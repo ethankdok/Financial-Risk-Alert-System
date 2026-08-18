@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>關鍵字管理｜管理後台</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="admin-auth.js"></script>
+  <script>AdminAuth.requireAuth();</script>
+</head>
+<body class="admin-body">
+<script>document.addEventListener('DOMContentLoaded',()=>AdminAuth.mountUser());</script>
+<header class="admin-topbar"><div class="admin-topbar-inner">
+  <a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Administrator Console</span></div></a>
+  <div class="admin-user"></div>
+    </div>
+  </header>
+<main class="admin-shell">
+<aside class="admin-sidebar">
+  <div class="admin-sidebar-title">管理後台</div>
+  <nav>
+    <a href="admin-dashboard.html"><span>▦</span> 儀表板</a>
+    <a href="admin-keyword-extract.html"><span>⌕</span> 關鍵字擷取</a>
+    <a class="active" href="admin-keyword-manage.html"><span>⌘</span> 關鍵字管理</a>
+    <a href="admin-risk-feature-manage.html"><span>⚠</span> 風險特徵管理</a>
+        <a href="admin-admin-manage.html"><span>♙</span> 管理員管理</a>
+    <a href="#"><span>⇧</span> 資料匯入</a>
+    <a href="admin-audit-log.html"><span>≣</span> 操作紀錄</a>
+  </nav>
+  <div class="admin-sidebar-note"><strong>正式關鍵字字庫</strong><p>此頁管理「已核准」關鍵字。可搜尋、修改分類與風險、停用或刪除。</p></div>
+  <a class="admin-back-link" href="index.html">← 返回前台</a>
+</aside>
+<section class="admin-main">
+  <div class="admin-page-head"><div><span class="eyebrow">Keyword Library</span><h1>關鍵字管理</h1><p>管理人工審核後進入正式字庫的關鍵字，並維護其分類、風險與啟用狀態。</p></div><button id="addKeyword" class="btn" type="button">＋ 新增關鍵字</button></div>
+
+  <div class="keyword-summary">
+    <div class="keyword-summary-card"><span>關鍵字總數</span><strong id="sumTotal">0</strong></div>
+    <div class="keyword-summary-card"><span>啟用中</span><strong id="sumActive">0</strong></div>
+    <div class="keyword-summary-card"><span>高風險</span><strong id="sumHigh">0</strong></div>
+    <div class="keyword-summary-card"><span>本次瀏覽器新增</span><strong id="sumLocal">0</strong></div>
+  </div>
+
+  <section class="admin-panel">
+    <div class="admin-panel-head"><div><h2>正式字庫</h2><p>「關鍵字擷取」頁核准的詞會自動出現在這裡。</p></div></div>
+    <div class="keyword-toolbar">
+      <label class="admin-field keyword-search"><span>搜尋</span><input id="searchInput" type="search" placeholder="搜尋關鍵字、分類或來源…"></label>
+      <label class="admin-field"><span>風險等級</span><select id="riskFilter"><option value="">全部</option><option>高</option><option>中</option><option>低</option></select></label>
+      <label class="admin-field"><span>狀態</span><select id="statusFilter"><option value="">全部</option><option value="active">啟用</option><option value="inactive">停用</option></select></label>
+    </div>
+    <div class="keyword-table-wrap"><table class="keyword-table"><thead><tr><th>關鍵字</th><th>分類</th><th>風險</th><th>來源</th><th>狀態</th><th>更新時間</th><th>操作</th></tr></thead><tbody id="keywordRows"></tbody></table><div id="emptyState" class="keyword-empty" hidden>目前沒有符合條件的關鍵字。</div></div>
+  </section>
+</section>
+</main>
+
+<div id="editModal" class="keyword-modal-backdrop"><div class="keyword-modal"><h2 id="modalTitle">編輯關鍵字</h2><div class="keyword-modal-grid">
+<label class="admin-field wide"><span>關鍵字／詞組</span><input id="editPhrase"></label>
+<label class="admin-field"><span>分類</span><select id="editCategory"><option>行動誘導</option><option>可信感強化</option><option>心理壓力</option><option>保證報酬</option><option>未公開消息</option><option>來源可信度</option><option>其他</option></select></label>
+<label class="admin-field"><span>風險等級</span><select id="editRisk"><option>高</option><option>中</option><option>低</option></select></label>
+<label class="admin-field"><span>來源</span><select id="editSource"><option>X</option><option>Yahoo 財經</option><option>公開資訊觀測站</option><option>人工匯入</option><option>管理者新增</option></select></label>
+<label class="admin-field"><span>狀態</span><select id="editStatus"><option value="active">啟用</option><option value="inactive">停用</option></select></label>
+<label class="admin-field wide"><span>判斷說明</span><textarea id="editReason" rows="3" placeholder="此詞為何需要納入字庫？"></textarea></label>
+</div><div class="keyword-modal-actions"><button id="cancelEdit" class="secondary-btn">取消</button><button id="saveEdit" class="primary-admin-btn">儲存</button></div></div></div>
+<script>
+let items=[]; let editingId=null;
+const esc=AdminAuth.escapeHtml;
+function riskClass(r){return r==='高'?'risk-high':r==='中'?'risk-medium':'risk-low'}
+async function load(){items=await AdminAuth.api('/api/keywords');render();}
+function render(){
+ const q=searchInput.value.trim().toLowerCase(),rf=riskFilter.value,sf=statusFilter.value;
+ sumTotal.textContent=items.length;sumActive.textContent=items.filter(x=>x.status==='active').length;sumHigh.textContent=items.filter(x=>x.risk==='高').length;sumLocal.textContent=items.filter(x=>x.source==='管理者新增').length;
+ const f=items.filter(x=>(!q||[x.phrase,x.category,x.source].join(' ').toLowerCase().includes(q))&&(!rf||x.risk===rf)&&(!sf||x.status===sf));
+ emptyState.hidden=f.length>0;
+ keywordRows.innerHTML=f.map(x=>`<tr><td><div class="keyword-phrase">${esc(x.phrase)}</div><div class="keyword-muted">${esc(x.reason||'')}</div></td><td><span class="keyword-category">${esc(x.category)}</span></td><td><span class="status-tag ${riskClass(x.risk)}">${esc(x.risk)}風險</span></td><td><span class="keyword-source-badge">${esc(x.source)}</span></td><td><button class="mini-btn toggle-btn ${x.status==='inactive'?'off':'on'}" onclick="toggleStatus(${x.id})">${x.status==='inactive'?'停用':'啟用'}</button></td><td class="keyword-muted">${esc(x.updated_at||x.approved_at||'—')}</td><td><div class="keyword-actions"><button class="mini-btn" onclick="openEdit(${x.id})">編輯</button><button class="mini-btn danger" onclick="removeItem(${x.id})">刪除</button></div></td></tr>`).join('');
+}
+async function toggleStatus(id){const x=items.find(v=>v.id===id);await AdminAuth.api('/api/keywords/'+id,{method:'PUT',body:JSON.stringify({status:x.status==='active'?'inactive':'active'})});await load();}
+async function removeItem(id){const x=items.find(v=>v.id===id);if(!confirm(`確定要刪除「${x.phrase}」嗎？`))return;await AdminAuth.api('/api/keywords/'+id,{method:'DELETE'});await load();}
+function fill(x={}){editPhrase.value=x.phrase||'';editCategory.value=x.category||'其他';editRisk.value=x.risk||'中';editSource.value=x.source||'管理者新增';editStatus.value=x.status||'active';editReason.value=x.reason||''}
+function openEdit(id){editingId=id;const x=items.find(v=>v.id===id);modalTitle.textContent='編輯關鍵字';fill(x);editModal.classList.add('show')}
+addKeyword.onclick=()=>{editingId=null;modalTitle.textContent='新增關鍵字';fill();editModal.classList.add('show')};
+cancelEdit.onclick=()=>editModal.classList.remove('show');editModal.onclick=e=>{if(e.target===editModal)editModal.classList.remove('show')};
+saveEdit.onclick=async()=>{const obj={phrase:editPhrase.value.trim(),category:editCategory.value,risk:editRisk.value,source:editSource.value,status:editStatus.value,reason:editReason.value.trim()};if(!obj.phrase){alert('請輸入關鍵字');return}try{if(editingId)await AdminAuth.api('/api/keywords/'+editingId,{method:'PUT',body:JSON.stringify(obj)});else await AdminAuth.api('/api/keywords',{method:'POST',body:JSON.stringify(obj)});editModal.classList.remove('show');await load();}catch(e){alert(e.message)}};
+['searchInput','riskFilter','statusFilter'].forEach(id=>document.getElementById(id).addEventListener(id==='searchInput'?'input':'change',render));
+load();
+</script>
+</body></html>

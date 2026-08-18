@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>管理後台｜金融資訊真偽判斷與可信度風險提醒系統</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="admin-auth.js"></script>
+  <script>AdminAuth.requireAuth();</script>
+</head>
+<body class="admin-body">
+<script>document.addEventListener('DOMContentLoaded',()=>AdminAuth.mountUser());</script>
+  <header class="admin-topbar">
+    <div class="admin-topbar-inner">
+      <a class="brand" href="index.html">
+        <div class="brand-mark">FI</div>
+        <div class="brand-text">
+          <strong>金融資訊真偽判斷與可信度風險提醒系統</strong>
+          <span>Administrator Console</span>
+        </div>
+      </a>
+      <div class="admin-user"></div>
+    </div>
+  </header>
+
+  <main class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-title">管理後台</div>
+      <nav>
+        <a class="active" href="admin-dashboard.html"><span>▦</span> 儀表板</a>
+        <a href="admin-keyword-extract.html"><span>⌕</span> 關鍵字擷取</a>
+        <a href="admin-keyword-manage.html"><span>⌘</span> 關鍵字管理</a>
+        <a href="admin-risk-feature-manage.html"><span>⚠</span> 風險特徵管理</a>
+        <a href="admin-admin-manage.html"><span>♙</span> 管理員管理</a>
+        <a href="#"><span>⇧</span> 資料匯入</a>
+        <a href="admin-audit-log.html"><span>≣</span> 操作紀錄</a>
+      </nav>
+      <div class="admin-sidebar-note">
+        <strong>後台定位</strong>
+        <p>建立、審核與維護前台分析所需的關鍵字及風險特徵。</p>
+      </div>
+      <a class="admin-back-link" href="index.html">← 返回前台</a>
+    </aside>
+
+    <section class="admin-main">
+      <div class="admin-page-head">
+        <div>
+          <span class="eyebrow">Backend Management</span>
+          <h1>後台管理儀表板</h1>
+          <p>統整關鍵字建立、審核、風險特徵維護與資料更新狀態。資料來源：Flask + SQLite。</p>
+        </div>
+        <a class="btn btn-primary" href="#quick-review">查看待審核關鍵字</a>
+      </div>
+
+      <div class="admin-stat-grid">
+        <article class="admin-stat-card">
+          <div class="admin-stat-icon blue">K</div>
+          <div><span>正式關鍵字</span><strong>428</strong><small>已核准並啟用</small></div>
+        </article>
+        <article class="admin-stat-card">
+          <div class="admin-stat-icon orange">!</div>
+          <div><span>待審核候選詞</span><strong>17</strong><small>等待管理者確認</small></div>
+        </article>
+        <article class="admin-stat-card">
+          <div class="admin-stat-icon red">R</div>
+          <div><span>風險特徵</span><strong>36</strong><small>含分類與判斷規則</small></div>
+        </article>
+        <article class="admin-stat-card">
+          <div class="admin-stat-icon green">+</div>
+          <div><span>今日新增</span><strong>12</strong><small>來自 3 個資料來源</small></div>
+        </article>
+      </div>
+
+      <div class="admin-grid-2">
+        <section class="admin-panel" id="quick-review">
+          <div class="admin-panel-head">
+            <div><h2>待審核候選關鍵字</h2><p>系統擷取後，需由管理者確認才能進入正式字庫。</p></div>
+            <button class="admin-text-btn" type="button">查看全部 →</button>
+          </div>
+          <div class="admin-review-list">
+            <article class="admin-review-item">
+              <div class="review-main"><strong>保證漲停</strong><span>X 貼文 · 10:24</span></div>
+              <span class="status-tag tag-red">保證報酬</span>
+              <div class="review-actions"><button class="mini-btn approve">核准</button><button class="mini-btn reject">拒絕</button></div>
+            </article>
+            <article class="admin-review-item">
+              <div class="review-main"><strong>內線消息</strong><span>X 貼文 · 09:48</span></div>
+              <span class="status-tag tag-orange">未公開消息</span>
+              <div class="review-actions"><button class="mini-btn approve">核准</button><button class="mini-btn reject">拒絕</button></div>
+            </article>
+            <article class="admin-review-item">
+              <div class="review-main"><strong>限時加入 VIP</strong><span>Yahoo 財經 · 09:17</span></div>
+              <span class="status-tag tag-blue">行動誘導</span>
+              <div class="review-actions"><button class="mini-btn approve">核准</button><button class="mini-btn reject">拒絕</button></div>
+            </article>
+            <article class="admin-review-item">
+              <div class="review-main"><strong>錯過就沒有</strong><span>X 貼文 · 08:56</span></div>
+              <span class="status-tag tag-orange">心理壓力</span>
+              <div class="review-actions"><button class="mini-btn approve">核准</button><button class="mini-btn reject">拒絕</button></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <div><h2>風險特徵分布</h2><p>目前正式啟用的風險特徵分類。</p></div><a class="admin-text-btn" href="admin-risk-feature-manage.html">管理特徵 →</a>
+          </div>
+          <div class="risk-dist-list">
+            <div class="risk-dist-row"><div><strong>行動誘導</strong><span>12 個特徵</span></div><div class="risk-dist-bar"><i style="width:72%"></i></div><b>33%</b></div>
+            <div class="risk-dist-row"><div><strong>可信感強化</strong><span>9 個特徵</span></div><div class="risk-dist-bar"><i style="width:56%"></i></div><b>25%</b></div>
+            <div class="risk-dist-row"><div><strong>心理壓力</strong><span>8 個特徵</span></div><div class="risk-dist-bar"><i style="width:48%"></i></div><b>22%</b></div>
+            <div class="risk-dist-row"><div><strong>金融高風險主張</strong><span>7 個特徵</span></div><div class="risk-dist-bar red"><i style="width:42%"></i></div><b>20%</b></div>
+          </div>
+          <div class="admin-info-note">關鍵字與風險特徵分開管理：前者是擷取出的詞句；後者是用於判斷風險的分類與規則。</div>
+        </section>
+      </div>
+
+      <section class="admin-panel">
+        <div class="admin-panel-head">
+          <div><h2>最近資料更新</h2><p>追蹤資料匯入、關鍵字擷取與字庫更新紀錄。</p></div>
+          <button class="admin-text-btn" type="button">查看完整紀錄 →</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table admin-table">
+            <thead><tr><th>時間</th><th>來源</th><th>處理內容</th><th>擷取候選詞</th><th>狀態</th></tr></thead>
+            <tbody>
+              <tr><td>10:24</td><td>X</td><td>投資社群貼文批次 #082</td><td>6</td><td><span class="status-tag tag-orange">待審核</span></td></tr>
+              <tr><td>09:17</td><td>Yahoo 財經</td><td>熱門新聞批次 #041</td><td>4</td><td><span class="status-tag tag-green">已完成</span></td></tr>
+              <tr><td>08:45</td><td>公開資訊觀測站</td><td>公司重大訊息 #238</td><td>2</td><td><span class="status-tag tag-green">已完成</span></td></tr>
+              <tr><td>昨天 22:10</td><td>人工匯入</td><td>測試文字資料集</td><td>9</td><td><span class="status-tag tag-blue">已建檔</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+(async()=>{
+  await AdminAuth.mountUser();
+  try{
+    const [keywords,features,logs]=await Promise.all([AdminAuth.api('/api/keywords'),AdminAuth.api('/api/risk-features'),AdminAuth.logs()]);
+    const cards=document.querySelectorAll('.admin-stat-card strong');
+    if(cards[0])cards[0].textContent=keywords.filter(x=>x.status==='active').length;
+    if(cards[1])cards[1].textContent='0';
+    if(cards[2])cards[2].textContent=features.filter(x=>x.status==='active').length;
+    const today=new Date().toISOString().slice(0,10);
+    if(cards[3])cards[3].textContent=logs.filter(x=>(x.time||'').startsWith(today)&&['新增','核准'].includes(x.action)).length;
+
+    const list=document.querySelector('.admin-review-list');
+    if(list){
+      list.innerHTML=keywords.slice(0,4).map(x=>`<article class="admin-review-item"><div class="review-main"><strong>${AdminAuth.escapeHtml(x.phrase)}</strong><span>${AdminAuth.escapeHtml(x.source)} · ${AdminAuth.escapeHtml(x.updated_at||'')}</span></div><span class="status-tag ${x.risk==='高'?'tag-red':x.risk==='中'?'tag-orange':'tag-blue'}">${AdminAuth.escapeHtml(x.category)}</span><div class="review-actions"><a class="mini-btn approve" href="admin-keyword-manage.html">管理</a></div></article>`).join('') || '<div class="keyword-empty">目前尚無正式關鍵字。</div>';
+      const h=document.querySelector('#quick-review h2');if(h)h.textContent='最近更新關鍵字';
+      const p=document.querySelector('#quick-review .admin-panel-head p');if(p)p.textContent='顯示 SQLite 正式字庫中最近更新的關鍵字。';
+    }
+
+    const dims={};features.filter(x=>x.status==='active').forEach(x=>dims[x.dimension]=(dims[x.dimension]||0)+1);
+    const dist=document.querySelector('.risk-dist-list');
+    if(dist){const total=Math.max(1,Object.values(dims).reduce((a,b)=>a+b,0));dist.innerHTML=Object.entries(dims).map(([d,n])=>`<div class="risk-dist-row"><div><strong>${AdminAuth.escapeHtml(d)}</strong><span>${n} 個特徵</span></div><div class="risk-dist-bar"><i style="width:${Math.max(12,Math.round(n/total*100))}%"></i></div><b>${Math.round(n/total*100)}%</b></div>`).join('');}
+
+    const tbody=document.querySelector('.admin-table tbody');
+    if(tbody){tbody.innerHTML=logs.slice(0,4).map(x=>`<tr><td>${AdminAuth.escapeHtml(x.time)}</td><td>${AdminAuth.escapeHtml(x.adminName||'系統')}</td><td>${AdminAuth.escapeHtml(x.summary)}</td><td>—</td><td><span class="status-tag tag-green">${AdminAuth.escapeHtml(x.action)}</span></td></tr>`).join('') || '<tr><td colspan="5">目前尚無操作紀錄</td></tr>';}
+  }catch(e){console.error(e)}
+})();
+</script>
+</body></html>

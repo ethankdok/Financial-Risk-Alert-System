@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>管理員管理｜管理後台</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="admin-auth.js"></script>
+</head>
+<body class="admin-body">
+<header class="admin-topbar"><div class="admin-topbar-inner">
+  <a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Administrator Console</span></div></a>
+  <div class="admin-user"></div>
+</div></header>
+
+<main class="admin-shell">
+<aside class="admin-sidebar">
+  <div class="admin-sidebar-title">管理後台</div>
+  <nav>
+    <a href="admin-dashboard.html"><span>▦</span> 儀表板</a>
+    <a href="admin-keyword-extract.html"><span>⌕</span> 關鍵字擷取</a>
+    <a href="admin-keyword-manage.html"><span>⌘</span> 關鍵字管理</a>
+    <a href="admin-risk-feature-manage.html"><span>⚠</span> 風險特徵管理</a>
+    <a class="active" href="admin-admin-manage.html"><span>♙</span> 管理員管理</a>
+    <a href="#"><span>⇧</span> 資料匯入</a>
+    <a href="admin-audit-log.html"><span>≣</span> 操作紀錄</a>
+  </nav>
+  <div class="admin-sidebar-note"><strong>權限控制</strong><p>只有「系統管理員」可以新增、停用、調整角色與重設其他管理員密碼。</p></div>
+  <a class="admin-back-link" href="index.html">← 返回前台</a>
+</aside>
+
+<section class="admin-main">
+  <div class="admin-page-head"><div><span class="eyebrow">Administrator & Access Control</span><h1>管理員管理</h1><p>管理後台帳號、角色、啟用狀態與密碼重設；所有異動都會寫入操作紀錄。</p></div><button id="addAdmin" class="btn btn-primary" type="button">＋ 新增管理員</button></div>
+
+  <div id="permissionBanner" class="admin-permission-banner" hidden>
+    <strong>目前帳號沒有管理員管理權限</strong>
+    <span>你仍可登入與使用其他授權功能，但只有系統管理員可以管理帳號。</span>
+  </div>
+
+  <div class="keyword-summary">
+    <div class="keyword-summary-card"><span>管理員總數</span><strong id="sumTotal">0</strong></div>
+    <div class="keyword-summary-card"><span>啟用中</span><strong id="sumActive">0</strong></div>
+    <div class="keyword-summary-card"><span>系統管理員</span><strong id="sumSystem">0</strong></div>
+    <div class="keyword-summary-card"><span>內容審核員</span><strong id="sumReviewer">0</strong></div>
+  </div>
+
+  <section class="admin-panel admin-access-explainer">
+    <div class="admin-panel-head"><div><h2>Authentication 與 Authorization</h2><p>後台先確認「你是誰」，再確認「你能做什麼」。</p></div></div>
+    <div class="admin-access-flow">
+      <div class="admin-access-step"><span>1</span><div><strong>Authentication｜身分驗證</strong><small>帳號＋密碼登入，Flask 建立 Session。</small></div></div>
+      <div class="admin-access-arrow">→</div>
+      <div class="admin-access-step"><span>2</span><div><strong>Authorization｜權限授權</strong><small>依 role 判斷是否可管理其他帳號。</small></div></div>
+      <div class="admin-access-arrow">→</div>
+      <div class="admin-access-step"><span>3</span><div><strong>Audit Log｜操作追蹤</strong><small>新增、修改、停用、重設密碼都留下紀錄。</small></div></div>
+    </div>
+  </section>
+
+  <section class="admin-panel">
+    <div class="admin-panel-head"><div><h2>管理員帳號</h2><p>正式系統建議「停用」而不是直接刪除，避免歷史操作紀錄失去對應身分。</p></div></div>
+    <div class="keyword-toolbar">
+      <label class="admin-field keyword-search"><span>搜尋</span><input id="searchInput" type="search" placeholder="搜尋帳號、姓名或角色…"></label>
+      <label class="admin-field"><span>角色</span><select id="roleFilter"><option value="">全部</option><option>系統管理員</option><option>內容審核員</option></select></label>
+      <label class="admin-field"><span>狀態</span><select id="statusFilter"><option value="">全部</option><option value="1">啟用</option><option value="0">停用</option></select></label>
+    </div>
+    <div class="keyword-table-wrap"><table class="keyword-table admin-account-table"><thead><tr><th>管理員</th><th>帳號</th><th>角色</th><th>狀態</th><th>建立時間</th><th>操作</th></tr></thead><tbody id="adminRows"></tbody></table><div id="emptyState" class="keyword-empty" hidden>目前沒有符合條件的管理員。</div></div>
+  </section>
+</section>
+</main>
+
+<div id="adminModal" class="keyword-modal-backdrop"><div class="keyword-modal admin-account-modal">
+  <h2 id="modalTitle">新增管理員</h2>
+  <div class="keyword-modal-grid">
+    <label class="admin-field wide"><span>管理員帳號</span><input id="editUsername" autocomplete="off" placeholder="例如：admin003"><small>建立後不建議修改帳號，方便稽核追蹤。</small></label>
+    <label class="admin-field wide"><span>顯示名稱</span><input id="editName" placeholder="例如：Amy"></label>
+    <label class="admin-field"><span>角色</span><select id="editRole"><option>內容審核員</option><option>系統管理員</option></select></label>
+    <label class="admin-field" id="statusField"><span>狀態</span><select id="editStatus"><option value="1">啟用</option><option value="0">停用</option></select></label>
+    <label class="admin-field wide" id="passwordField"><span>初始密碼</span><input id="editPassword" type="password" autocomplete="new-password" placeholder="至少 8 個字元"><small>後端只會儲存 Password Hash，不會把明碼密碼存進 SQLite。</small></label>
+  </div>
+  <div class="keyword-modal-actions"><button id="cancelEdit" class="secondary-btn">取消</button><button id="saveEdit" class="primary-admin-btn">儲存</button></div>
+</div></div>
+
+<div id="passwordModal" class="keyword-modal-backdrop"><div class="keyword-modal admin-password-modal">
+  <h2>重設管理員密碼</h2>
+  <p id="passwordTarget" class="admin-modal-note"></p>
+  <label class="admin-field"><span>新密碼</span><input id="newPassword" type="password" autocomplete="new-password" placeholder="至少 8 個字元"></label>
+  <label class="admin-field"><span>再次輸入</span><input id="confirmPassword" type="password" autocomplete="new-password" placeholder="再次輸入新密碼"></label>
+  <div class="keyword-modal-actions"><button id="cancelPassword" class="secondary-btn">取消</button><button id="savePassword" class="primary-admin-btn">更新密碼</button></div>
+</div></div>
+
+<script>
+let items=[]; let me=null; let editingId=null; let passwordAdminId=null;
+const $=id=>document.getElementById(id); const esc=AdminAuth.escapeHtml;
+
+async function boot(){
+  me=await AdminAuth.requireAuth(); if(!me) return;
+  await AdminAuth.mountUser();
+  if(me.role!=='系統管理員'){
+    $('permissionBanner').hidden=false; $('addAdmin').disabled=true;
+    $('addAdmin').title='只有系統管理員可以新增管理員';
+    return;
+  }
+  await load();
+}
+async function load(){
+  try{items=await AdminAuth.api('/api/admins'); render();}
+  catch(e){ if(e.status===403){$('permissionBanner').hidden=false;} else alert(e.message); }
+}
+function render(){
+  $('sumTotal').textContent=items.length;
+  $('sumActive').textContent=items.filter(x=>Number(x.is_active)===1).length;
+  $('sumSystem').textContent=items.filter(x=>x.role==='系統管理員').length;
+  $('sumReviewer').textContent=items.filter(x=>x.role==='內容審核員').length;
+  const q=$('searchInput').value.trim().toLowerCase(), rf=$('roleFilter').value, sf=$('statusFilter').value;
+  const f=items.filter(x=>(!q||[x.username,x.display_name,x.role].join(' ').toLowerCase().includes(q))&&(!rf||x.role===rf)&&(sf===''||String(x.is_active)===sf));
+  $('emptyState').hidden=f.length>0;
+  $('adminRows').innerHTML=f.map(x=>{
+    const isMe=me && Number(me.id)===Number(x.id);
+    return `<tr><td><div class="admin-account-person"><span class="admin-account-avatar">${esc((x.display_name||'?').charAt(0).toUpperCase())}</span><div><strong>${esc(x.display_name)}</strong>${isMe?'<small>目前登入</small>':''}</div></div></td><td><code>${esc(x.username)}</code></td><td><span class="keyword-category">${esc(x.role)}</span></td><td><span class="status-tag ${Number(x.is_active)===1?'tag-green':'tag-gray'}">${Number(x.is_active)===1?'啟用':'停用'}</span></td><td class="keyword-muted">${esc(x.created_at||'—')}</td><td><div class="keyword-actions"><button class="mini-btn" onclick="openEdit(${x.id})">編輯</button><button class="mini-btn" onclick="openPassword(${x.id})">重設密碼</button>${Number(x.is_active)===1?`<button class="mini-btn danger" ${isMe?'disabled title="不能停用自己"':''} onclick="toggleStatus(${x.id})">停用</button>`:`<button class="mini-btn approve" onclick="toggleStatus(${x.id})">重新啟用</button>`}</div></td></tr>`;
+  }).join('');
+}
+function fill(x={}){
+  $('editUsername').value=x.username||''; $('editUsername').disabled=!!x.id;
+  $('editName').value=x.display_name||''; $('editRole').value=x.role||'內容審核員'; $('editStatus').value=String(x.is_active??1);
+  $('editPassword').value=''; $('passwordField').hidden=!!x.id; $('statusField').hidden=!x.id;
+}
+function openEdit(id){editingId=id; const x=items.find(v=>v.id===id); fill(x); $('modalTitle').textContent='編輯管理員'; $('adminModal').classList.add('show');}
+$('addAdmin').onclick=()=>{editingId=null;fill();$('modalTitle').textContent='新增管理員';$('adminModal').classList.add('show')};
+$('cancelEdit').onclick=()=> $('adminModal').classList.remove('show');
+$('adminModal').onclick=e=>{if(e.target===$('adminModal')) $('adminModal').classList.remove('show')};
+$('saveEdit').onclick=async()=>{
+  try{
+    if(editingId){
+      await AdminAuth.api('/api/admins/'+editingId,{method:'PUT',body:JSON.stringify({display_name:$('editName').value.trim(),role:$('editRole').value,is_active:Number($('editStatus').value)})});
+    }else{
+      await AdminAuth.api('/api/admins',{method:'POST',body:JSON.stringify({username:$('editUsername').value.trim(),display_name:$('editName').value.trim(),role:$('editRole').value,password:$('editPassword').value})});
+    }
+    $('adminModal').classList.remove('show'); await load();
+  }catch(e){alert(e.message)}
+};
+async function toggleStatus(id){
+  const x=items.find(v=>v.id===id); const next=Number(x.is_active)===1?0:1;
+  if(next===0 && !confirm(`確定要停用「${x.display_name}」嗎？停用後將無法登入。`)) return;
+  try{await AdminAuth.api('/api/admins/'+id,{method:'PUT',body:JSON.stringify({is_active:next})});await load();}catch(e){alert(e.message)}
+}
+function openPassword(id){passwordAdminId=id; const x=items.find(v=>v.id===id); $('passwordTarget').textContent=`管理員：${x.display_name}（${x.username}）`; $('newPassword').value=''; $('confirmPassword').value=''; $('passwordModal').classList.add('show');}
+$('cancelPassword').onclick=()=> $('passwordModal').classList.remove('show');
+$('passwordModal').onclick=e=>{if(e.target===$('passwordModal')) $('passwordModal').classList.remove('show')};
+$('savePassword').onclick=async()=>{
+  const p=$('newPassword').value, c=$('confirmPassword').value; if(p!==c){alert('兩次輸入的密碼不一致');return;}
+  try{await AdminAuth.api('/api/admins/'+passwordAdminId+'/reset-password',{method:'POST',body:JSON.stringify({password:p})});$('passwordModal').classList.remove('show');alert('密碼已更新，資料庫只保存雜湊值。');}catch(e){alert(e.message)}
+};
+['searchInput','roleFilter','statusFilter'].forEach(id=>$(id).addEventListener(id==='searchInput'?'input':'change',render));
+boot();
+</script>
+</body></html>

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>風險特徵管理｜管理後台</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="admin-auth.js"></script>
+  <script>AdminAuth.requireAuth();</script>
+</head>
+<body class="admin-body">
+<script>document.addEventListener('DOMContentLoaded',()=>AdminAuth.mountUser());</script>
+<header class="admin-topbar"><div class="admin-topbar-inner">
+  <a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Administrator Console</span></div></a>
+  <div class="admin-user"></div>
+    </div>
+  </header>
+<main class="admin-shell">
+<aside class="admin-sidebar">
+  <div class="admin-sidebar-title">管理後台</div>
+  <nav>
+    <a href="admin-dashboard.html"><span>▦</span> 儀表板</a>
+    <a href="admin-keyword-extract.html"><span>⌕</span> 關鍵字擷取</a>
+    <a href="admin-keyword-manage.html"><span>⌘</span> 關鍵字管理</a>
+    <a class="active" href="admin-risk-feature-manage.html"><span>⚠</span> 風險特徵管理</a>
+    <a href="admin-admin-manage.html"><span>♙</span> 管理員管理</a>
+    <a href="#"><span>⇧</span> 資料匯入</a>
+    <a href="admin-audit-log.html"><span>≣</span> 操作紀錄</a>
+  </nav>
+  <div class="admin-sidebar-note"><strong>風險特徵 ≠ 關鍵字</strong><p>關鍵字是實際詞句；風險特徵是用來判斷風險的分類、規則與權重。</p></div>
+  <a class="admin-back-link" href="index.html">← 返回前台</a>
+</aside>
+<section class="admin-main">
+  <div class="admin-page-head"><div><span class="eyebrow">Risk Feature Library</span><h1>風險特徵管理</h1><p>維護風險判斷規則、心理構面、分數權重與對應關鍵字，提供前台分析與 LLM 解釋使用。</p></div><button id="addFeature" class="btn btn-primary" type="button">＋ 新增風險特徵</button></div>
+
+  <div class="keyword-summary">
+    <div class="keyword-summary-card"><span>風險特徵總數</span><strong id="sumTotal">0</strong></div>
+    <div class="keyword-summary-card"><span>啟用中</span><strong id="sumActive">0</strong></div>
+    <div class="keyword-summary-card"><span>高權重特徵</span><strong id="sumHigh">0</strong></div>
+    <div class="keyword-summary-card"><span>關聯關鍵字</span><strong id="sumLinked">0</strong></div>
+  </div>
+
+  <section class="admin-panel risk-feature-explainer">
+    <div class="admin-panel-head"><div><h2>判斷邏輯</h2><p>顯示關鍵詞與句型如何對應至風險特徵及系統判定結果。</p></div></div>
+    <div class="risk-map-flow">
+      <div class="risk-map-box"><small>關鍵字／句型</small><strong>保證獲利、一定漲停</strong><span>實際出現在文本中的詞句</span></div>
+      <div class="risk-map-arrow">→</div>
+      <div class="risk-map-box accent"><small>風險特徵</small><strong>保證報酬</strong><span>分類規則＋權重 3 分</span></div>
+      <div class="risk-map-arrow">→</div>
+      <div class="risk-map-box"><small>系統輸出</small><strong>高風險訊號</strong><span>提供前台評分與 LLM 解釋</span></div>
+    </div>
+  </section>
+
+  <section class="admin-panel">
+    <div class="admin-panel-head"><div><h2>風險特徵字典</h2><p>可搜尋、調整權重、啟用／停用，並維護對應的關鍵字。</p></div></div>
+    <div class="keyword-toolbar">
+      <label class="admin-field keyword-search"><span>搜尋</span><input id="searchInput" type="search" placeholder="搜尋特徵名稱、構面、說明或關鍵字…"></label>
+      <label class="admin-field"><span>主要構面</span><select id="dimensionFilter"><option value="">全部</option><option>行動誘導</option><option>可信感強化</option><option>心理壓力</option><option>金融高風險主張</option><option>來源可信度</option></select></label>
+      <label class="admin-field"><span>狀態</span><select id="statusFilter"><option value="">全部</option><option value="active">啟用</option><option value="inactive">停用</option></select></label>
+    </div>
+    <div class="keyword-table-wrap"><table class="keyword-table risk-feature-table"><thead><tr><th>風險特徵</th><th>主要構面</th><th>權重</th><th>對應關鍵字</th><th>狀態</th><th>更新時間</th><th>操作</th></tr></thead><tbody id="featureRows"></tbody></table><div id="emptyState" class="keyword-empty" hidden>目前沒有符合條件的風險特徵。</div></div>
+  </section>
+</section>
+</main>
+
+<div id="featureModal" class="keyword-modal-backdrop"><div class="keyword-modal risk-feature-modal"><h2 id="modalTitle">編輯風險特徵</h2><div class="keyword-modal-grid">
+<label class="admin-field wide"><span>特徵名稱</span><input id="editName" placeholder="例如：保證報酬"></label>
+<label class="admin-field"><span>主要構面</span><select id="editDimension"><option>行動誘導</option><option>可信感強化</option><option>心理壓力</option><option>金融高風險主張</option><option>來源可信度</option></select></label>
+<label class="admin-field"><span>權重分數</span><select id="editWeight"><option value="1">1｜低</option><option value="2">2｜中</option><option value="3">3｜高</option><option value="4">4｜極高</option></select></label>
+<label class="admin-field"><span>狀態</span><select id="editStatus"><option value="active">啟用</option><option value="inactive">停用</option></select></label>
+<label class="admin-field wide"><span>對應關鍵字／句型</span><textarea id="editKeywords" rows="3" placeholder="用逗號分隔，例如：保證獲利、穩賺不賠、一定漲停"></textarea></label>
+<label class="admin-field wide"><span>判斷定義</span><textarea id="editDefinition" rows="3" placeholder="說明此特徵何時成立，以及為什麼需要納入判斷"></textarea></label>
+<label class="admin-field wide"><span>LLM 解釋模板</span><textarea id="editExplain" rows="2" placeholder="例如：本文對投資結果做確定性承諾，可能使使用者低估投資風險。"></textarea></label>
+</div><div class="keyword-modal-actions"><button id="cancelEdit" class="secondary-btn">取消</button><button id="saveEdit" class="primary-admin-btn">儲存</button></div></div></div>
+
+<script>
+let items=[];let editingId=null;const $=id=>document.getElementById(id);const esc=AdminAuth.escapeHtml;
+function weightBadge(w){return w>=3?'risk-high':w===2?'risk-medium':'risk-low'}
+async function load(){items=await AdminAuth.api('/api/risk-features');render();}
+function render(){const q=$('searchInput').value.trim().toLowerCase(),df=$('dimensionFilter').value,sf=$('statusFilter').value;
+ $('sumTotal').textContent=items.length;$('sumActive').textContent=items.filter(x=>x.status==='active').length;$('sumHigh').textContent=items.filter(x=>Number(x.weight)>=3).length;$('sumLinked').textContent=items.reduce((n,x)=>n+(x.keywords||[]).length,0);
+ const f=items.filter(x=>(!q||[x.name,x.dimension,x.definition,(x.keywords||[]).join(' ')].join(' ').toLowerCase().includes(q))&&(!df||x.dimension===df)&&(!sf||x.status===sf));$('emptyState').hidden=f.length>0;
+ $('featureRows').innerHTML=f.map(x=>`<tr><td><div class="keyword-phrase">${esc(x.name)}</div><div class="keyword-muted">${esc(x.definition)}</div></td><td><span class="keyword-category">${esc(x.dimension)}</span></td><td><span class="status-tag ${weightBadge(Number(x.weight))}">${esc(x.weight)} 分</span></td><td><div class="risk-keyword-chips">${(x.keywords||[]).slice(0,4).map(k=>`<span>${esc(k)}</span>`).join('')}${(x.keywords||[]).length>4?`<small>＋${(x.keywords||[]).length-4}</small>`:''}</div></td><td><button class="mini-btn toggle-btn ${x.status==='inactive'?'off':'on'}" onclick="toggleStatus(${x.id})">${x.status==='inactive'?'停用':'啟用'}</button></td><td class="keyword-muted">${esc(x.updated_at||'—')}</td><td><div class="keyword-actions"><button class="mini-btn" onclick="openEdit(${x.id})">編輯</button><button class="mini-btn danger" onclick="removeItem(${x.id})">刪除</button></div></td></tr>`).join('');}
+async function toggleStatus(id){const x=items.find(v=>v.id===id);await AdminAuth.api('/api/risk-features/'+id,{method:'PUT',body:JSON.stringify({status:x.status==='active'?'inactive':'active'})});await load();}
+async function removeItem(id){const x=items.find(v=>v.id===id);if(!confirm(`確定要刪除「${x.name}」嗎？`))return;await AdminAuth.api('/api/risk-features/'+id,{method:'DELETE'});await load();}
+function fill(x={}){$('editName').value=x.name||'';$('editDimension').value=x.dimension||'行動誘導';$('editWeight').value=String(x.weight||1);$('editStatus').value=x.status||'active';$('editKeywords').value=(x.keywords||[]).join('、');$('editDefinition').value=x.definition||'';$('editExplain').value=x.explain||''}
+function openEdit(id){editingId=id;fill(items.find(v=>v.id===id));$('modalTitle').textContent='編輯風險特徵';$('featureModal').classList.add('show')}
+$('addFeature').onclick=()=>{editingId=null;fill();$('modalTitle').textContent='新增風險特徵';$('featureModal').classList.add('show')};$('cancelEdit').onclick=()=>$('featureModal').classList.remove('show');$('featureModal').onclick=e=>{if(e.target===$('featureModal'))$('featureModal').classList.remove('show')};
+$('saveEdit').onclick=async()=>{const obj={name:$('editName').value.trim(),dimension:$('editDimension').value,weight:Number($('editWeight').value),status:$('editStatus').value,keywords:$('editKeywords').value.split(/[、,，\n]/).map(s=>s.trim()).filter(Boolean),definition:$('editDefinition').value.trim(),explain:$('editExplain').value.trim()};if(!obj.name||!obj.definition){alert('請輸入特徵名稱與判斷定義');return}try{if(editingId)await AdminAuth.api('/api/risk-features/'+editingId,{method:'PUT',body:JSON.stringify(obj)});else await AdminAuth.api('/api/risk-features',{method:'POST',body:JSON.stringify(obj)});$('featureModal').classList.remove('show');await load();}catch(e){alert(e.message)}};
+['searchInput','dimensionFilter','statusFilter'].forEach(id=>$(id).addEventListener(id==='searchInput'?'input':'change',render));load();
+</script>
+</body></html>

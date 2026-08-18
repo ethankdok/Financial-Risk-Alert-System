@@ -1,17 +1,6 @@
-# Python
-venv/
+.venv/
 __pycache__/
 *.pyc
-
-# Environment variables
-.env
-
-# macOS
 .DS_Store
-
-# VS Code
-.vscode/
-
-# Local backup files
-static/script_backup.js
-static/script_before_summary.js
+financial_risk.db
+.env

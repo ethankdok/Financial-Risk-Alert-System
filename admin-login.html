@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>管理員登入｜金融資訊風險系統</title><link rel="stylesheet" href="style.css"></head>
+<body class="admin-login-body">
+<div class="admin-login-shell">
+  <section class="admin-login-brand">
+    <div class="brand-mark admin-login-logo">FI</div>
+    <span class="eyebrow">Administrator Console</span>
+    <h1>金融資訊風險辨識<br>管理後台</h1>
+    <p>登入後可建立與維護關鍵字、風險特徵，並追蹤每一次管理者修改紀錄。</p>
+    <div class="admin-login-points"><span>✓ 管理員身分識別</span><span>✓ 修改紀錄追蹤</span><span>✓ 關鍵字與風險特徵維護</span></div>
+  </section>
+  <section class="admin-login-card">
+    <div><span class="eyebrow">Secure Access</span><h2>管理員登入</h2><p>請使用後台管理帳號登入。</p></div>
+    <form id="adminLoginForm">
+      <label class="admin-field"><span>管理員帳號</span><input id="adminUsername" autocomplete="username" placeholder="例如：admin001" required></label>
+      <label class="admin-field"><span>密碼</span><input id="adminPassword" type="password" autocomplete="current-password" placeholder="請輸入密碼" required></label>
+      <div id="loginError" class="admin-login-error" hidden>帳號或密碼錯誤，請重新輸入。</div>
+      <button class="primary-admin-btn admin-login-submit" type="submit">登入管理後台</button>
+    </form>
+    <p class="admin-login-warning">系統採用帳號驗證與權限控管機制，管理操作將保留紀錄以供追蹤與稽核。</p>
+  </section>
+</div>
+<script src="admin-auth.js"></script><script>
+(async()=>{
+  const existing=await AdminAuth.getSession();if(existing){location.href='admin-dashboard.html';return;}
+  const p=new URLSearchParams(location.search);const next=p.get('next')||'admin-dashboard.html';
+  document.getElementById('adminLoginForm').addEventListener('submit',async e=>{
+    e.preventDefault();loginError.hidden=true;
+    const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;btn.textContent='登入中…';
+    const s=await AdminAuth.login(adminUsername.value.trim(),adminPassword.value);
+    btn.disabled=false;btn.textContent='登入管理後台';
+    if(!s){loginError.hidden=false;return;}location.href=next;
+  });
+})();
+</script></body></html>

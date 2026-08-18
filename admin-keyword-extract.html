@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>關鍵字擷取｜管理後台</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="admin-auth.js"></script>
+  <script>AdminAuth.requireAuth();</script>
+</head>
+<body class="admin-body">
+<script>document.addEventListener('DOMContentLoaded',()=>AdminAuth.mountUser());</script>
+  <header class="admin-topbar">
+    <div class="admin-topbar-inner">
+      <a class="brand" href="index.html">
+        <div class="brand-mark">FI</div>
+        <div class="brand-text">
+          <strong>金融資訊真偽判斷與可信度風險提醒系統</strong>
+          <span>Administrator Console</span>
+        </div>
+      </a>
+      <div class="admin-user"></div>
+    </div>
+  </header>
+
+  <main class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-title">管理後台</div>
+      <nav>
+        <a href="admin-dashboard.html"><span>▦</span> 儀表板</a>
+        <a class="active" href="admin-keyword-extract.html"><span>⌕</span> 關鍵字擷取</a>
+        <a href="admin-keyword-manage.html"><span>⌘</span> 關鍵字管理</a>
+        <a href="admin-risk-feature-manage.html"><span>⚠</span> 風險特徵管理</a>
+        <a href="admin-admin-manage.html"><span>♙</span> 管理員管理</a>
+        <a href="#"><span>⇧</span> 資料匯入</a>
+        <a href="admin-audit-log.html"><span>≣</span> 操作紀錄</a>
+      </nav>
+      <div class="admin-sidebar-note">
+        <strong>關鍵字建立流程</strong>
+        <p>輸入文本 → 系統擷取候選詞 → 人工審核 → 核准後加入正式字庫。</p>
+      </div>
+      <a class="admin-back-link" href="index.html">← 返回前台</a>
+    </aside>
+
+    <section class="admin-main">
+      <div class="admin-page-head">
+        <div>
+          <span class="eyebrow">Keyword Extraction</span>
+          <h1>關鍵字擷取與人工審核</h1>
+          <p>輸入金融新聞或社群貼文，產生候選關鍵字；核准後才會加入正式字庫。</p>
+        </div>
+        <button id="loadExample" class="btn" type="button">載入範例文字</button>
+      </div>
+
+      <div class="admin-grid-2 admin-extract-layout">
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <div><h2>1. 輸入待分析文本</h2><p>可貼入 X 貼文、Yahoo 財經新聞或人工蒐集資料。</p></div>
+          </div>
+
+          <div class="admin-form-grid">
+            <label class="admin-field">
+              <span>資料來源</span>
+              <select id="sourceSelect">
+                <option value="X">X</option>
+                <option value="Yahoo 財經">Yahoo 財經</option>
+                <option value="公開資訊觀測站">公開資訊觀測站</option>
+                <option value="人工匯入">人工匯入</option>
+              </select>
+            </label>
+            <label class="admin-field">
+              <span>候選詞數量</span>
+              <select id="candidateLimit">
+                <option value="6">6</option>
+                <option value="8" selected>8</option>
+                <option value="10">10</option>
+                <option value="12">12</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="admin-field admin-textarea-field">
+            <span>原始文字</span>
+            <textarea id="inputText" placeholder="例如：內部法人消息指出，這檔股票明天一定漲停。今晚前加入老師 VIP，前 50 名可免費取得完整名單。"></textarea>
+            <small><b id="charCount">0</b> 字｜系統會保留完整原文供後續查核。</small>
+          </label>
+
+          <div class="method-block">
+            <strong>擷取方法</strong>
+            <label><input type="checkbox" checked disabled> 規則／種子詞比對</label>
+            <label><input type="checkbox" checked> TF-IDF 候選詞</label>
+            <label><input type="checkbox" checked> TextRank 重要詞</label>
+            <label><input type="checkbox" checked> KeyBERT 語意擴充</label>
+            <p>系統依據種子詞、片語規則與詞頻產生候選關鍵字，供管理員審核、分類與納入字典。</p>
+          </div>
+
+          <div class="admin-form-actions">
+            <button id="extractBtn" class="btn btn-primary" type="button">開始擷取候選關鍵字</button>
+            <button id="clearBtn" class="btn" type="button">清除</button>
+          </div>
+        </section>
+
+        <section class="admin-panel extraction-summary-panel">
+          <div class="admin-panel-head"><div><h2>2. 本次分析摘要</h2><p>先確認系統從文字中偵測到哪些風險訊號。</p></div></div>
+          <div class="extract-empty" id="summaryEmpty">
+            <div class="empty-icon">⌕</div>
+            <strong>尚未分析</strong>
+            <span>輸入文字並按下「開始擷取候選關鍵字」。</span>
+          </div>
+          <div id="summaryContent" hidden>
+            <div class="extract-summary-score">
+              <div><span>候選關鍵字</span><strong id="candidateCount">0</strong></div>
+              <div><span>高風險訊號</span><strong id="highRiskCount">0</strong></div>
+              <div><span>資料來源</span><strong id="summarySource">—</strong></div>
+            </div>
+            <div class="risk-hint-box" id="riskHint"></div>
+            <div class="matched-preview"><strong>原文觸發片段</strong><p id="matchedPreviewText"></p></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="admin-panel" id="candidatePanel">
+        <div class="admin-panel-head">
+          <div><h2>3. 候選關鍵字人工審核</h2><p>系統只產生候選詞；管理者確認分類與風險後才能正式入庫。</p></div>
+          <div class="candidate-toolbar">
+            <span id="reviewStatus">尚無候選詞</span>
+            <button id="approveAllBtn" class="admin-text-btn" type="button" disabled>核准全部建議項目</button>
+          </div>
+        </div>
+        <div id="candidateEmpty" class="candidate-empty-row">分析完成後，候選關鍵字會顯示在這裡。</div>
+        <div class="table-wrap" id="candidateTableWrap" hidden>
+          <table class="data-table admin-table candidate-table">
+            <thead>
+              <tr><th>候選詞／片段</th><th>建議分類</th><th>風險程度</th><th>系統依據</th><th>狀態</th><th>操作</th></tr>
+            </thead>
+            <tbody id="candidateRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="admin-panel-head"><div><h2>本次已核准字庫</h2><p>核准後會直接寫入 SQLite 正式關鍵字資料表，所有管理員共用。</p></div><button id="clearLibrary" class="admin-text-btn danger-link" type="button">管理正式字庫</button></div>
+        <div id="libraryEmpty" class="candidate-empty-row">尚未核准任何關鍵字。</div>
+        <div id="libraryList" class="approved-keyword-list"></div>
+      </section>
+    </section>
+  </main>
+
+<script>
+const seedRules = [
+  {phrase:'保證獲利', category:'金融高風險主張', risk:'高', reason:'保證報酬'},
+  {phrase:'保證漲停', category:'金融高風險主張', risk:'高', reason:'保證報酬'},
+  {phrase:'一定漲停', category:'金融高風險主張', risk:'高', reason:'絕對化報酬承諾'},
+  {phrase:'穩賺不賠', category:'金融高風險主張', risk:'高', reason:'無風險／保證報酬'},
+  {phrase:'穩賺', category:'金融高風險主張', risk:'高', reason:'保證式獲利暗示'},
+  {phrase:'無風險', category:'金融高風險主張', risk:'高', reason:'不合理風險承諾'},
+  {phrase:'內線消息', category:'可信感強化', risk:'高', reason:'未公開消息／權威訴求'},
+  {phrase:'內部法人消息', category:'可信感強化', risk:'高', reason:'未公開消息／權威訴求'},
+  {phrase:'老師', category:'可信感強化', risk:'中', reason:'權威訴求'},
+  {phrase:'專家推薦', category:'可信感強化', risk:'中', reason:'權威訴求'},
+  {phrase:'官方合作', category:'可信感強化', risk:'中', reason:'權威或品牌背書'},
+  {phrase:'連續命中', category:'可信感強化', risk:'中', reason:'成功案例強化'},
+  {phrase:'上萬名會員', category:'可信感強化', risk:'中', reason:'社會認同'},
+  {phrase:'加入 VIP', category:'行動誘導', risk:'中', reason:'加入會員／行動要求'},
+  {phrase:'加入VIP', category:'行動誘導', risk:'中', reason:'加入會員／行動要求'},
+  {phrase:'立即加入', category:'行動誘導', risk:'中', reason:'立即行動要求'},
+  {phrase:'私訊', category:'行動誘導', risk:'中', reason:'聯絡／轉移平台'},
+  {phrase:'免費取得', category:'行動誘導', risk:'中', reason:'利益交換／誘導'},
+  {phrase:'免費領取', category:'行動誘導', risk:'中', reason:'利益交換／誘導'},
+  {phrase:'今晚前', category:'心理壓力', risk:'中', reason:'時間急迫'},
+  {phrase:'今晚十二點前', category:'心理壓力', risk:'中', reason:'時間急迫'},
+  {phrase:'最後機會', category:'心理壓力', risk:'中', reason:'時間急迫'},
+  {phrase:'名額有限', category:'心理壓力', risk:'中', reason:'稀缺壓力'},
+  {phrase:'僅剩', category:'心理壓力', risk:'中', reason:'數量稀缺'},
+  {phrase:'前 50 名', category:'心理壓力', risk:'中', reason:'數量稀缺'},
+  {phrase:'前50名', category:'心理壓力', risk:'中', reason:'數量稀缺'},
+  {phrase:'錯過就沒有', category:'心理壓力', risk:'中', reason:'損失／錯失恐懼'},
+  {phrase:'錯過', category:'心理壓力', risk:'中', reason:'錯失恐懼'}
+];
+const commonStop = new Set(['今天','明天','我們','你們','公司','股票','投資','市場','目前','表示','指出','可以','可能','已經','就是','這個','這檔','內容','完整','取得','消息']);
+let currentCandidates = [];
+
+const input = document.getElementById('inputText');
+input.addEventListener('input',()=> document.getElementById('charCount').textContent = input.value.length);
+
+document.getElementById('loadExample').addEventListener('click',()=>{
+  input.value = '內部法人消息指出，這檔股票明天一定漲停。老師已連續命中多檔強勢股，今晚前加入老師 VIP，前 50 名可免費取得完整名單，錯過就沒有！';
+  input.dispatchEvent(new Event('input'));
+});
+
+document.getElementById('clearBtn').addEventListener('click',()=>{
+  input.value=''; input.dispatchEvent(new Event('input')); currentCandidates=[]; renderCandidates(); resetSummary();
+});
+
+document.getElementById('extractBtn').addEventListener('click', extractKeywords);
+document.getElementById('approveAllBtn').addEventListener('click', async()=>{
+  for(let i=0;i<currentCandidates.length;i++) if(currentCandidates[i].status==='待審核') await approveCandidate(i,false);
+  renderCandidates(); await renderLibrary();
+});
+
+document.getElementById('clearLibrary').addEventListener('click',async()=>{
+  alert('SQLite 版本不提供一鍵清空正式字庫；請到「關鍵字管理」逐筆刪除，避免誤刪正式資料。');
+});
+
+function extractKeywords(){
+  const text = input.value.trim();
+  if(!text){ alert('請先輸入要分析的文字。'); return; }
+  const limit = Number(document.getElementById('candidateLimit').value);
+  const results = []; const seen = new Set();
+  seedRules.forEach(rule=>{if(text.indexOf(rule.phrase)>=0&&!seen.has(rule.phrase)){seen.add(rule.phrase);results.push({...rule,score:rule.risk==='高'?0.96:0.86,status:'待審核',source:'規則／種子詞'});}});
+  const chunks=text.split(/[，。！？；、\s]/).map(s=>s.trim()).filter(s=>s.length>=2&&s.length<=18);const extra=[];
+  chunks.forEach(chunk=>{const cleaned=chunk.replace(/[「」『』（）()：:,.]/g,'');if(cleaned.length<2||commonStop.has(cleaned)||seen.has(cleaned))return;let signal=0;['漲','賺','獲利','名額','加入','免費','老師','內部','法人','限時','最後','VIP','會員','翻倍','保證','穩'].forEach(k=>{if(cleaned.includes(k))signal++;});if(signal>0)extra.push({phrase:cleaned,category:'待人工分類',risk:signal>=2?'中':'低',reason:'簡易詞頻／片語候選',score:Math.min(.82,.55+signal*.09),status:'待審核',source:'統計候選'});});
+  extra.sort((a,b)=>b.score-a.score).forEach(c=>{if(!seen.has(c.phrase)){seen.add(c.phrase);results.push(c);}});
+  currentCandidates=results.slice(0,limit);if(!currentCandidates.length)currentCandidates=[{phrase:text.slice(0,Math.min(12,text.length)),category:'待人工分類',risk:'低',reason:'未命中既有規則，保留人工檢視',score:.42,status:'待審核',source:'人工候選'}];renderCandidates();renderSummary(text);
+}
+function riskClass(risk){return risk==='高'?'tag-red':risk==='中'?'tag-orange':'tag-blue'}
+function renderCandidates(){const empty=candidateEmpty,wrap=candidateTableWrap,tbody=candidateRows,status=reviewStatus,approveAll=approveAllBtn;if(!currentCandidates.length){empty.hidden=false;wrap.hidden=true;status.textContent='尚無候選詞';approveAll.disabled=true;tbody.innerHTML='';return;}empty.hidden=true;wrap.hidden=false;approveAll.disabled=false;const waiting=currentCandidates.filter(c=>c.status==='待審核').length;status.textContent=`共 ${currentCandidates.length} 筆，${waiting} 筆待審核`;tbody.innerHTML=currentCandidates.map((c,i)=>`<tr class="${c.status==='已核准'?'approved-row':c.status==='已拒絕'?'rejected-row':''}"><td><strong>${AdminAuth.escapeHtml(c.phrase)}</strong><small class="candidate-score">關聯度 ${Math.round(c.score*100)}%</small></td><td><select class="inline-select" ${c.status!=='待審核'?'disabled':''} onchange="updateCategory(${i},this.value)">${['行動誘導','可信感強化','心理壓力','金融高風險主張','一般金融資訊','待人工分類'].map(v=>`<option ${c.category===v?'selected':''}>${v}</option>`).join('')}</select></td><td><span class="status-tag ${riskClass(c.risk)}">${c.risk}風險</span></td><td>${AdminAuth.escapeHtml(c.reason)}<small class="candidate-source">${c.source}</small></td><td><span class="review-state ${c.status==='已核准'?'state-approved':c.status==='已拒絕'?'state-rejected':''}">${c.status}</span></td><td class="candidate-actions">${c.status==='待審核'?`<button class="mini-btn approve" onclick="approveCandidate(${i})">核准</button><button class="mini-btn reject" onclick="rejectCandidate(${i})">拒絕</button>`:'—'}</td></tr>`).join('');}
+function updateCategory(i,value){currentCandidates[i].category=value;}
+async function approveCandidate(i,rerender=true){const c=currentCandidates[i];try{await AdminAuth.api('/api/keywords',{method:'POST',body:JSON.stringify({phrase:c.phrase.trim(),category:c.category,risk:c.risk,reason:c.reason,source:sourceSelect.value,status:'active'})});c.status='已核准';}catch(e){if(e.status===409){c.status='已核准';}else{alert(e.message);return;}}if(rerender){renderCandidates();await renderLibrary();}}
+function rejectCandidate(i){currentCandidates[i].status='已拒絕';renderCandidates();}
+async function renderLibrary(){const lib=await AdminAuth.api('/api/keywords');if(!lib.length){libraryEmpty.hidden=false;libraryList.innerHTML='';return;}libraryEmpty.hidden=true;libraryList.innerHTML=lib.slice(0,12).map(c=>`<div class="approved-keyword-item"><div><strong>${AdminAuth.escapeHtml(c.phrase)}</strong><span>${AdminAuth.escapeHtml(c.category)} · ${AdminAuth.escapeHtml(c.source)}</span></div><span class="status-tag ${riskClass(c.risk)}">${c.risk}風險</span><small>${AdminAuth.escapeHtml(c.updated_at||c.approved_at||'')}</small><a class="keyword-remove" href="admin-keyword-manage.html" title="到關鍵字管理編輯">↗</a></div>`).join('');}
+function renderSummary(text){summaryEmpty.hidden=true;summaryContent.hidden=false;candidateCount.textContent=currentCandidates.length;const high=currentCandidates.filter(c=>c.risk==='高').length;highRiskCount.textContent=high;summarySource.textContent=sourceSelect.value;const cats=[...new Set(currentCandidates.filter(c=>c.category!=='待人工分類').map(c=>c.category))];riskHint.innerHTML=high?`<strong>偵測到高風險訊號</strong><p>包含 ${high} 筆高風險候選詞；建議優先確認「${cats.join('、')||'風險主張'}」相關片段。</p>`:`<strong>尚未偵測到明確高風險詞</strong><p>仍需由管理者查看上下文與來源，不能只以關鍵字判定。</p>`;matchedPreviewText.textContent=currentCandidates.slice(0,5).map(c=>`「${c.phrase}」`).join('、')||text.slice(0,60);}
+function resetSummary(){summaryEmpty.hidden=false;summaryContent.hidden=true;}
+renderLibrary();
+</script>
+</body></html>
