@@ -132,6 +132,17 @@ def init_db():
               created_at TEXT NOT NULL,
               FOREIGN KEY(admin_id) REFERENCES admins(id)
             );
+
+        CREATE TABLE IF NOT EXISTS analysis_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            query_text TEXT NOT NULL,
+            risk_score INTEGER NOT NULL,
+            raw_score INTEGER NOT NULL DEFAULT 0,
+            risk_level TEXT NOT NULL,
+            matched_keywords_json TEXT NOT NULL DEFAULT '[]',
+            matched_features_json TEXT NOT NULL DEFAULT '[]',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
             """
         )
 
