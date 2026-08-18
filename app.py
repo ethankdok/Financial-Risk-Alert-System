@@ -151,7 +151,7 @@ def init_db():
                 "INSERT INTO admins(username,password_hash,display_name,role,created_at) VALUES(?,?,?,?,?)",
                 [
                     ("admin001", generate_password_hash("demo1234"), "Ethan", "系統管理員", now_str()),
-                    ("admin002", generate_password_hash("demo5678"), "John", "內容審核員", now_str()),
+                    ("admin002", generate_password_hash("demo5678"), "Rainy", "內容審核員", now_str()),
                 ],
             )
 
