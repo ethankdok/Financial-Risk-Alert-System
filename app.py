@@ -1,7 +1,8 @@
 from flask import Flask, jsonify, render_template, request
+from financial_routes import create_financial_blueprint
 
 app = Flask(__name__)
-
+app.register_blueprint(create_financial_blueprint())
 
 @app.route("/")
 def index():

@@ -1,0 +1,190 @@
+{
+  "version": "common-analysis-0.2.0",
+  "scope": "common",
+  "description": "跨產業共通的基本面分析規則；不得宣稱為 IC 設計產業專屬標準。",
+  "rules": [
+    {
+      "rule_id": "COM_GROWTH_001",
+      "name": "主要成長指標同步成長",
+      "dimension": "growth",
+      "assessment_type": "direct",
+      "severity": "positive",
+      "logic_expression": "revenue_growth_yoy > 0 AND operating_income_growth_yoy > 0 AND net_income_growth_yoy > 0",
+      "direct_metrics": ["revenue_growth_yoy", "operating_income_growth_yoy", "net_income_growth_yoy"],
+      "indirect_metrics": ["eps_growth_yoy"],
+      "threshold_basis": "directional",
+      "evidence_basis": "以營收、營業利益與淨利是否同向成長衡量成長廣度，屬通用財務分析。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "revenue_growth_yoy", "op": "gt", "value": 0},
+        {"feature": "operating_income_growth_yoy", "op": "gt", "value": 0},
+        {"feature": "net_income_growth_yoy", "op": "gt", "value": 0}
+      ]},
+      "rationale": "營收與核心獲利同步成長，比單看營收更能支持基本面成長。"
+    },
+    {
+      "rule_id": "COM_GROWTH_002",
+      "name": "營收成長但獲利成長未跟上",
+      "dimension": "growth",
+      "assessment_type": "cross_factor",
+      "severity": "attention",
+      "logic_expression": "revenue_growth_yoy > 0 AND (operating_income_growth_yoy < 0 OR net_income_growth_yoy < 0)",
+      "direct_metrics": ["revenue_growth_yoy"],
+      "indirect_metrics": ["operating_income_growth_yoy", "net_income_growth_yoy"],
+      "threshold_basis": "directional",
+      "evidence_basis": "以獲利是否同步驗證營收成長品質，屬通用財務分析。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "revenue_growth_yoy", "op": "gt", "value": 0},
+        {"any": [
+          {"feature": "operating_income_growth_yoy", "op": "lt", "value": 0},
+          {"feature": "net_income_growth_yoy", "op": "lt", "value": 0}
+        ]}
+      ]},
+      "rationale": "營收增加但核心獲利沒有同步，代表成長品質需要進一步拆解。"
+    },
+    {
+      "rule_id": "COM_GROWTH_003",
+      "name": "主要成長指標同步衰退",
+      "dimension": "growth",
+      "assessment_type": "direct",
+      "severity": "high_attention",
+      "logic_expression": "revenue_growth_yoy < 0 AND operating_income_growth_yoy < 0 AND net_income_growth_yoy < 0",
+      "direct_metrics": ["revenue_growth_yoy", "operating_income_growth_yoy", "net_income_growth_yoy"],
+      "indirect_metrics": ["eps_growth_yoy"],
+      "threshold_basis": "directional",
+      "evidence_basis": "同時觀察營收與主要獲利指標的方向，屬通用財務分析。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "revenue_growth_yoy", "op": "lt", "value": 0},
+        {"feature": "operating_income_growth_yoy", "op": "lt", "value": 0},
+        {"feature": "net_income_growth_yoy", "op": "lt", "value": 0}
+      ]},
+      "rationale": "營收與主要獲利指標同步負成長，屬於較全面的基本面收縮訊號。"
+    },
+    {
+      "rule_id": "COM_PROFIT_001",
+      "name": "三項獲利率同步改善",
+      "dimension": "profitability",
+      "assessment_type": "direct",
+      "severity": "positive",
+      "logic_expression": "gross_margin_change_pp > 0 AND operating_margin_change_pp > 0 AND net_margin_change_pp > 0",
+      "direct_metrics": ["gross_margin", "operating_margin", "net_margin"],
+      "indirect_metrics": [],
+      "threshold_basis": "directional",
+      "evidence_basis": "毛利率、營業利益率與淨利率共同改善屬通用獲利能力訊號。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "gross_margin_change_pp", "op": "gt", "value": 0},
+        {"feature": "operating_margin_change_pp", "op": "gt", "value": 0},
+        {"feature": "net_margin_change_pp", "op": "gt", "value": 0}
+      ]},
+      "rationale": "三項利潤率同步改善，代表獲利能力改善較具一致性。"
+    },
+    {
+      "rule_id": "COM_PROFIT_002",
+      "name": "毛利率與營業利益率同步下滑",
+      "dimension": "profitability",
+      "assessment_type": "trend",
+      "severity": "attention",
+      "logic_expression": "gross_margin_change_pp <= -1 AND operating_margin_change_pp <= -1",
+      "direct_metrics": ["gross_margin", "operating_margin"],
+      "indirect_metrics": ["revenue_growth_yoy"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "1 個百分點為 MVP 的重大變動提示值，不是產業公認門檻；後續需以公司歷史與同業分布校準。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "gross_margin_change_pp", "op": "lte", "value": -1},
+        {"feature": "operating_margin_change_pp", "op": "lte", "value": -1}
+      ]},
+      "rationale": "兩個核心利潤率同時下降，比單一比率波動更值得關注。"
+    },
+    {
+      "rule_id": "COM_CASH_001",
+      "name": "帳面獲利為正但營業現金流為負",
+      "dimension": "cash_flow",
+      "assessment_type": "cross_factor",
+      "severity": "high_attention",
+      "logic_expression": "net_margin > 0 AND operating_cash_flow < 0",
+      "direct_metrics": ["operating_cash_flow", "cash_conversion_ratio"],
+      "indirect_metrics": ["net_margin"],
+      "threshold_basis": "accounting_directional",
+      "evidence_basis": "以營業現金流驗證帳面獲利是否轉化為現金，屬通用盈餘品質檢查。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "net_margin", "op": "gt", "value": 0},
+        {"feature": "operating_cash_flow", "op": "lt", "value": 0}
+      ]},
+      "rationale": "帳面獲利未轉化成營業現金時，需進一步檢視營運資金與非現金項目。"
+    },
+    {
+      "rule_id": "COM_CASH_002",
+      "name": "現金轉換能力偏弱",
+      "dimension": "cash_flow",
+      "assessment_type": "direct",
+      "severity": "attention",
+      "logic_expression": "cash_conversion_ratio < 0.8",
+      "direct_metrics": ["cash_conversion_ratio"],
+      "indirect_metrics": ["net_income_growth_yoy"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "0.8 倍為 MVP 提示值，不是會計準則或 IC 設計產業標準；應搭配歷史趨勢解讀。",
+      "evidence_references": [],
+      "condition": {"feature": "cash_conversion_ratio", "op": "lt", "value": 0.8},
+      "rationale": "營業現金流相對淨利偏低，代表盈餘轉化為現金的程度需要觀察。"
+    },
+    {
+      "rule_id": "COM_EQ_001",
+      "name": "淨利成長但營業現金流下降",
+      "dimension": "earnings_quality",
+      "assessment_type": "indirect",
+      "severity": "attention",
+      "logic_expression": "net_income_growth_yoy > 0 AND operating_cash_flow_change_percent < 0",
+      "direct_metrics": ["net_income_growth_yoy"],
+      "indirect_metrics": ["operating_cash_flow_change_percent", "cash_conversion_ratio"],
+      "threshold_basis": "directional",
+      "evidence_basis": "以營業現金流方向間接檢查淨利成長品質，屬通用盈餘品質分析。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "net_income_growth_yoy", "op": "gt", "value": 0},
+        {"feature": "operating_cash_flow_change_percent", "op": "lt", "value": 0}
+      ]},
+      "rationale": "淨利增加但營業現金流下降，代表帳面獲利與現金實現程度不同步。"
+    },
+    {
+      "rule_id": "COM_STRUCT_001",
+      "name": "短期流動性不足且持續惡化",
+      "dimension": "financial_structure",
+      "assessment_type": "trend",
+      "severity": "high_attention",
+      "logic_expression": "current_ratio < 100 AND current_ratio_change_pp < 0",
+      "direct_metrics": ["current_ratio"],
+      "indirect_metrics": ["operating_cash_flow", "free_cash_flow"],
+      "threshold_basis": "accounting_identity_plus_trend",
+      "evidence_basis": "流動比率 100% 表示流動資產等於流動負債；系統再要求比率仍下降，避免只靠單點門檻。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "current_ratio", "op": "lt", "value": 100},
+        {"feature": "current_ratio_change_pp", "op": "lt", "value": 0}
+      ]},
+      "rationale": "流動資產不足覆蓋流動負債且比率持續下降時，短期財務彈性需要優先觀察。"
+    },
+    {
+      "rule_id": "COM_STRUCT_002",
+      "name": "負債比快速上升且自由現金流為負",
+      "dimension": "financial_structure",
+      "assessment_type": "cross_factor",
+      "severity": "attention",
+      "logic_expression": "debt_ratio_change_pp >= 10 AND free_cash_flow < 0",
+      "direct_metrics": ["debt_ratio"],
+      "indirect_metrics": ["free_cash_flow", "current_ratio"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "10 個百分點為 MVP 的重大變動提示值，不是產業標準；透過 FCF 同時承壓才形成注意訊號。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "debt_ratio_change_pp", "op": "gte", "value": 10},
+        {"feature": "free_cash_flow", "op": "lt", "value": 0}
+      ]},
+      "rationale": "負債比快速增加且自由現金流轉負，代表財務結構與現金緩衝同時承壓。"
+    }
+  ]
+}
