@@ -1,0 +1,77 @@
+{
+  "version": "semiconductor-analysis-0.2.0",
+  "scope": "semiconductor",
+  "description": "半導體共通 overlay；聚焦產品組合、存貨循環與現金流，不把門檻宣稱為所有子產業通用標準。",
+  "rules": [
+    {
+      "rule_id": "SEM_PROFIT_001",
+      "name": "營收成長但毛利率與營業利益率同步壓縮",
+      "dimension": "profitability",
+      "assessment_type": "cross_factor",
+      "severity": "attention",
+      "logic_expression": "revenue_growth_yoy > 0 AND gross_margin_change_pp < 0 AND operating_margin_change_pp < 0",
+      "direct_metrics": ["gross_margin", "operating_margin"],
+      "indirect_metrics": ["revenue_growth_yoy"],
+      "threshold_basis": "directional",
+      "evidence_basis": "半導體營收成長可能同時伴隨產品組合、價格或成本變化，因此以毛利率與營業利益率檢查成長品質。",
+      "evidence_references": ["MediaTek 2024 Q3 Financial Results", "MediaTek 2024 Q4 Financial Results"],
+      "condition": {"all": [
+        {"feature": "revenue_growth_yoy", "op": "gt", "value": 0},
+        {"feature": "gross_margin_change_pp", "op": "lt", "value": 0},
+        {"feature": "operating_margin_change_pp", "op": "lt", "value": 0}
+      ]},
+      "rationale": "營收雖成長，但兩個核心利潤率同步下降時，不應直接把營收成長解讀成全面基本面改善。"
+    },
+    {
+      "rule_id": "SEM_INV_001",
+      "name": "存貨增速明顯高於營收",
+      "dimension": "operating_efficiency",
+      "assessment_type": "indirect",
+      "severity": "attention",
+      "logic_expression": "inventory_revenue_gap >= 15",
+      "direct_metrics": ["inventory_growth_yoy"],
+      "indirect_metrics": ["revenue_growth_yoy"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "半導體具有備貨與產品週期特性；15 個百分點只作 MVP 異常差距提示，後續需以子產業歷史分布校準。",
+      "evidence_references": ["MediaTek 2024 Q3 Financial Results", "MediaTek 2024 Q4 Financial Results"],
+      "condition": {"feature": "inventory_revenue_gap", "op": "gte", "value": 15},
+      "rationale": "存貨增加不能單獨判負面；只有增速明顯超前營收時才提高注意。"
+    },
+    {
+      "rule_id": "SEM_INV_002",
+      "name": "營收衰退且存貨逆勢增加",
+      "dimension": "operating_efficiency",
+      "assessment_type": "cross_factor",
+      "severity": "high_attention",
+      "logic_expression": "revenue_growth_yoy < 0 AND inventory_revenue_gap >= 30",
+      "direct_metrics": ["inventory_growth_yoy"],
+      "indirect_metrics": ["revenue_growth_yoy", "cash_conversion_ratio"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "30 個百分點為 MVP 強訊號門檻；重點在需求轉弱與存貨相對營收明顯背離同時出現。",
+      "evidence_references": ["MediaTek 2024 Q3 Financial Results", "MediaTek 2024 Q4 Financial Results"],
+      "condition": {"all": [
+        {"feature": "revenue_growth_yoy", "op": "lt", "value": 0},
+        {"feature": "inventory_revenue_gap", "op": "gte", "value": 30}
+      ]},
+      "rationale": "需求轉弱時存貨仍快速增加，比單獨看到存貨增加更能反映去化與營運資金壓力。"
+    },
+    {
+      "rule_id": "SEM_CASH_001",
+      "name": "自由現金流為負且營業現金流下降",
+      "dimension": "cash_flow",
+      "assessment_type": "cross_factor",
+      "severity": "attention",
+      "logic_expression": "free_cash_flow < 0 AND operating_cash_flow_change_percent < 0",
+      "direct_metrics": ["free_cash_flow", "operating_cash_flow"],
+      "indirect_metrics": ["net_income_growth_yoy"],
+      "threshold_basis": "directional",
+      "evidence_basis": "半導體公司投資型態差異大，因此不把單年負 FCF 直接列高風險；須同時看到 OCF 下降才提示現金壓力。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "free_cash_flow", "op": "lt", "value": 0},
+        {"feature": "operating_cash_flow_change_percent", "op": "lt", "value": 0}
+      ]},
+      "rationale": "負自由現金流本身可能來自投資，但若營業現金流也下降，現金來源與支出兩端同時承壓。"
+    }
+  ]
+}

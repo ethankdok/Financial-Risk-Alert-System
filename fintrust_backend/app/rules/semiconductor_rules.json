@@ -1,0 +1,97 @@
+{
+  "version": "semiconductor-mvp-0.2.0",
+  "industry": "半導體",
+  "threshold_basis": "可調式 MVP 預設門檻；正式研究版須以半導體子產業與公司歷史資料校準",
+  "rules": [
+    {
+      "rule_id": "SEM_DATA_001",
+      "name": "會計恆等式差異",
+      "category": "資料品質",
+      "metric": "accounting_equation_gap_percent",
+      "operator": "abs_max",
+      "thresholds": { "attention": 0.5, "high": 1.0 },
+      "unit": "%",
+      "rationale": "資產應近似等於負債加權益；差異過大時停止把資料視為可靠輸入。"
+    },
+    {
+      "rule_id": "SEM_DATA_002",
+      "name": "官方營收成長率重算差異",
+      "category": "資料品質",
+      "metric": "monthly_revenue_yoy_reported_gap",
+      "operator": "abs_max",
+      "thresholds": { "attention": 0.5, "high": 1.0 },
+      "unit": "百分點",
+      "rationale": "比較交易所揭露的成長率與系統由原始營收重算的結果，避免欄位或單位映射錯誤。"
+    },
+    {
+      "rule_id": "SEM_GROWTH_001",
+      "name": "單月營收年增率明顯衰退",
+      "category": "成長性",
+      "metric": "monthly_revenue_yoy",
+      "operator": "decline_band",
+      "thresholds": { "positive": 10.0, "attention": -10.0, "high": -20.0 },
+      "unit": "%",
+      "rationale": "以同月比較降低季節性影響；門檻保留設定檔，後續以半導體子產業分布校準。"
+    },
+    {
+      "rule_id": "SEM_GROWTH_002",
+      "name": "單月營收月增率明顯衰退",
+      "category": "成長性",
+      "metric": "monthly_revenue_mom",
+      "operator": "decline_band",
+      "thresholds": { "positive": 10.0, "attention": -15.0, "high": -30.0 },
+      "unit": "%",
+      "rationale": "月增率僅作短期訊號，不單獨形成最終結論。"
+    },
+    {
+      "rule_id": "SEM_PROFIT_001",
+      "name": "營業利益率轉負",
+      "category": "獲利能力",
+      "metric": "operating_margin",
+      "operator": "min",
+      "thresholds": { "attention": 0.0, "high": -5.0 },
+      "unit": "%",
+      "rationale": "營業利益率為負代表本業產生營業損失；嚴重程度依負值幅度分級。"
+    },
+    {
+      "rule_id": "SEM_PROFIT_002",
+      "name": "淨利率轉負",
+      "category": "獲利能力",
+      "metric": "net_margin",
+      "operator": "min",
+      "thresholds": { "attention": 0.0, "high": -5.0 },
+      "unit": "%",
+      "rationale": "淨利率為負表示整體期間損益為虧損，但仍須搭配非經常性項目解讀。"
+    },
+    {
+      "rule_id": "SEM_LIQ_001",
+      "name": "短期償債能力偏弱",
+      "category": "流動性",
+      "metric": "current_ratio",
+      "operator": "min",
+      "thresholds": { "attention": 100.0, "high": 75.0 },
+      "unit": "%",
+      "rationale": "流動資產低於流動負債時列為注意；門檻不是跨產業通用結論，正式版須依半導體子產業校準。"
+    },
+    {
+      "rule_id": "SEM_STRUCTURE_001",
+      "name": "負債比偏高",
+      "category": "財務結構",
+      "metric": "debt_ratio",
+      "operator": "max",
+      "thresholds": { "attention": 70.0, "high": 85.0 },
+      "unit": "%",
+      "rationale": "負債比只作結構壓力訊號，不直接等同財務危機；正式版需加入子產業與歷史基準。"
+    },
+    {
+      "rule_id": "SEM_STRUCTURE_002",
+      "name": "權益為負",
+      "category": "財務結構",
+      "metric": "equity_value",
+      "operator": "min",
+      "thresholds": { "attention": 0.0, "high": -1.0 },
+      "unit": "新台幣仟元",
+      "rationale": "權益為負屬重大財務結構訊號，需優先檢視財報與持續經營說明。"
+    }
+  ]
+}

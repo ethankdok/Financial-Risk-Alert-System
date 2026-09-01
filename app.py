@@ -8,6 +8,7 @@ from functools import wraps
 from pathlib import Path
 
 from flask import Flask, jsonify, request, session, send_from_directory
+from financial_routes import create_financial_blueprint
 from werkzeug.security import check_password_hash, generate_password_hash
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -19,6 +20,7 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
 )
+app.register_blueprint(create_financial_blueprint())
 
 
 def now_str() -> str:

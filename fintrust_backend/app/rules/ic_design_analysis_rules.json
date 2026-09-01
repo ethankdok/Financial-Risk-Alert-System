@@ -1,0 +1,196 @@
+{
+  "version": "ic-design-analysis-0.2.0",
+  "scope": "ic_design",
+  "subindustry": "IC 設計",
+  "description": "IC 設計產業 overlay；聚焦研發投入、產品組合、存貨與應收週轉、現金轉化。所有 heuristic 門檻均標示為 MVP 參數，不宣稱為產業公認標準。",
+  "rules": [
+    {
+      "rule_id": "IC_RD_001",
+      "name": "研發投入維持高投入趨勢",
+      "dimension": "rd_innovation",
+      "assessment_type": "trend",
+      "severity": "normal",
+      "logic_expression": "rd_expense_growth_yoy > 0 AND rd_intensity_change_pp >= -1",
+      "direct_metrics": ["rd_expense_growth_yoy", "rd_intensity"],
+      "indirect_metrics": ["revenue_growth_yoy"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "IC 設計競爭力高度依賴持續研發；研發費用增加只代表投入延續，不直接等同正向基本面。-1 個百分點僅用於避免營收快速成長造成比率小幅稀釋時誤判。",
+      "evidence_references": ["MediaTek Innovation - annual R&D investment target", "MediaTek 2024 Q3 Financial Results"],
+      "condition": {"all": [
+        {"feature": "rd_expense_growth_yoy", "op": "gt", "value": 0},
+        {"feature": "rd_intensity_change_pp", "op": "gte", "value": -1}
+      ]},
+      "rationale": "本規則只標記研發投入持續性，不把研發增加本身評為 positive；仍需由營收、毛利與現金流間接驗證轉化成果。"
+    },
+    {
+      "rule_id": "IC_RD_002",
+      "name": "研發費用與研發強度同步下降",
+      "dimension": "rd_innovation",
+      "assessment_type": "cross_factor",
+      "severity": "attention",
+      "logic_expression": "rd_expense_growth_yoy <= 0 AND rd_intensity_change_pp <= -2",
+      "direct_metrics": ["rd_expense_growth_yoy", "rd_intensity"],
+      "indirect_metrics": ["revenue_growth_yoy", "gross_margin"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "避免只因營收快速成長造成 R&D intensity 被稀釋就判定創新轉弱；只有研發費用本身未成長且強度明顯下降才提高注意。",
+      "evidence_references": ["MediaTek Innovation - annual R&D investment target"],
+      "condition": {"all": [
+        {"feature": "rd_expense_growth_yoy", "op": "lte", "value": 0},
+        {"feature": "rd_intensity_change_pp", "op": "lte", "value": -2}
+      ]},
+      "rationale": "研發金額與占營收比同步下降，比單看研發強度下降更能代表投入可能轉弱。"
+    },
+    {
+      "rule_id": "IC_RD_003",
+      "name": "研發投入轉化與產品去化同時承壓",
+      "dimension": "rd_innovation",
+      "assessment_type": "cross_factor",
+      "severity": "high_attention",
+      "logic_expression": "rd_intensity_change_pp >= 0 AND revenue_growth_yoy < 0 AND inventory_revenue_gap >= 15 AND cash_conversion_ratio < 0.8",
+      "direct_metrics": ["rd_intensity", "rd_expense_growth_yoy"],
+      "indirect_metrics": ["revenue_growth_yoy", "inventory_growth_yoy", "cash_conversion_ratio"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "研發增加本身不是風險；需同時看到營收衰退、存貨相對營收背離與現金轉換偏弱才形成高注意。",
+      "evidence_references": ["MediaTek 2024 Q3 Financial Results", "MediaTek 2024 Q4 Financial Results"],
+      "condition": {"all": [
+        {"feature": "rd_intensity_change_pp", "op": "gte", "value": 0},
+        {"feature": "revenue_growth_yoy", "op": "lt", "value": 0},
+        {"feature": "inventory_revenue_gap", "op": "gte", "value": 15},
+        {"feature": "cash_conversion_ratio", "op": "lt", "value": 0.8}
+      ]},
+      "rationale": "高研發投入若同時伴隨需求、去化與現金轉化壓力，才值得進一步追蹤投入轉化效率。"
+    },
+    {
+      "rule_id": "IC_PROFIT_001",
+      "name": "毛利率穩定但營業利益率受研發費用壓縮",
+      "dimension": "profitability",
+      "assessment_type": "cross_factor",
+      "severity": "attention",
+      "logic_expression": "revenue_growth_yoy >= 0 AND gross_margin_change_pp >= -0.5 AND operating_margin_change_pp <= -1 AND rd_intensity_change_pp >= 0.5",
+      "direct_metrics": ["gross_margin", "operating_margin"],
+      "indirect_metrics": ["rd_intensity", "revenue_growth_yoy"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "聯發科官方法說曾出現毛利率相對穩定、但 R&D 投入提高使營業利益率下降的情境，因此把 gross margin 與 operating margin 分開判讀。",
+      "evidence_references": ["MediaTek 2024 Q3 Financial Results"],
+      "condition": {"all": [
+        {"feature": "revenue_growth_yoy", "op": "gte", "value": 0},
+        {"feature": "gross_margin_change_pp", "op": "gte", "value": -0.5},
+        {"feature": "operating_margin_change_pp", "op": "lte", "value": -1},
+        {"feature": "rd_intensity_change_pp", "op": "gte", "value": 0.5}
+      ]},
+      "rationale": "毛利端沒有明顯惡化但營業利益率下降且研發強度提高時，較可能是營業費用吸收壓力而非產品毛利全面惡化；本規則只提示結構差異，不推定因果。"
+    },
+    {
+      "rule_id": "IC_OPS_001",
+      "name": "存貨週轉天數上升且營收未成長",
+      "dimension": "operating_efficiency",
+      "assessment_type": "indirect",
+      "severity": "attention",
+      "logic_expression": "inventory_turnover_days_change_absolute >= 15 AND revenue_growth_yoy <= 0",
+      "direct_metrics": ["inventory_turnover_days"],
+      "indirect_metrics": ["revenue_growth_yoy", "inventory_growth_yoy"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "聯發科官方固定揭露 inventory turnover days；週轉天數拉長比只看期末存貨增加更直接反映去化速度。15 天為 MVP 提示值。",
+      "evidence_references": ["MediaTek 2024 Q3 Financial Results", "MediaTek 2024 Q4 Financial Results", "MediaTek 2025 Q1 Financial Results"],
+      "condition": {"all": [
+        {"feature": "inventory_turnover_days_change_absolute", "op": "gte", "value": 15},
+        {"feature": "revenue_growth_yoy", "op": "lte", "value": 0}
+      ]},
+      "rationale": "存貨週轉天數明顯增加且營收沒有成長時，產品去化速度值得注意。"
+    },
+    {
+      "rule_id": "IC_OPS_002",
+      "name": "存貨成長與週轉效率同時惡化",
+      "dimension": "operating_efficiency",
+      "assessment_type": "cross_factor",
+      "severity": "high_attention",
+      "logic_expression": "inventory_revenue_gap >= 15 AND inventory_turnover_days_change_absolute >= 15",
+      "direct_metrics": ["inventory_growth_yoy", "inventory_turnover_days"],
+      "indirect_metrics": ["revenue_growth_yoy", "cash_conversion_ratio"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "同時使用存貨相對營收的量與週轉天數的速度，避免只用單一存貨餘額推論去化壓力。",
+      "evidence_references": ["MediaTek 2024 Q3 Financial Results", "MediaTek 2024 Q4 Financial Results"],
+      "condition": {"all": [
+        {"feature": "inventory_revenue_gap", "op": "gte", "value": 15},
+        {"feature": "inventory_turnover_days_change_absolute", "op": "gte", "value": 15}
+      ]},
+      "rationale": "存貨增速超前營收且週轉天數同步拉長時，比單一存貨成長訊號更能支持去化壓力判斷。"
+    },
+    {
+      "rule_id": "IC_OPS_003",
+      "name": "應收週轉天數上升且營業現金流下降",
+      "dimension": "operating_efficiency",
+      "assessment_type": "indirect",
+      "severity": "attention",
+      "logic_expression": "receivable_turnover_days_change_absolute >= 10 AND operating_cash_flow_change_percent < 0",
+      "direct_metrics": ["receivable_turnover_days"],
+      "indirect_metrics": ["operating_cash_flow", "revenue_growth_yoy"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "聯發科官方固定揭露 accounts receivable turnover days；週轉天數增加搭配 OCF 下降可作為收現效率轉弱的間接證據。10 天為 MVP 提示值。",
+      "evidence_references": ["MediaTek 2024 Q3 Financial Results", "MediaTek 2025 Q1 Financial Results"],
+      "condition": {"all": [
+        {"feature": "receivable_turnover_days_change_absolute", "op": "gte", "value": 10},
+        {"feature": "operating_cash_flow_change_percent", "op": "lt", "value": 0}
+      ]},
+      "rationale": "應收款回收速度變慢且營業現金流同步下降時，營運資金與收現效率需要持續觀察。"
+    },
+    {
+      "rule_id": "IC_INVEST_001",
+      "name": "研發投入伴隨營收與營業利益同步成長",
+      "dimension": "investment_efficiency",
+      "assessment_type": "indirect",
+      "severity": "positive",
+      "logic_expression": "rd_expense_growth_yoy > 0 AND revenue_growth_yoy > 0 AND operating_income_growth_yoy > 0 AND gross_margin_change_pp >= -1",
+      "direct_metrics": ["rd_expense_growth_yoy", "rd_intensity"],
+      "indirect_metrics": ["revenue_growth_yoy", "operating_income_growth_yoy", "gross_margin"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "IC 設計研發投入具有遞延效益，因此不要求單一年度存在因果；僅在投入增加同時看到營收、營業利益成長且毛利率未明顯惡化時列為初步正向轉化證據。",
+      "evidence_references": ["MediaTek Innovation - annual R&D investment target", "MediaTek 2024 Q3 Financial Results"],
+      "condition": {"all": [
+        {"feature": "rd_expense_growth_yoy", "op": "gt", "value": 0},
+        {"feature": "revenue_growth_yoy", "op": "gt", "value": 0},
+        {"feature": "operating_income_growth_yoy", "op": "gt", "value": 0},
+        {"feature": "gross_margin_change_pp", "op": "gte", "value": -1}
+      ]},
+      "rationale": "研發增加本身不列正向；只有多項營運結果同時改善時，才視為投入轉化的初步支持。"
+    },
+    {
+      "rule_id": "IC_INVEST_002",
+      "name": "研發支出增速遠高於營收且營收衰退",
+      "dimension": "investment_efficiency",
+      "assessment_type": "cross_factor",
+      "severity": "attention",
+      "logic_expression": "rd_revenue_growth_gap >= 20 AND revenue_growth_yoy < 0",
+      "direct_metrics": ["rd_expense_growth_yoy"],
+      "indirect_metrics": ["revenue_growth_yoy", "operating_margin"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "研發具有遞延效益，20 個百分點只作投入與當期營收背離的監控門檻，不代表研發失敗。",
+      "evidence_references": ["MediaTek Innovation - annual R&D investment target"],
+      "condition": {"all": [
+        {"feature": "rd_revenue_growth_gap", "op": "gte", "value": 20},
+        {"feature": "revenue_growth_yoy", "op": "lt", "value": 0}
+      ]},
+      "rationale": "投入增速與營收表現落差擴大時需要持續追蹤，但不得直接下研發失敗結論。"
+    },
+    {
+      "rule_id": "IC_INVEST_003",
+      "name": "高研發投入但營收、毛利與現金轉換同步承壓",
+      "dimension": "investment_efficiency",
+      "assessment_type": "cross_factor",
+      "severity": "high_attention",
+      "logic_expression": "rd_intensity_change_pp >= 2 AND revenue_growth_yoy < 0 AND gross_margin_change_pp <= -3 AND cash_conversion_ratio < 0.8",
+      "direct_metrics": ["rd_intensity"],
+      "indirect_metrics": ["revenue_growth_yoy", "gross_margin", "cash_conversion_ratio"],
+      "threshold_basis": "heuristic_mvp",
+      "evidence_basis": "以營收、毛利與現金轉換多方位間接驗證研發投入的當期營運承接狀況；2pp、3pp、0.8 均為待校準 MVP 參數。",
+      "evidence_references": ["MediaTek 2024 Q3 Financial Results", "MediaTek 2024 Q4 Financial Results"],
+      "condition": {"all": [
+        {"feature": "rd_intensity_change_pp", "op": "gte", "value": 2},
+        {"feature": "revenue_growth_yoy", "op": "lt", "value": 0},
+        {"feature": "gross_margin_change_pp", "op": "lte", "value": -3},
+        {"feature": "cash_conversion_ratio", "op": "lt", "value": 0.8}
+      ]},
+      "rationale": "只有高研發投入與多項營運結果同步承壓時才提高注意，避免把 IC 設計業正常的高研發支出直接視為風險。"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "version": "foundry-history-0.2.0",
+  "subindustry": "晶圓代工",
+  "threshold_basis": "晶圓代工資本密集特性＋公司自身歷史中位數；門檻為可調整 MVP 參數，後續以 foundry peer median / MAD 校準",
+  "evidence_basis": "晶圓代工高資本投入是產業常態，資本支出本身不直接列為風險；需同時觀察自由現金流與毛利率，避免把正常擴產誤判為負面。",
+  "evidence_references": [
+    "TWSE / MOPS official filings: capital expenditure, cash flow and income-statement fields",
+    "TSMC annual reports discuss capital spending as capacity and technology investment",
+    "docs/rule-evidence-and-llm-governance.md#foundry"
+  ],
+  "rules": [
+    {
+      "rule_id": "FOUNDRY_CAPEX_MARGIN_001",
+      "name": "擴產、自由現金流與毛利率壓力",
+      "category": "晶圓代工資本投入",
+      "rule_scope": "foundry",
+      "operator": "foundry_capex_margin_pressure",
+      "logic_expression": "capex_intensity > historical_median + gap AND free_cash_flow < 0 AND gross_margin_change_pp <= margin_drop",
+      "thresholds": {
+        "attention_capex_gap": 8.0,
+        "high_capex_gap": 15.0,
+        "attention_margin_drop": -2.0,
+        "high_margin_drop": -4.0
+      },
+      "metrics": ["capex_intensity", "free_cash_flow", "gross_margin"],
+      "rationale": "晶圓代工高資本支出本身不是負面；只有當投入明顯高於公司歷史基準，同時自由現金流為負且毛利率下滑時，才提高關注。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "company_history_threshold",
+      "evidence_basis": "高資本密集子產業應用公司自身歷史基準，並以現金流與毛利率作為資本投入是否形成壓力的交叉證據。",
+      "evidence_references": [
+        "TWSE / MOPS official filings: capital expenditure, cash flow and income-statement fields",
+        "TSMC annual reports discuss capital spending as capacity and technology investment",
+        "docs/rule-evidence-and-llm-governance.md#foundry"
+      ],
+      "llm_interpretation_guardrail": "LLM 可解釋資本投入、毛利率與自由現金流之間的關聯，但不得把高 CapEx 單獨判定為負面，也不得更改 deterministic verdict。"
+    }
+  ]
+}

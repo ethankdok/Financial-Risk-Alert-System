@@ -12,4 +12,41 @@
 </div>
 </div>
 </div>
-</div></main></div><script src="script.js"></script></body></html>
+</div><section class="content-card financial-evidence-section" data-financial-evidence>
+<div class="financial-section-head">
+<div>
+<span class="eyebrow">FINTRUST OFFICIAL EVIDENCE</span>
+<h2>財報與官方證據</h2>
+<p>以公開資訊觀測站與 FinTrust 財報規則引擎提供獨立的官方量化證據層。</p>
+</div>
+<span class="status-tag tag-blue" data-financial-state>等待查詢</span>
+</div>
+<div class="financial-loading" data-financial-loading>
+<div class="loading-bar"><i></i></div>
+<p class="muted-text">正在辨識查詢中的公司，並讀取 FinTrust 官方財報證據...</p>
+</div>
+<div class="financial-empty" data-financial-empty hidden></div>
+<div class="financial-content" data-financial-content hidden>
+<div class="financial-summary-grid" data-financial-summary></div>
+<div class="financial-block">
+<div class="section-row"><div><h3>財報核心數據</h3><p class="muted-text">直接呈現 backend 已計算的 key metrics，不在前端重算比率或門檻。</p></div></div>
+<div class="financial-metric-grid" data-financial-metrics></div>
+</div>
+<div class="financial-block">
+<div class="section-row"><div><h3>Deterministic Financial Rule Pipeline</h3><p class="muted-text">規則判斷、實際值、門檻與證據期間皆來自 FinTrust deterministic rule engine。</p></div></div>
+<div class="financial-rule-list" data-financial-rules></div>
+</div>
+<div class="financial-block">
+<div class="section-row"><div><h3>財務分析面向</h3><p class="muted-text">依 backend 回傳的 dimension assessments 動態呈現。</p></div></div>
+<div class="financial-dimension-grid" data-financial-dimensions></div>
+</div>
+<div class="financial-block financial-llm-block">
+<div class="section-row"><div><h3>AI 財報解讀</h3><p class="muted-text">此區為 FinTrust backend 的 Gemini 財報解讀，與原 AI 搜尋摘要分離。</p></div><span class="status-tag tag-blue" data-financial-llm-state>檢查中</span></div>
+<div data-financial-llm></div>
+</div>
+<div class="financial-block">
+<div class="section-row"><div><h3>官方補充證據</h3><p class="muted-text">包含法說會、重大訊息與可追溯官方來源；metadata-only 會忠實標示。</p></div></div>
+<div class="financial-official-grid" data-financial-official></div>
+</div>
+</div>
+</section></main></div><script src="script.js"></script></body></html>

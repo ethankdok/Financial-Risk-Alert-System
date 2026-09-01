@@ -1,0 +1,172 @@
+{
+  "version": "semiconductor-history-mvp-0.2.0",
+  "industry": "半導體",
+  "threshold_basis": "官方財報定義＋公司自身 3–5 年年度資料的可調式 MVP 門檻；後續須以半導體子產業分布、中位數與 MAD 校準",
+  "rules": [
+    {
+      "rule_id": "SEM_HIST_DATA_001",
+      "name": "歷史資料涵蓋不足",
+      "category": "資料品質",
+      "operator": "minimum_available_years",
+      "thresholds": { "minimum": 3 },
+      "metrics": [],
+      "rationale": "少於三個完整年度時，不應產生長期趨勢結論。",
+      "credibility_level": "official_standard",
+      "calibration_status": "official_definition",
+      "evidence_basis": "長期趨勢分析至少需要多期可比較官方財報；本規則不是財務風險本身，而是避免資料不足時過度解讀。",
+      "evidence_references": [
+        "MOPS / TWSE official annual financial filings",
+        "docs/rule-evidence-and-llm-governance.md#data-coverage"
+      ]
+    },
+    {
+      "rule_id": "SEM_HIST_GROWTH_001",
+      "name": "營收連續兩年衰退",
+      "category": "成長性",
+      "operator": "two_consecutive_below",
+      "thresholds": { "attention": 0.0, "high": -10.0 },
+      "metrics": ["revenue_growth_yoy"],
+      "rationale": "連續衰退比單一年度下滑更可能代表需求或產品週期壓力。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "company_history_threshold",
+      "evidence_basis": "營收是需求與產品週期的直接量化訊號；採連續兩期條件可降低單一年度景氣或匯率波動造成的誤判。",
+      "evidence_references": [
+        "MOPS / TWSE official income statement revenue fields",
+        "TSMC annual reports and investor disclosures discuss demand cycle / product mix effects on revenue",
+        "docs/rule-evidence-and-llm-governance.md#growth"
+      ]
+    },
+    {
+      "rule_id": "SEM_HIST_PROFIT_001",
+      "name": "毛利率明顯下滑",
+      "category": "獲利能力",
+      "operator": "latest_change_below",
+      "thresholds": { "attention": -3.0, "high": -5.0 },
+      "metrics": ["gross_margin"],
+      "rationale": "毛利率須以百分點變化判斷，並搭配產品組合、價格與產能利用率解讀。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "company_history_threshold",
+      "evidence_basis": "毛利率反映價格、成本、產品組合與產能利用率，不以單一水準跨公司比較，而以公司自身百分點變化做初步警示。",
+      "evidence_references": [
+        "MOPS / TWSE official income statement gross profit and revenue fields",
+        "TSMC annual reports define and discuss gross margin as key financial performance indicator",
+        "docs/rule-evidence-and-llm-governance.md#profitability"
+      ]
+    },
+    {
+      "rule_id": "SEM_HIST_INV_001",
+      "name": "存貨成長明顯高於營收",
+      "category": "營運效率",
+      "operator": "latest_gap_above",
+      "thresholds": { "attention": 15.0, "high": 30.0 },
+      "metrics": ["inventory_growth_yoy", "revenue_growth_yoy"],
+      "rationale": "存貨增速高於營收可能代表備貨、產品組合或去化壓力，不能只憑存貨增加單獨判定。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "company_history_threshold",
+      "evidence_basis": "半導體供需循環會反映在庫存與營收的相對變化；規則使用存貨與營收差距，而非單看存貨增加。",
+      "evidence_references": [
+        "MOPS / TWSE official balance sheet inventory and revenue fields",
+        "docs/rule-evidence-and-llm-governance.md#inventory-and-working-capital"
+      ]
+    },
+    {
+      "rule_id": "SEM_HIST_CASH_001",
+      "name": "淨利為正但營業現金流為負",
+      "category": "現金流品質",
+      "operator": "positive_profit_negative_ocf",
+      "thresholds": {},
+      "metrics": ["net_margin", "operating_cash_flow"],
+      "rationale": "獲利未轉化為營業現金時，應檢視應收帳款、存貨與非現金項目。",
+      "credibility_level": "official_standard",
+      "calibration_status": "official_definition",
+      "evidence_basis": "現金流量表與損益表之間的差異是盈餘品質分析的基本概念；正獲利但營業現金流為負需保守提示。",
+      "evidence_references": [
+        "MOPS / TWSE official income statement and cash-flow statement fields",
+        "docs/rule-evidence-and-llm-governance.md#earnings-quality"
+      ]
+    },
+    {
+      "rule_id": "SEM_HIST_CASH_002",
+      "name": "現金轉換能力連續偏弱",
+      "category": "現金流品質",
+      "operator": "two_consecutive_below",
+      "thresholds": { "attention": 0.8, "high": 0.5 },
+      "metrics": ["cash_conversion_ratio"],
+      "rationale": "營業現金流相對淨利連續偏低，可能表示盈餘品質需要進一步查核。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "literature_supported_mvp_threshold",
+      "evidence_basis": "現金轉換比用於檢查獲利是否能轉為營業現金；採連續兩期低於門檻避免單期營運資金變動造成過度警示。",
+      "evidence_references": [
+        "MOPS / TWSE official cash-flow and income statement fields",
+        "docs/rule-evidence-and-llm-governance.md#cash-flow-quality"
+      ]
+    },
+    {
+      "rule_id": "SEM_HIST_FCF_001",
+      "name": "自由現金流轉負",
+      "category": "現金流品質",
+      "operator": "latest_or_two_negative",
+      "thresholds": {},
+      "metrics": ["free_cash_flow"],
+      "rationale": "資本密集半導體公司可能因擴產出現短期負自由現金流，因此需區分單年與連續兩年。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "company_history_threshold",
+      "evidence_basis": "自由現金流結合營業現金流與資本支出；在半導體中不能單獨視為負面，而要與擴產、毛利率和負債結構一起解讀。",
+      "evidence_references": [
+        "MOPS / TWSE official cash-flow statement fields",
+        "TSMC annual reports include cash-flow and capital expenditure indicators",
+        "docs/rule-evidence-and-llm-governance.md#free-cash-flow"
+      ]
+    },
+    {
+      "rule_id": "SEM_HIST_CAPEX_001",
+      "name": "資本支出強度高於歷史基準且自由現金流為負",
+      "category": "半導體資本投入",
+      "operator": "latest_above_median_with_negative",
+      "thresholds": { "attention_gap": 10.0, "high_gap": 20.0 },
+      "metrics": ["capex_intensity", "free_cash_flow"],
+      "rationale": "資本支出高本身不是負面訊號；只有明顯高於公司歷史基準且現金流承壓時才提高注意。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "company_history_threshold",
+      "evidence_basis": "半導體產業具有資本密集特性；規則以公司自身歷史中位數作為基準，避免用跨產業固定數值誤判正常擴產。",
+      "evidence_references": [
+        "TSMC annual reports discuss capital spending as core capacity / technology investment",
+        "MOPS / TWSE official cash-flow statement capital expenditure fields",
+        "docs/rule-evidence-and-llm-governance.md#capex"
+      ]
+    },
+    {
+      "rule_id": "SEM_HIST_STRUCTURE_001",
+      "name": "負債比明顯上升且處於較高水準",
+      "category": "財務結構",
+      "operator": "latest_level_and_change_above",
+      "thresholds": { "level_attention": 70.0, "level_high": 85.0, "change_attention": 10.0 },
+      "metrics": ["debt_ratio"],
+      "rationale": "負債比需同時觀察絕對水準與自身歷史變化，不能直接套用跨產業固定標準。",
+      "credibility_level": "official_standard",
+      "calibration_status": "company_history_threshold",
+      "evidence_basis": "負債比是財務結構基本比率；但資本密集公司與輕資產公司水準不同，因此同步觀察水準與公司自身變化。",
+      "evidence_references": [
+        "MOPS / TWSE official balance sheet liabilities and assets fields",
+        "docs/rule-evidence-and-llm-governance.md#financial-structure"
+      ]
+    },
+    {
+      "rule_id": "SEM_HIST_RD_001",
+      "name": "研發投入趨勢",
+      "category": "半導體研發投入",
+      "operator": "informational_trend",
+      "thresholds": { "material_change": 2.0 },
+      "metrics": ["rd_intensity"],
+      "rationale": "研發投入可能具有遞延效益，本規則只提供中性趨勢觀察，不直接判定風險。",
+      "credibility_level": "peer_reviewed_literature",
+      "calibration_status": "literature_supported_mvp_threshold",
+      "evidence_basis": "台灣半導體相關文獻指出研發強度與公司績效存在關聯且可能有遞延效果；因此本規則只中性揭露趨勢，避免把研發增加誤判為風險。",
+      "evidence_references": [
+        "Sher & Yang (2005), Technovation, 25(1), 33-43",
+        "Chen & Wu (2020), Sustainability, 12(12), 5128",
+        "docs/rule-evidence-and-llm-governance.md#rd-intensity"
+      ]
+    }
+  ]
+}
