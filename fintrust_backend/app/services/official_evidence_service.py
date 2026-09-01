@@ -23,6 +23,11 @@ def _model_to_dict(value: Any) -> dict[str, Any] | None:
     return dict(value)
 
 
+def _prefer_available_records(items: list[Any]) -> list[Any]:
+    available = [item for item in items if getattr(item, "status", None) == "available"]
+    return available or items
+
+
 class OfficialEvidenceService:
     """Aggregate official quantitative and event disclosures for the shared frontend."""
 
@@ -44,16 +49,24 @@ class OfficialEvidenceService:
 
         snapshot_obj = self.repository.get_latest_snapshot(company.ticker) if self.repository else None
         snapshot = _model_to_dict(snapshot_obj)
-        conferences = (
-            build_investor_conference_metadata(company.ticker, fetch_live=fetch_conference_live)
-            if include_conferences
-            else []
-        )
-        material_events = (
-            build_material_event_metadata(company.ticker, year=material_event_year)
-            if include_material_events
-            else []
-        )
+        conferences = []
+        if include_conferences:
+            if fetch_conference_live:
+                conferences = build_investor_conference_metadata(company.ticker, fetch_live=True)
+            elif self.repository:
+                conferences = self.repository.list_investor_conferences(company.ticker)
+                conferences = _prefer_available_records(conferences)
+
+        material_events = []
+        if include_material_events:
+            if self.repository:
+                material_events = self.repository.list_material_events(company.ticker)
+                if material_event_year is not None:
+                    year_text = str(material_event_year)
+                    material_events = [item for item in material_events if (item.event_date or "").startswith(year_text)]
+                material_events = _prefer_available_records(material_events)
+            elif material_event_year is not None:
+                material_events = build_material_event_metadata(company.ticker, year=material_event_year)
 
         layers = []
         limitations: list[str] = []
@@ -85,9 +98,9 @@ class OfficialEvidenceService:
                     source_url=item.document_url or item.source_url,
                     status=item.status,
                     limitation=(
-                        "已偵測法說會附件或頁面文字 preview；PDF / 影音全文解析仍在後續階段。"
+                        f"已讀取 persisted {item.source_name} 法說會附件或頁面文字 preview。"
                         if item.status == "available"
-                        else "Phase 4 metadata MVP；尚未解析附件全文。"
+                        else "尚未取得可用 persisted 法說會資料；請執行 official-events refresh。"
                     ),
                 )
                 for item in conferences
@@ -98,9 +111,9 @@ class OfficialEvidenceService:
             sources.extend(
                 OfficialSourceLink(
                     source_name=item.source_name,
-                    source_url=item.source_url,
+                    source_url=item.detail_url or item.source_url,
                     status=item.status,
-                    limitation="Phase 5 metadata MVP；尚未批次解析公告清單。",
+                    limitation=f"已讀取 persisted {item.source_name} 重大訊息。" if item.status == "available" else "尚未取得可用 persisted 重大訊息；請執行 official-events refresh。",
                 )
                 for item in material_events
             )
@@ -118,11 +131,11 @@ class OfficialEvidenceService:
         if conferences:
             parsed_count = sum(1 for item in conferences if item.status == "available")
             if parsed_count:
-                summary_parts.append("已偵測法說會頁面文字或附件連結，可補充近期展望、產能、庫存與需求訊息。")
+                summary_parts.append("已納入 persisted 官方法說會／IR 頁面文字或附件連結，可補充近期展望、產能、庫存與需求訊息。")
             else:
-                summary_parts.append("已預留法說會 metadata 層，用於補充近期展望、產能、庫存與需求訊息。")
+                summary_parts.append("法說會 persisted evidence 尚未就緒，請由管理端執行 refresh。")
         if material_events:
-            summary_parts.append("已預留重大訊息 metadata 與事件分類層，用於補充更即時的官方事件。")
+            summary_parts.append("已納入 persisted 官方重大訊息與事件分類層，用於補充更即時的官方事件。")
         if not summary_parts:
             summary_parts.append("尚未取得可用官方證據，請先執行 refresh。")
 

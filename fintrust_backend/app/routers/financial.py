@@ -29,6 +29,7 @@ from app.official_event_models import (
     OfficialDocumentExtractionResult,
     OfficialEvidenceCardResponse,
     OfficialEvidenceSummary,
+    OfficialEventsRefreshResult,
 )
 from app.pipeline_models import (
     AnalysisRunSummary,
@@ -55,6 +56,7 @@ from app.services.official_document_extraction import (
     enrich_conferences_with_document_extraction,
 )
 from app.services.official_evidence_cards import OfficialEvidenceCardBuilder
+from app.services.official_event_ingestion import OfficialEventIngestionService
 from app.services.official_event_sources import (
     build_investor_conference_metadata,
     build_material_event_metadata,
@@ -173,11 +175,14 @@ def investor_conferences(
     ticker: str,
     fetch_live: bool = Query(
         default=False,
-        description="True 時嘗試讀取 MOPS 法說會頁面並解析 HTML preview / 附件連結；預設 False 以保持 demo 穩定。",
+        description="True 時診斷性讀取 MOPS live；預設 False 讀取 persisted official evidence。",
     ),
+    repository: AnalysisRepository = Depends(get_analysis_repository),
 ) -> list[InvestorConferenceRecord]:
     try:
-        return build_investor_conference_metadata(ticker, fetch_live=fetch_live)
+        if fetch_live:
+            return build_investor_conference_metadata(ticker, fetch_live=True)
+        return repository.list_investor_conferences(ticker)
     except UnsupportedCompanyError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -208,9 +213,19 @@ def material_events(
     ticker: str,
     year: int | None = Query(default=None, ge=2019, le=datetime.now().year),
     title: str | None = Query(default=None),
+    fetch_live: bool = Query(default=False, description="True 時診斷性讀取 MOPS live；預設 False 讀取 persisted official evidence。"),
+    fetch_details: bool = Query(default=False),
+    repository: AnalysisRepository = Depends(get_analysis_repository),
 ) -> list[MaterialEventRecord]:
     try:
-        return build_material_event_metadata(ticker, year=year, title=title)
+        if fetch_live:
+            return build_material_event_metadata(ticker, year=year, title=title, fetch_live=True, fetch_details=fetch_details)
+        events = repository.list_material_events(ticker)
+        if year is not None:
+            events = [event for event in events if (event.event_date or "").startswith(str(year))]
+        if title:
+            events = [event for event in events if title in event.title]
+        return events
     except UnsupportedCompanyError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -285,6 +300,33 @@ async def refresh_company_pipeline(
     if result.status == "failed":
         raise HTTPException(status_code=502, detail=result.error or "Financial refresh failed.")
     return result
+
+
+@router.post(
+    "/admin/companies/{ticker}/official-events/refresh",
+    response_model=OfficialEventsRefreshResult,
+    dependencies=[Depends(require_ingestion_token)],
+)
+def refresh_company_official_events(
+    ticker: str,
+    include_conferences: bool = Query(default=True),
+    include_material_events: bool = Query(default=True),
+    material_event_year: int | None = Query(default=None, ge=2019, le=datetime.now().year),
+    extract_documents: bool = Query(default=True),
+    material_fetch_details: bool = Query(default=True),
+    repository: AnalysisRepository = Depends(get_analysis_repository),
+) -> OfficialEventsRefreshResult:
+    try:
+        return OfficialEventIngestionService(repository=repository).refresh_company(
+            ticker,
+            include_conferences=include_conferences,
+            include_material_events=include_material_events,
+            material_event_year=material_event_year,
+            extract_documents=extract_documents,
+            material_fetch_details=material_fetch_details,
+        )
+    except UnsupportedCompanyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post(

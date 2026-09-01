@@ -6,6 +6,7 @@ from typing import Any
 from app.financial_analysis_models import FinancialStatementAnalysisReport
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.models import FinancialFact
+from app.official_event_models import InvestorConferenceRecord, MaterialEventRecord
 from app.pipeline_models import AnalysisRunSummary, FrontendAnalysisSnapshot, PersistenceCounts
 from app.services.analysis_repository import (
     document_id,
@@ -15,6 +16,7 @@ from app.services.analysis_repository import (
     metric_rows,
     rule_rows,
 )
+from app.services.official_event_sources import investor_conference_identity, material_event_identity
 
 
 class FirestoreAnalysisRepository:
@@ -138,6 +140,93 @@ class FirestoreAnalysisRepository:
         payload = document.to_dict() or {}
         payload.pop("updated_at", None)
         return FrontendAnalysisSnapshot.model_validate(payload)
+
+    def save_official_events(
+        self,
+        *,
+        ticker: str,
+        investor_conferences: list[InvestorConferenceRecord],
+        material_events: list[MaterialEventRecord],
+        refreshed_at: datetime,
+    ) -> dict[str, int]:
+        batch = self.client.batch()
+        for record in investor_conferences:
+            event_id = investor_conference_identity(record)
+            payload = record.model_copy(update={"event_id": event_id, "retrieved_at": record.retrieved_at or refreshed_at})
+            batch.set(
+                self.client.collection("official_events").document(f"investor_conference:{event_id}"),
+                {
+                    "event_type": "investor_conference",
+                    "event_id": event_id,
+                    "ticker": ticker,
+                    "company_name": payload.company_name,
+                    "event_date": payload.conference_date,
+                    "event_time": None,
+                    "title": payload.title,
+                    "source_url": payload.source_url,
+                    "detail_url": payload.document_url,
+                    "status": payload.status,
+                    "payload": payload.model_dump(mode="python"),
+                    "retrieved_at": refreshed_at,
+                },
+                merge=True,
+            )
+        for record in material_events:
+            event_id = material_event_identity(record)
+            payload = record.model_copy(update={"event_id": event_id, "retrieved_at": record.retrieved_at or refreshed_at})
+            batch.set(
+                self.client.collection("official_events").document(f"material_event:{event_id}"),
+                {
+                    "event_type": "material_event",
+                    "event_id": event_id,
+                    "ticker": ticker,
+                    "company_name": payload.company_name,
+                    "event_date": payload.event_date,
+                    "event_time": payload.event_time,
+                    "title": payload.title,
+                    "source_url": payload.source_url,
+                    "detail_url": payload.detail_url,
+                    "status": payload.status,
+                    "payload": payload.model_dump(mode="python"),
+                    "retrieved_at": refreshed_at,
+                },
+                merge=True,
+            )
+        batch.commit()
+        return {"investor_conferences": len(investor_conferences), "material_events": len(material_events)}
+
+    def list_investor_conferences(self, ticker: str, limit: int = 20) -> list[InvestorConferenceRecord]:
+        from google.cloud.firestore_v1.base_query import FieldFilter
+
+        documents = (
+            self.client.collection("official_events")
+            .where(filter=FieldFilter("ticker", "==", ticker))
+            .where(filter=FieldFilter("event_type", "==", "investor_conference"))
+            .stream()
+        )
+        rows = [document.to_dict() or {} for document in documents]
+        rows.sort(key=lambda row: (str(row.get("event_date") or ""), str(row.get("retrieved_at") or "")), reverse=True)
+        return [InvestorConferenceRecord.model_validate(row.get("payload") or {}) for row in rows[:limit]]
+
+    def list_material_events(self, ticker: str, limit: int = 50) -> list[MaterialEventRecord]:
+        from google.cloud.firestore_v1.base_query import FieldFilter
+
+        documents = (
+            self.client.collection("official_events")
+            .where(filter=FieldFilter("ticker", "==", ticker))
+            .where(filter=FieldFilter("event_type", "==", "material_event"))
+            .stream()
+        )
+        rows = [document.to_dict() or {} for document in documents]
+        rows.sort(
+            key=lambda row: (
+                str(row.get("event_date") or ""),
+                str(row.get("event_time") or ""),
+                str(row.get("retrieved_at") or ""),
+            ),
+            reverse=True,
+        )
+        return [MaterialEventRecord.model_validate(row.get("payload") or {}) for row in rows[:limit]]
 
     def list_metrics(
         self,

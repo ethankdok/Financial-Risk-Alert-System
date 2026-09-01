@@ -198,6 +198,29 @@ class FinTrustClient:
             params={"year": year, "title": title},
         )
 
+    def refresh_official_events(
+        self,
+        ticker: str,
+        *,
+        include_conferences: bool = True,
+        include_material_events: bool = True,
+        material_event_year: int | None = None,
+        extract_documents: bool = True,
+        material_fetch_details: bool = True,
+    ) -> Any:
+        return self.request(
+            "POST",
+            f"/api/v1/financial/admin/companies/{ticker}/official-events/refresh",
+            params={
+                "include_conferences": str(include_conferences).lower(),
+                "include_material_events": str(include_material_events).lower(),
+                "material_event_year": material_event_year,
+                "extract_documents": str(extract_documents).lower(),
+                "material_fetch_details": str(material_fetch_details).lower(),
+            },
+            include_ingestion_token=True,
+        )
+
     def metrics(self, ticker: str, *, latest_only: bool = True, limit: int = 1000) -> Any:
         return self.request(
             "GET",

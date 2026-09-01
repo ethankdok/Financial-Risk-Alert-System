@@ -48,6 +48,14 @@ def create_financial_blueprint(client: FinTrustClient | None = None):
             status,
         )
 
+    def bool_param(payload: dict[str, Any], name: str, default: bool) -> bool:
+        value = payload.get(name, request.args.get(name))
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
     @blueprint.get("/api/financial/health")
     def health():
         try:
@@ -166,6 +174,29 @@ def create_financial_blueprint(client: FinTrustClient | None = None):
             return to_response({"success": True, "data": get_client().analysis_runs(ticker)})
         except FinTrustClientError as exc:
             return handle_error(exc)
+
+    @blueprint.post("/api/financial/admin/companies/<ticker>/official-events/refresh")
+    def refresh_official_events(ticker: str):
+        try:
+            payload = request.get_json(silent=True) or {}
+            year = payload.get("material_event_year") or request.args.get("material_event_year")
+            return to_response(
+                {
+                    "success": True,
+                    "data": get_client().refresh_official_events(
+                        ticker,
+                        include_conferences=bool_param(payload, "include_conferences", True),
+                        include_material_events=bool_param(payload, "include_material_events", True),
+                        material_event_year=int(year) if year else None,
+                        extract_documents=bool_param(payload, "extract_documents", True),
+                        material_fetch_details=bool_param(payload, "material_fetch_details", True),
+                    ),
+                }
+            )
+        except (ValueError, FinTrustClientError) as exc:
+            if isinstance(exc, FinTrustClientError):
+                return handle_error(exc)
+            return to_response({"success": False, "error": "Invalid official-events refresh parameters."}, 400)
 
     @blueprint.post("/api/financial/admin/companies/<ticker>/refresh")
     def refresh_company(ticker: str):

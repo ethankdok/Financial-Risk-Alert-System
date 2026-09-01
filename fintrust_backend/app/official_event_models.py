@@ -112,6 +112,7 @@ class OfficialDocumentExtractionResult(BaseModel):
 
 
 class InvestorConferenceRecord(BaseModel):
+    event_id: str | None = None
     ticker: str
     company_name: str
     subindustry: str
@@ -135,17 +136,21 @@ class InvestorConferenceRecord(BaseModel):
     document_extractions: list[OfficialDocumentExtractionResult] = Field(default_factory=list)
     summary: str | None = None
     limitations: list[str] = Field(default_factory=list)
+    retrieved_at: datetime | None = None
 
 
 class MaterialEventRecord(BaseModel):
+    event_id: str | None = None
     ticker: str
     company_name: str
     subindustry: str
     event_date: str | None = None
+    event_time: str | None = None
     title: str
     category: MaterialEventCategory = "other"
     source_name: str = "公開資訊觀測站 重大訊息"
     source_url: str
+    detail_url: str | None = None
     status: OfficialEvidenceSourceStatus = "metadata_only"
     raw_text: str | None = None
     related_metrics: list[str] = Field(default_factory=list)
@@ -153,6 +158,7 @@ class MaterialEventRecord(BaseModel):
     summary: str | None = None
     disclosure_claims: list[OfficialDisclosureClaim] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
+    retrieved_at: datetime | None = None
 
 
 class OfficialEvidenceSummary(BaseModel):
@@ -195,3 +201,18 @@ class OfficialEvidenceCardResponse(BaseModel):
     source_status: dict[str, Any] = Field(default_factory=dict)
     limitations: list[str] = Field(default_factory=list)
     frontend_hints: dict[str, Any] = Field(default_factory=dict)
+
+
+class OfficialEventsRefreshResult(BaseModel):
+    ticker: str
+    company_name: str
+    subindustry: str
+    refreshed_at: datetime
+    source_mode: Literal["official", "metadata_only"] = "official"
+    investor_conference_count: int = 0
+    material_event_count: int = 0
+    persisted: dict[str, int] = Field(default_factory=dict)
+    live_source_outcome: dict[str, str] = Field(default_factory=dict)
+    investor_conferences: list[InvestorConferenceRecord] = Field(default_factory=list)
+    material_events: list[MaterialEventRecord] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)

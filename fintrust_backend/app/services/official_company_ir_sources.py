@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from urllib.parse import unquote
 from datetime import datetime, timezone
 from html import unescape
 from pathlib import Path
@@ -12,6 +13,8 @@ from app.official_event_models import InvestorConferenceRecord
 from app.services.company_registry import get_company
 from app.services.official_event_sources import (
     CONFERENCE_TOPIC_METRICS,
+    _dedupe,
+    _stable_hash,
     infer_conference_topics,
     infer_official_claims,
     parse_investor_conference_html,
@@ -22,10 +25,8 @@ SPACE_RE = re.compile(r"\s+")
 LIVE_DEBUG_LIMIT = 1200
 BLOCKED_ERROR_MARKERS = ("403", "forbidden", "access denied")
 
-# Official company IR pages are used only as a Phase 4 fallback when MOPS returns
-# a search shell / no-data page. They do not replace MOPS; they preserve a path to
-# official conference/presentation evidence so Phase 4 can keep moving while MOPS
-# form parameters are being tuned.
+# Official company IR pages are a stable official source for conference documents
+# when exchange HTML pages are blocked or do not expose attachments directly.
 OFFICIAL_IR_FALLBACK_URLS: dict[str, list[str]] = {
     "2330": [
         "https://investor.tsmc.com/english/quarterly-results/2026/q2",
@@ -130,6 +131,30 @@ IR_KEYWORDS = (
     "影音",
     "財務暨營運報告說明會",
 )
+MEDIATEK_QUARTERLY_DOC_RE = re.compile(
+    r'<a\s+href="(?P<url>https://www\.mediatek\.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/'
+    r'(?P<year>\d{4})/Quarterly%20Earnings%20Release-(?P=year)Q(?P<quarter>[1-4])/(?P<file>[^"]+))"[^>]*>\s*</a>\s*<span>(?P<label>[^<]+)</span>',
+    re.IGNORECASE,
+)
+MEDIATEK_INVITATION_DATE_RE = re.compile(
+    r"\b(?P<month>January|February|March|April|May|June|July|August|September|October|November|December)\s+"
+    r"(?P<day>\d{1,2})\s+(?P<year>\d{4})\b",
+    re.IGNORECASE,
+)
+MONTHS = {
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
+}
 
 
 def _strip_tags(value: str) -> str:
@@ -200,6 +225,97 @@ def _all_variants_blocked(variants: list[dict[str, Any]]) -> bool:
     )
 
 
+def _mediatek_conference_date_from_docs(docs: list[dict[str, str]]) -> str | None:
+    for item in docs:
+        haystack = unquote(f"{item.get('url', '')} {item.get('label', '')} {item.get('file', '')}")
+        match = MEDIATEK_INVITATION_DATE_RE.search(haystack)
+        if not match:
+            continue
+        month = MONTHS[match.group("month").casefold()]
+        return f"{int(match.group('year')):04d}-{month:02d}-{int(match.group('day')):02d}"
+    return None
+
+
+def _preferred_mediatek_document(docs: list[dict[str, str]]) -> dict[str, str] | None:
+    preferred = ("Transcript", "Presentation", "Earnings call invitation", "Press Release", "Financial Statements")
+    for label in preferred:
+        for item in docs:
+            if item.get("label") == label:
+                return item
+    return docs[0] if docs else None
+
+
+def parse_mediatek_quarterly_earnings_html(
+    html: str,
+    *,
+    max_items: int = 3,
+    source_url: str = "https://www.mediatek.com/investor-relations/financial-information",
+) -> list[InvestorConferenceRecord]:
+    company = get_company("2454")
+    if company is None:
+        raise ValueError("Unsupported company for MediaTek official IR parser: 2454")
+    grouped: dict[tuple[int, int], list[dict[str, str]]] = {}
+    for match in MEDIATEK_QUARTERLY_DOC_RE.finditer(html):
+        year = int(match.group("year"))
+        quarter = int(match.group("quarter"))
+        grouped.setdefault((year, quarter), []).append(
+            {
+                "url": match.group("url"),
+                "label": _strip_tags(match.group("label")),
+                "file": match.group("file"),
+            }
+        )
+
+    records: list[InvestorConferenceRecord] = []
+    for (year, quarter), docs in sorted(grouped.items(), reverse=True):
+        if not any((item.get("label") or "").casefold() in {"earnings call invitation", "presentation", "transcript"} for item in docs):
+            continue
+        preferred = _preferred_mediatek_document(docs)
+        if preferred is None:
+            continue
+        labels = [item["label"] for item in docs]
+        evidence_text = (
+            f"MediaTek {year} Q{quarter} quarterly earnings release page lists "
+            f"{', '.join(labels)} for the investor conference, including official presentation/transcript materials where available. "
+            "The company IR source is used as official recent conference evidence with revenue, financial results, operating report and outlook context."
+        )
+        topics = infer_conference_topics(evidence_text, company.subindustry)
+        claims = infer_official_claims(evidence_text, source_url=source_url)
+        records.append(
+            InvestorConferenceRecord(
+                event_id=_stable_hash("investor_conference", "company_official_ir", company.ticker, year, quarter, preferred["url"]),
+                ticker=company.ticker,
+                company_name=company.name,
+                subindustry=company.subindustry,
+                fiscal_year=year,
+                quarter=quarter,
+                conference_date=_mediatek_conference_date_from_docs(docs),
+                title=f"MediaTek {year} Q{quarter} Results - Investors Conference",
+                source_name="company_official_ir",
+                source_url=source_url,
+                document_url=preferred["url"],
+                status="available",
+                document_extract_status="document_link_found",
+                document_title=preferred["label"],
+                document_text_preview=evidence_text[:800],
+                document_text_length=len(evidence_text),
+                source_evidence=_dedupe([*labels, *(item["url"] for item in docs), *topics]),
+                extracted_topics=topics[:max_items],
+                related_metrics=CONFERENCE_TOPIC_METRICS.get(company.subindustry, []),
+                disclosure_claims=claims,
+                summary="已從 MediaTek 官方 IR quarterly earnings release 頁面取得 investor conference 文件連結與官方文字脈絡。",
+                limitations=[
+                    "此筆資料來自 company_official_ir，不標示為 MOPS；MOPS 可用時仍作為額外官方來源。",
+                    "頁面 parser 保留 presentation/transcript/press release/financial statements URL；PDF 文字抽取由既有 document extraction service 處理。",
+                ],
+                retrieved_at=datetime.now(timezone.utc),
+            )
+        )
+        if len(records) >= max_items:
+            break
+    return records
+
+
 def _seeded_official_records(
     ticker: str,
     *,
@@ -220,7 +336,7 @@ def _seeded_official_records(
                 company_name=company.name,
                 subindustry=company.subindustry,
                 title=item["title"],
-                source_name="公司官方投資人關係網站（search-index fallback）",
+                source_name="company_official_ir",
                 source_url=item["source_url"],
                 document_url=item.get("document_url"),
                 status="available",
@@ -267,7 +383,7 @@ def _preview_record_from_ir_page(
         company_name=company.name,
         subindustry=company.subindustry,
         title=f"{company.name} 公司官方 IR 法說會／Investor Conference 頁面",
-        source_name="公司官方投資人關係網站",
+        source_name="company_official_ir",
         source_url=source_url,
         status="available",
         document_extract_status="html_preview",
@@ -277,11 +393,12 @@ def _preview_record_from_ir_page(
         related_metrics=CONFERENCE_TOPIC_METRICS.get(company.subindustry, []),
         disclosure_claims=claims,
         source_evidence=topics[:max_items] + ([text[:160]] if text else []),
-        summary="MOPS 法說會 live query 目前僅回 shell/no-data，因此暫以公司官方 IR 頁面作為 Phase 4 官方文字 fallback。",
+        summary="已從公司官方 IR 頁面取得 investor conference 相關官方文字 preview。",
         limitations=[
-            "此為公司官方 IR fallback，不取代 MOPS；後續仍需補正 MOPS 法說會表單參數與附件解析。",
-            "目前只保存 HTML preview / 官方 IR 連結；PDF / presentation / transcript 全文抽取仍待下一步接入。",
+            "此筆資料來自 company_official_ir，不標示為 MOPS；MOPS 可用時仍作為額外官方來源。",
+            "若頁面未直接提供文件連結，系統保留 HTML preview 與官方 IR URL。",
         ],
+        retrieved_at=datetime.now(timezone.utc),
     )
 
 
@@ -334,6 +451,32 @@ def build_official_ir_fallback_metadata(
         "blocked_by_source": blocked_by_source,
         "fallback_mode": "live_html" if best else None,
     }
+    if company.ticker == "2454":
+        mediatek_records: list[InvestorConferenceRecord] = []
+        for variant in variants:
+            if variant.get("status") != "fetched" or not variant.get("html"):
+                continue
+            mediatek_records.extend(
+                parse_mediatek_quarterly_earnings_html(
+                    str(variant["html"]),
+                    max_items=max_items,
+                    source_url=str(variant["url"]),
+                )
+            )
+        if mediatek_records:
+            deduped: dict[str, InvestorConferenceRecord] = {}
+            for record in mediatek_records:
+                deduped.setdefault(record.event_id or record.document_url or record.title, record)
+            debug.update(
+                {
+                    "available": True,
+                    "fallback_mode": "company_official_ir_quarterly_earnings",
+                    "best_url": next(iter(deduped.values())).source_url,
+                    "best_score": max(int(variant.get("score") or 0) for variant in variants),
+                    "record_count": len(deduped),
+                }
+            )
+            return list(deduped.values())[:max_items], debug
     if best is None:
         if blocked_by_source and company.ticker in SEEDED_OFFICIAL_IR_INDEX:
             blocked_reason = "公司官方 IR 網站在 Codespaces live fetch 回傳 403 Forbidden；改用官方 search-index fallback。"
@@ -361,8 +504,8 @@ def build_official_ir_fallback_metadata(
         enriched: list[InvestorConferenceRecord] = []
         for record in available_records[:max_items]:
             limitations = list(record.limitations)
-            limitations.append("此筆資料來自公司官方 IR fallback；MOPS 法說會 live query 仍需後續補正。")
-            enriched.append(record.model_copy(update={"source_name": "公司官方投資人關係網站", "limitations": limitations}))
+            limitations.append("此筆資料來自 company_official_ir；MOPS 可用時仍作為額外官方來源。")
+            enriched.append(record.model_copy(update={"source_name": "company_official_ir", "limitations": limitations}))
         return enriched, debug
 
     text = _strip_tags(str(best["html"]))

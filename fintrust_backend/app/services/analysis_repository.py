@@ -4,14 +4,18 @@ import hashlib
 import json
 import os
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+from collections.abc import Iterator
 from typing import Any, Protocol
 
 from app.financial_analysis_models import FinancialStatementAnalysisReport
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.models import FinancialFact
+from app.official_event_models import InvestorConferenceRecord, MaterialEventRecord
 from app.pipeline_models import AnalysisRunSummary, FrontendAnalysisSnapshot, PersistenceCounts
+from app.services.official_event_sources import investor_conference_identity, material_event_identity
 
 
 HISTORICAL_FACT_FIELDS = [
@@ -56,6 +60,16 @@ class AnalysisRepository(Protocol):
     ) -> PersistenceCounts: ...
 
     def get_latest_snapshot(self, ticker: str) -> FrontendAnalysisSnapshot | None: ...
+    def save_official_events(
+        self,
+        *,
+        ticker: str,
+        investor_conferences: list[InvestorConferenceRecord],
+        material_events: list[MaterialEventRecord],
+        refreshed_at: datetime,
+    ) -> dict[str, int]: ...
+    def list_investor_conferences(self, ticker: str, limit: int = 20) -> list[InvestorConferenceRecord]: ...
+    def list_material_events(self, ticker: str, limit: int = 50) -> list[MaterialEventRecord]: ...
     def list_metrics(
         self,
         ticker: str,
@@ -232,10 +246,15 @@ class SqliteAnalysisRepository:
         Path(database_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.database_path)
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            yield connection
+            connection.commit()
+        finally:
+            connection.close()
 
     def _init_schema(self) -> None:
         with self._connect() as connection:
@@ -281,6 +300,23 @@ class SqliteAnalysisRepository:
                 ticker TEXT PRIMARY KEY, run_id TEXT NOT NULL,
                 snapshot_json TEXT NOT NULL, updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS official_events (
+                event_type TEXT NOT NULL,
+                event_id TEXT NOT NULL,
+                ticker TEXT NOT NULL,
+                company_name TEXT NOT NULL,
+                event_date TEXT,
+                event_time TEXT,
+                title TEXT NOT NULL,
+                source_url TEXT NOT NULL,
+                detail_url TEXT,
+                status TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                retrieved_at TEXT NOT NULL,
+                PRIMARY KEY (event_type, event_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_official_events_ticker_type
+                ON official_events (ticker, event_type, event_date DESC, retrieved_at DESC);
             """)
 
     def save_pipeline_result(
@@ -357,6 +393,105 @@ class SqliteAnalysisRepository:
                 "SELECT snapshot_json FROM latest_analysis_snapshots WHERE ticker = ?", (ticker,)
             ).fetchone()
         return FrontendAnalysisSnapshot.model_validate_json(row["snapshot_json"]) if row else None
+
+    def save_official_events(
+        self,
+        *,
+        ticker: str,
+        investor_conferences: list[InvestorConferenceRecord],
+        material_events: list[MaterialEventRecord],
+        refreshed_at: datetime,
+    ) -> dict[str, int]:
+        conference_count = 0
+        material_count = 0
+        with self._connect() as connection:
+            for record in investor_conferences:
+                event_id = investor_conference_identity(record)
+                payload = record.model_copy(update={"event_id": event_id, "retrieved_at": record.retrieved_at or refreshed_at})
+                connection.execute(
+                    """INSERT INTO official_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(event_type, event_id) DO UPDATE SET
+                        ticker=excluded.ticker,
+                        company_name=excluded.company_name,
+                        event_date=excluded.event_date,
+                        event_time=excluded.event_time,
+                        title=excluded.title,
+                        source_url=excluded.source_url,
+                        detail_url=excluded.detail_url,
+                        status=excluded.status,
+                        payload_json=excluded.payload_json,
+                        retrieved_at=excluded.retrieved_at""",
+                    (
+                        "investor_conference",
+                        event_id,
+                        ticker,
+                        payload.company_name,
+                        payload.conference_date,
+                        None,
+                        payload.title,
+                        payload.source_url,
+                        payload.document_url,
+                        payload.status,
+                        to_json(payload.model_dump(mode="json")),
+                        refreshed_at.isoformat(),
+                    ),
+                )
+                conference_count += 1
+            for record in material_events:
+                event_id = material_event_identity(record)
+                payload = record.model_copy(update={"event_id": event_id, "retrieved_at": record.retrieved_at or refreshed_at})
+                connection.execute(
+                    """INSERT INTO official_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(event_type, event_id) DO UPDATE SET
+                        ticker=excluded.ticker,
+                        company_name=excluded.company_name,
+                        event_date=excluded.event_date,
+                        event_time=excluded.event_time,
+                        title=excluded.title,
+                        source_url=excluded.source_url,
+                        detail_url=excluded.detail_url,
+                        status=excluded.status,
+                        payload_json=excluded.payload_json,
+                        retrieved_at=excluded.retrieved_at""",
+                    (
+                        "material_event",
+                        event_id,
+                        ticker,
+                        payload.company_name,
+                        payload.event_date,
+                        payload.event_time,
+                        payload.title,
+                        payload.source_url,
+                        payload.detail_url,
+                        payload.status,
+                        to_json(payload.model_dump(mode="json")),
+                        refreshed_at.isoformat(),
+                    ),
+                )
+                material_count += 1
+        return {"investor_conferences": conference_count, "material_events": material_count}
+
+    def list_investor_conferences(self, ticker: str, limit: int = 20) -> list[InvestorConferenceRecord]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """SELECT payload_json FROM official_events
+                WHERE ticker = ? AND event_type = 'investor_conference'
+                ORDER BY COALESCE(event_date, '') DESC, retrieved_at DESC
+                LIMIT ?""",
+                (ticker, limit),
+            ).fetchall()
+        return [InvestorConferenceRecord.model_validate_json(row["payload_json"]) for row in rows]
+
+    def list_material_events(self, ticker: str, limit: int = 50) -> list[MaterialEventRecord]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """SELECT payload_json FROM official_events
+                WHERE ticker = ? AND event_type = 'material_event'
+                ORDER BY COALESCE(event_date, '') DESC, COALESCE(event_time, '') DESC, retrieved_at DESC
+                LIMIT ?""",
+                (ticker, limit),
+            ).fetchall()
+        return [MaterialEventRecord.model_validate_json(row["payload_json"]) for row in rows]
 
     def list_metrics(
         self,

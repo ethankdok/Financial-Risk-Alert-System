@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import re
+import ssl
 from datetime import datetime, timezone
 from html import unescape
 from pathlib import Path
@@ -67,6 +68,15 @@ def _decode_bytes(raw: bytes, content_type: str | None = None) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
+def _verified_ssl_context():
+    try:
+        import truststore
+
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except Exception:
+        return None
+
+
 def _extract_pdf_text(raw: bytes, *, max_chars: int) -> tuple[str | None, str | None]:
     try:
         from pypdf import PdfReader  # type: ignore
@@ -106,7 +116,7 @@ class OfficialDocumentExtractionService:
     def _open(self, request: Request) -> Any:
         if self.opener is not None:
             return self.opener(request, self.timeout_seconds)
-        return urlopen(request, timeout=self.timeout_seconds)  # noqa: S310 - official URL supplied by backend source registry.
+        return urlopen(request, timeout=self.timeout_seconds, context=_verified_ssl_context())  # noqa: S310 - official URL supplied by backend source registry.
 
     def extract(self, request_payload: OfficialDocumentExtractionRequest) -> OfficialDocumentExtractionResult:
         company = get_company(request_payload.ticker)
@@ -189,7 +199,7 @@ class OfficialDocumentExtractionService:
                 related_metrics=related_metrics,
                 disclosure_claims=claims,
                 limitations=[
-                    "文件文字抽取為 Phase 4 MVP preview；仍需後續加入更完整的 PDF/table parsing 與 Gemini bounded summary。"
+                    "文件文字抽取已支援官方 PDF / HTML preview；較複雜表格或影音內容仍保留官方連結供人工覆核。"
                 ],
                 debug={**debug, "topics": topics},
             )

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import re
+import hashlib
+import ssl
 from datetime import datetime, timezone
 from html import unescape
 from pathlib import Path
 from typing import Any, Iterable
-from urllib.parse import urljoin, urlencode
+from urllib.parse import parse_qsl, urljoin, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 from app.official_event_models import (
@@ -21,6 +23,7 @@ from app.services.financial_analysis_service import UnsupportedCompanyError
 
 
 MOPS_BASE = "https://mops.twse.com.tw/mops/web"
+TWSE_MATERIAL_EVENTS_OPENAPI_URL = "https://openapi.twse.com.tw/v1/opendata/t187ap04_L"
 
 CONFERENCE_TOPIC_METRICS: dict[str, list[str]] = {
     "晶圓代工": ["capex_intensity", "free_cash_flow", "gross_margin", "operating_margin", "debt_ratio"],
@@ -56,6 +59,16 @@ CELL_RE = re.compile(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", re.IGNORECASE | re.DOTALL)
 TAG_RE = re.compile(r"<[^>]+>")
 SPACE_RE = re.compile(r"\s+")
 DATE_RE = re.compile(r"(?P<year>20\d{2}|1\d{2})[./\-年](?P<month>\d{1,2})[./\-月](?P<day>\d{1,2})")
+TIME_RE = re.compile(r"(?P<hour>[0-2]?\d):(?P<minute>[0-5]\d)(?::(?P<second>[0-5]\d))?")
+ROC_COMPACT_DATE_RE = re.compile(r"^(?P<year>\d{3})(?P<month>\d{2})(?P<day>\d{2})$")
+TWSE_CONFERENCE_KEYWORDS = (
+    "法人說明會",
+    "法說會",
+    "投資人說明會",
+    "investor conference",
+    "earnings conference",
+    "conference call",
+)
 DOCUMENT_KEYWORDS = (
     "pdf", "ppt", "pptx", "簡報", "法人", "法說", "video", "影音", "錄影", "錄音", "下載", "download", "presentation"
 )
@@ -77,6 +90,19 @@ def _dedupe(items: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(item for item in items if item))
 
 
+def _canonical_url(value: str | None) -> str:
+    if not value:
+        return ""
+    parsed = urlparse(value.strip())
+    query = urlencode(sorted(parse_qsl(parsed.query, keep_blank_values=True)))
+    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", query, ""))
+
+
+def _stable_hash(*parts: object) -> str:
+    raw = "|".join(str(part or "") for part in parts)
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+
+
 def _extract_first_date(text: str) -> str | None:
     match = DATE_RE.search(text)
     if not match:
@@ -87,8 +113,46 @@ def _extract_first_date(text: str) -> str | None:
     return f"{year:04d}-{int(match.group('month')):02d}-{int(match.group('day')):02d}"
 
 
+def _extract_first_time(text: str) -> str | None:
+    match = TIME_RE.search(text)
+    if not match:
+        return None
+    second = match.group("second") or "00"
+    return f"{int(match.group('hour')):02d}:{int(match.group('minute')):02d}:{int(second):02d}"
+
+
+def _parse_twse_date(value: object) -> str | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    match = ROC_COMPACT_DATE_RE.match(text)
+    if match:
+        return f"{int(match.group('year')) + 1911:04d}-{int(match.group('month')):02d}-{int(match.group('day')):02d}"
+    return _extract_first_date(text)
+
+
+def _parse_twse_time(value: object) -> str | None:
+    digits = re.sub(r"\D", "", str(value or ""))
+    if not digits:
+        return None
+    digits = digits.zfill(6)
+    if len(digits) > 6:
+        digits = digits[-6:]
+    return f"{int(digits[:2]):02d}:{int(digits[2:4]):02d}:{int(digits[4:6]):02d}"
+
+
 def _preview_text(text: str, *, limit: int = 800) -> str:
     return _strip_tags(text)[:limit]
+
+
+def _is_blocked_by_source_text(text: str) -> bool:
+    normalized = text.casefold()
+    return (
+        "for security reasons" in normalized
+        or "location.href = location.origin" in normalized
+        or "無法呈現" in text
+        or "無法顯示" in text
+    )
 
 
 def _current_roc_year() -> int:
@@ -102,6 +166,37 @@ def _decode_response(raw: bytes) -> str:
         except UnicodeDecodeError:
             continue
     return raw.decode("utf-8", errors="replace")
+
+
+def _verified_ssl_context():
+    try:
+        import truststore
+
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except Exception:
+        return None
+
+
+def _public_request_json(url: str, *, timeout_seconds: float = 10.0) -> Any:
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "FinTrustAlert-MIS-Project/0.1 (+https://github.com/UnaLu027/fintrust-alert)",
+            "Accept": "application/json,text/plain,*/*",
+        },
+    )
+    with urlopen(request, timeout=timeout_seconds, context=_verified_ssl_context()) as response:  # noqa: S310 - official public OpenAPI endpoint
+        raw = response.read()
+    return json.loads(_decode_response(raw))
+
+
+def _twse_field(row: dict[str, Any], *names: str) -> str:
+    normalized = {str(key).strip(): value for key, value in row.items()}
+    for name in names:
+        value = normalized.get(name.strip())
+        if value is not None:
+            return str(value).strip()
+    return ""
 
 
 def _claim_from_keyword(
@@ -175,6 +270,27 @@ def material_event_query_url(ticker: str, year: int | None = None) -> str:
     return f"{MOPS_BASE}/t05st01?{urlencode(params)}"
 
 
+def investor_conference_identity(record: InvestorConferenceRecord) -> str:
+    return record.event_id or _stable_hash(
+        "investor_conference",
+        record.ticker,
+        record.conference_date,
+        _canonical_url(record.document_url or record.source_url),
+        record.title,
+    )
+
+
+def material_event_identity(record: MaterialEventRecord) -> str:
+    return record.event_id or _stable_hash(
+        "material_event",
+        record.ticker,
+        record.event_date,
+        record.event_time,
+        _canonical_url(record.detail_url or record.source_url),
+        record.title,
+    )
+
+
 def _conference_query_params(ticker: str, *, year: int | None = None) -> dict[str, str]:
     params = {
         "encodeURIComponent": "1",
@@ -204,11 +320,11 @@ def _mops_request(url: str, *, params: dict[str, str] | None = None, method: str
             "User-Agent": "FinTrustAlert-MIS-Project/0.1 (+https://github.com/UnaLu027/fintrust-alert)",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Referer": investor_conference_query_url(str((params or {}).get("co_id", ""))),
+            "Referer": f"{MOPS_BASE}/mops",
         },
         method=method,
     )
-    with urlopen(request, timeout=timeout_seconds) as response:  # noqa: S310 - official public disclosure page
+    with urlopen(request, timeout=timeout_seconds, context=_verified_ssl_context()) as response:  # noqa: S310 - official public disclosure page
         raw = response.read()
     return _decode_response(raw)
 
@@ -234,19 +350,21 @@ def _html_score(html: str, company_name: str) -> int:
 
 def _summarize_html_variant(*, strategy: str, url: str, html: str | None = None, error: str | None = None, company_name: str = "") -> dict[str, Any]:
     text = _strip_tags(html or "")
+    blocked = bool(text and _is_blocked_by_source_text(text))
     return {
         "strategy": strategy,
         "url": url,
-        "status": "error" if error else "fetched",
+        "status": "error" if error else "blocked_by_source" if blocked else "fetched",
         "error": error,
         "html_length": len(html or ""),
         "text_length": len(text),
-        "score": _html_score(html or "", company_name) if html else 0,
+        "score": -100 if blocked else _html_score(html or "", company_name) if html else 0,
         "has_table": "<table" in (html or "").casefold(),
         "anchor_count": len(ANCHOR_RE.findall(html or "")),
         "contains_company_name": bool(company_name and company_name in text),
         "contains_conference_keywords": any(keyword in text for keyword in ("法人說明會", "法說會", "簡報", "影音")),
         "contains_no_data_phrase": any(no_data in text for no_data in ("查無資料", "無符合條件", "無資料")),
+        "blocked_by_source": blocked,
         "text_preview": text[:LIVE_DEBUG_LIMIT],
     }
 
@@ -333,6 +451,15 @@ def _extract_document_links(html: str, source_url: str) -> list[tuple[str, str]]
     return list(dict.fromkeys(links))
 
 
+def _extract_links(html: str, source_url: str) -> list[tuple[str, str]]:
+    links: list[tuple[str, str]] = []
+    for href, label_html in ANCHOR_RE.findall(html):
+        label = _strip_tags(label_html)
+        absolute = urljoin(source_url, href)
+        links.append((absolute, label or absolute))
+    return list(dict.fromkeys(links))
+
+
 def _extract_table_rows(html: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row_html in TR_RE.findall(html):
@@ -378,15 +505,17 @@ def _record_from_conference_text(
     status = "available" if links or claims or len(text) >= 40 else "metadata_only"
     extract_status = "document_link_found" if links else "html_preview" if status == "available" else "metadata_only"
     limitations = [
-        "Phase 4 已開始解析 MOPS 法說會 HTML/table row；PDF / 簡報全文解析與影音逐字稿仍待下一步接入。",
+        "系統已支援 MOPS 法說會資料取得、官方附件解析、文件文字抽取、topics / claims 整理與持久化。",
         "法說會內容屬管理層展望，僅能作為官方文字證據，仍需與年度財報指標交叉檢查。",
     ]
     if not links:
         limitations.append("本筆法說會列未偵測到附件連結；保留 row text preview 供 parser debug 與人工覆核。")
     return InvestorConferenceRecord(
+        event_id=_stable_hash("investor_conference", company.ticker, _extract_first_date(text), _canonical_url(document_url or source), title),
         ticker=company.ticker,
         company_name=company.name,
         subindustry=company.subindustry,
+        source_name="mops",
         conference_date=_extract_first_date(text),
         title=title,
         source_url=source,
@@ -406,6 +535,7 @@ def _record_from_conference_text(
             else None
         ),
         limitations=limitations,
+        retrieved_at=datetime.now(timezone.utc),
     )
 
 
@@ -455,15 +585,17 @@ def parse_investor_conference_html(
     status = "available" if links or claims or has_useful_preview else "metadata_only"
     extract_status = "document_link_found" if links else "html_preview" if has_useful_preview else "metadata_only"
     limitations = [
-        "Phase 4 目前支援 MOPS 法說會頁面 HTML preview、table row 與附件連結偵測；PDF / 簡報全文解析與影音逐字稿仍待下一步接入。",
+        "系統已支援 MOPS 法說會資料取得、官方附件解析、文件文字抽取、topics / claims 整理與持久化。",
         "法說會內容屬管理層展望，僅能作為官方文字證據，仍需與年度財報指標交叉檢查。",
     ]
     if not links:
         limitations.append("本次 HTML 未偵測到 PDF / 簡報 / 影音附件連結；保留 MOPS 查詢入口與 debug 檔供下一步調整 POST/table parser。")
     page_record = InvestorConferenceRecord(
+        event_id=_stable_hash("investor_conference", company.ticker, _extract_first_date(page_text), _canonical_url(document_url or source), f"{company.name} 法人說明會資料"),
         ticker=company.ticker,
         company_name=company.name,
         subindustry=company.subindustry,
+        source_name="mops",
         conference_date=_extract_first_date(page_text),
         title=f"{company.name} 法人說明會資料",
         source_url=source,
@@ -483,6 +615,7 @@ def parse_investor_conference_html(
             else None
         ),
         limitations=limitations,
+        retrieved_at=datetime.now(timezone.utc),
     )
     if page_record.status == "available":
         return [page_record, *records[: max_items - 1]] if records else [page_record]
@@ -502,12 +635,47 @@ def build_investor_conference_metadata(
     if html is not None:
         return parse_investor_conference_html(company.ticker, html, source_url=url, max_items=max_items)
     if fetch_live:
+        twse_records: list[InvestorConferenceRecord] = []
+        try:
+            twse_records = build_twse_investor_conference_metadata(company.ticker, max_items=max_items)
+        except Exception:
+            twse_records = []
+        try:
+            from app.services.official_company_ir_sources import build_official_ir_fallback_metadata
+
+            ir_records, _debug = build_official_ir_fallback_metadata(company.ticker, max_items=max_items, debug_dir=debug_dir)
+            combined = _dedupe_conference_records([*twse_records, *ir_records])
+            if combined:
+                return combined[:max_items]
+        except Exception:
+            if twse_records:
+                return twse_records[:max_items]
         try:
             variants = fetch_investor_conference_html_variants(company.ticker)
             if debug_dir is not None:
                 write_investor_conference_debug_files(company.ticker, variants, debug_dir)
             best = _best_html_variant(variants)
             if best is None:
+                errors = [str(variant.get("error")) for variant in variants if variant.get("status") == "error"]
+                blocked = [variant for variant in variants if variant.get("status") == "blocked_by_source"]
+                if blocked and len(blocked) == len(variants):
+                    return [
+                        _metadata_only_conference_record(
+                            company.ticker,
+                            max_items=max_items,
+                            extra_limitations=["MOPS live fetch 被來源安全機制阻擋；保留 persisted previous evidence 或 metadata 查詢入口。"],
+                            status="blocked_by_source",
+                        )
+                    ]
+                if errors and len(errors) == len(variants):
+                    return [
+                        _metadata_only_conference_record(
+                            company.ticker,
+                            max_items=max_items,
+                            extra_limitations=[f"MOPS live fetch 全部失敗：{errors[0]}"],
+                            status="error",
+                        )
+                    ]
                 return [
                     _metadata_only_conference_record(
                         company.ticker,
@@ -518,6 +686,8 @@ def build_investor_conference_metadata(
                 ]
             return parse_investor_conference_html(company.ticker, str(best["html"]), source_url=url, max_items=max_items)
         except Exception as exc:  # pragma: no cover - live MOPS availability is external
+            if twse_records:
+                return twse_records[:max_items]
             return [
                 _metadata_only_conference_record(
                     company.ticker,
@@ -527,6 +697,13 @@ def build_investor_conference_metadata(
                 )
             ]
     return [_metadata_only_conference_record(company.ticker, max_items=max_items)]
+
+
+def _dedupe_conference_records(records: list[InvestorConferenceRecord]) -> list[InvestorConferenceRecord]:
+    deduped: dict[str, InvestorConferenceRecord] = {}
+    for record in records:
+        deduped.setdefault(investor_conference_identity(record), record)
+    return list(deduped.values())
 
 
 def _metadata_only_conference_record(
@@ -545,15 +722,17 @@ def _metadata_only_conference_record(
         "庫存、現金流與財務結構",
     ]
     limitations = [
-        "目前為 Phase 4 metadata MVP：先保存 MOPS 法說會查詢入口與子產業關聯指標，尚未解析 PDF 或影音逐字稿。",
-        "正式 scraper 需依 MOPS 表單與各公司申報附件欄位補充文件 URL、日期與簡報文字。",
+        "系統已支援 MOPS 法說會資料取得、官方附件解析、文件文字抽取、topics / claims 整理與持久化。",
+        "若 MOPS 回傳來源安全機制頁面、附件不存在或文件格式無法解析，系統會保留來源狀態與既有 persisted evidence。",
     ]
     if extra_limitations:
         limitations.extend(extra_limitations)
     return InvestorConferenceRecord(
+        event_id=_stable_hash("investor_conference", company.ticker, None, _canonical_url(url), f"{company.name} 法人說明會資料查詢入口"),
         ticker=company.ticker,
         company_name=company.name,
         subindustry=company.subindustry,
+        source_name="mops",
         title=f"{company.name} 法人說明會資料查詢入口",
         source_url=url,
         status=status,  # type: ignore[arg-type]
@@ -562,15 +741,382 @@ def _metadata_only_conference_record(
         related_metrics=related_metrics,
         source_evidence=topics[:max_items],
         limitations=limitations,
+        retrieved_at=datetime.now(timezone.utc),
     )
 
 
 def classify_material_event(title: str, raw_text: str | None = None) -> tuple[MaterialEventCategory, list[str], bool]:
-    text = f"{title} {raw_text or ''}".casefold()
+    title_text = title.casefold()
+    body_text = (raw_text or "").casefold()
+    best: tuple[int, int, MaterialEventCategory, tuple[str, ...]] | None = None
     for category, keywords, metrics in MATERIAL_EVENT_KEYWORDS:
-        if any(keyword.casefold() in text for keyword in keywords):
-            return category, list(metrics), True
+        title_hits = sum(1 for keyword in keywords if keyword.casefold() in title_text)
+        body_hits = sum(1 for keyword in keywords if keyword.casefold() in body_text)
+        score = title_hits * 3 + body_hits
+        if score <= 0:
+            continue
+        candidate = (score, title_hits, category, metrics)
+        if best is None or candidate[:2] > best[:2]:
+            best = candidate
+    if best is not None:
+        return best[2], list(best[3]), True
     return "other", [], False
+
+
+def fetch_twse_material_event_rows(*, timeout_seconds: float = 10.0) -> list[dict[str, Any]]:
+    payload = _public_request_json(TWSE_MATERIAL_EVENTS_OPENAPI_URL, timeout_seconds=timeout_seconds)
+    if not isinstance(payload, list):
+        raise RuntimeError("TWSE material-information OpenAPI did not return a JSON list.")
+    return [row for row in payload if isinstance(row, dict)]
+
+
+def filter_twse_material_event_rows(ticker: str, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    company = _require_company(ticker)
+    return [row for row in rows if _twse_field(row, "公司代號") == company.ticker]
+
+
+def _twse_openapi_raw_text(row: dict[str, Any]) -> str:
+    parts = [
+        f"出表日期：{_twse_field(row, '出表日期')}",
+        f"發言日期：{_twse_field(row, '發言日期')}",
+        f"發言時間：{_twse_field(row, '發言時間')}",
+        f"公司代號：{_twse_field(row, '公司代號')}",
+        f"公司名稱：{_twse_field(row, '公司名稱')}",
+        f"符合條款：{_twse_field(row, '符合條款')}",
+        f"事實發生日：{_twse_field(row, '事實發生日')}",
+        f"主旨：{_twse_field(row, '主旨')}",
+        f"說明：{_twse_field(row, '說明')}",
+    ]
+    return "\n".join(part for part in parts if not part.endswith("："))
+
+
+def parse_twse_material_event_rows(
+    ticker: str,
+    rows: list[dict[str, Any]],
+    *,
+    max_items: int = 5,
+) -> list[MaterialEventRecord]:
+    company = _require_company(ticker)
+    records: list[MaterialEventRecord] = []
+    for row in filter_twse_material_event_rows(company.ticker, rows):
+        title = _twse_field(row, "主旨") or f"{company.name} TWSE 重大訊息"
+        description = _twse_field(row, "說明")
+        clause = _twse_field(row, "符合條款")
+        announcement_date = _parse_twse_date(_twse_field(row, "發言日期"))
+        announcement_time = _parse_twse_time(_twse_field(row, "發言時間"))
+        fact_date = _parse_twse_date(_twse_field(row, "事實發生日"))
+        raw_text = _twse_openapi_raw_text(row)
+        category, related_metrics, risk_related = classify_material_event(title, description)
+        records.append(
+            MaterialEventRecord(
+                event_id=_stable_hash("material_event", "twse_openapi", company.ticker, announcement_date, announcement_time, fact_date, clause, title),
+                ticker=company.ticker,
+                company_name=_twse_field(row, "公司名稱") or company.name,
+                subindustry=company.subindustry,
+                event_date=fact_date or announcement_date,
+                event_time=announcement_time,
+                title=title,
+                category=category,
+                source_name="twse_openapi",
+                source_url=TWSE_MATERIAL_EVENTS_OPENAPI_URL,
+                status="available",
+                raw_text=_preview_text(raw_text, limit=1800),
+                related_metrics=related_metrics,
+                risk_related=risk_related,
+                summary=f"TWSE OpenAPI 上市公司每日重大訊息；符合條款：{clause or '未提供'}；發言日期：{announcement_date or '未提供'}。",
+                disclosure_claims=_claims_for_material_event(
+                    category=category,
+                    title=title,
+                    raw_text=description or raw_text,
+                    related_metrics=related_metrics,
+                    source_url=TWSE_MATERIAL_EVENTS_OPENAPI_URL,
+                    risk_related=risk_related,
+                ),
+                limitations=[
+                    "此筆資料來自 TWSE OpenAPI 上市公司每日重大訊息；若當日 feed 未含該公司，系統才會回到 MOPS fallback。",
+                    "OpenAPI feed 不提供 MOPS 明細頁 URL；系統保留發言日期、發言時間、符合條款、事實發生日與說明全文。",
+                ],
+                retrieved_at=datetime.now(timezone.utc),
+            )
+        )
+        if len(records) >= max_items:
+            break
+    return records
+
+
+def build_twse_material_event_metadata(ticker: str, *, max_items: int = 5) -> list[MaterialEventRecord]:
+    return parse_twse_material_event_rows(ticker, fetch_twse_material_event_rows(), max_items=max_items)
+
+
+def build_twse_investor_conference_metadata(ticker: str, *, max_items: int = 3) -> list[InvestorConferenceRecord]:
+    company = _require_company(ticker)
+    rows = filter_twse_material_event_rows(company.ticker, fetch_twse_material_event_rows())
+    records: list[InvestorConferenceRecord] = []
+    for row in rows:
+        title = _twse_field(row, "主旨")
+        description = _twse_field(row, "說明")
+        text = f"{title}\n{description}"
+        if not any(keyword.casefold() in text.casefold() for keyword in TWSE_CONFERENCE_KEYWORDS):
+            continue
+        conference_date = _parse_twse_date(_twse_field(row, "事實發生日")) or _parse_twse_date(_twse_field(row, "發言日期"))
+        conference_time = _parse_twse_time(_twse_field(row, "發言時間"))
+        topics = infer_conference_topics(text, company.subindustry)
+        claims = infer_official_claims(text, source_url=TWSE_MATERIAL_EVENTS_OPENAPI_URL)
+        records.append(
+            InvestorConferenceRecord(
+                event_id=_stable_hash("investor_conference", "twse_openapi", company.ticker, conference_date, conference_time, _twse_field(row, "符合條款"), title),
+                ticker=company.ticker,
+                company_name=_twse_field(row, "公司名稱") or company.name,
+                subindustry=company.subindustry,
+                conference_date=conference_date,
+                title=title or f"{company.name} 法人說明會公告",
+                source_name="twse_openapi",
+                source_url=TWSE_MATERIAL_EVENTS_OPENAPI_URL,
+                status="available",
+                document_extract_status="html_preview",
+                document_text_preview=_preview_text(_twse_openapi_raw_text(row), limit=800),
+                document_text_length=len(_twse_openapi_raw_text(row)),
+                extracted_topics=topics[:max_items],
+                related_metrics=CONFERENCE_TOPIC_METRICS.get(company.subindustry, []),
+                disclosure_claims=claims,
+                source_evidence=_dedupe([title, _twse_field(row, "符合條款"), *topics]),
+                summary="TWSE OpenAPI 重大訊息 feed 偵測到法說會相關官方公告；後續以公司官方 IR 文件補足 presentation / transcript。",
+                limitations=[
+                    "TWSE OpenAPI 用於偵測法說會公告；presentation / transcript 文件仍以公司官方 IR 或 MOPS 附件補足。",
+                ],
+                retrieved_at=datetime.now(timezone.utc),
+            )
+        )
+        if len(records) >= max_items:
+            break
+    return records
+
+
+def _material_event_query_params(ticker: str, *, year: int | None = None) -> dict[str, str]:
+    params = {
+        "encodeURIComponent": "1",
+        "step": "1",
+        "firstin": "1",
+        "off": "1",
+        "TYPEK": "all",
+        "co_id": ticker,
+    }
+    if year is not None:
+        params["year"] = str(year - 1911 if year > 1911 else year)
+    return params
+
+
+def fetch_material_event_html_variants(
+    ticker: str,
+    *,
+    year: int | None = None,
+    timeout_seconds: float = 10.0,
+) -> list[dict[str, Any]]:
+    company = _require_company(ticker)
+    params = _material_event_query_params(company.ticker, year=year)
+    attempts: list[tuple[str, str, str, dict[str, str]]] = [
+        ("get_entry", "GET", f"{MOPS_BASE}/t05st01", params),
+        ("get_ajax", "GET", f"{MOPS_BASE}/ajax_t05st01", params),
+        ("post_ajax", "POST", f"{MOPS_BASE}/ajax_t05st01", params),
+    ]
+    variants: list[dict[str, Any]] = []
+    for strategy, method, endpoint, attempt_params in attempts:
+        final_url = f"{endpoint}?{urlencode(attempt_params)}" if method == "GET" else endpoint
+        try:
+            html = _mops_request(endpoint, params=attempt_params, method=method, timeout_seconds=timeout_seconds)
+            text = _strip_tags(html)
+            blocked = _is_blocked_by_source_text(text)
+            variants.append({
+                "strategy": strategy,
+                "url": final_url,
+                "status": "blocked_by_source" if blocked else "fetched",
+                "html_length": len(html),
+                "text_length": len(text),
+                "score": -100 if blocked else _html_score(html, company.name) + (50 if "重大訊息" in text else 0),
+                "has_table": "<table" in html.casefold(),
+                "anchor_count": len(ANCHOR_RE.findall(html)),
+                "contains_company_name": company.name in text,
+                "contains_material_event_keywords": "重大訊息" in text or "公告" in text,
+                "contains_no_data_phrase": any(no_data in text for no_data in ("查無資料", "無符合條件", "無資料")),
+                "blocked_by_source": blocked,
+                "text_preview": text[:LIVE_DEBUG_LIMIT],
+                "html": html,
+            })
+        except Exception as exc:  # pragma: no cover - live MOPS availability is external
+            variants.append({
+                "strategy": strategy,
+                "url": final_url,
+                "status": "error",
+                "error": str(exc),
+                "html_length": 0,
+                "text_length": 0,
+                "score": 0,
+            })
+    return variants
+
+
+def fetch_material_event_html(
+    ticker: str,
+    *,
+    year: int | None = None,
+    timeout_seconds: float = 10.0,
+) -> str:
+    variants = fetch_material_event_html_variants(ticker, year=year, timeout_seconds=timeout_seconds)
+    best = _best_html_variant(variants)
+    if best is None:
+        raise RuntimeError("MOPS 重大訊息 live fetch did not return usable HTML.")
+    return str(best["html"])
+
+
+def _event_id_from_url(url: str) -> str | None:
+    parsed = urlparse(url)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    if query.get("seq_no") or query.get("spoke_date"):
+        return _stable_hash("mops_detail", parsed.path, query.get("co_id"), query.get("spoke_date"), query.get("spoke_time"), query.get("seq_no"))
+    return None
+
+
+def _row_looks_like_material_event(row: dict[str, Any], company_name: str, ticker: str) -> bool:
+    text = str(row.get("row_text") or "")
+    if any(header in text for header in ("公司代號", "公司名稱", "主旨", "序號")) and "重大訊息" not in text:
+        return False
+    if ticker in text or (company_name and company_name in text):
+        return True
+    return any(keyword in text for keyword in ("重大訊息", "公告", "董事會", "取得", "處分", "背書保證"))
+
+
+def _material_title_from_cells(cells: list[str], company_name: str, ticker: str) -> str:
+    candidates = [
+        cell
+        for cell in cells
+        if cell
+        and ticker not in cell
+        and company_name not in cell
+        and not DATE_RE.fullmatch(cell)
+        and not TIME_RE.fullmatch(cell)
+        and cell not in {"詳細資料", "查詢", "公告", "重大訊息"}
+    ]
+    if not candidates:
+        return f"{company_name} 重大訊息"
+    return max(candidates, key=len)[:180]
+
+
+def parse_material_event_detail_html(html: str, *, max_chars: int = 1800) -> str | None:
+    text = _strip_tags(html)
+    if not text:
+        return None
+    markers = ("主旨", "符合條款", "事實發生日", "說明")
+    if any(marker in text for marker in markers):
+        return text[:max_chars]
+    return text[:max_chars] if len(text) >= 40 else None
+
+
+def fetch_material_event_detail_text(
+    detail_url: str,
+    *,
+    timeout_seconds: float = 10.0,
+    max_chars: int = 1800,
+) -> tuple[str | None, str | None]:
+    try:
+        html = _mops_request(detail_url, timeout_seconds=timeout_seconds)
+    except Exception as exc:  # pragma: no cover - live MOPS availability is external
+        return None, str(exc)
+    return parse_material_event_detail_html(html, max_chars=max_chars), None
+
+
+def _claims_for_material_event(
+    *,
+    category: MaterialEventCategory,
+    title: str,
+    raw_text: str | None,
+    related_metrics: list[str],
+    source_url: str,
+    risk_related: bool,
+) -> list[OfficialDisclosureClaim]:
+    if not risk_related:
+        return []
+    claim_type: OfficialClaimType = "other"
+    if category in {"capacity_or_capex", "inventory_or_demand", "revenue_or_orders"}:
+        claim_type = category
+    if category == "financial_outlook":
+        claim_type = "outlook"
+    if category == "financing_or_debt":
+        claim_type = "cash_flow_or_financing"
+    return [
+        OfficialDisclosureClaim(
+            claim_type=claim_type,
+            text=_preview_text(raw_text or title, limit=260),
+            related_metrics=related_metrics,
+            evidence_source=source_url,
+            confidence=0.72,
+            limitations=["重大訊息分類使用既有保守關鍵字分類器；不改變 deterministic 財報規則結果。"],
+        )
+    ]
+
+
+def parse_material_event_list_html(
+    ticker: str,
+    html: str,
+    *,
+    source_url: str | None = None,
+    max_items: int = 5,
+    fetch_details: bool = False,
+) -> list[MaterialEventRecord]:
+    company = _require_company(ticker)
+    source = source_url or material_event_query_url(company.ticker)
+    records: list[MaterialEventRecord] = []
+    for row in _extract_table_rows(html):
+        if not _row_looks_like_material_event(row, company.name, company.ticker):
+            continue
+        cells = list(row["cells"])
+        row_text = str(row["row_text"])
+        links = _extract_links(str(row.get("row_html") or ""), source)
+        detail_url = next((url for url, label in links if "t05st01" in url or "detail" in label.casefold() or "詳細" in label), links[0][0] if links else None)
+        title = _material_title_from_cells(cells, company.name, company.ticker)
+        detail_text = None
+        detail_error = None
+        if fetch_details and detail_url:
+            detail_text, detail_error = fetch_material_event_detail_text(detail_url)
+        official_text = detail_text or row_text
+        category, related_metrics, risk_related = classify_material_event(title, official_text)
+        event_date = _extract_first_date(row_text)
+        event_time = _extract_first_time(row_text)
+        record = MaterialEventRecord(
+            event_id=_event_id_from_url(detail_url or "") or _stable_hash("material_event", company.ticker, event_date, event_time, _canonical_url(detail_url or source), title),
+            ticker=company.ticker,
+            company_name=company.name,
+            subindustry=company.subindustry,
+            event_date=event_date,
+            event_time=event_time,
+            title=title,
+            category=category,
+            source_name="mops",
+            source_url=source,
+            detail_url=detail_url,
+            status="available",
+            raw_text=_preview_text(official_text, limit=1800),
+            related_metrics=related_metrics,
+            risk_related=risk_related,
+            summary=("已解析 MOPS 重大訊息清單" + ("與公告明細。" if detail_text else "。")),
+            disclosure_claims=_claims_for_material_event(
+                category=category,
+                title=title,
+                raw_text=official_text,
+                related_metrics=related_metrics,
+                source_url=detail_url or source,
+                risk_related=risk_related,
+            ),
+            limitations=(
+                ["MOPS 明細頁抓取失敗；已保存清單列文字與 detail_url。", detail_error]
+                if detail_error
+                else ["重大訊息為近期官方揭露，只作為 recent official context，不改變年度財報規則判斷。"]
+            ),
+            retrieved_at=datetime.now(timezone.utc),
+        )
+        records.append(record)
+        if len(records) >= max_items:
+            break
+    return records
 
 
 def build_material_event_metadata(
@@ -579,7 +1125,89 @@ def build_material_event_metadata(
     year: int | None = None,
     title: str | None = None,
     raw_text: str | None = None,
+    fetch_live: bool = False,
+    html: str | None = None,
+    fetch_details: bool = False,
+    max_items: int = 5,
 ) -> list[MaterialEventRecord]:
+    company = _require_company(ticker)
+    source_url = material_event_query_url(company.ticker, year=year)
+    if html is not None:
+        parsed = parse_material_event_list_html(company.ticker, html, source_url=source_url, max_items=max_items, fetch_details=fetch_details)
+        return parsed or _metadata_only_material_event_record(company.ticker, year=year, title=title, raw_text=raw_text)
+    if fetch_live:
+        try:
+            twse_records = build_twse_material_event_metadata(company.ticker, max_items=max_items)
+            if year is not None:
+                twse_records = [record for record in twse_records if (record.event_date or "").startswith(str(year))]
+            if twse_records:
+                return twse_records
+        except Exception:
+            pass
+        try:
+            variants = fetch_material_event_html_variants(company.ticker, year=year)
+            best = _best_html_variant(variants)
+            if best is None:
+                errors = [str(variant.get("error")) for variant in variants if variant.get("status") == "error"]
+                blocked = [variant for variant in variants if variant.get("status") == "blocked_by_source"]
+                if blocked and len(blocked) == len(variants):
+                    return _metadata_only_material_event_record(
+                        company.ticker,
+                        year=year,
+                        title=title,
+                        raw_text=raw_text,
+                        status="blocked_by_source",
+                        extra_limitations=["MOPS live fetch 被來源安全機制阻擋；保留 persisted previous evidence 或 metadata 查詢入口。"],
+                    )
+                if errors and len(errors) == len(variants):
+                    return _metadata_only_material_event_record(
+                        company.ticker,
+                        year=year,
+                        title=title,
+                        raw_text=raw_text,
+                        status="error",
+                        extra_limitations=[f"MOPS live fetch 全部失敗：{errors[0]}"],
+                    )
+                return _metadata_only_material_event_record(
+                    company.ticker,
+                    year=year,
+                    title=title,
+                    raw_text=raw_text,
+                    status="needs_manual_review",
+                    extra_limitations=["MOPS live fetch 完成但沒有解析到重大訊息列；請檢查 MOPS HTML/table parser。"],
+                )
+            parsed = parse_material_event_list_html(company.ticker, str(best["html"]), source_url=source_url, max_items=max_items, fetch_details=fetch_details)
+            if parsed:
+                return parsed
+            return _metadata_only_material_event_record(
+                company.ticker,
+                year=year,
+                title=title,
+                raw_text=raw_text,
+                status="needs_manual_review",
+                extra_limitations=["MOPS live fetch 完成但沒有解析到重大訊息列；請檢查 MOPS HTML/table parser。"],
+            )
+        except Exception as exc:  # pragma: no cover - live MOPS availability is external
+            return _metadata_only_material_event_record(
+                company.ticker,
+                year=year,
+                title=title,
+                raw_text=raw_text,
+                status="error",
+                extra_limitations=[f"即時抓取 MOPS 重大訊息頁面失敗：{exc}"],
+            )
+    return _metadata_only_material_event_record(company.ticker, year=year, title=title, raw_text=raw_text)
+
+
+def _metadata_only_material_event_record(
+    ticker: str,
+    *,
+    year: int | None = None,
+    title: str | None = None,
+    raw_text: str | None = None,
+    status: str = "metadata_only",
+    extra_limitations: list[str] | None = None,
+) -> MaterialEventRecord:
     company = _require_company(ticker)
     source_url = material_event_query_url(company.ticker, year=year)
     event_title = title or f"{company.name} 歷史重大訊息查詢入口"
@@ -591,7 +1219,7 @@ def build_material_event_metadata(
             related_metrics=related_metrics,
             evidence_source=source_url,
             confidence=0.68 if risk_related else 0.45,
-            limitations=["重大訊息目前為 keyword classification MVP，後續需以公告全文與 Gemini 摘要校驗。"],
+            limitations=["重大訊息使用保守 keyword classification；後續可再以公告全文與 Gemini 摘要校驗。"],
         )
     ] if risk_related else []
     return [
@@ -599,17 +1227,22 @@ def build_material_event_metadata(
             ticker=company.ticker,
             company_name=company.name,
             subindustry=company.subindustry,
+            event_id=_stable_hash("material_event", company.ticker, year, _canonical_url(source_url), event_title),
             title=event_title,
             category=category,
+            source_name="mops",
             source_url=source_url,
-            status="metadata_only",
+            status=status,  # type: ignore[arg-type]
             raw_text=raw_text,
             related_metrics=related_metrics,
             risk_related=risk_related,
             disclosure_claims=claims,
             limitations=[
-                "目前為 Phase 5 metadata MVP：先保存 MOPS 重大訊息查詢入口與事件分類規則，尚未批次解析歷史公告清單。",
+                "系統已支援 MOPS 重大訊息列表／明細取得、事件分類、stable identity、去重與持久化。",
+                "若 MOPS live source 受到來源安全機制限制，系統會保留來源狀態並優先提供既有 persisted evidence。",
                 "事件分類使用保守關鍵字與子產業指標對應，後續需以 MOPS 實際公告文字與 Gemini 摘要校驗。",
+                *(extra_limitations or []),
             ],
+            retrieved_at=datetime.now(timezone.utc),
         )
     ]

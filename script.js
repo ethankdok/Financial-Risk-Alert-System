@@ -299,13 +299,39 @@ document.addEventListener('DOMContentLoaded',()=>{
   };
 
   const buildSourceLink = (item) => {
-    const href = item?.source_url || item?.document_url || item?.video_url;
+    const href = item?.detail_url || item?.document_url || item?.source_url || item?.video_url;
     if (!href) return appendText(document.createDocumentFragment(), 'span', null, text(item?.source_name, '官方來源'));
-    const link = el('a', 'financial-source-link', text(item?.source_name || item?.document_title || href));
+    const link = el('a', 'financial-source-link', text(item?.document_title || item?.source_name || href));
     link.href = href;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     return link;
+  };
+
+  const appendTagList = (parent, label, items) => {
+    const values = (items || []).filter(Boolean).slice(0, 6);
+    if (!values.length) return;
+    const wrap = el('div', 'financial-tag-list');
+    appendText(wrap, 'b', null, label);
+    values.forEach((value) => appendText(wrap, 'span', null, value));
+    parent.appendChild(wrap);
+  };
+
+  const appendDisclosureClaims = (parent, claims) => {
+    const values = (claims || []).slice(0, 3);
+    if (!values.length) return;
+    const details = el('details', 'financial-details');
+    appendText(details, 'summary', null, '官方揭露主張');
+    const list = el('div', 'financial-compact-list');
+    values.forEach((claim) => {
+      const row = el('div', 'financial-compact-row');
+      appendText(row, 'b', null, text(claim.claim_type, 'official_claim'));
+      appendText(row, 'small', null, text(claim.text));
+      appendTagList(row, 'related metrics', claim.related_metrics);
+      list.appendChild(row);
+    });
+    details.appendChild(list);
+    parent.appendChild(details);
   };
 
   const showEmpty = (message, detail) => {
@@ -542,7 +568,17 @@ document.addEventListener('DOMContentLoaded',()=>{
       rowHead.appendChild(buildBadge(item.status || item.document_extract_status || item.category));
       row.appendChild(rowHead);
       appendText(row, 'p', null, item.summary || item.raw_text || item.document_text_preview || '目前僅取得官方基本資料。');
-      appendText(row, 'small', 'muted-text', text(item.conference_date || item.event_date || item.generated_at, '日期尚未提供'));
+      const dateText = [item.conference_date || item.event_date || item.generated_at, item.event_time].filter(Boolean).join(' ');
+      appendText(row, 'small', 'muted-text', text(dateText, '日期尚未提供'));
+      appendTagList(row, 'topics', item.extracted_topics);
+      appendTagList(row, 'related metrics', item.related_metrics);
+      if (item.document_extract_status) {
+        appendText(row, 'small', 'muted-text', `document extract: ${item.document_extract_status}`);
+      }
+      if (item.category) {
+        appendText(row, 'small', 'muted-text', `category: ${item.category}`);
+      }
+      appendDisclosureClaims(row, item.disclosure_claims);
       row.appendChild(buildSourceLink(item));
       if (item.limitations?.length) {
         appendText(row, 'small', 'muted-text', `限制：${item.limitations.join('；')}`);
