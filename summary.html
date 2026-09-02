@@ -2,8 +2,103 @@
 <header class="site-header"><div class="nav-wrap"><a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Financial Information Credibility & Risk Alert System</span></div></a><nav class="nav-links"><a href="index.html">首頁</a><a class="active" href="analysis.html">資訊分析</a><a href="official.html">公告比對</a><a href="records.html">分析紀錄</a><a href="member.html">會員中心</a></nav></div></header>
 <section class="page-hero"><div class="container"><div class="breadcrumb">首頁 / 資訊分析 / AI 搜尋摘要</div><h1>AI 搜尋摘要</h1><p id="summaryQuery">依據使用者查詢，整合三個資料來源產生初步結論。</p></div></section>
 <div class="container layout"><aside class="sidebar"><a class="active" href="analysis.html">金融資訊分析</a><a href="official.html">官方公告比對</a><a href="records.html">分析紀錄</a><a href="member.html">會員中心</a></aside><main>
-<section class="content-card ai-overview-card"><div class="ai-overview-head"><div><span class="eyebrow">AI OVERVIEW</span><h2>目前沒有可靠資料支持「保證漲停」的說法</h2></div><span class="status-tag tag-red">高風險</span></div><p class="overview-copy">綜合 Yahoo 財經新聞、X 社群貼文及公開資訊觀測站資料，目前未發現台積電發布與「下週保證漲停」相關的官方公告。X 上部分貼文使用「內線消息」、「保證獲利」及「老師帶單」等高風險話術，且多則貼文內容高度相似，因此此資訊可信度偏低，建議使用者先查閱官方公告，不應僅依該貼文進行投資決策。</p><div class="overview-metrics"><div><span>可信度</span><strong>23%</strong></div><div><span>風險等級</span><strong class="danger-text">高風險</strong></div><div><span>比對來源</span><strong>3 類</strong></div><div><span>相關資料</span><strong>28 筆</strong></div></div></section>
-<section class="content-card"><h3>AI 判斷依據</h3><div class="reason-list"><div class="reason"><div>01</div><div><b>官方資料未支持此說法</b><span>公開資訊觀測站沒有與「保證漲停」或特定價格預測相符的重大訊息。</span></div></div><div class="reason"><div>02</div><div><b>包含高風險投資話術</b><span>貼文出現「內線消息」、「保證獲利」與「限時加入」等用語。</span></div></div><div class="reason"><div>03</div><div><b>相似貼文短時間大量出現</b><span>X 平台偵測到 21 則高度相似內容，可能存在集中行銷或導流行為。</span></div></div></div></section>
-<section class="content-card"><div class="section-row"><div><h3>摘要使用的資料來源</h3><p class="muted-text">每一項結論都對應可追溯的搜尋結果。</p></div><a class="btn btn-secondary" href="official.html">查看官方公告</a></div><div class="source-cards"><article><span class="source-label">Yahoo 財經</span><h4>未發現可信新聞支持保證漲停</h4><p>找到 4 篇近期相關新聞，但內容皆未提供保證獲利或必然上漲的證據。</p></article><article><span class="source-label">X 社群平台</span><h4>偵測到 21 則高度相似貼文</h4><p>多則內容使用相同句型，並引導使用者加入投資群組。</p></article><article><span class="source-label">公開資訊觀測站</span><h4>未查得對應重大訊息</h4><p>官方公告沒有支持貼文所宣稱的特定漲幅或時間點。</p></article></div></section>
+<section class="content-card ai-overview-card">
+  <div class="ai-overview-head">
+    <div><span class="eyebrow">RULE-BASED RISK OVERVIEW</span><h2 id="overviewTitle">正在分析輸入內容…</h2></div>
+    <span id="riskTag" class="status-tag">分析中</span>
+  </div>
+  <p id="overviewCopy" class="overview-copy">系統正在透過後端 Risk Features 與新版加權公式計算風險分數。</p>
+  <div class="overview-metrics">
+    <div><span>風險分數</span><strong id="riskScore">--</strong></div>
+    <div><span>風險等級</span><strong id="riskLevel">--</strong></div>
+    <div><span>原始分數</span><strong id="rawScore">--</strong></div>
+    <div><span>最大分數</span><strong id="maxScore">--</strong></div>
+  </div>
+</section>
+<section class="content-card">
+  <h3>風險判斷依據</h3>
+  <div id="reasonList" class="reason-list">
+    <div class="reason"><div>01</div><div><b>等待分析結果</b><span>命中的 Risk Features 會顯示在這裡。</span></div></div>
+  </div>
+</section>
+<section class="content-card"><div class="section-row"><div><h3>外部資料來源整合</h3><p class="muted-text">Yahoo 財經、X 與公開資訊觀測站尚未在本頁即時查詢；目前結果來自後端 Risk Features 規則評分。</p></div><a class="btn btn-secondary" href="official.html">查看官方公告</a></div><div class="source-cards"><article><span class="source-label">目前版本</span><h4>Rule-based Risk Features</h4><p>依 SQLite 中啟用的風險特徵、關鍵字與權重計算 0–100 風險分數。</p></article><article><span class="source-label">下一階段</span><h4>Yahoo 財經與 X</h4><p>後續串接新聞與社群資料，加入來源可信度與跨來源比對。</p></article><article><span class="source-label">下一階段</span><h4>公開資訊觀測站</h4><p>後續加入財報、法說會與重大訊息，作為官方資料佐證。</p></article></div></section>
 <div class="summary-actions"><a class="btn btn-primary" href="result.html">查看完整分析</a><a class="btn btn-secondary" href="analysis.html">重新搜尋</a></div>
-</main></div><script src="script.js"></script></body></html>
+</main></div><script src="script.js"></script>
+<script>
+(async function () {
+  const params = new URLSearchParams(window.location.search);
+  const query =
+    params.get("q") ||
+    params.get("query") ||
+    sessionStorage.getItem("analysisQuery") ||
+    sessionStorage.getItem("searchQuery") ||
+    localStorage.getItem("analysisQuery") ||
+    localStorage.getItem("searchQuery") ||
+    "";
+
+  const summaryQuery = document.getElementById("summaryQuery");
+  if (!query) {
+    summaryQuery.textContent = "找不到上一頁的查詢內容，請返回資訊分析頁重新輸入。";
+    document.getElementById("overviewTitle").textContent = "尚未取得分析文字";
+    document.getElementById("overviewCopy").textContent = "請返回資訊分析頁重新搜尋。";
+    return;
+  }
+
+  summaryQuery.textContent = `查詢內容：「${query}」｜結果由後端新版 Risk Score API 即時計算。`;
+
+  try {
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({text: query})
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "分析失敗");
+
+    const score = Number(data.score ?? 0);
+    const level = data.risk_level || "--";
+    const features = Array.isArray(data.matched_features) ? data.matched_features : [];
+
+    document.getElementById("riskScore").textContent = `${score} / 100`;
+    document.getElementById("riskLevel").textContent = level;
+    document.getElementById("rawScore").textContent = data.raw_score ?? "--";
+    document.getElementById("maxScore").textContent = data.max_score ?? "--";
+
+    const tag = document.getElementById("riskTag");
+    tag.textContent = level;
+    tag.className = "status-tag " + (level === "高風險" ? "tag-red" : "");
+
+    document.getElementById("overviewTitle").textContent =
+      features.length ? `偵測到 ${features.length} 項風險特徵，風險分數 ${score} 分` : "目前未命中已建立的風險特徵";
+
+    document.getElementById("overviewCopy").textContent =
+      `本次 Raw Score 為 ${data.raw_score}，Active Features 最大總權重為 ${data.max_score}，依 RiskScore = 100 × RawScore / MaxScore 正規化後為 ${score} 分，判定為${level}。目前 30 / 60 為 Prototype Threshold。`;
+
+    const reasonList = document.getElementById("reasonList");
+    if (!features.length) {
+      reasonList.innerHTML = '<div class="reason"><div>01</div><div><b>未命中風險特徵</b><span>目前規則庫沒有偵測到相符的風險話術；這不等同於資訊已被證實可信。</span></div></div>';
+    } else {
+      reasonList.innerHTML = features.map((f, i) => `
+        <div class="reason">
+          <div>${String(i + 1).padStart(2, "0")}</div>
+          <div>
+            <b>${escapeHtml(f.name)}（權重 ${f.weight}）</b>
+            <span>${escapeHtml(f.explain || f.definition || "")} 命中：${(f.matched_keywords || []).map(escapeHtml).join("、")}</span>
+          </div>
+        </div>`).join("");
+    }
+  } catch (err) {
+    document.getElementById("overviewTitle").textContent = "後端分析失敗";
+    document.getElementById("overviewCopy").textContent = err.message;
+    document.getElementById("riskTag").textContent = "錯誤";
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    }[ch]));
+  }
+})();
+</script>
+
+</body></html>

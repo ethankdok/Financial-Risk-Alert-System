@@ -133,16 +133,17 @@ def init_db():
               FOREIGN KEY(admin_id) REFERENCES admins(id)
             );
 
-        CREATE TABLE IF NOT EXISTS analysis_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            query_text TEXT NOT NULL,
-            risk_score INTEGER NOT NULL,
-            raw_score INTEGER NOT NULL DEFAULT 0,
-            risk_level TEXT NOT NULL,
-            matched_keywords_json TEXT NOT NULL DEFAULT '[]',
-            matched_features_json TEXT NOT NULL DEFAULT '[]',
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
+            CREATE TABLE IF NOT EXISTS analysis_records (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              query_text TEXT NOT NULL,
+              risk_score INTEGER NOT NULL,
+              raw_score INTEGER NOT NULL DEFAULT 0,
+              max_score INTEGER NOT NULL DEFAULT 0,
+              risk_level TEXT NOT NULL,
+              matched_keywords_json TEXT NOT NULL DEFAULT '[]',
+              matched_features_json TEXT NOT NULL DEFAULT '[]',
+              created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             """
         )
 
@@ -151,7 +152,7 @@ def init_db():
                 "INSERT INTO admins(username,password_hash,display_name,role,created_at) VALUES(?,?,?,?,?)",
                 [
                     ("admin001", generate_password_hash("demo1234"), "Ethan", "系統管理員", now_str()),
-                    ("admin002", generate_password_hash("demo5678"), "Rainy", "內容審核員", now_str()),
+                    ("admin002", generate_password_hash("demo5678"), "John", "內容審核員", now_str()),
                 ],
             )
 
@@ -175,13 +176,70 @@ def init_db():
 
         if conn.execute("SELECT COUNT(*) FROM risk_features").fetchone()[0] == 0:
             features = [
-                ("保證報酬", "金融高風險主張", 3, ["保證獲利","穩賺不賠","一定漲停","保證翻倍"], "對未來投資報酬做確定性或無風險承諾。", "本文對投資結果做確定性承諾，可能使使用者低估投資風險。"),
-                ("未公開消息", "可信感強化", 3, ["內線消息","公司高層透露","主力準備拉抬"], "宣稱掌握尚未公開或無法查證的公司資訊。", "本文以未公開消息建立可信感，但缺乏正式來源支持。"),
-                ("時間急迫", "心理壓力", 1, ["立即","今晚截止","最後機會","現在處理"], "透過時間限制促使使用者快速做決定。", "本文使用時間限制製造急迫感，可能降低使用者查證時間。"),
-                ("稀缺壓力", "心理壓力", 1, ["名額有限","僅剩三席","前50名","額滿即止"], "利用數量或名額限制增加錯失焦慮。", "本文利用名額或數量限制製造稀缺感。"),
-                ("加入／聯絡誘導", "行動誘導", 1, ["加入VIP","私訊老師","聯絡助理","點擊連結"], "要求使用者加入群組、聯絡特定對象或點擊外部連結。", "本文包含直接行動要求，應確認對方身分與連結來源。"),
-                ("權威訴求", "可信感強化", 1, ["老師推薦","專家預測","法人透露","官方合作"], "利用權威身分或專業形象提高說服力。", "本文使用權威身分強化可信感，但權威宣稱仍需獨立查證。"),
-                ("來源不可驗證", "來源可信度", 2, ["獨家消息","內部消息","匿名人士指出"], "重要主張未提供可追溯、可驗證的正式來源。", "本文的重要主張目前缺乏可驗證來源，建議對照正式公告。"),
+                (
+                    "保證報酬／低風險高報酬",
+                    "金融高風險主張",
+                    3,
+                    ["保證獲利", "穩賺不賠", "一定漲停", "保證翻倍", "零風險高報酬", "保證報酬"],
+                    "對未來投資報酬做確定性承諾，或宣稱高報酬同時幾乎沒有風險。",
+                    "本文出現保證報酬或低風險高報酬主張，屬於重要投資風險警訊。",
+                ),
+                (
+                    "內線／未公開消息訴求",
+                    "可信感強化",
+                    3,
+                    ["內線消息", "公司高層透露", "主力準備拉抬", "未公開消息", "內部人士透露"],
+                    "宣稱掌握尚未公開、內線或一般投資人無法驗證的資訊。",
+                    "本文以內線或未公開消息建立可信感，但缺乏正式公開來源支持。",
+                ),
+                (
+                    "來源不可驗證",
+                    "來源可信度",
+                    2,
+                    ["獨家消息", "內部消息", "匿名人士指出", "消息人士透露", "不能公開來源"],
+                    "重要主張未提供可追溯、可驗證的正式來源。",
+                    "本文的重要主張目前缺乏可驗證來源，建議對照公開資訊觀測站或正式公告。",
+                ),
+                (
+                    "急迫性／時間壓力",
+                    "心理壓力",
+                    2,
+                    ["立即", "今晚截止", "最後機會", "現在處理", "馬上買", "立刻加入", "今天最後"],
+                    "透過時間限制或立即行動要求促使使用者快速做決定。",
+                    "本文使用時間壓力降低使用者查證與思考時間。",
+                ),
+                (
+                    "稀缺性訴求",
+                    "心理壓力",
+                    1,
+                    ["名額有限", "僅剩三席", "前50名", "額滿即止", "限量名額", "最後幾個名額"],
+                    "利用名額、數量或機會有限製造錯失焦慮。",
+                    "本文利用稀缺性增加行動壓力；此特徵單獨出現時不一定代表高風險。",
+                ),
+                (
+                    "群組／私訊／外部導流",
+                    "行動誘導",
+                    2,
+                    ["加入VIP", "加入 VIP", "私訊老師", "聯絡助理", "點擊連結", "加入LINE", "加入 LINE", "下載APP", "下載 App"],
+                    "要求使用者加入群組、私訊特定對象、下載 App 或前往外部連結。",
+                    "本文包含群組、私訊或外部導流行為，應確認對方身分、平台與連結來源。",
+                ),
+                (
+                    "未驗證權威訴求",
+                    "可信感強化",
+                    1,
+                    ["老師推薦", "專家預測", "法人透露", "官方合作", "金管會認證", "分析師保證"],
+                    "透過權威、專業或官方身分提高說服力，但相關身分或合作未經驗證。",
+                    "本文使用權威身分強化可信感，仍需透過正式來源獨立查證。",
+                ),
+                (
+                    "社會認同／從眾訴求",
+                    "社會影響",
+                    2,
+                    ["大家都買了", "大家都上車了", "群友都賺錢", "會員都獲利", "已經很多人獲利", "很多人都買", "大家都在買"],
+                    "利用他人已參與或已獲利的描述，製造從眾與社會認同壓力。",
+                    "本文透過『大家都在做』或『大家都賺錢』建立從眾感，可能降低個別投資人的查證意願。",
+                ),
             ]
             for name, dimension, weight, keywords, definition, explain in features:
                 conn.execute(
@@ -569,81 +627,90 @@ def clear_audit_logs():
     return jsonify({"ok": True})
 
 
-
 @app.post("/api/analyze")
 def analyze_text():
     data = request.get_json(silent=True) or {}
-    text = str(data.get("text", "")).strip()
+    text_input = str(data.get("text", "")).strip()
 
-    if not text:
+    if not text_input:
         return jsonify({"error": "請提供要分析的文字"}), 400
 
     matched_keywords = []
     matched_features = []
-    total_score = 0
+    raw_score = 0
 
     with db_conn() as conn:
         keyword_rows = conn.execute(
             """
             SELECT id, phrase, category, risk, source, reason
             FROM keywords
-            WHERE status = 'active'
+            WHERE status='active'
             """
         ).fetchall()
 
         for row in keyword_rows:
             phrase = row["phrase"]
-
-            if phrase and phrase in text:
-                matched_keywords.append({
-                    "id": row["id"],
-                    "phrase": phrase,
-                    "category": row["category"],
-                    "risk": row["risk"],
-                    "source": row["source"],
-                    "reason": row["reason"]
-                })
+            if phrase and phrase in text_input:
+                matched_keywords.append(
+                    {
+                        "id": row["id"],
+                        "phrase": phrase,
+                        "category": row["category"],
+                        "risk": row["risk"],
+                        "source": row["source"],
+                        "reason": row["reason"],
+                    }
+                )
 
         feature_rows = conn.execute(
             """
-            SELECT id, name, dimension, weight,
-                   keywords_json, definition, explain
+            SELECT id, name, dimension, weight, keywords_json, definition, explain
             FROM risk_features
-            WHERE status = 'active'
+            WHERE status='active'
+            ORDER BY id ASC
             """
         ).fetchall()
+
+        # 新版公式的分母：所有 active Risk Features 的最大可能權重總和。
+        max_score = sum(max(0, int(row["weight"] or 0)) for row in feature_rows)
 
         for row in feature_rows:
             try:
                 feature_keywords = json.loads(row["keywords_json"] or "[]")
-            except Exception:
+            except (TypeError, json.JSONDecodeError):
                 feature_keywords = []
 
             hits = [
                 keyword
                 for keyword in feature_keywords
-                if keyword and keyword in text
+                if keyword and keyword in text_input
             ]
 
+            # 同一個 feature 不論命中幾個關鍵字，只加一次該 feature 的權重。
             if hits:
-                weight = int(row["weight"] or 0)
-                total_score += weight
+                weight = max(0, int(row["weight"] or 0))
+                raw_score += weight
+                matched_features.append(
+                    {
+                        "id": row["id"],
+                        "name": row["name"],
+                        "dimension": row["dimension"],
+                        "weight": weight,
+                        "matched_keywords": hits,
+                        "definition": row["definition"],
+                        "explain": row["explain"],
+                    }
+                )
 
-                matched_features.append({
-                    "id": row["id"],
-                    "name": row["name"],
-                    "dimension": row["dimension"],
-                    "weight": weight,
-                    "matched_keywords": hits,
-                    "definition": row["definition"],
-                    "explain": row["explain"]
-                })
+    # 新版 Normalized Weighted Score：
+    # RiskScore = 100 × (Σ w_i x_i / Σ w_i)
+    risk_score = (
+        min(100, round((raw_score / max_score) * 100))
+        if max_score > 0
+        else 0
+    )
 
-    # 將內部原始權重轉換為 0-100 的風險指數
-    # 原始權重 0-9 對應至 0-100，超過 9 分則以 100 分為上限
-    raw_score = total_score
-    risk_score = min(100, round((raw_score / 9) * 100))
-
+    # 目前仍為 Prototype Threshold；後續以人工標註資料驗證與校正。
     if risk_score >= 60:
         risk_level = "高風險"
     elif risk_score >= 30:
@@ -651,7 +718,6 @@ def analyze_text():
     else:
         risk_level = "低風險"
 
-    # 儲存本次分析紀錄
     with db_conn() as conn:
         cursor = conn.execute(
             """
@@ -659,38 +725,54 @@ def analyze_text():
                 query_text,
                 risk_score,
                 raw_score,
+                max_score,
                 risk_level,
                 matched_keywords_json,
                 matched_features_json
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                text,
+                text_input,
                 risk_score,
                 raw_score,
+                max_score,
                 risk_level,
                 json.dumps(matched_keywords, ensure_ascii=False),
-                json.dumps(matched_features, ensure_ascii=False)
-            )
+                json.dumps(matched_features, ensure_ascii=False),
+            ),
         )
         record_id = cursor.lastrowid
 
-    return jsonify({
-        "record_id": record_id,
-        "text": text,
-        "risk_level": risk_level,
-        "score": risk_score,
-        "raw_score": raw_score,
-        "matched_keywords": matched_keywords,
-        "matched_features": matched_features,
-        "summary": {
-            "keyword_count": len(matched_keywords),
-            "feature_count": len(matched_features)
+    return jsonify(
+        {
+            "record_id": record_id,
+            "text": text_input,
+            "score": risk_score,
+            "raw_score": raw_score,
+            "max_score": max_score,
+            "risk_level": risk_level,
+            "matched_keywords": matched_keywords,
+            "matched_features": matched_features,
+            "summary": {
+                "keyword_count": len(matched_keywords),
+                "feature_count": len(matched_features),
+                "active_feature_count": len(feature_rows),
+            },
+            "normalization": {
+                "formula": "100 * raw_score / max_score",
+                "note": "max_score 由所有 active risk features 的權重動態加總，不寫死固定值。",
+            },
+            "threshold": {
+                "low": "< 30",
+                "medium": "30-59",
+                "high": ">= 60",
+                "status": "prototype",
+            },
         }
-    })
+    )
 
 
 if __name__ == "__main__":
     init_db()
-    app.run(host="127.0.0.1", port=5001, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=True)
