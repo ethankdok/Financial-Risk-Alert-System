@@ -17,7 +17,7 @@ Both Cloud Run services should use `asia-east1` so the application and Firestore
 
 - `Dockerfile.flask`: Gunicorn, one worker + threads, listens on Cloud Run's injected `$PORT`.
 - `Dockerfile.fastapi`: Uvicorn, listens on `$PORT`.
-- `/healthz` is available on both services.
+- `/health` is available on both services.
 
 ## Production datastore settings
 

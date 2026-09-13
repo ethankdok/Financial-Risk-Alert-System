@@ -56,8 +56,8 @@ def root():
     }
 
 
-@app.get("/healthz")
-def healthz():
+@app.get("/health")
+def health():
     return {
         "status": "ok",
         "service": "fintrust-api",

@@ -177,8 +177,8 @@ def system_admin_required(fn):
     return wrapped
 
 
-@app.get("/healthz")
-def healthz():
+@app.get("/health")
+def health():
     return jsonify({
         "status": "ok",
         "service": "financial-risk-web",

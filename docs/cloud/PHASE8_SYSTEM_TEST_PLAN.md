@@ -6,8 +6,8 @@ This plan is intentionally separate from the later user/usability experiment. It
 
 | ID | Test | Expected result |
 |---|---|---|
-| SYS-01 | Open Flask `/healthz` | 200; reports web service and configured datastore backend |
-| SYS-02 | Open FastAPI `/healthz` | 200; reports API service and persistence backend |
+| SYS-01 | Open Flask `/health` | 200; reports web service and configured datastore backend |
+| SYS-02 | Open FastAPI `/health` | 200; reports API service and persistence backend |
 | SYS-03 | Flask `/api/financial/health` | Flask can reach FastAPI; no localhost dependency |
 | SYS-04 | Restart/redeploy a Cloud Run revision | persistent records remain in Firestore |
 

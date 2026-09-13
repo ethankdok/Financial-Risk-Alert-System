@@ -73,9 +73,9 @@ def main(argv: list[str] | None = None) -> int:
     ticker = args.ticker
 
     checks = [
-        check("Flask health", f"{web}/healthz", {200}),
+        check("Flask health", f"{web}/health", {200}),
         check("Flask→FastAPI proxy health", f"{web}/api/financial/health", {200}),
-        check("FastAPI health", f"{api}/healthz", {200}),
+        check("FastAPI health", f"{api}/health", {200}),
         check("FastAPI financial health", f"{api}/api/v1/financial/health", {200}),
         check("Company registry", f"{api}/api/v1/financial/companies", {200}),
         check("Persisted metrics contract", f"{api}/api/v1/financial/companies/{ticker}/metrics?limit=10", {200}),
