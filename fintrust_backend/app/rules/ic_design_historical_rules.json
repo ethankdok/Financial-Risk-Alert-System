@@ -1,0 +1,39 @@
+{
+  "version": "ic-design-history-0.2.0",
+  "subindustry": "IC 設計",
+  "threshold_basis": "IC 設計研發、產品組合與存貨特性＋公司自身歷史趨勢；門檻為可調整 MVP 參數，後續以 IC design peer baseline 校準",
+  "evidence_basis": "IC 設計相對輕資產，研發投入、產品週期與庫存去化比資本支出更重要；研發強度提高本身不直接列為風險，需搭配營收、存貨與現金轉換。",
+  "evidence_references": [
+    "Sher & Yang (2005), Technovation, 25(1), 33-43",
+    "Chen & Wu (2020), Sustainability, 12(12), 5128",
+    "docs/rule-evidence-and-llm-governance.md#ic-design"
+  ],
+  "rules": [
+    {
+      "rule_id": "ICDESIGN_RD_INVENTORY_001",
+      "name": "研發投入、營收與存貨轉化壓力",
+      "category": "IC 設計研發與產品去化",
+      "rule_scope": "ic_design",
+      "operator": "ic_design_rd_conversion_pressure",
+      "logic_expression": "rd_intensity_change_pp >= rd_change_min AND revenue_growth_yoy < 0 AND inventory_growth_yoy - revenue_growth_yoy >= inventory_gap AND cash_conversion_ratio < cash_conversion_max",
+      "thresholds": {
+        "rd_change_min": 0.0,
+        "attention_inventory_gap": 15.0,
+        "high_inventory_gap": 30.0,
+        "attention_cash_conversion_max": 0.8,
+        "high_cash_conversion_max": 0.5
+      },
+      "metrics": ["rd_intensity", "revenue_growth_yoy", "inventory_growth_yoy", "cash_conversion_ratio"],
+      "rationale": "研發強度提高不直接列為風險；只有當營收下滑、存貨增速明顯高於營收且現金轉換偏弱時，才提示研發投入轉化與產品去化壓力。",
+      "credibility_level": "peer_reviewed_literature",
+      "calibration_status": "literature_supported_mvp_threshold",
+      "evidence_basis": "文獻支持研發能力與財務績效存在關聯，但效果需放在產業脈絡與營運轉化中解讀；因此採複合條件而非單一研發費用判斷。",
+      "evidence_references": [
+        "Sher & Yang (2005), Technovation, 25(1), 33-43",
+        "Chen & Wu (2020), Sustainability, 12(12), 5128",
+        "docs/rule-evidence-and-llm-governance.md#ic-design"
+      ],
+      "llm_interpretation_guardrail": "LLM 可摘要研發、產品組合、庫存與需求的關聯，但不得把研發投入增加本身判定為風險，也不得改寫 deterministic verdict。"
+    }
+  ]
+}

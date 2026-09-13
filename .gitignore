@@ -1,6 +1,32 @@
+# Python
+venv/
 .venv/
 __pycache__/
 *.pyc
-.DS_Store
-financial_risk.db
+.pytest_cache/
+
+# Environment variables
 .env
+*.env
+
+# Local database / generated data
+*.db
+*.sqlite
+*.sqlite3
+data/demo-output/
+fintrust_backend/.venv/
+fintrust_backend/data/demo-output/
+fintrust_backend/data/*.db
+fintrust_backend/data/*.sqlite
+fintrust_backend/data/*.sqlite3
+fintrust_backend/data/
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Local backup files
+static/script_backup.js
+static/script_before_summary.js

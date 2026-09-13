@@ -8,6 +8,7 @@ from functools import wraps
 from pathlib import Path
 
 from flask import Flask, jsonify, request, session, send_from_directory
+from financial_routes import create_financial_blueprint
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from data_shift import data_shift_bp
@@ -21,6 +22,7 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
 )
+app.register_blueprint(create_financial_blueprint())
 
 app.register_blueprint(data_shift_bp)
 
