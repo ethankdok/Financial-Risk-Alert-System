@@ -10,6 +10,8 @@ from pathlib import Path
 from flask import Flask, jsonify, request, session, send_from_directory
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from data_shift import data_shift_bp
+
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "financial_risk.db"
 
@@ -19,6 +21,8 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
 )
+
+app.register_blueprint(data_shift_bp)
 
 
 def now_str() -> str:

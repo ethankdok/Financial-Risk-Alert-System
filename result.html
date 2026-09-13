@@ -1,15 +1,398 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>分析結果</title><link rel="stylesheet" href="style.css"></head><body>
-<header class="site-header"><div class="nav-wrap"><a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Financial Information Credibility & Risk Alert System</span></div></a><nav class="nav-links"><a href="index.html">首頁</a><a class="active" href="analysis.html">資訊分析</a><a href="official.html">公告比對</a><a href="records.html">分析紀錄</a><a href="member.html">會員中心</a></nav></div></header>
-<section class="page-hero"><div class="container"><div class="breadcrumb">首頁 / 金融資訊分析 / 分析結果</div><h1>可信度分析結果</h1><p>查詢內容：「台積電保證漲停、老師帶單」</p></div></section>
-<div class="container layout"><aside class="sidebar"><a class="active" href="analysis.html">金融資訊分析</a><a href="official.html">官方公告比對</a><a href="records.html">分析紀錄</a><a href="member.html">會員中心</a></aside><main><div class="content-card"><div class="result-top"><div class="score-ring" style="background:conic-gradient(var(--orange) 0 42%,#dfe8f4 42% 100%)"><strong>42</strong></div><div><h2>資訊可信度偏低</h2><p>系統比對 X、Yahoo 財經與公開資訊觀測站後，發現此內容具有誇大行銷特徵，且缺乏官方資料支持。</p><div class="progress"><span style="width:42%;background:linear-gradient(90deg,var(--orange),#f2b763)"></span></div></div><div class="risk-box"><span>風險等級</span><strong>高風險</strong><small>建議再次查證</small></div></div></div><div class="content-card"><h3>AI 判定原因</h3><div class="reason-list"><div class="reason"><div>01</div><div><b>使用保證性與誇張用語</b><span>出現「保證漲停」、「穩賺」等高風險行銷詞彙。</span></div></div><div class="reason"><div>02</div><div><b>缺乏官方公告支持</b><span>公開資訊觀測站中未找到與該說法一致的重大訊息。</span></div></div><div class="reason"><div>03</div><div><b>相似貼文大量出現</b><span>X 平台短時間出現多則高度相似內容，可能為行銷操作。</span></div></div></div></div><div class="content-card" id="externalVerification">
-<h3>外部資訊查證</h3>
-<div class="reason-list">
-<div class="reason">
-<div>—</div>
-<div>
-<b>尚未取得外部來源查證結果</b>
-<span>目前已完成文字風險特徵分析；公開資訊來源的即時比對結果將於取得資料後顯示。</span>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>分析結果</title>
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    .drift-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .drift-metric {
+      padding: 18px;
+      border: 1px solid #e5eaf0;
+      border-radius: 14px;
+      background: #f8fafc;
+    }
+
+    .drift-metric span {
+      display: block;
+      color: #718096;
+      font-size: 13px;
+      margin-bottom: 7px;
+    }
+
+    .drift-metric strong {
+      display: block;
+      font-size: 22px;
+      color: #173f35;
+    }
+
+    .drift-status {
+      margin-top: 18px;
+      padding: 18px 20px;
+      border-radius: 14px;
+      background: #f2f7f4;
+      border-left: 4px solid #446f5b;
+    }
+
+    .drift-status b {
+      display: block;
+      margin-bottom: 8px;
+      color: #244d3c;
+    }
+
+    .drift-status p {
+      margin: 0;
+      line-height: 1.7;
+      color: #4a5568;
+    }
+
+    .drift-period {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 12px 0 4px;
+      color: #52606d;
+    }
+
+    .drift-period strong {
+      color: #253f35;
+    }
+
+    .term-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .term-box {
+      border: 1px solid #e4e9ee;
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .term-box h4 {
+      margin: 0 0 14px;
+      color: #2f5545;
+    }
+
+    .term-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .term-tag {
+      display: inline-block;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: #edf4ef;
+      color: #335b49;
+      font-size: 13px;
+    }
+
+    .term-tag.down {
+      background: #f4f1ec;
+      color: #725d43;
+    }
+
+    .quality-ok {
+      color: #2e7d55 !important;
+    }
+
+    .quality-warning {
+      color: #b36b22 !important;
+    }
+
+    .drift-empty {
+      padding: 25px;
+      margin-top: 15px;
+      text-align: center;
+      border-radius: 14px;
+      border: 1px dashed #cfd8dc;
+      color: #718096;
+      background: #fafbfc;
+    }
+
+    .drift-run-panel {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid #e5eaf0;
+    }
+
+    .drift-run-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .drift-run-row input {
+      width: 180px;
+      padding: 11px 13px;
+      border: 1px solid #ccd6df;
+      border-radius: 10px;
+      font-size: 15px;
+      text-transform: uppercase;
+    }
+
+    .drift-run-row button {
+      padding: 11px 18px;
+      border: 0;
+      border-radius: 10px;
+      background: #244d3c;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .drift-run-row button:disabled {
+      opacity: .65;
+      cursor: wait;
+    }
+
+    #driftRunStatus {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #52606d;
+    }
+
+    @media (max-width: 900px) {
+      .drift-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .term-columns {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .drift-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="site-header">
+  <div class="nav-wrap">
+    <a class="brand" href="index.html">
+      <div class="brand-mark">FI</div>
+      <div class="brand-text">
+        <strong>金融資訊真偽判斷與可信度風險提醒系統</strong>
+        <span>Financial Information Credibility & Risk Alert System</span>
+      </div>
+    </a>
+
+    <nav class="nav-links">
+      <a href="index.html">首頁</a>
+      <a class="active" href="analysis.html">資訊分析</a>
+      <a href="official.html">公告比對</a>
+      <a href="records.html">分析紀錄</a>
+      <a href="member.html">會員中心</a>
+    </nav>
+  </div>
+</header>
+
+<section class="page-hero">
+  <div class="container">
+    <div class="breadcrumb">首頁 / 金融資訊分析 / 分析結果</div>
+    <h1>可信度分析結果</h1>
+    <p>查詢內容載入中</p>
+  </div>
+</section>
+
+<div class="container layout">
+  <aside class="sidebar">
+    <a class="active" href="analysis.html">金融資訊分析</a>
+    <a href="official.html">官方公告比對</a>
+    <a href="records.html">分析紀錄</a>
+    <a href="member.html">會員中心</a>
+  </aside>
+
+  <main>
+
+    <div class="content-card">
+      <div class="result-top">
+        <div class="score-ring"
+             style="background:conic-gradient(var(--orange) 0 0%,#dfe8f4 0% 100%)">
+          <strong>0</strong>
+        </div>
+
+        <div>
+          <h2>風險分析分數</h2>
+          <p>正在載入分析結果。</p>
+          <div class="progress">
+            <span style="width:0%;background:linear-gradient(90deg,var(--orange),#f2b763)"></span>
+          </div>
+        </div>
+
+        <div class="risk-box">
+          <span>風險等級</span>
+          <strong>—</strong>
+          <small>正在分析</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card">
+      <h3>AI 判定原因</h3>
+      <div class="reason-list">
+        <div class="reason">
+          <div>01</div>
+          <div>
+            <b>正在載入分析結果</b>
+            <span>系統正在整理風險特徵。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" id="externalVerification">
+      <h3>外部資訊查證</h3>
+      <div class="reason-list">
+        <div class="reason">
+          <div>—</div>
+          <div>
+            <b>尚未取得外部來源查證結果</b>
+            <span>目前已完成文字風險特徵分析；公開資訊來源的即時比對結果將於取得資料後顯示。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" id="dataShiftSection">
+      <h3>跨期文字變化分析</h3>
+
+      <p>
+        比較不同期間的財報、法說會或其他官方文字資料，
+        衡量公司資訊內容是否出現顯著變化。
+      </p>
+
+      <div class="drift-run-panel">
+        <strong>從 STRUX 法說會資料直接執行</strong>
+
+        <p style="margin:8px 0 12px;color:#718096;">
+          輸入 STRUX 中的股票代號，系統會自動取得該公司最新兩期法說會文字並進行比較。
+          目前可先使用 AMT 驗證完整流程。
+        </p>
+
+        <div class="drift-run-row">
+          <input
+            id="driftTickerInput"
+            type="text"
+            value="AMT"
+            placeholder="例如 AMT"
+            autocomplete="off"
+          >
+
+          <button
+            id="runDataShiftButton"
+            type="button"
+          >
+            執行跨期分析
+          </button>
+        </div>
+
+        <div id="driftRunStatus"></div>
+      </div>
+
+      <div class="drift-empty" id="dataShiftEmpty">
+        尚未取得可進行跨期比較的兩期資料。
+      </div>
+
+      <div id="dataShiftContent" style="display:none;">
+
+        <div class="drift-period">
+          <span>
+            股票／公司：
+            <strong id="driftTicker">—</strong>
+          </span>
+
+          <span>|</span>
+
+          <span>
+            比較期間：
+            <strong id="driftPeriod">—</strong>
+          </span>
+
+          <span>|</span>
+
+          <span>
+            資料來源：
+            <strong id="driftSource">—</strong>
+          </span>
+        </div>
+
+        <div class="drift-grid">
+
+          <div class="drift-metric">
+            <span>資料漂移程度</span>
+            <strong id="driftLevel">—</strong>
+          </div>
+
+          <div class="drift-metric">
+            <span>Jensen-Shannon Divergence</span>
+            <strong id="driftJsd">—</strong>
+          </div>
+
+          <div class="drift-metric">
+            <span>Cosine Similarity</span>
+            <strong id="driftCosine">—</strong>
+          </div>
+
+          <div class="drift-metric">
+            <span>資料品質</span>
+            <strong id="driftQuality">—</strong>
+          </div>
+
+        </div>
+
+        <div class="drift-status">
+          <b>系統判讀</b>
+          <p id="driftInterpretation">—</p>
+        </div>
+
+        <div class="term-columns">
+
+          <div class="term-box">
+            <h4>主要增加詞彙</h4>
+            <div class="term-tags" id="emergingTerms"></div>
+          </div>
+
+          <div class="term-box">
+            <h4>主要下降詞彙</h4>
+            <div class="term-tags" id="disappearingTerms"></div>
+          </div>
+
+        </div>
+
+        <div class="drift-status" style="margin-top:20px;">
+          <b>判定門檻</b>
+          <p id="driftThresholdText">—</p>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
 </div>
-</div>
-</div>
-</div></main></div><script src="script.js"></script></body></html>
+
+<script src="script.js"></script>
+
+</body>
+</html>
