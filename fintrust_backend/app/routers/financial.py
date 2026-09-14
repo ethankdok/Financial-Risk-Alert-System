@@ -101,13 +101,13 @@ def health() -> HealthResponse:
 
 
 @router.get("/ai/health")
-def ai_analysis_health():
-    return AIFinancialAnalysisService().health(subindustry="IC 設計")
+def ai_analysis_health(subindustry: str = Query(default="IC 設計")):
+    return AIFinancialAnalysisService().health(subindustry=subindustry)
 
 
 @router.get("/ai/rules", response_model=AnalysisRuleCatalogResponse)
-def ai_analysis_rules() -> AnalysisRuleCatalogResponse:
-    return MonitorableFinancialRuleEngine(subindustry="IC 設計").catalog()
+def ai_analysis_rules(subindustry: str = Query(default="IC 設計")) -> AnalysisRuleCatalogResponse:
+    return MonitorableFinancialRuleEngine(subindustry=subindustry).catalog()
 
 
 @router.get("/statement-coverage", response_model=FinancialStatementCoverageReport)

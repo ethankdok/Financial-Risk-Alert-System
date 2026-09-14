@@ -11,7 +11,7 @@ from flask import Flask, jsonify, request, session, send_from_directory
 from financial_routes import create_financial_blueprint
 from fintrust_client import FinTrustClient, FinTrustClientError
 from flask_data_repository import DuplicateRecordError, build_flask_data_repository
-from member_services import MemberAuthService, NotificationService, bool_int, utc_now_str
+from member_services import MemberAuthService, NotificationService, bool_int, create_email_provider, utc_now_str
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from data_shift import data_shift_bp
@@ -550,12 +550,14 @@ def _notification_evidence(ticker: str) -> dict[str, Any]:
 @app.post("/api/system/notifications/process")
 @notification_job_required
 def process_notifications():
-    service = NotificationService(repository, evidence_provider=_notification_evidence)
+    email_provider = create_email_provider()
+    service = NotificationService(repository, evidence_provider=_notification_evidence, email_provider=email_provider)
     results = service.process_all_members()
     return jsonify({
         "processed": len(results),
         "sent": sum(1 for item in results if item.get("status") == "sent"),
         "suppressed_duplicate": sum(1 for item in results if item.get("status") == "suppressed_duplicate"),
+        "email_provider": email_provider.health(),
         "items": results,
     })
 
@@ -573,7 +575,7 @@ def admin_system_status():
         "app_env": APP_ENV,
         "flask_datastore_backend": repository.backend_name,
         "member_auth_mode": "local_password" if member_auth.local_password_enabled() else "managed_firebase_token",
-        "notification_provider": "console",
+        "notification_provider": create_email_provider().health(),
         "notification_job_token_configured": bool(os.getenv("NOTIFICATION_JOB_TOKEN", "").strip()),
         "data_shift_parquet_configured": bool(os.getenv("DATA_SHIFT_PARQUET", "").strip()),
         "fintrust_api_configured": bool(os.getenv("FINTRUST_API_BASE_URL", "").strip()),

@@ -148,7 +148,7 @@ class UnifiedAnalysisOrchestrator:
         )
 
         ai_analysis = None
-        if include_gemini and financial_result.status == "completed" and company.subindustry == "IC 設計":
+        if include_gemini and financial_result.status == "completed" and AIFinancialAnalysisService.supports(company.subindustry):
             historical_report = await HistoricalFinancialAnalysisService().analyze(
                 company.ticker,
                 years=years,
@@ -170,7 +170,7 @@ class UnifiedAnalysisOrchestrator:
                 )
             )
         else:
-            stages.append(_stage("ai_financial", "NOT_CONFIGURED", limitations=["Gemini/LLM execution was disabled or subindustry is unsupported."]))
+            stages.append(_stage("ai_financial", "NOT_CONFIGURED", limitations=["Gemini/LLM execution was disabled, financial data failed, or subindustry is unsupported."]))
 
         card_payload = card.model_dump(mode="json")
         if ai_analysis is not None:

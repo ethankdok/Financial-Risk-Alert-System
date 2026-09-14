@@ -22,7 +22,7 @@ from app.services.monitorable_rule_engine import MonitorableFinancialRuleEngine
 
 class AIFinancialAnalysisService:
     version = "ai-financial-analysis-0.2.0"
-    supported_subindustries = {"IC 設計"}
+    supported_subindustries = {"晶圓代工", "IC 設計", "封裝測試"}
 
     def __init__(
         self,
@@ -163,9 +163,14 @@ class AIFinancialAnalysisService:
             )
 
         limitations = list(report.limitations)
-        limitations.append(
-            "AI v2 規則分為 common、semiconductor、ic_design 三層；heuristic_mvp 門檻僅供架構驗證，尚不是產業公認標準。"
-        )
+        if report.subindustry == "IC 設計":
+            limitations.append(
+                "AI v2 規則分為 common、semiconductor、ic_design 三層；heuristic_mvp 門檻僅供架構驗證，尚不是產業公認標準。"
+            )
+        else:
+            limitations.append(
+                "AI v2 對此子產業使用 common + semiconductor 共同規則層；專屬 overlay 尚未校準，LLM 不得補造不存在的產業專屬判斷。"
+            )
         if trace.status == "not_configured":
             limitations.append("LLM 尚未設定；目前仍完成財務特徵、規則監控與八大面向 deterministic 分析。")
         if trace.status == "failed":

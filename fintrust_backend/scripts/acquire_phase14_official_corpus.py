@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Phase 14 Real Corpus Expansion — Acquisition Script
-====================================================
+
 Fetches official disclosure evidence for 2330 / 2303 / 3711 using the
 *existing* service architecture.  Does NOT reimplement any scraper or parser.
 

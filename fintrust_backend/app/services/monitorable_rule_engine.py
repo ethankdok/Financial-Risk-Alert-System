@@ -20,15 +20,14 @@ class MonitorableFinancialRuleEngine:
     """Config-driven layered rule engine with explicit provenance for monitoring."""
 
     def __init__(self, *, subindustry: str = "IC 設計") -> None:
-        if subindustry != "IC 設計":
-            raise ValueError("AI analysis engine v2 currently provides a full layered catalog for IC 設計.")
         rules_dir = Path(__file__).resolve().parents[1] / "rules"
         self.subindustry = subindustry
         self.configs = [
             self._load(rules_dir / "common_analysis_rules.json"),
             self._load(rules_dir / "semiconductor_analysis_rules.json"),
-            self._load(rules_dir / "ic_design_analysis_rules.json"),
         ]
+        if subindustry == "IC 設計":
+            self.configs.append(self._load(rules_dir / "ic_design_analysis_rules.json"))
         self.rules: list[dict[str, Any]] = []
         for config in self.configs:
             for raw_rule in config["rules"]:

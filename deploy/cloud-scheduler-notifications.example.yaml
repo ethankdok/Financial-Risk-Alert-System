@@ -1,0 +1,26 @@
+# Example only. Do not apply to production until release approval.
+#
+# Recommended production path:
+# - Use a dedicated Cloud Scheduler service account.
+# - Grant it permission to invoke the Flask Cloud Run service.
+# - Keep NOTIFICATION_JOB_TOKEN in Secret Manager if the header guard is used.
+# - Keep the notification processor idempotent via dedupe_key history.
+
+name: fintrust-notification-processor
+description: FinTrust member notification processor
+schedule: "*/30 * * * *"
+timeZone: Asia/Taipei
+httpTarget:
+  uri: https://FINANCIAL_RISK_WEB_URL/api/system/notifications/process
+  httpMethod: POST
+  oidcToken:
+    serviceAccountEmail: fintrust-scheduler@PROJECT_ID.iam.gserviceaccount.com
+    audience: https://FINANCIAL_RISK_WEB_URL
+  headers:
+    X-Notification-Job-Token: SECRET_MANAGER_OR_RUNTIME_TOKEN_VALUE
+retryConfig:
+  retryCount: 3
+  maxRetryDuration: 300s
+  minBackoffDuration: 10s
+  maxBackoffDuration: 60s
+  maxDoublings: 3

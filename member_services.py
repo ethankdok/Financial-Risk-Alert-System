@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import os
+import smtplib
+import ssl
 import uuid
 from dataclasses import dataclass
+from email.message import EmailMessage as SmtpMessage
 from datetime import UTC, datetime
 from typing import Any, Callable
 
@@ -132,9 +135,96 @@ class EmailProvider:
     def send(self, message: EmailMessage) -> dict[str, Any]:
         return {"provider": self.name, "status": "dry_run", "message_id": None}
 
+    def health(self) -> dict[str, Any]:
+        return {"provider": self.name, "configured": True, "status": "dry_run"}
+
 
 class ConsoleEmailProvider(EmailProvider):
     name = "console"
+
+
+class SmtpEmailProvider(EmailProvider):
+    name = "smtp"
+
+    def __init__(
+        self,
+        *,
+        host: str | None = None,
+        port: int | None = None,
+        username: str | None = None,
+        password: str | None = None,
+        from_email: str | None = None,
+        use_tls: bool | None = None,
+        use_ssl: bool | None = None,
+        timeout_seconds: float = 10.0,
+    ) -> None:
+        self.host = (host if host is not None else os.getenv("SMTP_HOST", "")).strip()
+        self.port = int(port if port is not None else os.getenv("SMTP_PORT", "587"))
+        self.username = (username if username is not None else os.getenv("SMTP_USERNAME", "")).strip()
+        self.password = password if password is not None else os.getenv("SMTP_PASSWORD", "")
+        self.from_email = (from_email if from_email is not None else os.getenv("EMAIL_FROM", "")).strip()
+        self.use_tls = bool_int(os.getenv("SMTP_USE_TLS"), 1) == 1 if use_tls is None else use_tls
+        self.use_ssl = bool_int(os.getenv("SMTP_USE_SSL"), 0) == 1 if use_ssl is None else use_ssl
+        self.timeout_seconds = timeout_seconds
+
+    def configured(self) -> bool:
+        return bool(self.host and self.port and self.from_email)
+
+    def health(self) -> dict[str, Any]:
+        return {
+            "provider": self.name,
+            "configured": self.configured(),
+            "host_configured": bool(self.host),
+            "port": self.port,
+            "from_email_configured": bool(self.from_email),
+            "username_configured": bool(self.username),
+            "use_tls": self.use_tls,
+            "use_ssl": self.use_ssl,
+        }
+
+    def send(self, message: EmailMessage) -> dict[str, Any]:
+        if not self.configured():
+            return {
+                "provider": self.name,
+                "status": "failed",
+                "safe_error_detail": "SMTP_HOST, SMTP_PORT, and EMAIL_FROM must be configured.",
+            }
+        smtp_message = SmtpMessage()
+        smtp_message["From"] = self.from_email
+        smtp_message["To"] = message.to_email
+        smtp_message["Subject"] = message.subject
+        smtp_message.set_content(message.body)
+        try:
+            if self.use_ssl:
+                with smtplib.SMTP_SSL(self.host, self.port, timeout=self.timeout_seconds, context=ssl.create_default_context()) as client:
+                    self._login_if_configured(client)
+                    client.send_message(smtp_message)
+            else:
+                with smtplib.SMTP(self.host, self.port, timeout=self.timeout_seconds) as client:
+                    if self.use_tls:
+                        client.starttls(context=ssl.create_default_context())
+                    self._login_if_configured(client)
+                    client.send_message(smtp_message)
+        except Exception as exc:
+            return {
+                "provider": self.name,
+                "status": "failed",
+                "safe_error_detail": f"{type(exc).__name__}: SMTP send failed.",
+            }
+        return {"provider": self.name, "status": "sent", "message_id": None}
+
+    def _login_if_configured(self, client: smtplib.SMTP) -> None:
+        if self.username and self.password:
+            client.login(self.username, self.password)
+
+
+def create_email_provider() -> EmailProvider:
+    provider = os.getenv("EMAIL_PROVIDER", "console").strip().lower()
+    if provider in {"", "console", "dry_run", "none"}:
+        return ConsoleEmailProvider()
+    if provider == "smtp":
+        return SmtpEmailProvider()
+    return ConsoleEmailProvider()
 
 
 def notification_dedupe_key(member_uid: str, ticker: str, notification_type: str, evidence_identity: str) -> str:
