@@ -54,3 +54,12 @@ def root():
         "persistence_backend": os.getenv("DATASTORE_BACKEND", "sqlite"),
         "disclaimer": "僅供財報分析與可信度風險提醒，非投資建議。",
     }
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "service": "fintrust-api",
+        "persistence_backend": os.getenv("DATASTORE_BACKEND", "sqlite"),
+    }
