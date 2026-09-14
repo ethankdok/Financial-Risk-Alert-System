@@ -8,6 +8,7 @@ from app.services.analysis_repository import AnalysisRepository
 from app.services.official_document_extraction import enrich_conferences_with_document_extraction
 from app.services.official_evidence_service import OfficialEvidenceService
 from app.services.text_intelligence import FinancialTextIntelligenceService, documents_from_official_events
+from app.services.llm_evidence_selection import select_llm_text_evidence
 
 
 def _dump(value: Any) -> dict[str, Any]:
@@ -81,13 +82,23 @@ class OfficialEvidenceCardBuilder:
             conferences=conferences,
             material_events=summary.material_events,
         )
-        text_analysis = FinancialTextIntelligenceService().analyze_documents(text_documents)
+        text_service = FinancialTextIntelligenceService()
+        text_analysis = text_service.analyze_documents(text_documents)
         text_evidence = [
             sentence.model_dump(mode="json")
             for document in text_analysis.documents
             for sentence in document.sentences
             if sentence.relevant
         ][:8]
+        comparable_documents = [document for document in text_documents if document.period and document.text.strip()]
+        narrative_shift = None
+        if len(comparable_documents) >= 2:
+            ordered = sorted(comparable_documents, key=lambda item: item.period or "")
+            narrative_shift = text_service.narrative_shift(ordered[-2], ordered[-1]).model_dump(mode="json")
+        _selected_evidence, llm_evidence_ids = select_llm_text_evidence(
+            text_evidence,
+            narrative_shift=narrative_shift,
+        )
         status = _source_status(conferences, summary.material_events, snapshot)
         limitations = list(dict.fromkeys([
             *summary.limitations,
@@ -121,6 +132,9 @@ class OfficialEvidenceCardBuilder:
             material_events=[_dump(item) for item in summary.material_events],
             disclosure_claims=claims,
             text_evidence=text_evidence,
+            narrative_shift=narrative_shift,
+            semantic_analysis=text_analysis.semantic_analysis,
+            llm_evidence_ids=llm_evidence_ids,
             sources=[source.model_dump(mode="json") for source in summary.sources],
             source_status=status,
             limitations=limitations,

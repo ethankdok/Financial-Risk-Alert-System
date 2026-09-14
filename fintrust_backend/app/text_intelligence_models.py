@@ -80,6 +80,8 @@ class TextEvidenceSentence(BaseModel):
     relevance_score: float
     relevance_model_name: str
     relevance_model_version: str
+    semantic_relevance_score: float | None = None
+    semantic_provider: str | None = None
     topics: list[CanonicalTopic] = Field(default_factory=list)
     topic_scores: list[TopicDecision] = Field(default_factory=list)
     related_metrics: list[str] = Field(default_factory=list)
@@ -116,6 +118,7 @@ class TextMiningDocumentResult(BaseModel):
     top_terms: list[TextMiningTerm] = Field(default_factory=list)
     tfidf_terms: list[TfidfTerm] = Field(default_factory=list)
     sentences: list[TextEvidenceSentence] = Field(default_factory=list)
+    semantic_summary: dict[str, Any] = Field(default_factory=dict)
 
 
 class TextMiningAnalysisRequest(BaseModel):
@@ -128,6 +131,7 @@ class TextMiningAnalysisResponse(BaseModel):
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     model_summary: dict[str, Any]
     documents: list[TextMiningDocumentResult]
+    semantic_analysis: dict[str, Any] = Field(default_factory=dict)
 
 
 class NarrativeShiftRequest(BaseModel):
@@ -191,4 +195,3 @@ class AnnotationCandidateExportRow(BaseModel):
     annotator_id: str = ""
     annotation_round: str = ""
     annotation_notes: str = ""
-

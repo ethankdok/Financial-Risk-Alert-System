@@ -6,10 +6,12 @@ from app.dependencies import get_analysis_repository
 from app.services.analysis_repository import AnalysisRepository
 from app.services.financial_analysis_service import UnsupportedCompanyError
 from app.services.text_intelligence import (
+    TEXT_INTELLIGENCE_VERSION,
     FinancialTextIntelligenceService,
     documents_from_official_events,
     export_annotation_candidates_csv,
 )
+from app.services.text_embedding_provider import create_text_embedding_provider
 from app.text_intelligence_models import (
     NarrativeShiftRequest,
     NarrativeShiftResponse,
@@ -19,6 +21,18 @@ from app.text_intelligence_models import (
 
 
 router = APIRouter(prefix="/api/v1/financial/text-mining", tags=["text-mining-v2"])
+
+
+@router.get("/health")
+def text_mining_health():
+    embedding_provider = create_text_embedding_provider()
+    return {
+        "module": "financial_text_intelligence_v2",
+        "version": TEXT_INTELLIGENCE_VERSION,
+        "baseline": "PROTOTYPE_BASELINE",
+        "semantic_embedding": embedding_provider.health(),
+        "ground_truth_required_for_performance_claims": True,
+    }
 
 
 @router.post("/analyze", response_model=TextMiningAnalysisResponse)
@@ -71,3 +85,13 @@ def company_annotation_candidates_csv(
         headers={"Content-Disposition": f'attachment; filename="{ticker}-annotation-candidates.csv"'},
     )
 
+
+@router.get("/companies/{ticker}/latest-run")
+def company_latest_text_intelligence_run(
+    ticker: str,
+    repository: AnalysisRepository = Depends(get_analysis_repository),
+):
+    latest = repository.get_latest_text_intelligence_result(ticker)
+    if latest is None:
+        raise HTTPException(status_code=404, detail="No persisted text intelligence run is available for this ticker.")
+    return latest

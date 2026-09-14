@@ -28,6 +28,14 @@ from app.services.official_event_sources import (
 TAG_RE = re.compile(r"<[^>]+>")
 SPACE_RE = re.compile(r"\s+")
 SCRIPT_STYLE_RE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
+STRUCTURAL_NOISE_RE = re.compile(
+    r"<(nav|header|footer|aside|script|style)\b[^>]*>.*?</\1>",
+    re.IGNORECASE | re.DOTALL,
+)
+PARAGRAPH_RE = re.compile(
+    r"<(?:p|li|h[1-6]|td|th|div|section|article)\b[^>]*>(.*?)</(?:p|li|h[1-6]|td|th|div|section|article)>",
+    re.IGNORECASE | re.DOTALL,
+)
 TEXTISH_CONTENT_TYPES = ("text/", "json", "xml", "html", "javascript")
 DEFAULT_USER_AGENT = "FinTrustAlert-MIS-Project/0.1 (+https://github.com/UnaLu027/fintrust-alert)"
 
@@ -37,6 +45,31 @@ Opener = Callable[[Request, float], Any]
 def strip_html(value: str) -> str:
     no_scripts = SCRIPT_STYLE_RE.sub(" ", value)
     return SPACE_RE.sub(" ", unescape(TAG_RE.sub(" ", no_scripts))).strip()
+
+
+def _dedupe_repeated_lines(lines: list[str]) -> list[str]:
+    counts: dict[str, int] = {}
+    output: list[str] = []
+    for line in lines:
+        key = line.casefold()
+        counts[key] = counts.get(key, 0) + 1
+        if counts[key] <= 2:
+            output.append(line)
+    return output
+
+
+def extract_meaningful_html_text(value: str) -> tuple[str, list[str]]:
+    html = STRUCTURAL_NOISE_RE.sub(" ", value)
+    paragraphs = [
+        strip_html(match.group(1))
+        for match in PARAGRAPH_RE.finditer(html)
+    ]
+    paragraphs = [paragraph for paragraph in paragraphs if len(paragraph) >= 8]
+    if not paragraphs:
+        text = strip_html(html)
+        paragraphs = [line.strip() for line in re.split(r"[\r\n]+", text) if len(line.strip()) >= 8]
+    paragraphs = _dedupe_repeated_lines(paragraphs)
+    return "\n".join(paragraphs).strip(), paragraphs
 
 
 def infer_document_kind(url: str, title: str | None = None, content_type: str | None = None) -> OfficialDocumentKind:
@@ -77,22 +110,25 @@ def _verified_ssl_context():
         return None
 
 
-def _extract_pdf_text(raw: bytes, *, max_chars: int) -> tuple[str | None, str | None]:
+def _extract_pdf_text(raw: bytes, *, max_chars: int) -> tuple[str | None, str | None, int]:
     try:
         from pypdf import PdfReader  # type: ignore
     except Exception:
-        return None, "PDF parser pypdf 尚未安裝；目前先保留文件連結與 download/debug 狀態。"
+        return None, "PDF parser pypdf 尚未安裝；目前先保留文件連結與 download/debug 狀態。", 0
     try:
         reader = PdfReader(io.BytesIO(raw))
         chunks = []
-        for page in reader.pages[:8]:
+        pages_extracted = 0
+        for page in reader.pages:
             chunks.append(page.extract_text() or "")
+            pages_extracted += 1
             if sum(len(chunk) for chunk in chunks) >= max_chars:
                 break
-        text = SPACE_RE.sub(" ", " ".join(chunks)).strip()
-        return (text[:max_chars] if text else None), None
+        lines = [SPACE_RE.sub(" ", line).strip() for chunk in chunks for line in chunk.splitlines()]
+        text = "\n".join(_dedupe_repeated_lines([line for line in lines if line])).strip()
+        return (text[:max_chars] if text else None), None, pages_extracted
     except Exception as exc:  # pragma: no cover - PDF parsing varies by document
-        return None, f"PDF 下載成功但文字抽取失敗：{exc}"
+        return None, f"PDF 下載成功但文字抽取失敗：{exc}", 0
 
 
 def _source_status_from_error(error: Exception) -> tuple[OfficialEvidenceSourceStatus, str]:
@@ -173,19 +209,24 @@ class OfficialDocumentExtractionService:
             "final_url": final_url,
             "http_status": http_status,
         }
-        text: str | None = None
+        full_text: str | None = None
         limitation: str | None = None
+        paragraph_count: int | None = None
+        pages_extracted: int | None = None
         if kind == "pdf":
-            text, limitation = _extract_pdf_text(raw, max_chars=request_payload.max_preview_chars)
+            full_text, limitation, pages_extracted = _extract_pdf_text(raw, max_chars=request_payload.max_full_text_chars)
         elif kind in {"html", "transcript", "unknown"} or (content_type and any(t in content_type.casefold() for t in TEXTISH_CONTENT_TYPES)):
-            text = strip_html(_decode_bytes(raw, content_type))[: request_payload.max_preview_chars]
+            full_text, paragraphs = extract_meaningful_html_text(_decode_bytes(raw, content_type))
+            paragraph_count = len(paragraphs)
+            full_text = full_text[: request_payload.max_full_text_chars]
         else:
             limitation = "此文件類型目前不直接抽取全文；保留官方文件連結供下一步下載或人工覆核。"
 
-        claims = infer_official_claims(text or request_payload.document_title or "", source_url=final_url or source_url)
+        text_preview = full_text[: request_payload.max_preview_chars] if full_text else None
+        claims = infer_official_claims(full_text or request_payload.document_title or "", source_url=final_url or source_url)
         related_metrics = CONFERENCE_TOPIC_METRICS.get(company.subindustry, [])
-        topics = infer_conference_topics(text or request_payload.document_title or "", company.subindustry)
-        if text:
+        topics = infer_conference_topics(full_text or request_payload.document_title or "", company.subindustry)
+        if full_text:
             return OfficialDocumentExtractionResult(
                 **base_kwargs,
                 document_kind=kind,
@@ -194,12 +235,16 @@ class OfficialDocumentExtractionService:
                 content_type=content_type,
                 final_url=final_url,
                 http_status=http_status,
-                text_preview=text,
-                text_length=len(text),
+                text_preview=text_preview,
+                full_text=full_text,
+                text_length=len(text_preview or ""),
+                full_text_length=len(full_text),
+                paragraph_count=paragraph_count,
+                pages_extracted=pages_extracted,
                 related_metrics=related_metrics,
                 disclosure_claims=claims,
                 limitations=[
-                    "文件文字抽取已支援官方 PDF / HTML preview；較複雜表格或影音內容仍保留官方連結供人工覆核。"
+                    "文件文字抽取已支援官方 PDF / HTML full-text candidate；較複雜表格或影音內容仍保留官方連結供人工覆核。"
                 ],
                 debug={**debug, "topics": topics},
             )
@@ -211,6 +256,8 @@ class OfficialDocumentExtractionService:
             content_type=content_type,
             final_url=final_url,
             http_status=http_status,
+            paragraph_count=paragraph_count,
+            pages_extracted=pages_extracted,
             related_metrics=related_metrics,
             disclosure_claims=claims,
             limitations=[limitation or "文件下載成功，但目前無可用文字 preview；保留官方連結與 debug 資訊。"],
@@ -228,6 +275,7 @@ class OfficialDocumentExtractionService:
                 document_title=record.document_title or record.title,
                 source_name=record.source_name,
                 max_preview_chars=max_preview_chars,
+                max_full_text_chars=max(1000, min(200000, max_preview_chars * 30)),
             )
         )
 
@@ -263,6 +311,9 @@ def enrich_conferences_with_document_extraction(
         if extraction.text_preview:
             update["document_text_preview"] = extraction.text_preview
             update["document_text_length"] = extraction.text_length
+        if extraction.full_text:
+            update["document_full_text"] = extraction.full_text
+            update["document_full_text_length"] = extraction.full_text_length
         enriched.append(record.model_copy(update=update))
 
     summary = {

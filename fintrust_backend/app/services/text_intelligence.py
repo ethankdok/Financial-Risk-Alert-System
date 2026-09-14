@@ -24,6 +24,11 @@ from app.text_intelligence_models import (
     TopicChange,
     TopicDecision,
 )
+from app.services.text_embedding_provider import (
+    TextEmbeddingProvider,
+    cosine_similarity as embedding_cosine_similarity,
+    create_text_embedding_provider,
+)
 
 
 TEXT_INTELLIGENCE_VERSION = "text-intelligence-v2.0.0"
@@ -45,6 +50,20 @@ TOPIC_RELATED_METRICS: dict[CanonicalTopic, list[str]] = {
     "legal_regulatory": ["net_margin", "operating_cash_flow"],
     "governance": ["debt_ratio", "current_ratio"],
     "other": [],
+}
+
+TOPIC_DESCRIPTIONS: dict[CanonicalTopic, str] = {
+    "outlook": "Management discussion of guidance, operating outlook, demand visibility, or future momentum.",
+    "capacity_capex": "Capacity expansion, capital expenditure, equipment, plants, and production planning.",
+    "demand_inventory": "End-market demand, customer pull-in, inventory digestion, and channel correction.",
+    "revenue_orders": "Revenue, orders, backlog, shipments, customer sales, and sales growth.",
+    "rd_product": "Research and development, product roadmap, technology platforms, and product mix.",
+    "cash_financing": "Cash flow, liquidity, financing, borrowing, debt, and financial structure.",
+    "ma_investment": "Acquisitions, strategic investments, disposals, and portfolio changes.",
+    "operation_disruption": "Factory interruptions, outages, supply disruption, and production shutdowns.",
+    "legal_regulatory": "Litigation, penalties, regulatory compliance, and legal risk.",
+    "governance": "Board, management, internal control, audit, and governance events.",
+    "other": "Official business, operational, or financial disclosure not covered by another topic.",
 }
 
 TOPIC_PROTOTYPES: dict[CanonicalTopic, tuple[str, ...]] = {
@@ -378,8 +397,15 @@ def apply_tfidf(results: list[TextMiningDocumentResult], *, limit: int = 12) -> 
 
 
 class FinancialTextIntelligenceService:
-    def __init__(self, relevance_model: PrototypeSemanticRelevanceModel | None = None) -> None:
+    def __init__(
+        self,
+        relevance_model: PrototypeSemanticRelevanceModel | None = None,
+        embedding_provider: TextEmbeddingProvider | None = None,
+        max_semantic_sentences: int = 40,
+    ) -> None:
         self.relevance_model = relevance_model or PrototypeSemanticRelevanceModel()
+        self.embedding_provider = embedding_provider if embedding_provider is not None else create_text_embedding_provider()
+        self.max_semantic_sentences = max_semantic_sentences
 
     def analyze_documents(
         self,
@@ -389,6 +415,7 @@ class FinancialTextIntelligenceService:
     ) -> TextMiningAnalysisResponse:
         results = [self._analyze_document(document, include_irrelevant_sentences=include_irrelevant_sentences) for document in documents]
         apply_tfidf(results)
+        semantic_analysis = self._annotate_semantic_scores(results)
         return TextMiningAnalysisResponse(
             model_summary={
                 "relevance_model": self.relevance_model.model_name,
@@ -396,10 +423,59 @@ class FinancialTextIntelligenceService:
                 "parser_version": PARSER_VERSION,
                 "boilerplate_version": BOILERPLATE_VERSION,
                 "supervised_baseline_available": TfidfNaiveBayesClassifier.model_name,
+                "topic_representation": {
+                    topic: {
+                        "description": TOPIC_DESCRIPTIONS[topic],
+                        "seed_lexicon": tokenize(" ".join(TOPIC_PROTOTYPES[topic]))[:20],
+                    }
+                    for topic in TOPIC_DESCRIPTIONS
+                },
                 "ground_truth_required_for_performance_claims": True,
             },
             documents=results,
+            semantic_analysis=semantic_analysis,
         )
+
+    def _annotate_semantic_scores(self, results: list[TextMiningDocumentResult]) -> dict[str, object]:
+        health = self.embedding_provider.health()
+        if not self.embedding_provider.configured:
+            return {**health, "status": "not_configured", "fallback": "PROTOTYPE_BASELINE"}
+        sentence_refs = [
+            sentence
+            for result in results
+            for sentence in result.sentences
+            if sentence.relevant
+        ][: self.max_semantic_sentences]
+        if not sentence_refs:
+            return {**health, "status": "no_relevant_sentences", "fallback": None}
+        prototype = " ".join(TOPIC_DESCRIPTIONS[topic] for topic in TOPIC_DESCRIPTIONS if topic != "other")
+        batch = self.embedding_provider.embed_sentences([prototype, *[sentence.cleaned_text for sentence in sentence_refs]])
+        metadata = batch.metadata.__dict__
+        if metadata["status"] != "completed" or len(batch.vectors) != len(sentence_refs) + 1:
+            return {**metadata, "fallback": "PROTOTYPE_BASELINE"}
+        prototype_vector = batch.vectors[0]
+        for sentence, vector in zip(sentence_refs, batch.vectors[1:]):
+            sentence.semantic_relevance_score = round(embedding_cosine_similarity(prototype_vector, vector), 6)
+            sentence.semantic_provider = metadata["provider"]
+        by_document: dict[str, list[float]] = {}
+        for sentence in sentence_refs:
+            if sentence.semantic_relevance_score is not None:
+                by_document.setdefault(sentence.document_id, []).append(sentence.semantic_relevance_score)
+        for result in results:
+            scores = by_document.get(result.document_id, [])
+            if scores:
+                result.semantic_summary = {
+                    "provider": metadata["provider"],
+                    "model": metadata["model"],
+                    "scored_sentence_count": len(scores),
+                    "mean_semantic_relevance": round(sum(scores) / len(scores), 6),
+                }
+        return {
+            **metadata,
+            "scored_sentence_count": len(sentence_refs),
+            "fallback": None,
+            "semantic_scores_are_calibrated_probabilities": False,
+        }
 
     def _analyze_document(
         self,
@@ -485,19 +561,26 @@ class FinancialTextIntelligenceService:
         relevant_jsd = calculate_word_jsd(relevant_text_1, relevant_text_2)
         topic_jsd = calculate_jsd_from_distributions(first.topic_proportions, second.topic_proportions)
         cosine = calculate_text_cosine(relevant_text_1 or clean_text(document_1.text), relevant_text_2 or clean_text(document_2.text))
+        semantic_embedding_cosine = self._semantic_period_cosine(
+            relevant_text_1 or clean_text(document_1.text),
+            relevant_text_2 or clean_text(document_2.text),
+        )
         emerging, disappearing = compare_term_changes(relevant_text_1, relevant_text_2)
         topic_changes = compare_topic_changes(first, second)
+        metrics = {
+            "raw_text_word_jsd": round(raw_jsd, 6),
+            "cleaned_text_word_jsd": round(cleaned_jsd, 6),
+            "relevant_text_word_jsd": round(relevant_jsd, 6),
+            "topic_distribution_jsd": round(topic_jsd, 6),
+            "semantic_tfidf_cosine_similarity": round(cosine, 6),
+        }
+        if semantic_embedding_cosine is not None:
+            metrics["semantic_embedding_cosine_similarity"] = semantic_embedding_cosine
         return NarrativeShiftResponse(
             ticker=document_1.ticker,
             period_1=document_1.period,
             period_2=document_2.period,
-            metrics={
-                "raw_text_word_jsd": round(raw_jsd, 6),
-                "cleaned_text_word_jsd": round(cleaned_jsd, 6),
-                "relevant_text_word_jsd": round(relevant_jsd, 6),
-                "topic_distribution_jsd": round(topic_jsd, 6),
-                "semantic_tfidf_cosine_similarity": round(cosine, 6),
-            },
+            metrics=metrics,
             data_quality=check_data_quality(document_1.text, document_2.text),
             topic_changes=topic_changes,
             emerging_terms=emerging,
@@ -505,7 +588,8 @@ class FinancialTextIntelligenceService:
             supporting_sentences=rank_supporting_sentences([*first.sentences, *second.sentences]),
             method={
                 "baseline_preserved": ["raw_text_word_jsd", "semantic_tfidf_cosine_similarity"],
-                "v2_metrics": ["cleaned_text_word_jsd", "relevant_text_word_jsd", "topic_distribution_jsd"],
+                "v2_metrics": ["cleaned_text_word_jsd", "relevant_text_word_jsd", "topic_distribution_jsd", "semantic_embedding_cosine_similarity"],
+                "semantic_embedding_provider": self.embedding_provider.health(),
                 "combined_weighted_score": None,
                 "note": "Metrics are reported separately until human drift labels justify any combined score.",
             },
@@ -514,6 +598,14 @@ class FinancialTextIntelligenceService:
                 "Prototype semantic scoring is an implementation-ready baseline, not a validated final model.",
             ],
         )
+
+    def _semantic_period_cosine(self, text_1: str, text_2: str) -> float | None:
+        if not self.embedding_provider.configured:
+            return None
+        batch = self.embedding_provider.embed_sentences([text_1[:4000], text_2[:4000]])
+        if batch.metadata.status != "completed" or len(batch.vectors) != 2:
+            return None
+        return round(embedding_cosine_similarity(batch.vectors[0], batch.vectors[1]), 6)
 
 
 def check_data_quality(text_1: str, text_2: str) -> dict[str, object]:
@@ -588,6 +680,8 @@ def documents_from_official_events(
     documents: list[OfficialTextDocumentInput] = []
     for record in conferences:
         parts = [
+            record.document_full_text,
+            *[extraction.full_text for extraction in record.document_extractions if extraction.full_text],
             record.document_text_preview,
             record.summary,
             " ".join(record.source_evidence),

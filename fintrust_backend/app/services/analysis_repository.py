@@ -16,6 +16,7 @@ from app.models import FinancialFact
 from app.official_event_models import InvestorConferenceRecord, MaterialEventRecord
 from app.pipeline_models import AnalysisRunSummary, FrontendAnalysisSnapshot, PersistenceCounts
 from app.services.official_event_sources import investor_conference_identity, material_event_identity
+from app.text_intelligence_models import NarrativeShiftResponse, TextMiningAnalysisResponse
 
 
 HISTORICAL_FACT_FIELDS = [
@@ -78,6 +79,15 @@ class AnalysisRepository(Protocol):
     ) -> list[dict[str, Any]]: ...
     def list_runs(self, ticker: str, limit: int = 20) -> list[AnalysisRunSummary]: ...
     def get_fact(self, ticker: str, metric: str, period: str) -> FinancialFact | None: ...
+    def save_text_intelligence_result(
+        self,
+        *,
+        ticker: str,
+        run_id: str,
+        analysis: TextMiningAnalysisResponse,
+        narrative_shift: NarrativeShiftResponse | None = None,
+    ) -> dict[str, int]: ...
+    def get_latest_text_intelligence_result(self, ticker: str) -> dict[str, Any] | None: ...
 
 
 def to_json(value: Any) -> str:
@@ -317,6 +327,27 @@ class SqliteAnalysisRepository:
             );
             CREATE INDEX IF NOT EXISTS idx_official_events_ticker_type
                 ON official_events (ticker, event_type, event_date DESC, retrieved_at DESC);
+            CREATE TABLE IF NOT EXISTS text_model_runs (
+                run_id TEXT PRIMARY KEY,
+                ticker TEXT NOT NULL,
+                model_summary_json TEXT NOT NULL,
+                semantic_analysis_json TEXT NOT NULL,
+                narrative_shift_json TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS text_evidence (
+                evidence_id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL,
+                ticker TEXT NOT NULL,
+                document_id TEXT NOT NULL,
+                sentence_id TEXT NOT NULL,
+                source_type TEXT NOT NULL,
+                source_url TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_text_evidence_ticker_run
+                ON text_evidence (ticker, run_id);
             """)
 
     def save_pipeline_result(
@@ -533,6 +564,71 @@ class SqliteAnalysisRepository:
                 (ticker, metric, period),
             ).fetchone()
         return financial_fact_from_row(dict(row)) if row else None
+
+    def save_text_intelligence_result(
+        self,
+        *,
+        ticker: str,
+        run_id: str,
+        analysis: TextMiningAnalysisResponse,
+        narrative_shift: NarrativeShiftResponse | None = None,
+    ) -> dict[str, int]:
+        created_at = analysis.generated_at.isoformat()
+        sentences = [sentence for document in analysis.documents for sentence in document.sentences]
+        with self._connect() as connection:
+            connection.execute(
+                """INSERT OR REPLACE INTO text_model_runs
+                (run_id, ticker, model_summary_json, semantic_analysis_json, narrative_shift_json, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    run_id,
+                    ticker,
+                    to_json(analysis.model_summary),
+                    to_json(analysis.semantic_analysis),
+                    to_json(narrative_shift.model_dump(mode="json")) if narrative_shift else None,
+                    created_at,
+                ),
+            )
+            for sentence in sentences:
+                connection.execute(
+                    """INSERT OR REPLACE INTO text_evidence
+                    (evidence_id, run_id, ticker, document_id, sentence_id, source_type, source_url, payload_json, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        sentence.evidence_id,
+                        run_id,
+                        ticker,
+                        sentence.document_id,
+                        sentence.sentence_id,
+                        sentence.source_type,
+                        sentence.source_url,
+                        to_json(sentence.model_dump(mode="json")),
+                        created_at,
+                    ),
+                )
+        return {"text_model_runs": 1, "text_evidence": len(sentences), "narrative_shift_results": 1 if narrative_shift else 0}
+
+    def get_latest_text_intelligence_result(self, ticker: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            run = connection.execute(
+                "SELECT * FROM text_model_runs WHERE ticker = ? ORDER BY created_at DESC LIMIT 1",
+                (ticker,),
+            ).fetchone()
+            if run is None:
+                return None
+            evidence_rows = connection.execute(
+                "SELECT payload_json FROM text_evidence WHERE ticker = ? AND run_id = ? ORDER BY sentence_id",
+                (ticker, run["run_id"]),
+            ).fetchall()
+        return {
+            "run_id": run["run_id"],
+            "ticker": run["ticker"],
+            "model_summary": json.loads(run["model_summary_json"]),
+            "semantic_analysis": json.loads(run["semantic_analysis_json"]),
+            "narrative_shift": json.loads(run["narrative_shift_json"]) if run["narrative_shift_json"] else None,
+            "text_evidence": [json.loads(row["payload_json"]) for row in evidence_rows],
+            "created_at": run["created_at"],
+        }
 
 
 def build_analysis_repository() -> AnalysisRepository:

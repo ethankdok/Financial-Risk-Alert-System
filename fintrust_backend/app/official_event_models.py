@@ -85,6 +85,7 @@ class OfficialDocumentExtractionRequest(BaseModel):
     document_title: str | None = None
     source_name: str = "官方揭露文件"
     max_preview_chars: int = Field(default=1800, ge=200, le=6000)
+    max_full_text_chars: int = Field(default=50000, ge=1000, le=200000)
 
 
 class OfficialDocumentExtractionResult(BaseModel):
@@ -102,7 +103,11 @@ class OfficialDocumentExtractionResult(BaseModel):
     final_url: str | None = None
     http_status: int | None = None
     text_preview: str | None = None
+    full_text: str | None = None
     text_length: int | None = None
+    full_text_length: int | None = None
+    paragraph_count: int | None = None
+    pages_extracted: int | None = None
     related_metrics: list[str] = Field(default_factory=list)
     disclosure_claims: list[OfficialDisclosureClaim] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
@@ -128,7 +133,9 @@ class InvestorConferenceRecord(BaseModel):
     document_extract_status: OfficialDocumentExtractStatus = "metadata_only"
     document_title: str | None = None
     document_text_preview: str | None = None
+    document_full_text: str | None = None
     document_text_length: int | None = None
+    document_full_text_length: int | None = None
     source_evidence: list[str] = Field(default_factory=list)
     extracted_topics: list[str] = Field(default_factory=list)
     related_metrics: list[str] = Field(default_factory=list)
@@ -198,6 +205,9 @@ class OfficialEvidenceCardResponse(BaseModel):
     material_events: list[dict[str, Any]] = Field(default_factory=list)
     disclosure_claims: list[dict[str, Any]] = Field(default_factory=list)
     text_evidence: list[dict[str, Any]] = Field(default_factory=list)
+    narrative_shift: dict[str, Any] | None = None
+    semantic_analysis: dict[str, Any] = Field(default_factory=dict)
+    llm_evidence_ids: list[str] = Field(default_factory=list)
     sources: list[dict[str, Any]] = Field(default_factory=list)
     source_status: dict[str, Any] = Field(default_factory=dict)
     limitations: list[str] = Field(default_factory=list)

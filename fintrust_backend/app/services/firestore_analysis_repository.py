@@ -8,6 +8,7 @@ from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.models import FinancialFact
 from app.official_event_models import InvestorConferenceRecord, MaterialEventRecord
 from app.pipeline_models import AnalysisRunSummary, FrontendAnalysisSnapshot, PersistenceCounts
+from app.text_intelligence_models import NarrativeShiftResponse, TextMiningAnalysisResponse
 from app.services.analysis_repository import (
     document_id,
     financial_fact_from_row,
@@ -284,3 +285,76 @@ class FirestoreAnalysisRepository:
             )
         )
         return financial_fact_from_row(rows[0])
+
+    def save_text_intelligence_result(
+        self,
+        *,
+        ticker: str,
+        run_id: str,
+        analysis: TextMiningAnalysisResponse,
+        narrative_shift: NarrativeShiftResponse | None = None,
+    ) -> dict[str, int]:
+        batch = self.client.batch()
+        created_at = analysis.generated_at
+        batch.set(
+            self.client.collection("text_model_runs").document(run_id),
+            {
+                "run_id": run_id,
+                "ticker": ticker,
+                "model_summary": analysis.model_summary,
+                "semantic_analysis": analysis.semantic_analysis,
+                "narrative_shift": narrative_shift.model_dump(mode="python") if narrative_shift else None,
+                "created_at": created_at,
+            },
+            merge=True,
+        )
+        sentences = [sentence for document in analysis.documents for sentence in document.sentences]
+        for sentence in sentences:
+            batch.set(
+                self.client.collection("text_evidence").document(sentence.evidence_id),
+                {
+                    "run_id": run_id,
+                    "ticker": ticker,
+                    "document_id": sentence.document_id,
+                    "sentence_id": sentence.sentence_id,
+                    "source_type": sentence.source_type,
+                    "source_url": sentence.source_url,
+                    "payload": sentence.model_dump(mode="python"),
+                    "created_at": created_at,
+                },
+                merge=True,
+            )
+        batch.commit()
+        return {"text_model_runs": 1, "text_evidence": len(sentences), "narrative_shift_results": 1 if narrative_shift else 0}
+
+    def get_latest_text_intelligence_result(self, ticker: str) -> dict[str, Any] | None:
+        from google.cloud.firestore_v1.base_query import FieldFilter
+
+        runs = [
+            document.to_dict() or {}
+            for document in self.client.collection("text_model_runs")
+            .where(filter=FieldFilter("ticker", "==", ticker))
+            .stream()
+        ]
+        if not runs:
+            return None
+        runs.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        run = runs[0]
+        run_id = str(run.get("run_id") or "")
+        documents = (
+            self.client.collection("text_evidence")
+            .where(filter=FieldFilter("ticker", "==", ticker))
+            .where(filter=FieldFilter("run_id", "==", run_id))
+            .stream()
+        )
+        evidence = [document.to_dict() or {} for document in documents]
+        evidence.sort(key=lambda row: str(row.get("sentence_id") or ""))
+        return {
+            "run_id": run_id,
+            "ticker": ticker,
+            "model_summary": run.get("model_summary") or {},
+            "semantic_analysis": run.get("semantic_analysis") or {},
+            "narrative_shift": run.get("narrative_shift"),
+            "text_evidence": [row.get("payload") or {} for row in evidence],
+            "created_at": run.get("created_at"),
+        }
