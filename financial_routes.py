@@ -220,4 +220,27 @@ def create_financial_blueprint(client: FinTrustClient | None = None):
                 return handle_error(exc)
             return to_response({"success": False, "error": "Invalid refresh parameters."}, 400)
 
+    @blueprint.post("/api/financial/admin/companies/<ticker>/unified-refresh")
+    def unified_refresh_company(ticker: str):
+        try:
+            payload = request.get_json(silent=True) or {}
+            end_year = payload.get("end_year") or request.args.get("end_year")
+            return to_response(
+                {
+                    "success": True,
+                    "data": get_client().unified_refresh_company(
+                        ticker,
+                        years=int(payload.get("years", request.args.get("years", 3))),
+                        end_year=int(end_year) if end_year else None,
+                        trigger=payload.get("trigger", request.args.get("trigger", "manual")),
+                        source_mode=payload.get("source_mode", request.args.get("source_mode", "official")),
+                        include_gemini=bool_param(payload, "include_gemini", True),
+                    ),
+                }
+            )
+        except (ValueError, FinTrustClientError) as exc:
+            if isinstance(exc, FinTrustClientError):
+                return handle_error(exc)
+            return to_response({"success": False, "error": "Invalid unified refresh parameters."}, 400)
+
     return blueprint

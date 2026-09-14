@@ -31,6 +31,7 @@ from app.official_event_models import (
     OfficialEvidenceSummary,
     OfficialEventsRefreshResult,
 )
+from app.phase12_models import FinancialStatementCoverageReport, UnifiedCompanyAnalysisResponse
 from app.pipeline_models import (
     AnalysisRunSummary,
     CompanyRefreshResult,
@@ -47,6 +48,7 @@ from app.services.financial_analysis_service import (
     UnsupportedCompanyError,
 )
 from app.services.financial_rule_engine import FinancialRuleEngine
+from app.services.financial_statement_coverage import audit_financial_statement_coverage
 from app.services.historical_analysis_service import HistoricalFinancialAnalysisService
 from app.services.ingestion_pipeline import FinancialIngestionPipeline
 from app.services.monitorable_rule_engine import MonitorableFinancialRuleEngine
@@ -64,6 +66,7 @@ from app.services.official_event_sources import (
 from app.services.official_evidence_service import OfficialEvidenceService
 from app.services.pipeline_evidence_repository import PipelineEvidenceRepository
 from app.services.twse_openapi import TwseOpenApiError
+from app.services.unified_analysis_orchestrator import UnifiedAnalysisOrchestrator
 from app.services.verifier import verify_claim
 
 
@@ -105,6 +108,11 @@ def ai_analysis_health():
 @router.get("/ai/rules", response_model=AnalysisRuleCatalogResponse)
 def ai_analysis_rules() -> AnalysisRuleCatalogResponse:
     return MonitorableFinancialRuleEngine(subindustry="IC 設計").catalog()
+
+
+@router.get("/statement-coverage", response_model=FinancialStatementCoverageReport)
+def statement_coverage() -> FinancialStatementCoverageReport:
+    return audit_financial_statement_coverage()
 
 
 @router.post("/ai/companies/{ticker}/analyze", response_model=AIFinancialAnalysisReport)
@@ -300,6 +308,33 @@ async def refresh_company_pipeline(
     if result.status == "failed":
         raise HTTPException(status_code=502, detail=result.error or "Financial refresh failed.")
     return result
+
+
+@router.post(
+    "/admin/companies/{ticker}/unified-refresh",
+    response_model=UnifiedCompanyAnalysisResponse,
+    dependencies=[Depends(require_ingestion_token)],
+)
+async def unified_company_refresh(
+    ticker: str,
+    years: int = Query(default=5, ge=3, le=5),
+    end_year: int | None = Query(default=None, ge=2019, le=datetime.now().year),
+    trigger: Literal["scheduler", "manual", "demo", "startup"] = Query(default="manual"),
+    source_mode: Literal["official", "demo_fixture"] = Query(default="official"),
+    include_gemini: bool = Query(default=True),
+    repository: AnalysisRepository = Depends(get_analysis_repository),
+) -> UnifiedCompanyAnalysisResponse:
+    try:
+        return await UnifiedAnalysisOrchestrator(repository=repository).refresh_company(
+            ticker,
+            years=years,
+            end_year=end_year,
+            trigger=trigger,
+            source_mode=source_mode,
+            include_gemini=include_gemini,
+        )
+    except UnsupportedCompanyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post(

@@ -252,6 +252,29 @@ class FinTrustClient:
             include_ingestion_token=True,
         )
 
+    def unified_refresh_company(
+        self,
+        ticker: str,
+        *,
+        years: int = 3,
+        end_year: int | None = None,
+        trigger: str = "manual",
+        source_mode: str = "official",
+        include_gemini: bool = True,
+    ) -> Any:
+        return self.request(
+            "POST",
+            f"/api/v1/financial/admin/companies/{ticker}/unified-refresh",
+            params={
+                "years": years,
+                "end_year": end_year,
+                "trigger": trigger,
+                "source_mode": source_mode,
+                "include_gemini": str(include_gemini).lower(),
+            },
+            include_ingestion_token=True,
+        )
+
 
 def safe_financial_payload(ticker: str, *, fetch_conference_live: bool = False, extract_documents: bool = False) -> dict[str, Any]:
     """Return a Flask-template-safe payload with partial failure handling."""
