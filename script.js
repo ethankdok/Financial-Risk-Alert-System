@@ -1956,5 +1956,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  document.querySelectorAll('[data-follow-company]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      if (!window.MemberAuth) {
+        location.href = 'login.html?next=member.html';
+        return;
+      }
+      const member = await MemberAuth.getMember();
+      if (!member) {
+        location.href = 'login.html?next=' + encodeURIComponent(location.pathname.split('/').pop() || 'member.html');
+        return;
+      }
+      try {
+        await MemberAuth.api('/api/member/watchlist', {
+          method: 'POST',
+          body: JSON.stringify({
+            ticker: button.dataset.followCompany,
+            company_name: button.dataset.followCompanyName || '',
+            alert_enabled: true,
+          }),
+        });
+        button.textContent = '已追蹤';
+        button.disabled = true;
+      } catch (error) {
+        button.textContent = error.message || '追蹤失敗';
+      }
+    });
+  });
+
   loadFinancialEvidence();
 })();

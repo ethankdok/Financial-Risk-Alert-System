@@ -1,1 +1,100 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>會員中心</title><link rel="stylesheet" href="style.css"></head><body><header class="site-header"><div class="nav-wrap"><a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Financial Information Credibility & Risk Alert System</span></div></a><nav class="nav-links"><a href="index.html">首頁</a><a href="analysis.html">資訊分析</a><a href="official.html">公告比對</a><a href="records.html">分析紀錄</a><a class="active" href="member.html">會員中心</a></nav></div></header><section class="page-hero"><div class="container"><div class="breadcrumb">首頁 / 會員中心</div><h1>會員中心</h1><p>管理個人資料、追蹤主題與風險提醒設定。</p></div></section><div class="container layout"><aside class="sidebar"><a href="analysis.html">金融資訊分析</a><a href="official.html">官方公告比對</a><a href="records.html">分析紀錄</a><a class="active" href="member.html">會員中心</a></aside><main><div class="content-card"><h2>個人資料</h2><div class="form-grid"><div class="form-group"><label>會員名稱</label><input class="form-control" value="Ethan"></div><div class="form-group"><label>Email</label><input class="form-control" value="ethan@example.com"></div><div class="full"><button class="btn btn-secondary">儲存修改</button></div></div></div><div class="content-card"><h3>追蹤關鍵字</h3><p>當系統發現相關高風險資訊時，可顯示風險提醒。</p><div class="helper-chips"><span class="chip">台積電</span><span class="chip">AI 概念股</span><span class="chip">ETF</span><span class="chip">川普關稅</span></div></div><div class="content-card"><h3>提醒偏好</h3><div class="reason-list"><div class="reason"><div>🔔</div><div><b>高風險資訊提醒</b><span>已開啟</span></div></div><div class="reason"><div>📄</div><div><b>官方公告更新</b><span>已開啟</span></div></div></div></div></main></div></body></html>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>會員中心</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="member-auth.js"></script>
+  <script>MemberAuth.requireMember();</script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-wrap">
+      <a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Member Center</span></div></a>
+      <nav class="nav-links"><a href="index.html">首頁</a><a href="analysis.html">資訊分析</a><a href="official.html">公告比對</a><a class="active" href="member.html">會員中心</a><button class="nav-button" data-member-logout type="button">登出</button></nav>
+    </div>
+  </header>
+  <section class="page-hero"><div class="container"><div class="breadcrumb">首頁 / 會員中心</div><h1>會員中心</h1><p><span data-member-name>會員</span>，管理個人資料、追蹤公司與通知設定。</p></div></section>
+  <div class="container layout">
+    <aside class="sidebar"><a href="analysis.html">金融資訊分析</a><a href="official.html">官方公告比對</a><a class="active" href="member.html">會員中心</a></aside>
+    <main class="member-grid">
+      <section class="content-card">
+        <h2>個人資料</h2>
+        <form class="form-grid" id="profileForm">
+          <div class="form-group"><label>會員名稱</label><input class="form-control" name="display_name"></div>
+          <div class="form-group"><label>Email</label><input class="form-control" name="email" type="email"></div>
+          <div class="full form-status" id="profileStatus"></div>
+          <div class="full"><button class="btn btn-secondary" type="submit">儲存修改</button></div>
+        </form>
+      </section>
+
+      <section class="content-card">
+        <div class="section-row"><div><h3>追蹤公司</h3><p class="muted-text">追蹤後可接收重大官方證據、財務高風險與敘事變化提醒。</p></div></div>
+        <form class="watchlist-form" id="watchlistForm">
+          <select class="form-control" name="ticker">
+            <option value="2454">2454 聯發科</option>
+            <option value="2330">2330 台積電</option>
+            <option value="2303">2303 聯電</option>
+            <option value="3711">3711 日月光投控</option>
+          </select>
+          <button class="btn btn-primary" type="submit">追蹤</button>
+        </form>
+        <div class="watchlist-grid" id="watchlistItems"></div>
+      </section>
+
+      <section class="content-card">
+        <h3>提醒偏好</h3>
+        <form class="preference-grid" id="preferenceForm">
+          <label><input type="checkbox" name="email_enabled"> Email 通知</label>
+          <label><input type="checkbox" name="important_alerts"> 重要/高風險提醒</label>
+          <label><input type="checkbox" name="material_event_alerts"> 新重大訊息</label>
+          <label><input type="checkbox" name="conference_alerts"> 新法說會/官方證據</label>
+          <label><input type="checkbox" name="narrative_shift_alerts"> 敘事變化提醒</label>
+          <label>摘要頻率<select class="form-control" name="digest_frequency"><option value="daily">每日</option><option value="weekly">每週</option><option value="off">關閉摘要</option></select></label>
+          <div class="full form-status" id="preferenceStatus"></div>
+          <button class="btn btn-secondary" type="submit">儲存偏好</button>
+        </form>
+      </section>
+
+      <section class="content-card">
+        <h3>最近通知紀錄</h3>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>時間</th><th>公司</th><th>類型</th><th>狀態</th><th>主旨</th></tr></thead><tbody id="notificationRows"><tr><td colspan="5">讀取中</td></tr></tbody></table></div>
+      </section>
+    </main>
+  </div>
+  <script>
+  const companyNames={2454:'聯發科',2330:'台積電',2303:'聯電',3711:'日月光投控'};
+  async function loadMemberPage(){
+    const member=await MemberAuth.requireMember(); if(!member)return;
+    MemberAuth.mountNav(member);
+    const profile=document.getElementById('profileForm');
+    profile.display_name.value=member.display_name||'';
+    profile.email.value=member.email||'';
+    await Promise.all([loadWatchlist(),loadPreferences(),loadNotifications()]);
+  }
+  async function loadWatchlist(){
+    const data=await MemberAuth.api('/api/member/watchlist');
+    const target=document.getElementById('watchlistItems');
+    target.innerHTML=(data.items||[]).map(item=>`<article class="watchlist-item"><div><strong>${MemberAuth.escapeHtml(item.ticker)} ${MemberAuth.escapeHtml(item.company_name||companyNames[item.ticker]||'')}</strong><span>${Number(item.alert_enabled)?'提醒開啟':'提醒關閉'}</span></div><div><button class="mini-btn" data-toggle="${MemberAuth.escapeHtml(item.ticker)}">${Number(item.alert_enabled)?'關閉提醒':'開啟提醒'}</button><button class="mini-btn danger" data-remove="${MemberAuth.escapeHtml(item.ticker)}">取消追蹤</button></div></article>`).join('')||'<p class="muted-text">尚未追蹤公司。</p>';
+    target.querySelectorAll('[data-toggle]').forEach(btn=>btn.addEventListener('click',async()=>{const ticker=btn.dataset.toggle;await MemberAuth.api(`/api/member/watchlist/${ticker}`,{method:'PATCH',body:JSON.stringify({alert_enabled:btn.textContent.includes('開啟')})});loadWatchlist();}));
+    target.querySelectorAll('[data-remove]').forEach(btn=>btn.addEventListener('click',async()=>{await MemberAuth.api(`/api/member/watchlist/${btn.dataset.remove}`,{method:'DELETE'});loadWatchlist();}));
+  }
+  async function loadPreferences(){
+    const {preferences:p}=await MemberAuth.api('/api/member/notification-preferences');
+    const form=document.getElementById('preferenceForm');
+    ['email_enabled','important_alerts','material_event_alerts','conference_alerts','narrative_shift_alerts'].forEach(name=>{form[name].checked=Number(p[name])===1;});
+    form.digest_frequency.value=p.digest_frequency||'daily';
+  }
+  async function loadNotifications(){
+    const data=await MemberAuth.api('/api/member/notifications');
+    const rows=document.getElementById('notificationRows');
+    rows.innerHTML=(data.items||[]).map(item=>`<tr><td>${MemberAuth.escapeHtml(item.created_at)}</td><td>${MemberAuth.escapeHtml(item.ticker)}</td><td>${MemberAuth.escapeHtml(item.notification_type)}</td><td><span class="status-tag ${item.status==='sent'?'tag-green':item.status==='suppressed_duplicate'?'tag-blue':'tag-orange'}">${MemberAuth.escapeHtml(item.status)}</span></td><td>${MemberAuth.escapeHtml(item.subject)}</td></tr>`).join('')||'<tr><td colspan="5">尚無通知紀錄</td></tr>';
+  }
+  document.getElementById('profileForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const data=await MemberAuth.api('/api/member/profile',{method:'PUT',body:JSON.stringify({display_name:form.display_name.value,email:form.email.value})});document.getElementById('profileStatus').textContent='已儲存';MemberAuth.mountNav(data.member);});
+  document.getElementById('watchlistForm').addEventListener('submit',async event=>{event.preventDefault();const ticker=event.currentTarget.ticker.value;await MemberAuth.api('/api/member/watchlist',{method:'POST',body:JSON.stringify({ticker,company_name:companyNames[ticker],alert_enabled:true})});loadWatchlist();});
+  document.getElementById('preferenceForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;await MemberAuth.api('/api/member/notification-preferences',{method:'PUT',body:JSON.stringify({email_enabled:form.email_enabled.checked,digest_frequency:form.digest_frequency.value,important_alerts:form.important_alerts.checked,material_event_alerts:form.material_event_alerts.checked,conference_alerts:form.conference_alerts.checked,narrative_shift_alerts:form.narrative_shift_alerts.checked})});document.getElementById('preferenceStatus').textContent='提醒偏好已儲存';});
+  loadMemberPage();
+  </script>
+</body>
+</html>

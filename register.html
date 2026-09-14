@@ -1,1 +1,50 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>註冊會員</title><link rel="stylesheet" href="style.css"></head><body><header class="site-header"><div class="nav-wrap"><a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Financial Information Credibility & Risk Alert System</span></div></a><nav class="nav-links"><a href="index.html">返回首頁</a></nav></div></header><div class="login-shell"><div class="auth-card"><span class="eyebrow">註冊會員</span><h1>建立帳號</h1><p>完成註冊後即可保存分析紀錄並設定個人化提醒。</p><div class="form-group"><label>會員名稱</label><input class="form-control" placeholder="請輸入名稱"></div><div class="form-group"><label>Email</label><input class="form-control" placeholder="name@example.com"></div><div class="form-group"><label>密碼</label><input class="form-control" type="password" placeholder="至少 8 個字元"></div><a class="btn btn-primary" style="width:100%" href="member.html">完成註冊</a><p class="auth-switch">已經有帳號？ <a href="login.html">返回登入</a></p></div></div></body></html>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>註冊會員</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="member-auth.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-wrap">
+      <a class="brand" href="index.html">
+        <div class="brand-mark">FI</div>
+        <div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Member Registration</span></div>
+      </a>
+      <nav class="nav-links"><a href="index.html">返回首頁</a><a href="login.html">會員登入</a></nav>
+    </div>
+  </header>
+  <main class="login-shell">
+    <form class="auth-card" id="memberRegisterForm">
+      <span class="eyebrow">註冊會員</span>
+      <h1>建立帳號</h1>
+      <p>建立測試會員後即可追蹤公司、設定個人提醒與查看通知歷史。</p>
+      <div class="form-group"><label>會員名稱</label><input class="form-control" name="display_name" autocomplete="name" required></div>
+      <div class="form-group"><label>Email</label><input class="form-control" name="email" type="email" autocomplete="email" required></div>
+      <div class="form-group"><label>密碼</label><input class="form-control" name="password" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="auth-error" id="memberRegisterError" hidden></div>
+      <button class="btn btn-primary" style="width:100%" type="submit">完成註冊</button>
+      <p class="auth-switch">已經有帳號？ <a href="login.html">返回登入</a></p>
+      <p class="auth-mode-note">正式部署時，會員身份應由 Firebase / Identity Platform 發行 UID；系統只保存 profile 與偏好設定。</p>
+    </form>
+  </main>
+  <script>
+  document.getElementById('memberRegisterForm').addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget;
+    const error=document.getElementById('memberRegisterError');
+    error.hidden=true;
+    try{
+      await MemberAuth.api('/api/member/auth/register',{method:'POST',body:JSON.stringify({display_name:form.display_name.value,email:form.email.value,password:form.password.value})});
+      location.href='member.html';
+    }catch(exc){
+      error.textContent=exc.message;
+      error.hidden=false;
+    }
+  });
+  </script>
+</body>
+</html>

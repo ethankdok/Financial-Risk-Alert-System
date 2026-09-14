@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>財務與官方證據｜管理後台</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="admin-auth.js"></script>
+  <script>AdminAuth.requireAuth();</script>
+</head>
+<body class="admin-body">
+  <header class="admin-topbar">
+    <div class="admin-topbar-inner">
+      <a class="brand" href="admin-dashboard.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Evidence Operations</span></div></a>
+      <div class="admin-user"></div>
+    </div>
+  </header>
+  <main class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-title">管理後台</div>
+      <nav>
+        <a href="admin-dashboard.html"><span>▦</span> 儀表板</a>
+        <a class="active" href="admin-financial-evidence.html"><span>□</span> 財務與官方證據</a>
+        <a href="admin-keyword-extract.html"><span>⌕</span> 關鍵字擷取</a>
+        <a href="admin-keyword-manage.html"><span>⌘</span> 關鍵字管理</a>
+        <a href="admin-risk-feature-manage.html"><span>!</span> 風險特徵管理</a>
+        <a href="admin-admin-manage.html"><span>♙</span> 管理員管理</a>
+        <a href="admin-audit-log.html"><span>≣</span> 操作紀錄</a>
+      </nav>
+      <div class="admin-sidebar-note"><strong>證據分層</strong><p>官方資料、衍生指標、規則、ML 文字證據與 LLM 摘要會分開標示。</p></div>
+      <a class="admin-back-link" href="index.html">返回前台</a>
+    </aside>
+    <section class="admin-main">
+      <div class="admin-page-head">
+        <div>
+          <span class="eyebrow">Financial Evidence Console</span>
+          <h1>財務與官方證據</h1>
+          <p>檢查已持久化的財報 facts、規則結果、官方事件、文字證據與執行歷史。</p>
+        </div>
+        <div class="admin-toolbar-inline">
+          <select class="form-control" id="tickerSelect"><option value="2454">2454 聯發科</option><option value="2330">2330 台積電</option><option value="2303">2303 聯電</option><option value="3711">3711 日月光投控</option></select>
+          <button class="btn btn-primary" id="refreshEvidenceBtn" type="button">Refresh Company Evidence</button>
+        </div>
+      </div>
+
+      <div class="evidence-runtime" id="runtimeStatus"></div>
+
+      <div class="admin-tabs" role="tablist">
+        <button class="active" data-tab="overview" type="button">Overview</button>
+        <button data-tab="facts" type="button">Facts</button>
+        <button data-tab="metrics" type="button">Metrics</button>
+        <button data-tab="rules" type="button">Rules</button>
+        <button data-tab="events" type="button">Official Events</button>
+        <button data-tab="text" type="button">Text Intelligence</button>
+        <button data-tab="runs" type="button">Run History</button>
+      </div>
+
+      <section class="admin-panel admin-tab-panel active" id="tab-overview"></section>
+      <section class="admin-panel admin-tab-panel" id="tab-facts">
+        <div class="keyword-toolbar"><label class="admin-field keyword-search"><span>搜尋 fact code / taxonomy</span><input id="factSearch" placeholder="revenue, eps, cash"></label></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>類型</th><th>期間</th><th>Fact</th><th>值</th><th>單位</th><th>來源</th></tr></thead><tbody id="factRows"></tbody></table></div>
+      </section>
+      <section class="admin-panel admin-tab-panel" id="tab-metrics"><div class="table-wrap"><table class="data-table"><thead><tr><th>Run</th><th>期間</th><th>指標</th><th>值</th><th>公式</th></tr></thead><tbody id="metricRows"></tbody></table></div></section>
+      <section class="admin-panel admin-tab-panel" id="tab-rules"><div id="ruleRows" class="financial-rule-list"></div></section>
+      <section class="admin-panel admin-tab-panel" id="tab-events"><div id="eventRows" class="admin-grid-2"></div></section>
+      <section class="admin-panel admin-tab-panel" id="tab-text"><div id="textRows"></div></section>
+      <section class="admin-panel admin-tab-panel" id="tab-runs"><div class="table-wrap"><table class="data-table"><thead><tr><th>Run ID</th><th>Trigger</th><th>Status</th><th>Started</th><th>Completed</th><th>Severity</th></tr></thead><tbody id="runRows"></tbody></table></div></section>
+    </section>
+  </main>
+  <script>
+  const state={ticker:'2454',overview:null};
+  const esc=AdminAuth.escapeHtml;
+  function tag(label,type='blue'){return `<span class="status-tag tag-${type}">${esc(label||'—')}</span>`}
+  function metricValue(v){return v===null||v===undefined?'—':Number(v).toLocaleString('zh-TW',{maximumFractionDigits:2})}
+  function rows(obj,path,empty=[]){return path.reduce((v,k)=>v&&v[k],obj)||empty}
+  async function loadRuntime(){
+    await AdminAuth.mountUser();
+    try{const r=await AdminAuth.api('/api/admin/system/status');document.getElementById('runtimeStatus').innerHTML=`<article>${tag(r.flask_datastore_backend==='firestore'?'Firestore':'SQLite local',r.flask_datastore_backend==='firestore'?'green':'blue')}<strong>Flask datastore</strong><span>${esc(r.app_env)} · member auth ${esc(r.member_auth_mode)}</span></article><article>${tag(r.fintrust_health?'Connected':'Unavailable',r.fintrust_health?'green':'orange')}<strong>FastAPI boundary</strong><span>${esc(r.fintrust_error?.message||'FinTrustClient same-origin proxy ready')}</span></article><article>${tag(r.data_shift_parquet_configured?'Configured':'Blocked','orange')}<strong>Data Shift artifact</strong><span>STRUX parquet remains external artifact gated.</span></article>`}catch(e){document.getElementById('runtimeStatus').textContent=e.message}
+  }
+  async function loadOverview(){
+    const res=await AdminAuth.api(`/api/admin/financial/companies/${state.ticker}/overview`);
+    state.overview=res.data;
+    renderAll();
+  }
+  function renderAll(){renderOverview();renderFacts();renderMetrics();renderRules();renderEvents();renderText();renderRuns();}
+  function renderOverview(){
+    const data=state.overview||{};const snapshot=data.snapshot||{};const card=data.official_card||{};
+    document.getElementById('tab-overview').innerHTML=`<div class="evidence-summary-grid"><article><span>OFFICIAL DATA</span><strong>${esc(snapshot.company_name||card.company_name||state.ticker)}</strong><p>${esc(snapshot.summary||'尚無 latest snapshot')}</p></article><article><span>RULE RESULT</span><strong>${esc(snapshot.overall_severity||card.overall_severity||'—')}</strong><p>${(snapshot.rule_cards||[]).filter(r=>r.triggered).length} triggered rules</p></article><article><span>ML/TEXT RESULT</span><strong>${rows(data,['text_intelligence','text_evidence']).length}</strong><p>persisted text evidence sentences</p></article><article><span>LIMITATION</span><strong>${(data.errors||[]).length}</strong><p>${esc((data.errors||[])[0]?.message||'No proxy error reported')}</p></article></div>`;
+  }
+  function renderFacts(){
+    const needle=(document.getElementById('factSearch').value||'').toLowerCase();
+    const facts=rows(state.overview,['facts','facts']).filter(f=>!needle||String(f.metric_code||'').toLowerCase().includes(needle)||String(f.taxonomy_concept||'').toLowerCase().includes(needle));
+    document.getElementById('factRows').innerHTML=facts.map(f=>`<tr><td>${esc(f.statement_type||f.analysis_type)}</td><td>${esc(f.period)}</td><td><strong>${esc(f.label||f.metric_code)}</strong><br><small>${esc(f.taxonomy_concept||'')}</small></td><td>${metricValue(f.value)}</td><td>${esc(f.unit)}</td><td><a class="financial-source-link" href="${esc(f.source_url)}" target="_blank" rel="noreferrer">official source</a><br><small>${esc(f.retrieved_at||'')}</small></td></tr>`).join('')||'<tr><td colspan="6">尚無 persisted facts。</td></tr>';
+  }
+  function renderMetrics(){const metrics=rows(state.overview,['metrics','metrics']);document.getElementById('metricRows').innerHTML=metrics.map(m=>`<tr><td>${esc(m.run_id)}</td><td>${esc(m.period)}</td><td>${esc(m.label||m.metric_code)}</td><td>${metricValue(m.value)} ${esc(m.unit||'')}</td><td>${esc(m.formula||'')}</td></tr>`).join('')||'<tr><td colspan="5">尚無 metrics。</td></tr>'}
+  function renderRules(){const rules=rows(state.overview,['rule_results','rule_results']);document.getElementById('ruleRows').innerHTML=rules.map(r=>`<article class="financial-rule-item"><div class="financial-rule-head"><b>${esc(r.name||r.rule_id)}</b>${tag(r.triggered?'觸發':'未觸發',r.triggered?'orange':'blue')}</div><p>${esc(r.explanation)}</p><div class="financial-tag-list"><b>Evidence</b>${(r.evidence_metrics||[]).map(x=>`<span>${esc(x)}</span>`).join('')}</div></article>`).join('')||'<p class="muted-text">尚無 rule results。</p>'}
+  function renderEvents(){const conferences=state.overview.conferences||[];const events=state.overview.material_events||[];document.getElementById('eventRows').innerHTML=`<section><h3>Investor Conferences</h3>${conferences.map(e=>eventCard(e,'conference')).join('')||'<p class="muted-text">尚無法說會紀錄。</p>'}</section><section><h3>Material Events</h3>${events.map(e=>eventCard(e,'event')).join('')||'<p class="muted-text">尚無重大訊息紀錄。</p>'}</section>`}
+  function eventCard(e,type){return `<article class="financial-official-item"><span class="source-label">${esc(e.status||type)}</span><h4>${esc(e.title)}</h4><p>${esc(e.document_text_preview||e.summary||e.limitation||'')}</p><a class="financial-source-link" href="${esc(e.document_url||e.detail_url||e.source_url)}" target="_blank" rel="noreferrer">source</a></article>`}
+  function renderText(){const text=state.overview.text_intelligence||{};const evidence=text.text_evidence||[];const narrative=text.narrative_shift;document.getElementById('textRows').innerHTML=`<div class="evidence-summary-grid"><article><span>ML/TEXT RESULT</span><strong>${evidence.length}</strong><p>sentences</p></article><article><span>NARRATIVE SHIFT</span><strong>${narrative?'available':'insufficient data'}</strong><p>${esc(narrative?.status||'No comparable periods')}</p></article></div><div class="financial-rule-list">${evidence.slice(0,30).map(e=>`<article class="financial-rule-item"><b>${esc((e.topics||[]).join(', ')||'official text')}</b><p>${esc(e.sentence_text)}</p><small>${esc(e.source_url)}</small></article>`).join('')}</div>`}
+  function renderRuns(){const runs=state.overview.runs||[];document.getElementById('runRows').innerHTML=runs.map(r=>`<tr><td><code>${esc(r.run_id)}</code></td><td>${esc(r.trigger)}</td><td>${tag(r.status,r.status==='completed'?'green':'orange')}</td><td>${esc(r.started_at)}</td><td>${esc(r.completed_at||'')}</td><td>${esc(r.overall_severity||'')}</td></tr>`).join('')||'<tr><td colspan="6">尚無 run history。</td></tr>'}
+  document.querySelectorAll('.admin-tabs button').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.admin-tabs button,.admin-tab-panel').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+btn.dataset.tab).classList.add('active');}));
+  document.getElementById('tickerSelect').addEventListener('change',e=>{state.ticker=e.target.value;loadOverview();});
+  document.getElementById('factSearch').addEventListener('input',renderFacts);
+  document.getElementById('refreshEvidenceBtn').addEventListener('click',async()=>{const btn=document.getElementById('refreshEvidenceBtn');btn.disabled=true;btn.textContent='Refreshing';try{await AdminAuth.api(`/api/financial/admin/companies/${state.ticker}/unified-refresh`,{method:'POST',body:JSON.stringify({source_mode:'official',trigger:'manual',include_gemini:false})});await loadOverview();}catch(e){alert(e.message)}finally{btn.disabled=false;btn.textContent='Refresh Company Evidence'}});
+  loadRuntime();loadOverview();
+  </script>
+</body>
+</html>

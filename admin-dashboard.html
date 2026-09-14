@@ -28,6 +28,7 @@
       <div class="admin-sidebar-title">管理後台</div>
       <nav>
         <a class="active" href="admin-dashboard.html"><span>▦</span> 儀表板</a>
+        <a href="admin-financial-evidence.html"><span>□</span> 財務與官方證據</a>
         <a href="admin-keyword-extract.html"><span>⌕</span> 關鍵字擷取</a>
         <a href="admin-keyword-manage.html"><span>⌘</span> 關鍵字管理</a>
         <a href="admin-risk-feature-manage.html"><span>⚠</span> 風險特徵管理</a>
@@ -47,9 +48,9 @@
         <div>
           <span class="eyebrow">Backend Management</span>
           <h1>後台管理儀表板</h1>
-          <p>統整關鍵字建立、審核、風險特徵維護與資料更新狀態。資料來源：Flask + SQLite。</p>
+          <p>統整關鍵字建立、審核、風險特徵維護與資料更新狀態。資料來源依 runtime 自動顯示。</p>
         </div>
-        <a class="btn btn-primary" href="#quick-review">查看待審核關鍵字</a>
+        <a class="btn btn-primary" href="admin-financial-evidence.html">查看財務與官方證據</a>
       </div>
 
       <div class="admin-stat-grid">
@@ -139,7 +140,7 @@
 (async()=>{
   await AdminAuth.mountUser();
   try{
-    const [keywords,features,logs]=await Promise.all([AdminAuth.api('/api/keywords'),AdminAuth.api('/api/risk-features'),AdminAuth.logs()]);
+    const [keywords,features,logs,status]=await Promise.all([AdminAuth.api('/api/keywords'),AdminAuth.api('/api/risk-features'),AdminAuth.logs(),AdminAuth.api('/api/admin/system/status')]);
     const cards=document.querySelectorAll('.admin-stat-card strong');
     if(cards[0])cards[0].textContent=keywords.filter(x=>x.status==='active').length;
     if(cards[1])cards[1].textContent='0';
@@ -151,7 +152,7 @@
     if(list){
       list.innerHTML=keywords.slice(0,4).map(x=>`<article class="admin-review-item"><div class="review-main"><strong>${AdminAuth.escapeHtml(x.phrase)}</strong><span>${AdminAuth.escapeHtml(x.source)} · ${AdminAuth.escapeHtml(x.updated_at||'')}</span></div><span class="status-tag ${x.risk==='高'?'tag-red':x.risk==='中'?'tag-orange':'tag-blue'}">${AdminAuth.escapeHtml(x.category)}</span><div class="review-actions"><a class="mini-btn approve" href="admin-keyword-manage.html">管理</a></div></article>`).join('') || '<div class="keyword-empty">目前尚無正式關鍵字。</div>';
       const h=document.querySelector('#quick-review h2');if(h)h.textContent='最近更新關鍵字';
-      const p=document.querySelector('#quick-review .admin-panel-head p');if(p)p.textContent='顯示 SQLite 正式字庫中最近更新的關鍵字。';
+      const p=document.querySelector('#quick-review .admin-panel-head p');if(p)p.textContent=`顯示 ${AdminAuth.escapeHtml(status.flask_datastore_backend)} 正式字庫中最近更新的關鍵字。`;
     }
 
     const dims={};features.filter(x=>x.status==='active').forEach(x=>dims[x.dimension]=(dims[x.dimension]||0)+1);

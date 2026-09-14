@@ -1,1 +1,50 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>會員登入</title><link rel="stylesheet" href="style.css"></head><body><header class="site-header"><div class="nav-wrap"><a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Financial Information Credibility & Risk Alert System</span></div></a><nav class="nav-links"><a href="index.html">返回首頁</a></nav></div></header><div class="login-shell"><div class="auth-card"><span class="eyebrow">會員登入</span><h1>歡迎回來</h1><p>登入後可保存分析紀錄與設定追蹤關鍵字。</p><div class="form-group"><label>Email</label><input class="form-control" placeholder="name@example.com"></div><div class="form-group"><label>密碼</label><input class="form-control" type="password" placeholder="請輸入密碼"></div><a class="btn btn-primary" style="width:100%" href="member.html">登入</a><p class="auth-switch">尚未註冊？ <a href="register.html">建立會員帳號</a></p></div></div></body></html>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>會員登入</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="member-auth.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-wrap">
+      <a class="brand" href="index.html">
+        <div class="brand-mark">FI</div>
+        <div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Member Sign In</span></div>
+      </a>
+      <nav class="nav-links"><a href="index.html">返回首頁</a><a href="register.html">建立會員帳號</a></nav>
+    </div>
+  </header>
+  <main class="login-shell">
+    <form class="auth-card" id="memberLoginForm">
+      <span class="eyebrow">會員登入</span>
+      <h1>歡迎回來</h1>
+      <p>登入後可追蹤公司、保存提醒偏好，並查看通知紀錄。</p>
+      <div class="form-group"><label>Email</label><input class="form-control" name="email" autocomplete="email" required></div>
+      <div class="form-group"><label>密碼</label><input class="form-control" name="password" type="password" autocomplete="current-password" required></div>
+      <div class="auth-error" id="memberLoginError" hidden></div>
+      <button class="btn btn-primary" style="width:100%" type="submit">登入</button>
+      <p class="auth-switch">尚未註冊？ <a href="register.html">建立會員帳號</a></p>
+      <p class="auth-mode-note">正式環境建議改接 Firebase / Google Cloud Identity Platform；本地開發使用安全雜湊密碼測試 adapter。</p>
+    </form>
+  </main>
+  <script>
+  document.getElementById('memberLoginForm').addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget;
+    const error=document.getElementById('memberLoginError');
+    error.hidden=true;
+    try{
+      await MemberAuth.api('/api/member/auth/login',{method:'POST',body:JSON.stringify({email:form.email.value,password:form.password.value})});
+      const next=new URLSearchParams(location.search).get('next')||'member.html';
+      location.href=next;
+    }catch(exc){
+      error.textContent=exc.message;
+      error.hidden=false;
+    }
+  });
+  </script>
+</body>
+</html>
