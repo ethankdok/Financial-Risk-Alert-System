@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app.py financial_routes.py fintrust_client.py flask_data_repository.py data_shift.py ./
+COPY app.py financial_routes.py fintrust_client.py flask_data_repository.py member_services.py data_shift.py ./
 COPY *.html *.js *.css ./
 COPY static ./static
 COPY templates ./templates

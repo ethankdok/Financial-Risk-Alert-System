@@ -166,6 +166,12 @@ class Phase15FlaskReleaseReadinessTests(unittest.TestCase):
         self.assertEqual(response.json["notification_provider"]["provider"], "smtp")
         self.assertTrue(response.json["notification_provider"]["configured"])
 
+    def test_flask_dockerfile_packages_member_services_module(self) -> None:
+        dockerfile = Path(__file__).resolve().parents[1] / "Dockerfile.flask"
+        content = dockerfile.read_text(encoding="utf-8")
+
+        self.assertIn("member_services.py", content)
+
 
 if __name__ == "__main__":
     unittest.main()
