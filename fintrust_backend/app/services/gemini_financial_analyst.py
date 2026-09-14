@@ -44,6 +44,7 @@ _SYSTEM_PROMPT = (
     "不得修改規則結果、不得臆測未提供的原因或因果關係、不得預測股價、不得提供買進、賣出、加碼、減碼、"
     "目標價或任何投資建議。你的任務是做跨面向的受約束整合：指出一致訊號、mixed signals、資料不足與限制。"
     "dimension_insights 必須涵蓋八個固定面向；若某面向 evidence 不足，直接說明資料不足，不得補造內容。"
+    "若收到 official_text_evidence 或 narrative_shift，只能作為補充官方文字脈絡，不得用來改寫 deterministic rule results。"
 )
 
 
@@ -101,6 +102,8 @@ class GeminiFinancialAnalyst:
     def _evidence_payload(
         dimensions: list[DimensionAssessment],
         rules: list[MonitoredRuleResult],
+        official_text_evidence: list[dict[str, Any]] | None = None,
+        narrative_shift: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return {
             "dimensions": [item.model_dump(mode="json") for item in dimensions],
@@ -109,15 +112,49 @@ class GeminiFinancialAnalyst:
                 for item in rules
                 if item.triggered or item.evaluation_status.value != "evaluated"
             ],
+            "official_text_evidence": official_text_evidence or [],
+            "narrative_shift": narrative_shift,
+            "guardrails": [
+                "Official text evidence may explain mixed signals but cannot change deterministic rules.",
+                "Do not invent missing financial numbers or causal explanations.",
+                "Do not provide investment advice or stock-price forecasts.",
+            ],
         }
 
     @staticmethod
     def _is_retryable_api_error(exc: Exception) -> bool:
-        code = getattr(exc, "code", None)
+        code = GeminiFinancialAnalyst._error_code(exc)
         try:
             return int(code) in _RETRYABLE_API_CODES
         except (TypeError, ValueError):
             return False
+
+    @staticmethod
+    def _error_code(exc: Exception) -> str | int | None:
+        current: BaseException | None = exc
+        seen: set[int] = set()
+        while current is not None and id(current) not in seen:
+            seen.add(id(current))
+            for attr in ("code", "status_code", "status"):
+                value = getattr(current, attr, None)
+                if value is not None:
+                    return value
+            current = current.__cause__ or current.__context__
+        return None
+
+    @classmethod
+    def _safe_trace_error(cls, exc: Exception) -> dict[str, Any]:
+        code = cls._error_code(exc)
+        message = str(exc)
+        if "GEMINI_API_KEY" in message:
+            message = message.replace("GEMINI_API_KEY", "API key")
+        return {
+            "error": message[:800],
+            "error_type": type(exc).__name__,
+            "error_code": code,
+            "retryable": cls._is_retryable_api_error(exc),
+            "safe_error_message": message[:280],
+        }
 
     async def _generate(self, *, model: str, user_prompt: str) -> Any:
         return await self._get_client().models.generate_content(
@@ -150,6 +187,8 @@ class GeminiFinancialAnalyst:
         subindustry: str,
         dimensions: list[DimensionAssessment],
         rules: list[MonitoredRuleResult],
+        official_text_evidence: list[dict[str, Any]] | None = None,
+        narrative_shift: dict[str, Any] | None = None,
     ) -> tuple[LLMNarrative | None, LLMAnalysisTrace]:
         used_rule_ids = [item.rule_id for item in rules if item.triggered]
         if not self.configured:
@@ -160,11 +199,14 @@ class GeminiFinancialAnalyst:
                 provider=self.provider_name,
                 provider_configured=False,
                 model=self.model,
+                requested_model=self.model,
+                effective_model=None,
                 prompt_version=self.prompt_version,
                 used_rule_ids=used_rule_ids,
+                llm_evidence_ids=[str(item.get("evidence_id")) for item in official_text_evidence or [] if item.get("evidence_id")],
             )
 
-        evidence = self._evidence_payload(dimensions, rules)
+        evidence = self._evidence_payload(dimensions, rules, official_text_evidence, narrative_shift)
         user_prompt = json.dumps(
             {
                 "company": {"name": company_name, "ticker": ticker, "subindustry": subindustry},
@@ -205,12 +247,16 @@ class GeminiFinancialAnalyst:
                 provider=self.provider_name,
                 provider_configured=True,
                 model=effective_model,
+                requested_model=self.model,
+                effective_model=effective_model,
                 prompt_version=self.prompt_version,
                 latency_ms=latency_ms,
                 used_rule_ids=used_rule_ids,
+                llm_evidence_ids=[str(item.get("evidence_id")) for item in official_text_evidence or [] if item.get("evidence_id")],
             )
         except Exception as exc:
             latency_ms = int((time.perf_counter() - started) * 1000)
+            error_fields = self._safe_trace_error(exc)
             return None, LLMAnalysisTrace(
                 enabled=True,
                 status="failed",
@@ -218,8 +264,11 @@ class GeminiFinancialAnalyst:
                 provider=self.provider_name,
                 provider_configured=True,
                 model=effective_model,
+                requested_model=self.model,
+                effective_model=effective_model,
                 prompt_version=self.prompt_version,
                 latency_ms=latency_ms,
                 used_rule_ids=used_rule_ids,
-                error=str(exc),
+                llm_evidence_ids=[str(item.get("evidence_id")) for item in official_text_evidence or [] if item.get("evidence_id")],
+                **error_fields,
             )

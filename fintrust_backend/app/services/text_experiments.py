@@ -1,11 +1,28 @@
 from __future__ import annotations
 
 import csv
+import hashlib
+import json
 import math
+import random
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+
+
+REQUIRED_ANNOTATION_COLUMNS = {
+    "sample_id",
+    "ticker",
+    "document_id",
+    "period",
+    "original_text",
+    "relevant_label",
+    "primary_topic",
+    "annotator_id",
+    "annotation_round",
+}
+VALID_RELEVANCE_LABELS = {"0", "1", ""}
 
 
 @dataclass(frozen=True)
@@ -141,16 +158,160 @@ def load_annotation_csv(path: str | Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def dataset_hash(rows: list[dict[str, str]]) -> str:
+    canonical = json.dumps(rows, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def validate_annotation_rows(rows: list[dict[str, str]]) -> dict[str, object]:
+    columns = set(rows[0]) if rows else set()
+    missing_columns = sorted(REQUIRED_ANNOTATION_COLUMNS - columns)
+    seen: set[tuple[str, str, str]] = set()
+    duplicate_keys: list[str] = []
+    invalid_rows: list[dict[str, object]] = []
+    for index, row in enumerate(rows, start=1):
+        key = (
+            row.get("sample_id", ""),
+            row.get("annotator_id", ""),
+            row.get("annotation_round", ""),
+        )
+        if key in seen:
+            duplicate_keys.append("|".join(key))
+        seen.add(key)
+        label = row.get("relevant_label", "")
+        if label not in VALID_RELEVANCE_LABELS:
+            invalid_rows.append({"row": index, "field": "relevant_label", "value": label})
+        if row.get("primary_topic") and label != "1":
+            invalid_rows.append({"row": index, "field": "primary_topic", "value": row.get("primary_topic"), "reason": "topic requires relevant_label=1"})
+    return {
+        "row_count": len(rows),
+        "missing_columns": missing_columns,
+        "duplicate_annotation_keys": duplicate_keys,
+        "invalid_rows": invalid_rows,
+        "dataset_hash": dataset_hash(rows),
+        "valid": not missing_columns and not duplicate_keys and not invalid_rows,
+    }
+
+
+def to_train_ready_rows(rows: list[dict[str, str]]) -> list[dict[str, object]]:
+    ready: list[dict[str, object]] = []
+    for row in rows:
+        label = row.get("relevant_label", "")
+        text = row.get("original_text", "").strip()
+        if label not in {"0", "1"} or not text:
+            continue
+        topics = [
+            value.strip()
+            for value in ",".join([row.get("primary_topic", ""), row.get("secondary_topics", "")]).split(",")
+            if value.strip()
+        ]
+        ready.append(
+            {
+                "sample_id": row.get("sample_id"),
+                "text": text,
+                "relevant_label": int(label),
+                "topics": sorted(set(topics)),
+                "group_key": row.get("document_id") or "|".join([row.get("ticker", ""), row.get("period", "")]),
+            }
+        )
+    return ready
+
+
+def group_aware_split(
+    rows: list[dict[str, object]],
+    *,
+    test_ratio: float = 0.2,
+    seed: int = 42,
+) -> dict[str, object]:
+    groups: dict[str, list[dict[str, object]]] = {}
+    for row in rows:
+        groups.setdefault(str(row.get("group_key") or row.get("document_id") or row.get("sample_id")), []).append(row)
+    group_keys = sorted(groups)
+    rng = random.Random(seed)
+    rng.shuffle(group_keys)
+    test_group_count = max(1, round(len(group_keys) * test_ratio)) if group_keys else 0
+    test_groups = set(group_keys[:test_group_count])
+    train = [row for key in group_keys if key not in test_groups for row in groups[key]]
+    test = [row for key in group_keys if key in test_groups for row in groups[key]]
+    return {
+        "seed": seed,
+        "test_ratio": test_ratio,
+        "train": train,
+        "test": test,
+        "train_groups": sorted(set(group_keys) - test_groups),
+        "test_groups": sorted(test_groups),
+        "document_leakage_prevented": not (set(group_keys) - test_groups) & test_groups,
+    }
+
+
+class SklearnTextClassifier:
+    """Optional training-only baseline; production does not import sklearn unless used."""
+
+    model_name = "tfidf_logistic_regression"
+    model_version = "0.1.0"
+
+    def __init__(self, *, model_kind: str = "logistic_regression") -> None:
+        self.model_kind = model_kind
+        self.pipeline = None
+
+    def fit(self, rows: Iterable[tuple[str, int]]) -> None:
+        try:
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.linear_model import LogisticRegression
+            from sklearn.pipeline import Pipeline
+            from sklearn.svm import LinearSVC
+        except Exception as exc:  # pragma: no cover - optional dependency boundary
+            raise RuntimeError("scikit-learn is an optional training dependency; install requirements-ml-training.txt.") from exc
+
+        items = list(rows)
+        texts = [text for text, _label in items]
+        labels = [label for _text, label in items]
+        estimator = LinearSVC() if self.model_kind == "linear_svm" else LogisticRegression(max_iter=1000)
+        self.pipeline = Pipeline([("tfidf", TfidfVectorizer(ngram_range=(1, 2))), ("model", estimator)])
+        self.pipeline.fit(texts, labels)
+
+    def predict(self, texts: list[str]) -> list[int]:
+        if self.pipeline is None:
+            raise RuntimeError("Model has not been fitted.")
+        return [int(value) for value in self.pipeline.predict(texts)]
+
+
+def rank_active_learning_candidates(
+    rows: list[dict[str, object]],
+    probabilities: list[dict[str, float]],
+    *,
+    limit: int = 50,
+) -> list[dict[str, object]]:
+    ranked = []
+    for row, proba in zip(rows, probabilities):
+        positive = float(proba.get("1", proba.get("relevant", 0.0)))
+        confidence = max(positive, 1 - positive)
+        ranked.append(
+            {
+                "sample_id": row.get("sample_id"),
+                "text": row.get("text") or row.get("original_text"),
+                "predicted_label": 1 if positive >= 0.5 else 0,
+                "confidence": round(confidence, 6),
+                "uncertainty": round(1 - confidence, 6),
+                "source": row.get("source_url") or row.get("source_name"),
+                "period": row.get("period"),
+            }
+        )
+    return sorted(ranked, key=lambda item: float(item["uncertainty"]), reverse=True)[:limit]
+
+
 def summarize_annotation_quality(rows: list[dict[str, str]]) -> dict[str, object]:
     by_sample: dict[str, list[dict[str, str]]] = {}
     for row in rows:
         by_sample.setdefault(row.get("sample_id", ""), []).append(row)
     paired = [items for items in by_sample.values() if len(items) >= 2]
     if not paired:
+        validation = validate_annotation_rows(rows)
         return {
             "sample_count": len(by_sample),
             "paired_sample_count": 0,
             "cohens_kappa_relevance": None,
+            "validation": validation,
             "note": "At least two annotations per sample are required for Cohen's Kappa.",
         }
     first = [items[0].get("relevant_label", "") for items in paired]
@@ -159,5 +320,5 @@ def summarize_annotation_quality(rows: list[dict[str, str]]) -> dict[str, object
         "sample_count": len(by_sample),
         "paired_sample_count": len(paired),
         "cohens_kappa_relevance": cohens_kappa(first, second),
+        "validation": validate_annotation_rows(rows),
     }
-

@@ -16,6 +16,7 @@ from app.financial_analysis_models import RuleSeverity
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.services.analysis_feature_engine import AnalysisFeatureEngine
 from app.services.llm_provider_protocol import FinancialLLMProvider, create_financial_llm_provider
+from app.services.llm_evidence_selection import select_llm_text_evidence
 from app.services.monitorable_rule_engine import MonitorableFinancialRuleEngine
 
 
@@ -118,6 +119,8 @@ class AIFinancialAnalysisService:
         report: HistoricalFinancialAnalysisReport,
         *,
         use_llm: bool = True,
+        official_text_evidence: list[dict[str, object]] | None = None,
+        narrative_shift: dict[str, object] | None = None,
     ) -> AIFinancialAnalysisReport:
         if not self.supports(report.subindustry):
             raise ValueError(f"AI analysis v2 尚未建立 {report.subindustry} 的完整產業規則層。")
@@ -126,16 +129,27 @@ class AIFinancialAnalysisService:
         rules = rule_engine.evaluate(features)
         dimensions = self._dimension_assessments(rules)
         if use_llm:
+            selected_evidence, llm_evidence_ids = select_llm_text_evidence(
+                list(official_text_evidence or []),
+                narrative_shift=narrative_shift,
+            )
             narrative, trace = await self.llm_analyst.analyze(
                 company_name=report.company_name,
                 ticker=report.ticker,
                 subindustry=report.subindustry,
                 dimensions=dimensions,
                 rules=rules,
+                official_text_evidence=selected_evidence,
+                narrative_shift=narrative_shift,
             )
+            trace.llm_evidence_ids = llm_evidence_ids
         else:
             narrative = None
             llm_health = self.llm_analyst.health()
+            selected_evidence, llm_evidence_ids = select_llm_text_evidence(
+                list(official_text_evidence or []),
+                narrative_shift=narrative_shift,
+            )
             trace = LLMAnalysisTrace(
                 enabled=False,
                 status="skipped",
@@ -145,6 +159,7 @@ class AIFinancialAnalysisService:
                 model=self.llm_analyst.model or None,
                 prompt_version=str(llm_health.get("prompt_version") or "financial-analysis-v2"),
                 used_rule_ids=[item.rule_id for item in rules if item.triggered],
+                llm_evidence_ids=llm_evidence_ids,
             )
 
         limitations = list(report.limitations)
@@ -173,5 +188,8 @@ class AIFinancialAnalysisService:
             deterministic_summary=self._deterministic_summary(dimensions),
             llm_narrative=narrative,
             llm_trace=trace,
+            official_text_evidence=selected_evidence,
+            narrative_shift=narrative_shift,
+            llm_evidence_ids=llm_evidence_ids,
             limitations=list(dict.fromkeys(limitations)),
         )

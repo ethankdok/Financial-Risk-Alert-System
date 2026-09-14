@@ -134,9 +134,16 @@ class LLMAnalysisTrace(BaseModel):
     provider: str | None = None
     provider_configured: bool | None = None
     model: str | None = None
+    requested_model: str | None = None
+    effective_model: str | None = None
     prompt_version: str = "financial-analysis-v1"
     latency_ms: int | None = None
     used_rule_ids: list[str] = Field(default_factory=list)
+    llm_evidence_ids: list[str] = Field(default_factory=list)
+    error_type: str | None = None
+    error_code: str | int | None = None
+    retryable: bool | None = None
+    safe_error_message: str | None = None
     error: str | None = None
 
 
@@ -158,4 +165,7 @@ class AIFinancialAnalysisReport(BaseModel):
     deterministic_summary: str
     llm_narrative: LLMNarrative | None = None
     llm_trace: LLMAnalysisTrace
+    official_text_evidence: list[dict[str, object]] = Field(default_factory=list)
+    narrative_shift: dict[str, object] | None = None
+    llm_evidence_ids: list[str] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)

@@ -89,6 +89,8 @@ class AnthropicFinancialAnalyst:
     def _evidence_payload(
         dimensions: list[DimensionAssessment],
         rules: list[MonitoredRuleResult],
+        official_text_evidence: list[dict[str, Any]] | None = None,
+        narrative_shift: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return {
             "dimensions": [item.model_dump(mode="json") for item in dimensions],
@@ -97,6 +99,8 @@ class AnthropicFinancialAnalyst:
                 for item in rules
                 if item.triggered or item.evaluation_status.value != "evaluated"
             ],
+            "official_text_evidence": official_text_evidence or [],
+            "narrative_shift": narrative_shift,
         }
 
     async def analyze(
@@ -107,6 +111,8 @@ class AnthropicFinancialAnalyst:
         subindustry: str,
         dimensions: list[DimensionAssessment],
         rules: list[MonitoredRuleResult],
+        official_text_evidence: list[dict[str, Any]] | None = None,
+        narrative_shift: dict[str, Any] | None = None,
     ) -> tuple[LLMNarrative | None, LLMAnalysisTrace]:
         used_rule_ids = [item.rule_id for item in rules if item.triggered]
         if not self.configured:
@@ -121,7 +127,7 @@ class AnthropicFinancialAnalyst:
                 used_rule_ids=used_rule_ids,
             )
 
-        evidence = self._evidence_payload(dimensions, rules)
+        evidence = self._evidence_payload(dimensions, rules, official_text_evidence, narrative_shift)
         user_prompt = json.dumps(
             {
                 "company": {"name": company_name, "ticker": ticker, "subindustry": subindustry},
