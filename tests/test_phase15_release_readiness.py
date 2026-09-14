@@ -12,6 +12,7 @@ from unittest.mock import patch
 from flask import Blueprint
 from werkzeug.security import generate_password_hash
 
+from fintrust_client import FinTrustClient
 from flask_data_repository import SqliteFlaskDataRepository
 from member_services import EmailMessage, SmtpEmailProvider, create_email_provider
 
@@ -44,6 +45,17 @@ class FakeSmtpClient:
 
     def send_message(self, message):
         self.__class__.sent_messages.append(message)
+
+
+class FakeHttpResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self):
+        return b'{"status":"ok"}'
 
 
 class Phase15FlaskReleaseReadinessTests(unittest.TestCase):
@@ -171,6 +183,24 @@ class Phase15FlaskReleaseReadinessTests(unittest.TestCase):
         content = dockerfile.read_text(encoding="utf-8")
 
         self.assertIn("member_services.py", content)
+
+    def test_extensionless_html_routes_are_served_for_browser_links(self) -> None:
+        response = self.client.get("/result")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("可信度分析結果", response.get_data(as_text=True))
+
+    def test_fintrust_client_health_uses_service_health_endpoint(self) -> None:
+        seen = {}
+
+        def opener(request, timeout):
+            seen["url"] = request.full_url
+            return FakeHttpResponse()
+
+        result = FinTrustClient(base_url="https://api.example.test", opener=opener).health()
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(seen["url"], "https://api.example.test/health")
 
 
 if __name__ == "__main__":

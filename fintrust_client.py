@@ -116,7 +116,7 @@ class FinTrustClient:
             return None
 
     def health(self) -> Any:
-        return self.request("GET", "/api/v1/financial/health")
+        return self.request("GET", "/health")
 
     def companies(self) -> Any:
         return self.request("GET", "/api/v1/financial/companies")

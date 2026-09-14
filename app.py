@@ -316,6 +316,11 @@ def home():
 
 @app.route("/<path:filename>")
 def static_files(filename):
+    requested = BASE_DIR / filename
+    if not requested.suffix:
+        html_filename = f"{filename}.html"
+        if (BASE_DIR / html_filename).is_file():
+            return send_from_directory(BASE_DIR, html_filename)
     return send_from_directory(BASE_DIR, filename)
 
 
