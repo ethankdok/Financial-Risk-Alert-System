@@ -367,7 +367,13 @@ def persisted_metrics(
     latest_only: bool = Query(default=True),
     repository: AnalysisRepository = Depends(get_analysis_repository),
 ):
-    metrics = repository.list_metrics(ticker, limit=limit, latest_only=latest_only)
+    run_id = None
+    if latest_only:
+        runs = repository.list_runs(ticker, limit=1)
+        run_id = runs[0].run_id if runs else None
+        if not run_id:
+            return {"ticker": ticker, "latest_only": True, "count": 0, "metrics": []}
+    metrics = repository.list_metrics(ticker, limit=limit, run_id=run_id)
     return {"ticker": ticker, "latest_only": latest_only, "count": len(metrics), "metrics": metrics}
 
 
@@ -377,24 +383,50 @@ def persisted_analysis_runs(
     limit: int = Query(default=20, ge=1, le=100),
     repository: AnalysisRepository = Depends(get_analysis_repository),
 ) -> list[AnalysisRunSummary]:
-    return repository.list_analysis_runs(ticker, limit=limit)
+    return repository.list_runs(ticker, limit=limit)
 
 
 @router.post("/facts/ingest", dependencies=[Depends(require_ingestion_token)])
 def ingest_fact(request: FactIngestRequest, repository: FinancialFactRepository = Depends(get_fact_repository)):
-    fact = repository.upsert_fact(request)
-    return {"status": "ok", "fact": fact}
+    count = repository.upsert_many(request.facts)
+    return {"status": "ok", "count": count}
 
 
 @router.post("/claims/extract", response_model=ClaimVerificationResult)
 def extract_financial_claim(request: ClaimExtractionRequest) -> ClaimVerificationResult:
-    claim = extract_claim(request.text, ticker_hint=request.ticker_hint)
-    return ClaimVerificationResult(claim=claim, verdict="not_verified", evidence=[], explanation="已完成主張抽取，尚未進行官方資料比對。")
+    claim = extract_claim(
+        request.text,
+        ticker_hint=request.ticker,
+        period_hint=request.period,
+        comparison_period_hint=request.comparison_period,
+    )
+    return ClaimVerificationResult(
+        claim=claim,
+        verdict="not_applicable",
+        evidence=None,
+        explanation="已完成主張抽取，尚未進行官方資料比對。",
+    )
+
+
+def get_pipeline_evidence_repository(
+    repository: AnalysisRepository = Depends(get_analysis_repository),
+) -> PipelineEvidenceRepository:
+    return PipelineEvidenceRepository(repository)
 
 
 @router.post("/claims/verify", response_model=ClaimVerificationResult)
 def verify_financial_claim(
     request: ClaimVerificationRequest,
-    repository: PipelineEvidenceRepository = Depends(lambda: PipelineEvidenceRepository()),
+    repository: PipelineEvidenceRepository = Depends(get_pipeline_evidence_repository),
 ) -> ClaimVerificationResult:
-    return verify_claim(request.claim, repository=repository)
+    claim = extract_claim(
+        request.text,
+        ticker_hint=request.ticker,
+        period_hint=request.period,
+        comparison_period_hint=request.comparison_period,
+    )
+    return verify_claim(
+        claim,
+        repository=repository,
+        tolerance_percentage_points=request.tolerance_percentage_points,
+    )

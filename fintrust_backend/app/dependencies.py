@@ -4,13 +4,12 @@ import os
 from functools import lru_cache
 
 from app.services.analysis_repository import AnalysisRepository, build_analysis_repository
-from app.services.fact_repository import FinancialFactRepository
+from app.services.fact_repository import FinancialFactRepository, build_fact_repository
 
 
 @lru_cache(maxsize=1)
 def get_fact_repository() -> FinancialFactRepository:
-    path = os.getenv("FINANCIAL_DATABASE_PATH", "./data/financial_facts.sqlite3")
-    return FinancialFactRepository(path)
+    return build_fact_repository()
 
 
 @lru_cache(maxsize=1)
