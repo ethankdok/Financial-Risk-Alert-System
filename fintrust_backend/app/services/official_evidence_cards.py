@@ -7,6 +7,7 @@ from app.official_event_models import OfficialEvidenceCardResponse
 from app.services.analysis_repository import AnalysisRepository
 from app.services.official_document_extraction import enrich_conferences_with_document_extraction
 from app.services.official_evidence_service import OfficialEvidenceService
+from app.services.text_intelligence import FinancialTextIntelligenceService, documents_from_official_events
 
 
 def _dump(value: Any) -> dict[str, Any]:
@@ -75,6 +76,18 @@ class OfficialEvidenceCardBuilder:
         key_metrics = list((snapshot or {}).get("key_metrics", []))[:6]
         rule_cards = list((snapshot or {}).get("rule_cards", []))[:8]
         claims = _claim_dicts([*conferences, *summary.material_events])
+        text_documents = documents_from_official_events(
+            ticker=summary.ticker,
+            conferences=conferences,
+            material_events=summary.material_events,
+        )
+        text_analysis = FinancialTextIntelligenceService().analyze_documents(text_documents)
+        text_evidence = [
+            sentence.model_dump(mode="json")
+            for document in text_analysis.documents
+            for sentence in document.sentences
+            if sentence.relevant
+        ][:8]
         status = _source_status(conferences, summary.material_events, snapshot)
         limitations = list(dict.fromkeys([
             *summary.limitations,
@@ -107,6 +120,7 @@ class OfficialEvidenceCardBuilder:
             investor_conferences=[_dump(item) for item in conferences],
             material_events=[_dump(item) for item in summary.material_events],
             disclosure_claims=claims,
+            text_evidence=text_evidence,
             sources=[source.model_dump(mode="json") for source in summary.sources],
             source_status=status,
             limitations=limitations,

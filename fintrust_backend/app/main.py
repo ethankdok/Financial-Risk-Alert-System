@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.financial import router as financial_router
+from app.routers.text_mining import router as text_mining_router
 
 
 logging.basicConfig(
@@ -41,6 +42,7 @@ app.add_middleware(
 )
 
 app.include_router(financial_router)
+app.include_router(text_mining_router)
 
 
 @app.get("/")

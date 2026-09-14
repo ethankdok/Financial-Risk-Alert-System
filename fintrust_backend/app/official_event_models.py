@@ -197,6 +197,7 @@ class OfficialEvidenceCardResponse(BaseModel):
     investor_conferences: list[dict[str, Any]] = Field(default_factory=list)
     material_events: list[dict[str, Any]] = Field(default_factory=list)
     disclosure_claims: list[dict[str, Any]] = Field(default_factory=list)
+    text_evidence: list[dict[str, Any]] = Field(default_factory=list)
     sources: list[dict[str, Any]] = Field(default_factory=list)
     source_status: dict[str, Any] = Field(default_factory=dict)
     limitations: list[str] = Field(default_factory=list)
