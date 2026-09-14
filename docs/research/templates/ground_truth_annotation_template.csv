@@ -1,0 +1,1 @@
+sample_id,ticker,company_name,source_type,source_name,source_url,document_url,document_id,period,event_date,section,sentence_id,original_text,relevant_label,primary_topic,secondary_topics,forward_looking,risk_relevant,annotator_id,annotation_round,annotation_notes
