@@ -412,6 +412,39 @@ def persisted_metrics(
     return {"ticker": ticker, "latest_only": latest_only, "count": len(metrics), "metrics": metrics}
 
 
+@router.get("/companies/{ticker}/facts")
+def persisted_facts(
+    ticker: str,
+    limit: int = Query(default=1000, ge=1, le=5000),
+    run_id: str | None = Query(default=None),
+    period: str | None = Query(default=None),
+    statement_type: str | None = Query(default=None),
+    search: str | None = Query(default=None),
+    repository: AnalysisRepository = Depends(get_analysis_repository),
+):
+    facts = repository.list_facts(
+        ticker,
+        limit=limit,
+        run_id=run_id,
+        period=period,
+        statement_type=statement_type,
+        search=search,
+    )
+    return {"ticker": ticker, "count": len(facts), "facts": facts}
+
+
+@router.get("/companies/{ticker}/rule-results")
+def persisted_rule_results(
+    ticker: str,
+    limit: int = Query(default=1000, ge=1, le=5000),
+    run_id: str | None = Query(default=None),
+    triggered: bool | None = Query(default=None),
+    repository: AnalysisRepository = Depends(get_analysis_repository),
+):
+    rules = repository.list_rule_results(ticker, limit=limit, run_id=run_id, triggered=triggered)
+    return {"ticker": ticker, "count": len(rules), "rule_results": rules}
+
+
 @router.get("/companies/{ticker}/analysis-runs", response_model=list[AnalysisRunSummary])
 def persisted_analysis_runs(
     ticker: str,

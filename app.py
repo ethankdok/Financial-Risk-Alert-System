@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
@@ -8,7 +9,9 @@ from typing import Any
 
 from flask import Flask, jsonify, request, session, send_from_directory
 from financial_routes import create_financial_blueprint
+from fintrust_client import FinTrustClient, FinTrustClientError
 from flask_data_repository import DuplicateRecordError, build_flask_data_repository
+from member_services import MemberAuthService, NotificationService, bool_int, utc_now_str
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from data_shift import data_shift_bp
@@ -27,11 +30,23 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=IS_PRODUCTION,
 )
-app.register_blueprint(create_financial_blueprint())
+
+
+def _financial_admin_required(fn):
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        if not session.get("admin_id"):
+            return jsonify({"error": "unauthorized"}), 401
+        return fn(*args, **kwargs)
+    return wrapped
+
+
+app.register_blueprint(create_financial_blueprint(admin_required=_financial_admin_required))
 app.register_blueprint(data_shift_bp)
 
 repository = build_flask_data_repository(BASE_DIR)
 repository.initialize()
+member_auth = MemberAuthService(repository, app_env=APP_ENV)
 
 
 def now_str() -> str:
@@ -46,6 +61,18 @@ def _public_admin(admin: dict[str, Any]) -> dict[str, Any]:
         "role": admin["role"],
         "is_active": int(admin.get("is_active", 1)),
         "created_at": admin.get("created_at"),
+    }
+
+
+def _public_member(member: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "uid": member["uid"],
+        "email": member["email"],
+        "display_name": member.get("display_name") or member.get("email"),
+        "account_status": member.get("account_status", "active"),
+        "auth_provider": member.get("auth_provider", "unknown"),
+        "created_at": member.get("created_at"),
+        "updated_at": member.get("updated_at"),
     }
 
 
@@ -225,6 +252,25 @@ def current_admin() -> dict[str, Any] | None:
     return _public_admin(admin) if admin else None
 
 
+def current_member() -> dict[str, Any] | None:
+    member_uid = session.get("member_uid")
+    if not member_uid:
+        return None
+    member = repository.get_member(str(member_uid))
+    if not member or member.get("account_status") != "active":
+        return None
+    return _public_member(member)
+
+
+def member_required(fn):
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        if not current_member():
+            return jsonify({"error": "unauthorized"}), 401
+        return fn(*args, **kwargs)
+    return wrapped
+
+
 def system_admin_required(fn):
     """Only active administrators with the 系統管理員 role may continue."""
     @wraps(fn)
@@ -234,6 +280,22 @@ def system_admin_required(fn):
             return jsonify({"error": "unauthorized"}), 401
         if admin["role"] != "系統管理員":
             return jsonify({"error": "forbidden", "message": "只有系統管理員可以管理管理員帳號"}), 403
+        return fn(*args, **kwargs)
+    return wrapped
+
+
+def notification_job_required(fn):
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        expected = os.getenv("NOTIFICATION_JOB_TOKEN", "").strip()
+        production = IS_PRODUCTION
+        if not expected:
+            if production:
+                return jsonify({"error": "NOTIFICATION_JOB_TOKEN must be configured in production"}), 503
+            return fn(*args, **kwargs)
+        provided = request.headers.get("X-Notification-Job-Token", "")
+        if not secrets.compare_digest(provided, expected):
+            return jsonify({"error": "unauthorized"}), 401
         return fn(*args, **kwargs)
     return wrapped
 
@@ -293,6 +355,265 @@ def api_me():
     if not admin:
         return jsonify({"error": "unauthorized"}), 401
     return jsonify({"id": admin["id"], "username": admin["username"], "name": admin["display_name"], "role": admin["role"]})
+
+
+@app.post("/api/member/auth/register")
+def member_register():
+    data = request.get_json(silent=True) or {}
+    try:
+        member = member_auth.register_local(
+            email=str(data.get("email", "")),
+            password=str(data.get("password", "")),
+            display_name=str(data.get("display_name", "")),
+        )
+    except DuplicateRecordError:
+        return jsonify({"error": "此 Email 已建立會員帳號"}), 409
+    except (RuntimeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    session.clear()
+    session["member_uid"] = member["uid"]
+    return jsonify({"member": _public_member(member)}), 201
+
+
+@app.post("/api/member/auth/login")
+def member_login():
+    data = request.get_json(silent=True) or {}
+    try:
+        member = member_auth.login_local(email=str(data.get("email", "")), password=str(data.get("password", "")))
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 400
+    if not member:
+        return jsonify({"error": "Email 或密碼錯誤"}), 401
+    session.clear()
+    session["member_uid"] = member["uid"]
+    return jsonify({"member": _public_member(member)})
+
+
+@app.post("/api/member/auth/firebase-login")
+def member_firebase_login():
+    data = request.get_json(silent=True) or {}
+    id_token = str(data.get("id_token", "")).strip()
+    if not id_token:
+        return jsonify({"error": "missing id_token"}), 400
+    try:
+        member = member_auth.login_firebase_token(id_token)
+    except (RuntimeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    session.clear()
+    session["member_uid"] = member["uid"]
+    return jsonify({"member": _public_member(member)})
+
+
+@app.post("/api/member/auth/logout")
+@member_required
+def member_logout():
+    member = current_member()
+    session.clear()
+    return jsonify({"ok": True, "member": member})
+
+
+@app.get("/api/member/me")
+def member_me():
+    member = current_member()
+    if not member:
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify({"member": member})
+
+
+@app.put("/api/member/profile")
+@member_required
+def member_profile_update():
+    member = current_member()
+    data = request.get_json(silent=True) or {}
+    fields = {
+        "display_name": str(data.get("display_name", member["display_name"])).strip() or member["display_name"],
+        "email": str(data.get("email", member["email"])).strip().lower() or member["email"],
+        "account_status": member["account_status"],
+        "updated_at": utc_now_str(),
+    }
+    try:
+        updated = repository.update_member(member["uid"], fields)
+    except DuplicateRecordError:
+        return jsonify({"error": "此 Email 已被使用"}), 409
+    return jsonify({"member": _public_member(updated or member)})
+
+
+@app.get("/api/member/watchlist")
+@member_required
+def member_watchlist():
+    member = current_member()
+    return jsonify({"items": repository.list_watchlist(member["uid"])})
+
+
+@app.post("/api/member/watchlist")
+@member_required
+def member_watchlist_add():
+    member = current_member()
+    data = request.get_json(silent=True) or {}
+    ticker = str(data.get("ticker", "")).strip()
+    if ticker not in {"2454", "2330", "2303", "3711"}:
+        return jsonify({"error": "目前僅支援 2454、2330、2303、3711"}), 400
+    now = utc_now_str()
+    item = repository.upsert_watchlist_item(member["uid"], {
+        "ticker": ticker,
+        "company_name": data.get("company_name"),
+        "alert_enabled": bool_int(data.get("alert_enabled"), 1),
+        "created_at": now,
+        "updated_at": now,
+    })
+    return jsonify({"item": item}), 201
+
+
+@app.patch("/api/member/watchlist/<ticker>")
+@member_required
+def member_watchlist_update(ticker: str):
+    member = current_member()
+    data = request.get_json(silent=True) or {}
+    item = repository.update_watchlist_item(member["uid"], ticker, {
+        "alert_enabled": bool_int(data.get("alert_enabled"), 1),
+        "updated_at": utc_now_str(),
+    })
+    if not item:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({"item": item})
+
+
+@app.delete("/api/member/watchlist/<ticker>")
+@member_required
+def member_watchlist_delete(ticker: str):
+    member = current_member()
+    old = repository.delete_watchlist_item(member["uid"], ticker)
+    if not old:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({"ok": True})
+
+
+@app.get("/api/member/notification-preferences")
+@member_required
+def member_notification_preferences():
+    member = current_member()
+    return jsonify({"preferences": repository.get_notification_preferences(member["uid"])})
+
+
+@app.put("/api/member/notification-preferences")
+@member_required
+def member_notification_preferences_update():
+    member = current_member()
+    data = request.get_json(silent=True) or {}
+    preferences = repository.save_notification_preferences(member["uid"], {
+        "email_enabled": bool_int(data.get("email_enabled"), 1),
+        "digest_frequency": data.get("digest_frequency", "daily"),
+        "important_alerts": bool_int(data.get("important_alerts"), 1),
+        "material_event_alerts": bool_int(data.get("material_event_alerts"), 1),
+        "conference_alerts": bool_int(data.get("conference_alerts"), 1),
+        "narrative_shift_alerts": bool_int(data.get("narrative_shift_alerts"), 1),
+        "updated_at": utc_now_str(),
+    })
+    return jsonify({"preferences": preferences})
+
+
+@app.get("/api/member/notifications")
+@member_required
+def member_notifications():
+    member = current_member()
+    return jsonify({"items": repository.list_notification_history(member["uid"], limit=100)})
+
+
+@app.get("/api/member/companies/<ticker>/evidence")
+@member_required
+def member_company_evidence(ticker: str):
+    try:
+        card = FinTrustClient().official_evidence_card(ticker, extract_documents=False)
+        return jsonify({"success": True, "data": card})
+    except FinTrustClientError as exc:
+        return jsonify({"success": False, "error": str(exc), "detail": exc.detail}), exc.status_code or 502
+
+
+def _notification_evidence(ticker: str) -> dict[str, Any]:
+    try:
+        card = FinTrustClient().official_evidence_card(ticker, extract_documents=False)
+        snapshot = card.get("financial_snapshot") if isinstance(card, dict) else None
+        return {
+            "ticker": ticker,
+            "company_name": card.get("company_name") if isinstance(card, dict) else ticker,
+            "overall_severity": card.get("overall_severity") or (snapshot or {}).get("overall_severity") if isinstance(card, dict) else None,
+            "evidence_readiness": card.get("evidence_readiness") if isinstance(card, dict) else None,
+            "conference_count": len(card.get("investor_conferences") or []) if isinstance(card, dict) else 0,
+            "material_event_count": len(card.get("material_events") or []) if isinstance(card, dict) else 0,
+            "narrative_shift": card.get("narrative_shift") if isinstance(card, dict) else None,
+            "run_id": card.get("run_id") or (snapshot or {}).get("run_id") if isinstance(card, dict) else None,
+        }
+    except FinTrustClientError:
+        return {"ticker": ticker, "overall_severity": "unknown", "evidence_identity": "fintrust_unreachable"}
+
+
+@app.post("/api/system/notifications/process")
+@notification_job_required
+def process_notifications():
+    service = NotificationService(repository, evidence_provider=_notification_evidence)
+    results = service.process_all_members()
+    return jsonify({
+        "processed": len(results),
+        "sent": sum(1 for item in results if item.get("status") == "sent"),
+        "suppressed_duplicate": sum(1 for item in results if item.get("status") == "suppressed_duplicate"),
+        "items": results,
+    })
+
+
+@app.get("/api/admin/system/status")
+@login_required
+def admin_system_status():
+    fintrust_health = None
+    fintrust_error = None
+    try:
+        fintrust_health = FinTrustClient().health()
+    except FinTrustClientError as exc:
+        fintrust_error = {"message": str(exc), "status_code": exc.status_code}
+    return jsonify({
+        "app_env": APP_ENV,
+        "flask_datastore_backend": repository.backend_name,
+        "member_auth_mode": "local_password" if member_auth.local_password_enabled() else "managed_firebase_token",
+        "notification_provider": "console",
+        "notification_job_token_configured": bool(os.getenv("NOTIFICATION_JOB_TOKEN", "").strip()),
+        "data_shift_parquet_configured": bool(os.getenv("DATA_SHIFT_PARQUET", "").strip()),
+        "fintrust_api_configured": bool(os.getenv("FINTRUST_API_BASE_URL", "").strip()),
+        "fintrust_health": fintrust_health,
+        "fintrust_error": fintrust_error,
+    })
+
+
+@app.get("/api/admin/financial/companies")
+@login_required
+def admin_financial_companies():
+    try:
+        return jsonify({"success": True, "data": FinTrustClient().companies()})
+    except FinTrustClientError as exc:
+        return jsonify({"success": False, "error": str(exc), "detail": exc.detail}), exc.status_code or 502
+
+
+@app.get("/api/admin/financial/companies/<ticker>/overview")
+@login_required
+def admin_financial_overview(ticker: str):
+    client = FinTrustClient()
+    payload: dict[str, Any] = {"ticker": ticker, "errors": []}
+    calls = {
+        "snapshot": lambda: client.latest_analysis(ticker),
+        "metrics": lambda: client.metrics(ticker, latest_only=False, limit=500),
+        "runs": lambda: client.analysis_runs(ticker),
+        "conferences": lambda: client.conferences(ticker),
+        "material_events": lambda: client.material_events(ticker),
+        "official_card": lambda: client.official_evidence_card(ticker),
+        "facts": lambda: client.facts(ticker, limit=1000),
+        "rule_results": lambda: client.rule_results(ticker, limit=500),
+        "text_intelligence": lambda: client.latest_text_intelligence(ticker),
+    }
+    for key, call in calls.items():
+        try:
+            payload[key] = call()
+        except FinTrustClientError as exc:
+            payload[key] = None
+            payload["errors"].append({"layer": key, "message": str(exc), "status_code": exc.status_code})
+    return jsonify({"success": not bool(payload["errors"]), "data": payload}), 207 if payload["errors"] else 200
 
 
 @app.get("/api/keywords")

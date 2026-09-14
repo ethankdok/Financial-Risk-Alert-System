@@ -41,6 +41,23 @@ class FlaskDataRepository(Protocol):
     def clear_audit_logs(self) -> None: ...
     def create_analysis_record(self, payload: dict[str, Any]) -> int: ...
 
+    def create_member(self, payload: dict[str, Any]) -> dict[str, Any]: ...
+    def get_member(self, uid: str) -> dict[str, Any] | None: ...
+    def get_member_by_email(self, email: str) -> dict[str, Any] | None: ...
+    def list_members(self, limit: int = 500) -> list[dict[str, Any]]: ...
+    def update_member(self, uid: str, fields: dict[str, Any]) -> dict[str, Any] | None: ...
+    def set_member_password_hash(self, uid: str, password_hash: str) -> None: ...
+    def get_member_password_hash(self, uid: str) -> str | None: ...
+    def list_watchlist(self, member_uid: str) -> list[dict[str, Any]]: ...
+    def upsert_watchlist_item(self, member_uid: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+    def update_watchlist_item(self, member_uid: str, ticker: str, fields: dict[str, Any]) -> dict[str, Any] | None: ...
+    def delete_watchlist_item(self, member_uid: str, ticker: str) -> dict[str, Any] | None: ...
+    def get_notification_preferences(self, member_uid: str) -> dict[str, Any]: ...
+    def save_notification_preferences(self, member_uid: str, preferences: dict[str, Any]) -> dict[str, Any]: ...
+    def append_notification_history(self, payload: dict[str, Any]) -> dict[str, Any]: ...
+    def list_notification_history(self, member_uid: str | None = None, limit: int = 100) -> list[dict[str, Any]]: ...
+    def find_notification_by_dedupe_key(self, dedupe_key: str) -> dict[str, Any] | None: ...
+
 
 class SqliteFlaskDataRepository:
     """Compatibility backend for local development and migration verification."""
@@ -128,6 +145,59 @@ class SqliteFlaskDataRepository:
                   matched_keywords_json TEXT NOT NULL DEFAULT '[]',
                   matched_features_json TEXT NOT NULL DEFAULT '[]',
                   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS members (
+                  uid TEXT PRIMARY KEY,
+                  email TEXT UNIQUE NOT NULL,
+                  display_name TEXT NOT NULL,
+                  account_status TEXT NOT NULL DEFAULT 'active',
+                  auth_provider TEXT NOT NULL,
+                  created_at TEXT NOT NULL,
+                  updated_at TEXT NOT NULL,
+                  schema_version INTEGER NOT NULL DEFAULT 1
+                );
+                CREATE TABLE IF NOT EXISTS member_credentials (
+                  member_uid TEXT PRIMARY KEY,
+                  password_hash TEXT NOT NULL,
+                  updated_at TEXT NOT NULL,
+                  FOREIGN KEY(member_uid) REFERENCES members(uid) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS member_watchlist (
+                  member_uid TEXT NOT NULL,
+                  ticker TEXT NOT NULL,
+                  company_name TEXT,
+                  alert_enabled INTEGER NOT NULL DEFAULT 1,
+                  created_at TEXT NOT NULL,
+                  updated_at TEXT NOT NULL,
+                  PRIMARY KEY(member_uid, ticker),
+                  FOREIGN KEY(member_uid) REFERENCES members(uid) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS notification_preferences (
+                  member_uid TEXT PRIMARY KEY,
+                  email_enabled INTEGER NOT NULL DEFAULT 1,
+                  digest_frequency TEXT NOT NULL DEFAULT 'daily',
+                  important_alerts INTEGER NOT NULL DEFAULT 1,
+                  material_event_alerts INTEGER NOT NULL DEFAULT 1,
+                  conference_alerts INTEGER NOT NULL DEFAULT 1,
+                  narrative_shift_alerts INTEGER NOT NULL DEFAULT 1,
+                  updated_at TEXT NOT NULL,
+                  FOREIGN KEY(member_uid) REFERENCES members(uid) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS notification_history (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  member_uid TEXT NOT NULL,
+                  ticker TEXT NOT NULL,
+                  notification_type TEXT NOT NULL,
+                  dedupe_key TEXT UNIQUE NOT NULL,
+                  subject TEXT NOT NULL,
+                  body TEXT NOT NULL,
+                  status TEXT NOT NULL,
+                  provider_status TEXT,
+                  safe_error_detail TEXT,
+                  created_at TEXT NOT NULL,
+                  sent_at TEXT,
+                  metadata_json TEXT NOT NULL DEFAULT '{}',
+                  FOREIGN KEY(member_uid) REFERENCES members(uid) ON DELETE CASCADE
                 );
                 """
             )
@@ -383,6 +453,191 @@ class SqliteFlaskDataRepository:
             )
             return int(cursor.lastrowid)
 
+    def create_member(self, payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            with self._connect() as connection:
+                connection.execute(
+                    """INSERT INTO members(uid,email,display_name,account_status,auth_provider,created_at,updated_at,schema_version)
+                    VALUES(?,?,?,?,?,?,?,?)""",
+                    (
+                        payload["uid"], payload["email"], payload["display_name"],
+                        payload.get("account_status", "active"), payload.get("auth_provider", "local_password"),
+                        payload["created_at"], payload["updated_at"], int(payload.get("schema_version", 1)),
+                    ),
+                )
+        except sqlite3.IntegrityError as exc:
+            raise DuplicateRecordError("member email or uid already exists") from exc
+        return dict(payload)
+
+    def get_member(self, uid: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            return self._row(connection.execute("SELECT * FROM members WHERE uid=?", (uid,)).fetchone())
+
+    def get_member_by_email(self, email: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            return self._row(connection.execute("SELECT * FROM members WHERE lower(email)=lower(?)", (email,)).fetchone())
+
+    def list_members(self, limit: int = 500) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute("SELECT * FROM members ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+        return [dict(row) for row in rows]
+
+    def update_member(self, uid: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+        old = self.get_member(uid)
+        if not old:
+            return None
+        after = {**old, **fields, "uid": uid}
+        try:
+            with self._connect() as connection:
+                connection.execute(
+                    "UPDATE members SET display_name=?, email=?, account_status=?, updated_at=? WHERE uid=?",
+                    (after["display_name"], after["email"], after["account_status"], after["updated_at"], uid),
+                )
+        except sqlite3.IntegrityError as exc:
+            raise DuplicateRecordError("member email already exists") from exc
+        return after
+
+    def set_member_password_hash(self, uid: str, password_hash: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """INSERT INTO member_credentials(member_uid,password_hash,updated_at) VALUES(?,?,CURRENT_TIMESTAMP)
+                ON CONFLICT(member_uid) DO UPDATE SET password_hash=excluded.password_hash, updated_at=excluded.updated_at""",
+                (uid, password_hash),
+            )
+
+    def get_member_password_hash(self, uid: str) -> str | None:
+        with self._connect() as connection:
+            row = connection.execute("SELECT password_hash FROM member_credentials WHERE member_uid=?", (uid,)).fetchone()
+        return str(row["password_hash"]) if row else None
+
+    def list_watchlist(self, member_uid: str) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM member_watchlist WHERE member_uid=? ORDER BY ticker",
+                (member_uid,),
+            ).fetchall()
+        return [{**dict(row), "alert_enabled": int(row["alert_enabled"])} for row in rows]
+
+    def upsert_watchlist_item(self, member_uid: str, payload: dict[str, Any]) -> dict[str, Any]:
+        item = {**payload, "member_uid": member_uid}
+        with self._connect() as connection:
+            connection.execute(
+                """INSERT INTO member_watchlist(member_uid,ticker,company_name,alert_enabled,created_at,updated_at)
+                VALUES(?,?,?,?,?,?)
+                ON CONFLICT(member_uid,ticker) DO UPDATE SET
+                    company_name=excluded.company_name,
+                    alert_enabled=excluded.alert_enabled,
+                    updated_at=excluded.updated_at""",
+                (
+                    member_uid, item["ticker"], item.get("company_name"),
+                    int(item.get("alert_enabled", 1)), item["created_at"], item["updated_at"],
+                ),
+            )
+        return {**item, "alert_enabled": int(item.get("alert_enabled", 1))}
+
+    def update_watchlist_item(self, member_uid: str, ticker: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+        old = next((item for item in self.list_watchlist(member_uid) if item["ticker"] == ticker), None)
+        if not old:
+            return None
+        after = {**old, **fields, "member_uid": member_uid, "ticker": ticker}
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE member_watchlist SET company_name=?, alert_enabled=?, updated_at=? WHERE member_uid=? AND ticker=?",
+                (after.get("company_name"), int(after.get("alert_enabled", 1)), after["updated_at"], member_uid, ticker),
+            )
+        return {**after, "alert_enabled": int(after.get("alert_enabled", 1))}
+
+    def delete_watchlist_item(self, member_uid: str, ticker: str) -> dict[str, Any] | None:
+        old = next((item for item in self.list_watchlist(member_uid) if item["ticker"] == ticker), None)
+        if not old:
+            return None
+        with self._connect() as connection:
+            connection.execute("DELETE FROM member_watchlist WHERE member_uid=? AND ticker=?", (member_uid, ticker))
+        return old
+
+    @staticmethod
+    def _default_notification_preferences(member_uid: str, updated_at: str | None = None) -> dict[str, Any]:
+        return {
+            "member_uid": member_uid,
+            "email_enabled": 1,
+            "digest_frequency": "daily",
+            "important_alerts": 1,
+            "material_event_alerts": 1,
+            "conference_alerts": 1,
+            "narrative_shift_alerts": 1,
+            "updated_at": updated_at or "",
+        }
+
+    def get_notification_preferences(self, member_uid: str) -> dict[str, Any]:
+        with self._connect() as connection:
+            row = connection.execute("SELECT * FROM notification_preferences WHERE member_uid=?", (member_uid,)).fetchone()
+        return dict(row) if row else self._default_notification_preferences(member_uid)
+
+    def save_notification_preferences(self, member_uid: str, preferences: dict[str, Any]) -> dict[str, Any]:
+        item = {**self._default_notification_preferences(member_uid), **preferences, "member_uid": member_uid}
+        with self._connect() as connection:
+            connection.execute(
+                """INSERT INTO notification_preferences
+                (member_uid,email_enabled,digest_frequency,important_alerts,material_event_alerts,conference_alerts,narrative_shift_alerts,updated_at)
+                VALUES(?,?,?,?,?,?,?,?)
+                ON CONFLICT(member_uid) DO UPDATE SET
+                    email_enabled=excluded.email_enabled,
+                    digest_frequency=excluded.digest_frequency,
+                    important_alerts=excluded.important_alerts,
+                    material_event_alerts=excluded.material_event_alerts,
+                    conference_alerts=excluded.conference_alerts,
+                    narrative_shift_alerts=excluded.narrative_shift_alerts,
+                    updated_at=excluded.updated_at""",
+                (
+                    member_uid, int(item["email_enabled"]), item["digest_frequency"], int(item["important_alerts"]),
+                    int(item["material_event_alerts"]), int(item["conference_alerts"]),
+                    int(item["narrative_shift_alerts"]), item["updated_at"],
+                ),
+            )
+        return {**item, **{key: int(item[key]) for key in ("email_enabled", "important_alerts", "material_event_alerts", "conference_alerts", "narrative_shift_alerts")}}
+
+    def append_notification_history(self, payload: dict[str, Any]) -> dict[str, Any]:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """INSERT INTO notification_history
+                (member_uid,ticker,notification_type,dedupe_key,subject,body,status,provider_status,safe_error_detail,created_at,sent_at,metadata_json)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    payload["member_uid"], payload["ticker"], payload["notification_type"], payload["dedupe_key"],
+                    payload["subject"], payload["body"], payload["status"], payload.get("provider_status"),
+                    payload.get("safe_error_detail"), payload["created_at"], payload.get("sent_at"),
+                    json.dumps(payload.get("metadata", {}), ensure_ascii=False),
+                ),
+            )
+            history_id = int(cursor.lastrowid)
+        return {**payload, "id": history_id}
+
+    def list_notification_history(self, member_uid: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        query = "SELECT * FROM notification_history"
+        params: list[Any] = []
+        if member_uid:
+            query += " WHERE member_uid=?"
+            params.append(member_uid)
+        query += " ORDER BY id DESC LIMIT ?"
+        params.append(limit)
+        with self._connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+        output = []
+        for row in rows:
+            item = dict(row)
+            item["metadata"] = json.loads(item.pop("metadata_json") or "{}")
+            output.append(item)
+        return output
+
+    def find_notification_by_dedupe_key(self, dedupe_key: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute("SELECT * FROM notification_history WHERE dedupe_key=?", (dedupe_key,)).fetchone()
+        if not row:
+            return None
+        item = dict(row)
+        item["metadata"] = json.loads(item.pop("metadata_json") or "{}")
+        return item
+
 
 class FirestoreFlaskDataRepository:
     """Firestore backend used by the Flask admin and text-risk application."""
@@ -404,7 +659,11 @@ class FirestoreFlaskDataRepository:
         if not snapshot.exists:
             return None
         data = snapshot.to_dict() or {}
-        data["id"] = int(data.get("id") or snapshot.id)
+        raw_id = data.get("id", snapshot.id)
+        try:
+            data["id"] = int(raw_id)
+        except (TypeError, ValueError):
+            data["id"] = str(raw_id)
         return data
 
     def _collection_rows(self, name: str) -> list[dict[str, Any]]:
@@ -595,6 +854,100 @@ class FirestoreFlaskDataRepository:
         record_id = self._next_id("analysis_records")
         self.client.collection("analysis_records").document(str(record_id)).set({**payload, "id": record_id})
         return record_id
+
+    def create_member(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if self.get_member(payload["uid"]) or self.get_member_by_email(payload["email"]):
+            raise DuplicateRecordError("member email or uid already exists")
+        self.client.collection("members").document(str(payload["uid"])).set(dict(payload), merge=True)
+        return dict(payload)
+
+    def get_member(self, uid: str) -> dict[str, Any] | None:
+        snapshot = self.client.collection("members").document(str(uid)).get()
+        return snapshot.to_dict() if snapshot.exists else None
+
+    def get_member_by_email(self, email: str) -> dict[str, Any] | None:
+        return self._find_one("members", "email", email)
+
+    def list_members(self, limit: int = 500) -> list[dict[str, Any]]:
+        rows = self._collection_rows("members")
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        return rows[:limit]
+
+    def update_member(self, uid: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+        old = self.get_member(uid)
+        if not old:
+            return None
+        email_owner = self.get_member_by_email(str(fields.get("email", old.get("email"))))
+        if email_owner and str(email_owner.get("uid")) != str(uid):
+            raise DuplicateRecordError("member email already exists")
+        after = {**old, **fields, "uid": uid}
+        self.client.collection("members").document(str(uid)).set(after, merge=True)
+        return after
+
+    def set_member_password_hash(self, uid: str, password_hash: str) -> None:
+        raise RuntimeError("Firestore member password storage is disabled; use managed member authentication.")
+
+    def get_member_password_hash(self, uid: str) -> str | None:
+        raise RuntimeError("Firestore member password storage is disabled; use managed member authentication.")
+
+    def list_watchlist(self, member_uid: str) -> list[dict[str, Any]]:
+        rows = self._collection_rows(f"members/{member_uid}/watchlist")
+        rows.sort(key=lambda row: str(row.get("ticker") or ""))
+        return rows
+
+    def upsert_watchlist_item(self, member_uid: str, payload: dict[str, Any]) -> dict[str, Any]:
+        item = {**payload, "member_uid": member_uid}
+        self.client.collection("members").document(member_uid).collection("watchlist").document(str(item["ticker"])).set(item, merge=True)
+        return item
+
+    def update_watchlist_item(self, member_uid: str, ticker: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+        old_ref = self.client.collection("members").document(member_uid).collection("watchlist").document(ticker)
+        snapshot = old_ref.get()
+        if not snapshot.exists:
+            return None
+        after = {**(snapshot.to_dict() or {}), **fields, "member_uid": member_uid, "ticker": ticker}
+        old_ref.set(after, merge=True)
+        return after
+
+    def delete_watchlist_item(self, member_uid: str, ticker: str) -> dict[str, Any] | None:
+        ref = self.client.collection("members").document(member_uid).collection("watchlist").document(ticker)
+        snapshot = ref.get()
+        if not snapshot.exists:
+            return None
+        old = snapshot.to_dict() or {}
+        ref.delete()
+        return old
+
+    @staticmethod
+    def _default_notification_preferences(member_uid: str, updated_at: str | None = None) -> dict[str, Any]:
+        return SqliteFlaskDataRepository._default_notification_preferences(member_uid, updated_at)
+
+    def get_notification_preferences(self, member_uid: str) -> dict[str, Any]:
+        snapshot = self.client.collection("members").document(member_uid).collection("settings").document("notification_preferences").get()
+        return snapshot.to_dict() if snapshot.exists else self._default_notification_preferences(member_uid)
+
+    def save_notification_preferences(self, member_uid: str, preferences: dict[str, Any]) -> dict[str, Any]:
+        item = {**self._default_notification_preferences(member_uid), **preferences, "member_uid": member_uid}
+        self.client.collection("members").document(member_uid).collection("settings").document("notification_preferences").set(item, merge=True)
+        return item
+
+    def append_notification_history(self, payload: dict[str, Any]) -> dict[str, Any]:
+        history_id = self._next_id("notification_history")
+        item = {**payload, "id": history_id}
+        self.client.collection("notification_history").document(str(history_id)).set(item, merge=True)
+        self.client.collection("members").document(payload["member_uid"]).collection("notification_history").document(str(history_id)).set(item, merge=True)
+        return item
+
+    def list_notification_history(self, member_uid: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        if member_uid:
+            rows = self._collection_rows(f"members/{member_uid}/notification_history")
+        else:
+            rows = self._collection_rows("notification_history")
+        rows.sort(key=lambda row: (str(row.get("created_at") or ""), int(row.get("id", 0))), reverse=True)
+        return rows[:limit]
+
+    def find_notification_by_dedupe_key(self, dedupe_key: str) -> dict[str, Any] | None:
+        return self._find_one("notification_history", "dedupe_key", dedupe_key)
 
 
 def build_flask_data_repository(base_dir: str | Path) -> FlaskDataRepository:

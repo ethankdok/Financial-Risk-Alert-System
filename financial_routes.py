@@ -7,12 +7,12 @@ Flask server calls the FinTrust FastAPI service behind the scenes.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from fintrust_client import FinTrustClient, FinTrustClientError, frontend_card_payload, safe_financial_payload
 
 
-def create_financial_blueprint(client: FinTrustClient | None = None):
+def create_financial_blueprint(client: FinTrustClient | None = None, admin_required: Callable | None = None):
     """Create a Flask Blueprint with FinTrust proxy endpoints.
 
     Flask is imported inside the factory so this integration package can still be
@@ -23,6 +23,7 @@ def create_financial_blueprint(client: FinTrustClient | None = None):
     from flask import Blueprint, Response, request
 
     blueprint = Blueprint("financial_proxy", __name__)
+    protect_admin = admin_required or (lambda fn: fn)
 
     def get_client() -> FinTrustClient:
         return client or FinTrustClient()
@@ -176,6 +177,7 @@ def create_financial_blueprint(client: FinTrustClient | None = None):
             return handle_error(exc)
 
     @blueprint.post("/api/financial/admin/companies/<ticker>/official-events/refresh")
+    @protect_admin
     def refresh_official_events(ticker: str):
         try:
             payload = request.get_json(silent=True) or {}
@@ -199,6 +201,7 @@ def create_financial_blueprint(client: FinTrustClient | None = None):
             return to_response({"success": False, "error": "Invalid official-events refresh parameters."}, 400)
 
     @blueprint.post("/api/financial/admin/companies/<ticker>/refresh")
+    @protect_admin
     def refresh_company(ticker: str):
         try:
             payload = request.get_json(silent=True) or {}
@@ -221,6 +224,7 @@ def create_financial_blueprint(client: FinTrustClient | None = None):
             return to_response({"success": False, "error": "Invalid refresh parameters."}, 400)
 
     @blueprint.post("/api/financial/admin/companies/<ticker>/unified-refresh")
+    @protect_admin
     def unified_refresh_company(ticker: str):
         try:
             payload = request.get_json(silent=True) or {}

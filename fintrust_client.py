@@ -228,8 +228,51 @@ class FinTrustClient:
             params={"latest_only": str(latest_only).lower(), "limit": limit},
         )
 
+    def facts(
+        self,
+        ticker: str,
+        *,
+        limit: int = 1000,
+        run_id: str | None = None,
+        period: str | None = None,
+        statement_type: str | None = None,
+        search: str | None = None,
+    ) -> Any:
+        return self.request(
+            "GET",
+            f"/api/v1/financial/companies/{ticker}/facts",
+            params={
+                "limit": limit,
+                "run_id": run_id,
+                "period": period,
+                "statement_type": statement_type,
+                "search": search,
+            },
+        )
+
+    def rule_results(
+        self,
+        ticker: str,
+        *,
+        limit: int = 1000,
+        run_id: str | None = None,
+        triggered: bool | None = None,
+    ) -> Any:
+        return self.request(
+            "GET",
+            f"/api/v1/financial/companies/{ticker}/rule-results",
+            params={
+                "limit": limit,
+                "run_id": run_id,
+                "triggered": str(triggered).lower() if triggered is not None else None,
+            },
+        )
+
     def analysis_runs(self, ticker: str) -> Any:
         return self.request("GET", f"/api/v1/financial/companies/{ticker}/analysis-runs")
+
+    def latest_text_intelligence(self, ticker: str) -> Any:
+        return self.request("GET", f"/api/v1/financial/text-mining/companies/{ticker}/latest-run")
 
     def refresh_company(
         self,

@@ -16,6 +16,7 @@ from app.services.analysis_repository import (
     latest_fact_rows,
     metric_rows,
     rule_rows,
+    statement_type_for_metric,
 )
 from app.services.official_event_sources import investor_conference_identity, material_event_identity
 
@@ -253,6 +254,57 @@ class FirestoreAnalysisRepository:
             ),
             reverse=not bool(run_id),
         )
+        return rows[:limit]
+
+    def list_facts(
+        self,
+        ticker: str,
+        limit: int = 500,
+        run_id: str | None = None,
+        period: str | None = None,
+        statement_type: str | None = None,
+        search: str | None = None,
+    ) -> list[dict[str, Any]]:
+        from google.cloud.firestore_v1.base_query import FieldFilter
+
+        query = self.client.collection("normalized_financial_facts").where(
+            filter=FieldFilter("ticker", "==", ticker)
+        )
+        if period:
+            query = query.where(filter=FieldFilter("period", "==", period))
+        rows = [document.to_dict() or {} for document in query.stream()]
+        for row in rows:
+            row["statement_type"] = statement_type_for_metric(str(row.get("metric_code") or ""))
+            row["label"] = row.get("metric_code")
+            row["run_id"] = run_id
+        if statement_type:
+            rows = [row for row in rows if row.get("statement_type") == statement_type]
+        if search:
+            needle = search.casefold()
+            rows = [
+                row for row in rows
+                if needle in str(row.get("metric_code") or "").casefold()
+                or needle in str(row.get("taxonomy_concept") or "").casefold()
+            ]
+        rows.sort(key=lambda row: (str(row.get("retrieved_at") or ""), str(row.get("period") or ""), str(row.get("metric_code") or "")), reverse=True)
+        return rows[:limit]
+
+    def list_rule_results(
+        self,
+        ticker: str,
+        limit: int = 500,
+        run_id: str | None = None,
+        triggered: bool | None = None,
+    ) -> list[dict[str, Any]]:
+        from google.cloud.firestore_v1.base_query import FieldFilter
+
+        query = self.client.collection("rule_results").where(filter=FieldFilter("ticker", "==", ticker))
+        if run_id:
+            query = query.where(filter=FieldFilter("run_id", "==", run_id))
+        rows = [document.to_dict() or {} for document in query.stream()]
+        if triggered is not None:
+            rows = [row for row in rows if bool(row.get("triggered")) is triggered]
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
         return rows[:limit]
 
     def list_runs(self, ticker: str, limit: int = 20) -> list[AnalysisRunSummary]:

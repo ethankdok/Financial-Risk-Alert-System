@@ -77,6 +77,22 @@ class AnalysisRepository(Protocol):
         limit: int = 200,
         run_id: str | None = None,
     ) -> list[dict[str, Any]]: ...
+    def list_facts(
+        self,
+        ticker: str,
+        limit: int = 500,
+        run_id: str | None = None,
+        period: str | None = None,
+        statement_type: str | None = None,
+        search: str | None = None,
+    ) -> list[dict[str, Any]]: ...
+    def list_rule_results(
+        self,
+        ticker: str,
+        limit: int = 500,
+        run_id: str | None = None,
+        triggered: bool | None = None,
+    ) -> list[dict[str, Any]]: ...
     def list_runs(self, ticker: str, limit: int = 20) -> list[AnalysisRunSummary]: ...
     def get_fact(self, ticker: str, metric: str, period: str) -> FinancialFact | None: ...
     def save_text_intelligence_result(
@@ -544,6 +560,61 @@ class SqliteAnalysisRepository:
                     (ticker, limit),
                 ).fetchall()
         return [dict(row) for row in rows]
+
+    def list_facts(
+        self,
+        ticker: str,
+        limit: int = 500,
+        run_id: str | None = None,
+        period: str | None = None,
+        statement_type: str | None = None,
+        search: str | None = None,
+    ) -> list[dict[str, Any]]:
+        query = "SELECT * FROM normalized_financial_facts WHERE ticker = ?"
+        params: list[Any] = [ticker]
+        if period:
+            query += " AND period = ?"
+            params.append(period)
+        if search:
+            query += " AND (metric_code LIKE ? OR taxonomy_concept LIKE ?)"
+            params.extend([f"%{search}%", f"%{search}%"])
+        query += " ORDER BY retrieved_at DESC, period DESC, metric_code LIMIT ?"
+        params.append(limit)
+        with self._connect() as connection:
+            rows = [dict(row) for row in connection.execute(query, params).fetchall()]
+        for row in rows:
+            row["statement_type"] = statement_type_for_metric(str(row.get("metric_code") or ""))
+            row["label"] = row.get("metric_code")
+            row["run_id"] = run_id
+        if statement_type:
+            rows = [row for row in rows if row.get("statement_type") == statement_type]
+        return rows
+
+    def list_rule_results(
+        self,
+        ticker: str,
+        limit: int = 500,
+        run_id: str | None = None,
+        triggered: bool | None = None,
+    ) -> list[dict[str, Any]]:
+        query = "SELECT * FROM rule_results WHERE ticker = ?"
+        params: list[Any] = [ticker]
+        if run_id:
+            query += " AND run_id = ?"
+            params.append(run_id)
+        if triggered is not None:
+            query += " AND triggered = ?"
+            params.append(1 if triggered else 0)
+        query += " ORDER BY rowid DESC LIMIT ?"
+        params.append(limit)
+        with self._connect() as connection:
+            rows = [dict(row) for row in connection.execute(query, params).fetchall()]
+        for row in rows:
+            row["triggered"] = bool(row.get("triggered"))
+            row["evidence_periods"] = json.loads(row.pop("evidence_periods_json") or "[]")
+            row["evidence_metrics"] = json.loads(row.pop("evidence_metrics_json") or "[]")
+            row["actual_values"] = json.loads(row.pop("actual_values_json") or "{}")
+        return rows
 
     def list_runs(self, ticker: str, limit: int = 20) -> list[AnalysisRunSummary]:
         with self._connect() as connection:

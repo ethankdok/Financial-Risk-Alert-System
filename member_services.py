@@ -1,0 +1,256 @@
+from __future__ import annotations
+
+import hashlib
+import os
+import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any, Callable
+
+from flask_data_repository import DuplicateRecordError, FlaskDataRepository
+from werkzeug.security import check_password_hash, generate_password_hash
+
+
+def utc_now_str() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def bool_int(value: Any, default: int = 1) -> int:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return 1 if value else 0
+    if isinstance(value, int):
+        return 1 if value else 0
+    return 1 if str(value).strip().lower() in {"1", "true", "yes", "on"} else 0
+
+
+class MemberAuthService:
+    """Member authentication boundary.
+
+    Production should use Firebase/Identity Platform ID tokens. Local password
+    auth is only for development and tests, and never stores member passwords in
+    Firestore.
+    """
+
+    def __init__(self, repository: FlaskDataRepository, *, app_env: str = "development") -> None:
+        self.repository = repository
+        self.app_env = app_env.strip().lower()
+
+    def local_password_enabled(self) -> bool:
+        if self.app_env == "production":
+            return False
+        configured = os.getenv("MEMBER_ALLOW_LOCAL_PASSWORD_AUTH")
+        if configured is not None:
+            return configured.strip().lower() in {"1", "true", "yes", "on"}
+        return self.app_env != "production" and self.repository.backend_name == "sqlite"
+
+    def register_local(self, *, email: str, password: str, display_name: str) -> dict[str, Any]:
+        if not self.local_password_enabled():
+            raise RuntimeError("Local member password registration is disabled for this runtime.")
+        clean_email = email.strip().lower()
+        if "@" not in clean_email:
+            raise ValueError("請輸入有效的 Email")
+        if len(password) < 8:
+            raise ValueError("密碼至少需要 8 個字元")
+        now = utc_now_str()
+        member = {
+            "uid": f"local_{uuid.uuid4().hex}",
+            "email": clean_email,
+            "display_name": display_name.strip() or clean_email.split("@")[0],
+            "account_status": "active",
+            "auth_provider": "local_password",
+            "created_at": now,
+            "updated_at": now,
+            "schema_version": 1,
+        }
+        created = self.repository.create_member(member)
+        self.repository.set_member_password_hash(created["uid"], generate_password_hash(password))
+        self.repository.save_notification_preferences(created["uid"], {"updated_at": now})
+        return created
+
+    def login_local(self, *, email: str, password: str) -> dict[str, Any] | None:
+        if not self.local_password_enabled():
+            raise RuntimeError("Local member password login is disabled for this runtime.")
+        member = self.repository.get_member_by_email(email.strip().lower())
+        if not member or member.get("account_status") != "active":
+            return None
+        password_hash = self.repository.get_member_password_hash(str(member["uid"]))
+        if not password_hash or not check_password_hash(password_hash, password):
+            return None
+        return member
+
+    def upsert_managed_identity(self, *, uid: str, email: str, display_name: str, provider: str) -> dict[str, Any]:
+        now = utc_now_str()
+        existing = self.repository.get_member(uid)
+        fields = {
+            "uid": uid,
+            "email": email.strip().lower(),
+            "display_name": display_name.strip() or email.split("@")[0],
+            "account_status": "active",
+            "auth_provider": provider,
+            "updated_at": now,
+            "schema_version": 1,
+        }
+        if existing:
+            return self.repository.update_member(uid, fields) or {**existing, **fields}
+        return self.repository.create_member({**fields, "created_at": now})
+
+    def login_firebase_token(self, id_token: str) -> dict[str, Any]:
+        project_id = os.getenv("FIREBASE_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
+        if not project_id:
+            raise RuntimeError("FIREBASE_PROJECT_ID or GOOGLE_CLOUD_PROJECT must be configured for managed member auth.")
+        try:
+            from google.auth.transport import requests as google_requests
+            from google.oauth2 import id_token as google_id_token
+        except ImportError as exc:  # pragma: no cover - dependency is transitive in deployed runtime
+            raise RuntimeError("google-auth is required for Firebase member token verification.") from exc
+        claims = google_id_token.verify_firebase_token(id_token, google_requests.Request(), audience=project_id)
+        uid = str(claims.get("sub") or claims.get("user_id") or "")
+        email = str(claims.get("email") or "")
+        if not uid or not email:
+            raise ValueError("Firebase token is missing uid or email.")
+        return self.upsert_managed_identity(
+            uid=uid,
+            email=email,
+            display_name=str(claims.get("name") or ""),
+            provider="firebase",
+        )
+
+
+@dataclass(slots=True)
+class EmailMessage:
+    to_email: str
+    subject: str
+    body: str
+    notification_type: str
+
+
+class EmailProvider:
+    name = "console"
+
+    def send(self, message: EmailMessage) -> dict[str, Any]:
+        return {"provider": self.name, "status": "dry_run", "message_id": None}
+
+
+class ConsoleEmailProvider(EmailProvider):
+    name = "console"
+
+
+def notification_dedupe_key(member_uid: str, ticker: str, notification_type: str, evidence_identity: str) -> str:
+    raw = "|".join([member_uid, ticker, notification_type, evidence_identity])
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+EvidenceProvider = Callable[[str], dict[str, Any]]
+
+
+class NotificationService:
+    def __init__(
+        self,
+        repository: FlaskDataRepository,
+        *,
+        evidence_provider: EvidenceProvider,
+        email_provider: EmailProvider | None = None,
+    ) -> None:
+        self.repository = repository
+        self.evidence_provider = evidence_provider
+        self.email_provider = email_provider or ConsoleEmailProvider()
+
+    @staticmethod
+    def _email_header(value: Any) -> str:
+        return str(value or "").replace("\r", " ").replace("\n", " ").strip()
+
+    @staticmethod
+    def build_email(member: dict[str, Any], ticker: str, evidence: dict[str, Any], notification_type: str) -> EmailMessage:
+        company = evidence.get("company_name") or ticker
+        severity = evidence.get("overall_severity") or evidence.get("evidence_readiness") or "unknown"
+        subject = NotificationService._email_header(f"[FinTrust] {company} {notification_type} alert")
+        lines = [
+            f"{member.get('display_name') or member.get('email')}，您好：",
+            f"{company} 目前有新的 {notification_type} 通知。",
+            f"狀態：{severity}",
+            f"Run ID：{evidence.get('run_id') or evidence.get('evidence_identity') or 'unknown'}",
+            "請回到系統查看官方資料、規則結果與來源限制；此通知不構成投資建議。",
+        ]
+        return EmailMessage(
+            to_email=NotificationService._email_header(member["email"]),
+            subject=subject,
+            body="\n".join(lines),
+            notification_type=notification_type,
+        )
+
+    @staticmethod
+    def classify_evidence(evidence: dict[str, Any], preferences: dict[str, Any]) -> tuple[str, str] | None:
+        identity = str(evidence.get("run_id") or evidence.get("evidence_identity") or evidence.get("updated_at") or "")
+        severity = str(evidence.get("overall_severity") or "").lower()
+        if bool_int(preferences.get("important_alerts")) and severity in {"high", "critical"}:
+            return "important_alert", identity or severity
+        if bool_int(preferences.get("material_event_alerts")) and int(evidence.get("material_event_count") or 0) > 0:
+            return "material_event", identity or str(evidence.get("material_event_count"))
+        if bool_int(preferences.get("conference_alerts")) and int(evidence.get("conference_count") or 0) > 0:
+            return "investor_conference", identity or str(evidence.get("conference_count"))
+        if bool_int(preferences.get("narrative_shift_alerts")) and evidence.get("narrative_shift"):
+            return "narrative_shift", identity or "narrative_shift"
+        return None
+
+    def process_member(self, member_uid: str) -> list[dict[str, Any]]:
+        member = self.repository.get_member(member_uid)
+        if not member or member.get("account_status") != "active":
+            return []
+        preferences = self.repository.get_notification_preferences(member_uid)
+        if not bool_int(preferences.get("email_enabled")):
+            return []
+
+        results: list[dict[str, Any]] = []
+        for watch in self.repository.list_watchlist(member_uid):
+            if not bool_int(watch.get("alert_enabled")):
+                continue
+            ticker = str(watch["ticker"])
+            evidence = self.evidence_provider(ticker)
+            decision = self.classify_evidence(evidence, preferences)
+            if not decision:
+                continue
+            notification_type, evidence_identity = decision
+            dedupe_key = notification_dedupe_key(member_uid, ticker, notification_type, evidence_identity)
+            now = utc_now_str()
+            existing = self.repository.find_notification_by_dedupe_key(dedupe_key)
+            if existing:
+                results.append(self.repository.append_notification_history({
+                    "member_uid": member_uid,
+                    "ticker": ticker,
+                    "notification_type": notification_type,
+                    "dedupe_key": f"{dedupe_key}:suppressed:{now}",
+                    "subject": existing.get("subject", "Duplicate suppressed"),
+                    "body": "Duplicate notification suppressed.",
+                    "status": "suppressed_duplicate",
+                    "provider_status": "suppressed_duplicate",
+                    "created_at": now,
+                    "metadata": {"original_dedupe_key": dedupe_key},
+                }))
+                continue
+
+            message = self.build_email(member, ticker, evidence, notification_type)
+            provider_result = self.email_provider.send(message)
+            status = "sent" if provider_result.get("status") in {"sent", "dry_run"} else "failed"
+            results.append(self.repository.append_notification_history({
+                "member_uid": member_uid,
+                "ticker": ticker,
+                "notification_type": notification_type,
+                "dedupe_key": dedupe_key,
+                "subject": message.subject,
+                "body": message.body,
+                "status": status,
+                "provider_status": str(provider_result.get("status") or ""),
+                "safe_error_detail": provider_result.get("safe_error_detail"),
+                "created_at": now,
+                "sent_at": now if status == "sent" else None,
+                "metadata": {"provider": provider_result.get("provider"), "evidence_identity": evidence_identity},
+            }))
+        return results
+
+    def process_all_members(self, limit: int = 500) -> list[dict[str, Any]]:
+        output: list[dict[str, Any]] = []
+        for member in self.repository.list_members(limit=limit):
+            output.extend(self.process_member(str(member["uid"])))
+        return output
