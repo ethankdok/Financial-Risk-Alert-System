@@ -20,7 +20,7 @@ class FakeFinTrustClient:
         return {"module": "test", "datastore_backend": "sqlite"}
 
     def companies(self):
-        return {"companies": [{"ticker": "2454", "name": "聯發科"}]}
+        return {"companies": [{"ticker": "2454", "name": "聯發科", "subindustry": "IC 設計"}]}
 
     def latest_analysis(self, ticker):
         return {"ticker": ticker, "company_name": "聯發科", "overall_severity": "high", "summary": "test snapshot", "rule_cards": []}
@@ -32,13 +32,20 @@ class FakeFinTrustClient:
         return [{"run_id": "run-1", "ticker": ticker, "trigger": "manual", "status": "completed", "started_at": "2026-09-14T00:00:00Z", "completed_at": "2026-09-14T00:01:00Z", "overall_severity": "high"}]
 
     def conferences(self, ticker):
-        return [{"ticker": ticker, "title": "Earnings call", "status": "official", "source_url": "https://example.test"}]
+        return [
+            {"event_id": "conf-1", "ticker": ticker, "company_name": "聯發科", "title": "Earnings call Q2", "status": "available", "conference_date": "2026-07-31", "source_name": "company_official_ir", "source_url": "https://example.test/ir", "document_url": "https://example.test/transcript.pdf", "document_text_preview": "Revenue growth and inventory recovery.", "retrieved_at": "2026-09-14T00:00:00Z", "extracted_topics": ["revenue_orders"]},
+            {"event_id": "conf-2", "ticker": ticker, "company_name": "聯發科", "title": "Earnings call Q1", "status": "available", "conference_date": "2026-04-30", "source_name": "company_official_ir", "source_url": "https://example.test/ir-q1", "document_url": "https://example.test/q1.pdf", "retrieved_at": "2026-09-13T00:00:00Z"},
+        ]
 
     def material_events(self, ticker):
-        return [{"ticker": ticker, "title": "Material event", "status": "official", "source_url": "https://example.test"}]
+        return [
+            {"event_id": "mat-1", "ticker": ticker, "company_name": "聯發科", "title": "公告本公司董事會決議資本支出案", "status": "available", "event_date": "2026-09-01", "event_time": "17:30:00", "source_name": "twse_openapi", "source_url": "https://openapi.twse.com.tw/v1/opendata/t187ap04_L", "raw_text": "官方重大訊息內容", "retrieved_at": "2026-09-15T00:00:00Z", "related_metrics": ["capex_intensity"]},
+            {"event_id": "mat-2", "ticker": ticker, "company_name": "聯發科", "title": "公告本公司營收資訊", "status": "available", "event_date": "2026-08-15", "source_name": "mops", "source_url": "https://mops.example/list", "detail_url": "https://mops.example/detail", "raw_text": "官方重大訊息內容", "retrieved_at": "2026-09-12T00:00:00Z"},
+            {"event_id": "blocked", "ticker": ticker, "company_name": "聯發科", "title": "MOPS diagnostic placeholder", "status": "blocked_by_source", "event_date": None, "source_name": "mops", "source_url": "https://mops.example/blocked"},
+        ]
 
     def official_evidence_card(self, ticker, extract_documents=False):
-        return {"ticker": ticker, "company_name": "聯發科", "overall_severity": "high", "investor_conferences": [], "material_events": [], "run_id": "run-1"}
+        return {"ticker": ticker, "company_name": "聯發科", "overall_severity": "high", "investor_conferences": self.conferences(ticker), "material_events": self.material_events(ticker), "run_id": "run-1", "narrative_shift": {"baseline_period": "2026Q1", "current_period": "2026Q2", "metrics": {"topic_distribution_jsd": 0.2, "tfidf_cosine_similarity": 0.7}}}
 
     def facts(self, ticker, *, limit=1000, run_id=None, period=None, statement_type=None, search=None):
         return {"ticker": ticker, "count": 1, "facts": [{"ticker": ticker, "period": "2026Q2", "metric_code": "revenue", "statement_type": "income_statement", "value": 100, "unit": "元", "source_url": "https://example.test"}]}
@@ -47,7 +54,18 @@ class FakeFinTrustClient:
         return {"ticker": ticker, "count": 1, "rule_results": [{"run_id": "run-1", "rule_id": "r1", "name": "High risk", "triggered": True, "explanation": "Triggered", "evidence_metrics": ["revenue"]}]}
 
     def latest_text_intelligence(self, ticker):
-        return {"run_id": "run-1", "ticker": ticker, "text_evidence": [{"sentence_text": "Revenue outlook changed.", "topics": ["financial_outlook"], "source_url": "https://example.test"}], "narrative_shift": {"status": "available"}}
+        return {
+            "run_id": "run-1",
+            "ticker": ticker,
+            "text_evidence": [{"sentence_text": "Revenue outlook changed.", "topics": ["financial_outlook"], "source_url": "https://example.test"}],
+            "narrative_shift": {
+                "baseline_period": "2026Q1",
+                "current_period": "2026Q2",
+                "metrics": {"topic_distribution_jsd": 0.2, "tfidf_cosine_similarity": 0.7},
+                "emerging_terms": ["AI"],
+                "disappearing_terms": ["inventory"],
+            },
+        }
 
 
 class FakeSnapshot:
@@ -154,6 +172,104 @@ class Phase13ProductCompletionTests(unittest.TestCase):
         self.assertEqual(third[0]["status"], "sent")
         history = self.repo.list_notification_history(member["uid"])
         self.assertEqual(len(history), 3)
+
+    def test_event_level_notification_dedupe_and_digest_preferences(self) -> None:
+        member = self.app_module.member_auth.register_local(email="events@example.com", password="strongpass", display_name="Events")
+        self.repo.upsert_watchlist_item(member["uid"], {"ticker": "2454", "company_name": "聯發科", "alert_enabled": 1, "created_at": "t0", "updated_at": "t0"})
+        self.repo.save_notification_preferences(member["uid"], {
+            "email_enabled": 1,
+            "important_alerts": 1,
+            "material_event_alerts": 1,
+            "conference_alerts": 0,
+            "narrative_shift_alerts": 1,
+            "digest_frequency": "weekly",
+            "updated_at": "t0",
+        })
+        service = NotificationService(
+            self.repo,
+            evidence_provider=lambda ticker: {
+                "ticker": ticker,
+                "company_name": "聯發科",
+                "notification_items": [
+                    {"notification_type": "material_event", "evidence_identity": "mat-1", "title": "重大訊息一", "event_date": "2026-09-01", "source_name": "twse_openapi", "official_url": "https://example.test/mat-1"},
+                    {"notification_type": "material_event", "evidence_identity": "mat-2", "title": "重大訊息二", "event_date": "2026-09-02", "source_name": "twse_openapi", "official_url": "https://example.test/mat-2"},
+                    {"notification_type": "investor_conference", "evidence_identity": "conf-1", "title": "法說會"},
+                    {"notification_type": "narrative_shift", "evidence_identity": "2026Q1->2026Q2", "baseline_period": "2026Q1", "current_period": "2026Q2", "metric_summary": "JSD=0.2"},
+                ],
+            },
+        )
+
+        daily = service.process_member(member["uid"], digest_frequency="daily")
+        weekly = service.process_member(member["uid"], digest_frequency="weekly")
+        duplicate_weekly = service.process_member(member["uid"], digest_frequency="weekly")
+
+        self.assertEqual(daily, [])
+        self.assertEqual([item["notification_type"] for item in weekly], ["material_event", "material_event", "narrative_shift"])
+        self.assertTrue(all(item["status"] == "sent" for item in weekly))
+        self.assertTrue(all(item["status"] == "suppressed_duplicate" for item in duplicate_weekly))
+
+        self.repo.save_notification_preferences(member["uid"], {"digest_frequency": "off", "updated_at": "t1"})
+        off = service.process_member(member["uid"])
+        self.assertEqual(off, [])
+
+    def test_official_browser_api_filters_multiple_real_records(self) -> None:
+        response = self.client.get("/api/official-evidence/browser?ticker=2454&type=material_event&source=twse&limit=10")
+        self.assertEqual(response.status_code, 200)
+        data = response.json
+        self.assertEqual(data["summary"]["material_event_count"], 2)
+        self.assertEqual(len(data["records"]), 1)
+        self.assertEqual(data["records"][0]["title"], "公告本公司董事會決議資本支出案")
+        self.assertEqual(data["records"][0]["official_url"], "https://openapi.twse.com.tw/v1/opendata/t187ap04_L")
+        self.assertEqual(data["summary"]["latest_official_event_date"], "2026-09-01")
+        self.assertEqual(data["summary"]["system_last_synchronized_at"], "2026-09-15T00:00:00Z")
+        self.assertEqual(data["summary"]["subindustry"], "IC 設計")
+        self.assertEqual(data["text_intelligence"]["run_id"], "run-1")
+        self.assertEqual(data["narrative_shift"]["baseline_period"], "2026Q1")
+        self.assertNotIn("blocked_by_source", {item["status"] for item in data["records"]})
+
+    def test_financial_evidence_page_is_owned_real_data_browser(self) -> None:
+        html = Path("financial-evidence.html").read_text(encoding="utf-8")
+
+        self.assertIn("/api/official-evidence/browser", html)
+        self.assertIn("官方資料日期", html)
+        self.assertIn("系統同步時間", html)
+        self.assertIn("與上一期比較 / Narrative Shift", html)
+        self.assertIn("Relevant-text JSD", html)
+        self.assertIn("TF-IDF Cosine", html)
+        self.assertIn("target=\"_blank\"", html)
+        self.assertNotIn("公告本公司董事會決議資本支出案", html)
+        self.assertNotIn("MOPS diagnostic placeholder", html)
+
+    def test_records_page_uses_real_member_history_or_empty_state(self) -> None:
+        response = self.client.get("/api/member/analysis-history")
+        self.assertEqual(response.status_code, 401)
+
+        member = self.app_module.member_auth.register_local(email="history@example.com", password="strongpass", display_name="History")
+        with self.client.session_transaction() as session:
+            session["member_uid"] = member["uid"]
+        response = self.client.get("/api/member/analysis-history")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["items"], [])
+        self.assertIn("不提供假分析紀錄", response.json["message"])
+
+    def test_admin_text_intelligence_lab_marks_weak_supervision(self) -> None:
+        with self.client.session_transaction() as session:
+            session["admin_id"] = 1
+
+        response = self.client.get("/api/admin/text-intelligence-lab/summary")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("WEAK SUPERVISION", response.json["weak_supervision_notice"])
+        self.assertIn("Human GT", response.json["weak_supervision_notice"])
+        self.assertEqual(response.json["persistence_design"]["training_safety"], "No model training runs synchronously inside Flask/FastAPI browser requests.")
+
+    def test_admin_financial_evidence_surface_contains_narrative_shift_metrics(self) -> None:
+        html = Path("admin-financial-evidence.html").read_text(encoding="utf-8")
+
+        self.assertIn("與上一期比較 / Narrative Shift", html)
+        self.assertIn("Relevant-text JSD", html)
+        self.assertIn("Topic JSD", html)
+        self.assertIn("TF-IDF Cosine", html)
+        self.assertIn("official source", html)
 
     def test_admin_evidence_console_api_and_refresh_auth_boundary(self) -> None:
         unauth = self.client.post("/api/financial/admin/companies/2454/unified-refresh", json={"include_gemini": False})

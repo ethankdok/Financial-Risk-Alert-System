@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import json
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
@@ -534,10 +535,265 @@ def member_company_evidence(ticker: str):
         return jsonify({"success": False, "error": str(exc), "detail": exc.detail}), exc.status_code or 502
 
 
+def _as_list(payload: Any, *keys: str) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict):
+        for key in keys:
+            value = payload.get(key)
+            if isinstance(value, list):
+                return [item for item in value if isinstance(item, dict)]
+    return []
+
+
+def _official_link(record: dict[str, Any]) -> str | None:
+    return record.get("document_url") or record.get("detail_url") or record.get("source_url")
+
+
+def _record_topics(record: dict[str, Any]) -> list[Any]:
+    output: list[Any] = []
+    for key in ("extracted_topics", "topics", "related_metrics"):
+        value = record.get(key) or []
+        if isinstance(value, list):
+            output.extend(item for item in value if item)
+    seen = set()
+    deduped = []
+    for item in output:
+        identity = json.dumps(item, ensure_ascii=False, sort_keys=True) if isinstance(item, dict) else str(item)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        deduped.append(item)
+    return deduped
+
+
+def _is_product_official_record(record: dict[str, Any]) -> bool:
+    status = str(record.get("status") or "").strip().lower()
+    return status == "available"
+
+
+def _record_date(record: dict[str, Any], record_type: str) -> str:
+    if record_type == "investor_conference":
+        return str(record.get("conference_date") or record.get("event_date") or "")
+    return str(record.get("event_date") or record.get("conference_date") or "")
+
+
+def _official_record(record: dict[str, Any], record_type: str) -> dict[str, Any]:
+    official_url = _official_link(record)
+    topics = _record_topics(record)
+    evidence_text = record.get("document_text_preview") or record.get("raw_text") or record.get("summary") or ""
+    representative = record.get("representative_evidence_sentences") or record.get("representative_sentences") or record.get("supporting_sentences") or []
+    return {
+        "type": record_type,
+        "event_id": record.get("event_id"),
+        "ticker": record.get("ticker"),
+        "company_name": record.get("company_name"),
+        "date": _record_date(record, record_type),
+        "event_time": record.get("event_time"),
+        "title": record.get("title"),
+        "category": record.get("category"),
+        "source_name": record.get("source_name"),
+        "source_url": record.get("source_url"),
+        "detail_url": record.get("detail_url"),
+        "document_url": record.get("document_url"),
+        "document_type": record.get("document_type"),
+        "official_url": official_url,
+        "document_extract_status": record.get("document_extract_status"),
+        "retrieved_at": record.get("retrieved_at"),
+        "preview": evidence_text,
+        "topics": topics,
+        "related_metrics": record.get("related_metrics") or [],
+        "relevant_sentence_count": record.get("relevant_sentence_count") or len(representative),
+        "representative_evidence_sentences": representative,
+        "has_full_text": bool(record.get("document_full_text") or record.get("raw_text") or record.get("document_text_preview")),
+        "status": record.get("status"),
+    }
+
+
+def _optional_fintrust_call(call) -> tuple[Any | None, dict[str, Any] | None]:
+    try:
+        return call(), None
+    except FinTrustClientError as exc:
+        return None, {"message": str(exc), "status_code": exc.status_code, "detail": exc.detail}
+
+
+@app.get("/api/official-evidence/browser")
+def official_evidence_browser():
+    ticker = str(request.args.get("ticker") or "2454").strip()
+    record_type = str(request.args.get("type") or "all").strip()
+    source = str(request.args.get("source") or "").strip().casefold()
+    topic = str(request.args.get("topic") or "").strip().casefold()
+    start_date = str(request.args.get("start_date") or "").strip()
+    end_date = str(request.args.get("end_date") or "").strip()
+    sort_order = str(request.args.get("sort") or "newest").strip()
+    text_available = str(request.args.get("text_available") or "").strip().lower()
+    page = max(int(request.args.get("page", 1) or 1), 1)
+    limit = min(max(int(request.args.get("limit", 20) or 20), 1), 50)
+    client = FinTrustClient()
+    try:
+        companies_payload = client.companies()
+        company_rows = _as_list(companies_payload, "companies")
+        company = next((item for item in company_rows if str(item.get("ticker")) == ticker), {"ticker": ticker, "name": ticker})
+        conferences = [_official_record(item, "investor_conference") for item in _as_list(client.conferences(ticker), "conferences", "items") if _is_product_official_record(item)]
+        material_events = [_official_record(item, "material_event") for item in _as_list(client.material_events(ticker), "material_events", "items") if _is_product_official_record(item)]
+    except FinTrustClientError as exc:
+        return jsonify({"success": False, "error": str(exc), "detail": exc.detail}), exc.status_code or 502
+
+    text_intelligence, text_error = _optional_fintrust_call(lambda: client.latest_text_intelligence(ticker))
+    official_card, card_error = _optional_fintrust_call(lambda: client.official_evidence_card(ticker))
+    narrative_shift = None
+    if isinstance(text_intelligence, dict):
+        narrative_shift = text_intelligence.get("narrative_shift")
+    if not narrative_shift and isinstance(official_card, dict):
+        narrative_shift = official_card.get("narrative_shift")
+
+    records = [*conferences, *material_events]
+    if record_type in {"investor_conference", "material_event"}:
+        records = [item for item in records if item["type"] == record_type]
+    if source:
+        records = [item for item in records if source in str(item.get("source_name") or "").casefold()]
+    if topic:
+        records = [item for item in records if any(topic in str(value).casefold() for value in item.get("topics") or [])]
+    if start_date:
+        records = [item for item in records if str(item.get("date") or "") >= start_date]
+    if end_date:
+        records = [item for item in records if str(item.get("date") or "") <= end_date]
+    if text_available in {"true", "1", "yes"}:
+        records = [item for item in records if item.get("has_full_text")]
+    records.sort(key=lambda item: (str(item.get("date") or ""), str(item.get("retrieved_at") or "")), reverse=sort_order != "oldest")
+    offset = (page - 1) * limit
+    visible = records[offset: offset + limit]
+    all_dates = [str(item.get("date") or "") for item in [*conferences, *material_events] if item.get("date")]
+    sync_times = [str(item.get("retrieved_at") or "") for item in [*conferences, *material_events] if item.get("retrieved_at")]
+    return jsonify({
+        "success": True,
+        "summary": {
+            "ticker": ticker,
+            "company_name": company.get("name") or company.get("company_name") or ticker,
+            "official_sources": sorted({str(item.get("source_name")) for item in [*conferences, *material_events] if item.get("source_name")}),
+            "latest_official_event_date": max(all_dates) if all_dates else None,
+            "system_last_synchronized_at": max(sync_times) if sync_times else None,
+            "investor_conference_count": len(conferences),
+            "material_event_count": len(material_events),
+            "subindustry": company.get("subindustry"),
+        },
+        "text_intelligence": text_intelligence,
+        "text_intelligence_error": text_error,
+        "narrative_shift": narrative_shift,
+        "official_card_error": card_error,
+        "records": visible,
+        "pagination": {"page": page, "limit": limit, "total": len(records), "has_more": offset + limit < len(records)},
+        "filters": {"type": record_type, "source": source, "topic": topic, "start_date": start_date, "end_date": end_date, "sort": sort_order, "text_available": text_available},
+    })
+
+
+@app.get("/api/member/analysis-history")
+@member_required
+def member_analysis_history():
+    member = current_member()
+    return jsonify({
+        "items": [],
+        "notifications": repository.list_notification_history(member["uid"], limit=20),
+        "message": "會員個人分析歷史尚未持久化；目前僅顯示通知歷史，不提供假分析紀錄。",
+    })
+
+
+def _load_research_json(name: str) -> dict[str, Any] | None:
+    configured = os.getenv("RESEARCH_ARTIFACT_DIR", "").strip()
+    candidates = []
+    if configured:
+        candidates.append(Path(configured) / name)
+    candidates.extend((BASE_DIR / "fintrust_backend" / "data").glob(f"**/{name}"))
+    for path in candidates:
+        try:
+            if path.is_file() and path.stat().st_size < 2_000_000:
+                return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+    return None
+
+
+@app.get("/api/admin/text-intelligence-lab/summary")
+@login_required
+def admin_text_intelligence_lab_summary():
+    experiment = _load_research_json("experiment_summary.json") or {}
+    manifest = _load_research_json("experiment_manifest.json") or experiment.get("manifest") or {}
+    dataset = _load_research_json("dataset_manifest.json") or experiment.get("dataset") or {}
+    metrics = experiment.get("model_comparison") or experiment.get("model_selection") or experiment.get("metrics") or []
+    return jsonify({
+        "success": True,
+        "artifact_status": "available" if experiment or manifest or dataset else "metadata_pending",
+        "dataset": dataset,
+        "experiment": manifest,
+        "model_comparison": metrics,
+        "weak_supervision_notice": "WEAK SUPERVISION - NOT FORMAL HUMAN-GT PERFORMANCE; Human GT remains pending.",
+        "human_gt_status": experiment.get("human_gt_status") or "pending",
+        "drift_lab": experiment.get("drift_lab") or experiment.get("drift_metrics") or {},
+        "analysis": {
+            "ablation_results": experiment.get("ablation_results") or [],
+            "error_analysis": experiment.get("error_analysis") or {},
+            "active_learning_candidates": experiment.get("active_learning_candidates") or [],
+            "keyword_free_relevant_candidates": experiment.get("keyword_free_relevant_candidates") or [],
+        },
+        "persistence_design": {
+            "metadata": "Persist dataset/experiment summaries in Firestore documents keyed by dataset_version and experiment_id.",
+            "large_artifacts": "Keep larger CSV/JSON/model outputs in Cloud Storage only after explicit upload approval.",
+            "training_safety": "No model training runs synchronously inside Flask/FastAPI browser requests.",
+        },
+    })
+
+
 def _notification_evidence(ticker: str) -> dict[str, Any]:
     try:
         card = FinTrustClient().official_evidence_card(ticker, extract_documents=False)
         snapshot = card.get("financial_snapshot") if isinstance(card, dict) else None
+        notification_items: list[dict[str, Any]] = []
+        if isinstance(card, dict):
+            severity = card.get("overall_severity") or (snapshot or {}).get("overall_severity")
+            run_id = card.get("run_id") or (snapshot or {}).get("run_id")
+            if str(severity or "").lower() in {"high", "critical"}:
+                notification_items.append({
+                    "notification_type": "important_alert",
+                    "evidence_identity": str(run_id or severity),
+                    "run_id": run_id,
+                    "overall_severity": severity,
+                    "fintrust_url": f"/result.html?ticker={ticker}",
+                })
+            for event in card.get("material_events") or []:
+                identity = str(event.get("event_id") or event.get("detail_url") or event.get("source_url") or event.get("title") or "")
+                if identity:
+                    notification_items.append({
+                        **event,
+                        "notification_type": "material_event",
+                        "evidence_identity": identity,
+                        "official_url": event.get("detail_url") or event.get("source_url"),
+                        "fintrust_url": f"/official.html?ticker={ticker}",
+                    })
+            for event in card.get("investor_conferences") or []:
+                identity = str(event.get("event_id") or event.get("document_url") or event.get("source_url") or event.get("title") or "")
+                if identity:
+                    notification_items.append({
+                        **event,
+                        "notification_type": "investor_conference",
+                        "evidence_identity": identity,
+                        "official_url": event.get("document_url") or event.get("source_url"),
+                        "fintrust_url": f"/official.html?ticker={ticker}",
+                    })
+            narrative = card.get("narrative_shift")
+            if isinstance(narrative, dict):
+                metrics = narrative.get("metrics") or {}
+                identity = str(narrative.get("comparison_id") or f"{narrative.get('baseline_period')}->{narrative.get('current_period')}" or run_id or "")
+                if identity:
+                    notification_items.append({
+                        "notification_type": "narrative_shift",
+                        "evidence_identity": identity,
+                        "baseline_period": narrative.get("baseline_period"),
+                        "current_period": narrative.get("current_period"),
+                        "metric_summary": f"JSD={metrics.get('topic_distribution_jsd')}; cosine={metrics.get('semantic_embedding_cosine_similarity') or metrics.get('tfidf_cosine_similarity')}",
+                        "changed_topics": narrative.get("topic_distribution_changes"),
+                        "changed_terms": narrative.get("emerging_terms"),
+                        "fintrust_url": f"/admin-financial-evidence.html?ticker={ticker}",
+                    })
         return {
             "ticker": ticker,
             "company_name": card.get("company_name") if isinstance(card, dict) else ticker,
@@ -547,6 +803,7 @@ def _notification_evidence(ticker: str) -> dict[str, Any]:
             "material_event_count": len(card.get("material_events") or []) if isinstance(card, dict) else 0,
             "narrative_shift": card.get("narrative_shift") if isinstance(card, dict) else None,
             "run_id": card.get("run_id") or (snapshot or {}).get("run_id") if isinstance(card, dict) else None,
+            "notification_items": notification_items,
         }
     except FinTrustClientError:
         return {"ticker": ticker, "overall_severity": "unknown", "evidence_identity": "fintrust_unreachable"}
@@ -555,9 +812,13 @@ def _notification_evidence(ticker: str) -> dict[str, Any]:
 @app.post("/api/system/notifications/process")
 @notification_job_required
 def process_notifications():
+    data = request.get_json(silent=True) or {}
+    digest_frequency = data.get("digest_frequency")
+    if digest_frequency not in {None, "daily", "weekly"}:
+        return jsonify({"error": "digest_frequency must be daily, weekly, or omitted"}), 400
     email_provider = create_email_provider()
     service = NotificationService(repository, evidence_provider=_notification_evidence, email_provider=email_provider)
-    results = service.process_all_members()
+    results = service.process_all_members(digest_frequency=digest_frequency)
     return jsonify({
         "processed": len(results),
         "sent": sum(1 for item in results if item.get("status") == "sent"),

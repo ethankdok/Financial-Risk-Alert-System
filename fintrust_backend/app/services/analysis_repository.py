@@ -15,7 +15,12 @@ from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.models import FinancialFact
 from app.official_event_models import InvestorConferenceRecord, MaterialEventRecord
 from app.pipeline_models import AnalysisRunSummary, FrontendAnalysisSnapshot, PersistenceCounts
-from app.services.official_event_sources import investor_conference_identity, material_event_identity
+from app.services.official_event_sources import (
+    investor_conference_identity,
+    is_persistable_investor_conference,
+    is_persistable_material_event,
+    material_event_identity,
+)
 from app.text_intelligence_models import NarrativeShiftResponse, TextMiningAnalysisResponse
 
 
@@ -326,6 +331,12 @@ class SqliteAnalysisRepository:
                 ticker TEXT PRIMARY KEY, run_id TEXT NOT NULL,
                 snapshot_json TEXT NOT NULL, updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS analysis_snapshots (
+                run_id TEXT PRIMARY KEY,
+                ticker TEXT NOT NULL,
+                snapshot_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS official_events (
                 event_type TEXT NOT NULL,
                 event_id TEXT NOT NULL,
@@ -429,6 +440,10 @@ class SqliteAnalysisRepository:
                 "INSERT OR REPLACE INTO latest_analysis_snapshots VALUES (?, ?, ?, ?)",
                 (snapshot.ticker, run_id, to_json(snapshot.model_dump(mode="json")), completed_at.isoformat()),
             )
+            connection.execute(
+                "INSERT OR REPLACE INTO analysis_snapshots VALUES (?, ?, ?, ?)",
+                (run_id, snapshot.ticker, to_json(snapshot.model_dump(mode="json")), completed_at.isoformat()),
+            )
         return PersistenceCounts(
             filings=len(historical_report.periods), facts=len(facts), metrics=len(metrics),
             rule_results=len(rules), snapshots=1,
@@ -453,6 +468,8 @@ class SqliteAnalysisRepository:
         material_count = 0
         with self._connect() as connection:
             for record in investor_conferences:
+                if not is_persistable_investor_conference(record):
+                    continue
                 event_id = investor_conference_identity(record)
                 payload = record.model_copy(update={"event_id": event_id, "retrieved_at": record.retrieved_at or refreshed_at})
                 connection.execute(
@@ -485,6 +502,8 @@ class SqliteAnalysisRepository:
                 )
                 conference_count += 1
             for record in material_events:
+                if not is_persistable_material_event(record):
+                    continue
                 event_id = material_event_identity(record)
                 payload = record.model_copy(update={"event_id": event_id, "retrieved_at": record.retrieved_at or refreshed_at})
                 connection.execute(
@@ -519,26 +538,30 @@ class SqliteAnalysisRepository:
         return {"investor_conferences": conference_count, "material_events": material_count}
 
     def list_investor_conferences(self, ticker: str, limit: int = 20) -> list[InvestorConferenceRecord]:
+        read_limit = max(limit * 5, limit)
         with self._connect() as connection:
             rows = connection.execute(
                 """SELECT payload_json FROM official_events
                 WHERE ticker = ? AND event_type = 'investor_conference'
                 ORDER BY COALESCE(event_date, '') DESC, retrieved_at DESC
                 LIMIT ?""",
-                (ticker, limit),
+                (ticker, read_limit),
             ).fetchall()
-        return [InvestorConferenceRecord.model_validate_json(row["payload_json"]) for row in rows]
+        records = [InvestorConferenceRecord.model_validate_json(row["payload_json"]) for row in rows]
+        return [record for record in records if is_persistable_investor_conference(record)][:limit]
 
     def list_material_events(self, ticker: str, limit: int = 50) -> list[MaterialEventRecord]:
+        read_limit = max(limit * 5, limit)
         with self._connect() as connection:
             rows = connection.execute(
                 """SELECT payload_json FROM official_events
                 WHERE ticker = ? AND event_type = 'material_event'
                 ORDER BY COALESCE(event_date, '') DESC, COALESCE(event_time, '') DESC, retrieved_at DESC
                 LIMIT ?""",
-                (ticker, limit),
+                (ticker, read_limit),
             ).fetchall()
-        return [MaterialEventRecord.model_validate_json(row["payload_json"]) for row in rows]
+        records = [MaterialEventRecord.model_validate_json(row["payload_json"]) for row in rows]
+        return [record for record in records if is_persistable_material_event(record)][:limit]
 
     def list_metrics(
         self,

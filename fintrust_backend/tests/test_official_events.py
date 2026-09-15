@@ -2,20 +2,25 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+import unittest.mock
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.official_event_models import MaterialEventRecord
 from app.services.analysis_repository import SqliteAnalysisRepository
 from app.services.official_evidence_service import OfficialEvidenceService
 from app.services.official_event_sources import (
     classify_material_event,
+    is_persistable_material_event,
     investor_conference_identity,
+    material_event_query_url,
     material_event_identity,
     parse_twse_material_event_rows,
     parse_investor_conference_html,
     parse_material_event_detail_html,
     parse_material_event_list_html,
 )
+from scripts.backfill_official_material_events import plan_material_event_backfill
 from app.services.official_company_ir_sources import parse_mediatek_quarterly_earnings_html
 
 
@@ -115,6 +120,11 @@ class OfficialEventTests(unittest.TestCase):
         self.assertIn("capex_intensity", metrics)
         self.assertTrue(risk_related)
 
+    def test_material_event_query_url_uses_roc_year_contract(self) -> None:
+        self.assertIn("year=113", material_event_query_url("2454", year=2024))
+        self.assertIn("year=114", material_event_query_url("2454", year=2025))
+        self.assertIn("year=115", material_event_query_url("2454", year=2026))
+
     def test_twse_openapi_rows_map_to_existing_material_event_model(self) -> None:
         records = parse_twse_material_event_rows("2454", TWSE_OPENAPI_ROWS)
 
@@ -125,7 +135,13 @@ class OfficialEventTests(unittest.TestCase):
         self.assertEqual(record.event_date, "2026-09-02")
         self.assertEqual(record.event_time, "15:00:01")
         self.assertIn("第12款", record.summary or "")
+        self.assertIn("說明：法人說明會擇要訊息", record.raw_text or "")
         self.assertEqual(record.event_id, material_event_identity(record))
+
+    def test_twse_openapi_absent_company_returns_no_material_event(self) -> None:
+        records = parse_twse_material_event_rows("2330", TWSE_OPENAPI_ROWS)
+
+        self.assertEqual(records, [])
 
     def test_mediatek_ir_parser_extracts_official_quarterly_documents(self) -> None:
         records = parse_mediatek_quarterly_earnings_html(MEDIATEK_IR_HTML)
@@ -169,6 +185,109 @@ class OfficialEventTests(unittest.TestCase):
         self.assertEqual(len(summary.material_events), 1)
         self.assertIn("investor_conference", summary.evidence_layers)
         self.assertIn("material_event", summary.evidence_layers)
+
+    def test_mops_detail_success_uses_official_disclosure_text(self) -> None:
+        with unittest.mock.patch(
+            "app.services.official_event_sources.fetch_material_event_detail_text",
+            return_value=("主旨：公告本公司董事會決議資本支出與研發投資案\n說明：官方明細全文", None),
+        ):
+            records = parse_material_event_list_html(
+                "2454",
+                MATERIAL_LIST_HTML,
+                source_url="https://mops.example/material",
+                fetch_details=True,
+            )
+
+        self.assertEqual(len(records), 1)
+        self.assertIn("官方明細全文", records[0].raw_text or "")
+        self.assertTrue(is_persistable_material_event(records[0]))
+
+    def test_mops_detail_failure_keeps_valid_list_row_text(self) -> None:
+        with unittest.mock.patch(
+            "app.services.official_event_sources.fetch_material_event_detail_text",
+            return_value=(None, "blocked by source"),
+        ):
+            records = parse_material_event_list_html(
+                "2454",
+                MATERIAL_LIST_HTML,
+                source_url="https://mops.example/material",
+                fetch_details=True,
+            )
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].status, "available")
+        self.assertIn("公告本公司董事會決議", records[0].raw_text or "")
+        self.assertTrue(any("MOPS 明細頁抓取失敗" in limitation for limitation in records[0].limitations))
+        self.assertTrue(is_persistable_material_event(records[0]))
+
+    def test_placeholder_material_event_is_not_persisted_and_previous_valid_evidence_survives(self) -> None:
+        valid_events = parse_material_event_list_html("2454", MATERIAL_LIST_HTML, source_url="https://mops.example/material")
+        placeholder = MaterialEventRecord(
+            ticker="2454",
+            company_name="聯發科",
+            subindustry="IC 設計",
+            title="聯發科 歷史重大訊息查詢入口",
+            source_name="mops",
+            source_url="https://mops.example/query",
+            status="blocked_by_source",
+            limitations=["source blocked"],
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            repository = SqliteAnalysisRepository(str(Path(tmp) / "pipeline.sqlite3"))
+            refreshed_at = datetime.now(timezone.utc)
+            first = repository.save_official_events(
+                ticker="2454",
+                investor_conferences=[],
+                material_events=valid_events,
+                refreshed_at=refreshed_at,
+            )
+            second = repository.save_official_events(
+                ticker="2454",
+                investor_conferences=[],
+                material_events=[placeholder],
+                refreshed_at=refreshed_at,
+            )
+            persisted = repository.list_material_events("2454")
+
+        self.assertEqual(first["material_events"], 1)
+        self.assertEqual(second["material_events"], 0)
+        self.assertEqual(len(persisted), 1)
+        self.assertNotIn("查詢入口", persisted[0].title)
+
+    def test_material_event_backfill_dry_run_does_not_write(self) -> None:
+        valid_events = parse_material_event_list_html("2454", MATERIAL_LIST_HTML, source_url="https://mops.example/material")
+        placeholder = MaterialEventRecord(
+            ticker="2454",
+            company_name="聯發科",
+            subindustry="IC 設計",
+            title="聯發科 歷史重大訊息查詢入口",
+            source_name="mops",
+            source_url="https://mops.example/query",
+            status="blocked_by_source",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            repository = SqliteAnalysisRepository(str(Path(tmp) / "pipeline.sqlite3"))
+            with unittest.mock.patch(
+                "scripts.backfill_official_material_events.build_twse_material_event_metadata",
+                return_value=valid_events,
+            ), unittest.mock.patch(
+                "scripts.backfill_official_material_events.build_material_event_metadata",
+                return_value=[valid_events[0], placeholder],
+            ):
+                report = plan_material_event_backfill(
+                    ticker="2454",
+                    years=[2024],
+                    repository=repository,
+                    execute=False,
+                )
+            persisted = repository.list_material_events("2454")
+
+        self.assertTrue(report["dry_run"])
+        self.assertEqual(report["available_records"], 1)
+        self.assertEqual(report["diagnostic_records_not_persistable"], 1)
+        self.assertEqual(report["duplicates_discovered"], 1)
+        self.assertEqual(report["persisted"]["material_events"], 0)
+        self.assertEqual(persisted, [])
 
 
 if __name__ == "__main__":

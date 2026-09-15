@@ -151,6 +151,7 @@ class _FakeOfficialEventService:
                 title="MediaTek 2026 Q1 Results",
                 source_name="company_official_ir",
                 source_url="https://example.test/q1",
+                status="available",
                 document_text_preview="Management expects inventory correction to improve and revenue orders to recover.",
                 document_extract_status="text_extracted",
             ),
@@ -165,6 +166,7 @@ class _FakeOfficialEventService:
                 title="MediaTek 2026 Q2 Results",
                 source_name="company_official_ir",
                 source_url="https://example.test/q2",
+                status="available",
                 document_text_preview="Management expects AI product momentum, revenue growth, and customer demand recovery.",
                 document_extract_status="text_extracted",
             ),
@@ -180,6 +182,21 @@ class _FakeOfficialEventService:
             persisted={"investor_conferences": 2, "material_events": 0},
             live_source_outcome={"investor_conference": "PASS", "material_event": "NO_DATA"},
             investor_conferences=conferences,
+        )
+
+
+class _FakeEmptyOfficialEventService:
+    def refresh_company(self, ticker, **kwargs):
+        refreshed_at = datetime.now(timezone.utc)
+        return OfficialEventsRefreshResult(
+            ticker=ticker,
+            company_name="聯發科",
+            subindustry="IC 設計",
+            refreshed_at=refreshed_at,
+            investor_conference_count=0,
+            material_event_count=0,
+            persisted={"investor_conferences": 0, "material_events": 0},
+            live_source_outcome={"investor_conference": "NO_DATA", "material_event": "NO_DATA"},
         )
 
 
@@ -208,6 +225,19 @@ class Phase12TextEvidenceE2ETests(unittest.TestCase):
         self.assertIn("Management expects", result.full_text or "")
         self.assertLessEqual(len(result.text_preview or ""), 200)
         self.assertGreaterEqual(result.paragraph_count or 0, 2)
+
+    def test_document_extraction_rejects_unapproved_document_host(self) -> None:
+        service = OfficialDocumentExtractionService()
+
+        with self.assertRaises(ValueError):
+            service.extract(
+                OfficialDocumentExtractionRequest(
+                    ticker="2454",
+                    document_url="http://169.254.169.254/latest/meta-data",
+                    source_url="https://www.mediatek.com/investor-relations/financial-information",
+                    document_title="Metadata",
+                )
+            )
 
     def test_semantic_provider_scores_are_additive_and_narrative_shift_keeps_metrics_separate(self) -> None:
         service = FinancialTextIntelligenceService(embedding_provider=_FakeEmbeddingProvider())
@@ -357,6 +387,24 @@ class Phase12TextEvidenceE2ETests(unittest.TestCase):
         self.assertEqual(stages["investor_conference"], "PASS")
         self.assertIn(stages["text_intelligence"], {"PASS", "NO_DATA"})
         self.assertEqual(result.persistence["text_model_runs"], 1)
+
+    def test_unified_orchestrator_does_not_persist_empty_text_intelligence_run(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = SqliteAnalysisRepository(str(Path(directory) / "pipeline.sqlite3"))
+            result = asyncio.run(
+                UnifiedAnalysisOrchestrator(
+                    repository=repository,
+                    financial_pipeline=_FakeFinancialPipeline(),
+                    official_event_service=_FakeEmptyOfficialEventService(),
+                    text_service=FinancialTextIntelligenceService(),
+                ).refresh_company("2454", include_gemini=False)
+            )
+            latest = repository.get_latest_text_intelligence_result("2454")
+
+        stages = {stage.name: stage.status for stage in result.stages}
+        self.assertEqual(stages["text_intelligence"], "NO_DATA")
+        self.assertEqual(result.persistence["text_model_runs"], 0)
+        self.assertIsNone(latest)
 
     def test_statement_coverage_api_reports_fourth_statement_missing(self) -> None:
         report = audit_financial_statement_coverage()

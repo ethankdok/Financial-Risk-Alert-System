@@ -4,12 +4,13 @@ import json
 import re
 import hashlib
 import ssl
+from http.cookiejar import CookieJar
 from datetime import datetime, timezone
 from html import unescape
 from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import parse_qsl, urljoin, urlencode, urlparse, urlunparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPCookieProcessor, HTTPSHandler, Request, build_opener, urlopen
 
 from app.official_event_models import (
     InvestorConferenceRecord,
@@ -266,7 +267,7 @@ def investor_conference_query_url(ticker: str) -> str:
 def material_event_query_url(ticker: str, year: int | None = None) -> str:
     params = {"co_id": ticker, "firstin": "true", "step": "1"}
     if year is not None:
-        params["year"] = str(year)
+        params["year"] = str(year - 1911 if year > 1911 else year)
     return f"{MOPS_BASE}/t05st01?{urlencode(params)}"
 
 
@@ -306,6 +307,23 @@ def _conference_query_params(ticker: str, *, year: int | None = None) -> dict[st
     return params
 
 
+def _mops_headers(*, referer: str) -> dict[str, str]:
+    return {
+        "User-Agent": "FinTrustAlert-MIS-Project/0.1 (+https://github.com/UnaLu027/fintrust-alert)",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Referer": referer,
+    }
+
+
+def _mops_opener():
+    handlers = [HTTPCookieProcessor(CookieJar())]
+    context = _verified_ssl_context()
+    if context is not None:
+        handlers.append(HTTPSHandler(context=context))
+    return build_opener(*handlers)
+
+
 def _mops_request(url: str, *, params: dict[str, str] | None = None, method: str = "GET", timeout_seconds: float = 10.0) -> str:
     data = None
     target_url = url
@@ -313,18 +331,24 @@ def _mops_request(url: str, *, params: dict[str, str] | None = None, method: str
         target_url = f"{url}?{urlencode(params)}"
     if method == "POST":
         data = urlencode(params or {}).encode("utf-8")
+    opener = _mops_opener()
+    landing = Request(
+        f"{MOPS_BASE}/mops",
+        headers=_mops_headers(referer="https://mops.twse.com.tw/"),
+        method="GET",
+    )
+    try:
+        with opener.open(landing, timeout=min(timeout_seconds, 5.0)) as response:
+            response.read(512)
+    except Exception:
+        pass
     request = Request(
         target_url,
         data=data,
-        headers={
-            "User-Agent": "FinTrustAlert-MIS-Project/0.1 (+https://github.com/UnaLu027/fintrust-alert)",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Referer": f"{MOPS_BASE}/mops",
-        },
+        headers=_mops_headers(referer=f"{MOPS_BASE}/mops"),
         method=method,
     )
-    with urlopen(request, timeout=timeout_seconds, context=_verified_ssl_context()) as response:  # noqa: S310 - official public disclosure page
+    with opener.open(request, timeout=timeout_seconds) as response:  # noqa: S310 - official public disclosure page
         raw = response.read()
     return _decode_response(raw)
 
@@ -846,6 +870,35 @@ def parse_twse_material_event_rows(
 
 def build_twse_material_event_metadata(ticker: str, *, max_items: int = 5) -> list[MaterialEventRecord]:
     return parse_twse_material_event_rows(ticker, fetch_twse_material_event_rows(), max_items=max_items)
+
+
+def is_persistable_investor_conference(record: InvestorConferenceRecord) -> bool:
+    """Return True only for real official conference records, not source diagnostics."""
+    return bool(
+        record.status == "available"
+        and record.ticker
+        and investor_conference_identity(record)
+        and record.conference_date
+        and record.title
+        and record.source_name
+        and record.source_url
+    )
+
+
+def is_persistable_material_event(record: MaterialEventRecord) -> bool:
+    """Return True only for real official material events, not query-entry placeholders."""
+    if record.status != "available":
+        return False
+    if "歷史重大訊息查詢入口" in record.title:
+        return False
+    return bool(
+        record.ticker
+        and material_event_identity(record)
+        and record.event_date
+        and record.title
+        and record.source_name
+        and record.source_url
+    )
 
 
 def build_twse_investor_conference_metadata(ticker: str, *, max_items: int = 3) -> list[InvestorConferenceRecord]:

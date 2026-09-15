@@ -224,6 +224,7 @@ class OfficialEventsRefreshResult(BaseModel):
     material_event_count: int = 0
     persisted: dict[str, int] = Field(default_factory=dict)
     live_source_outcome: dict[str, str] = Field(default_factory=dict)
+    source_health: list[dict[str, Any]] = Field(default_factory=list)
     investor_conferences: list[InvestorConferenceRecord] = Field(default_factory=list)
     material_events: list[MaterialEventRecord] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)

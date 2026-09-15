@@ -140,12 +140,15 @@ class UnifiedAnalysisOrchestrator:
         else:
             stages.append(_stage("narrative_shift", "NO_DATA", limitations=["At least two comparable official-text periods are required."]))
 
-        persistence = self.repository.save_text_intelligence_result(
-            ticker=company.ticker,
-            run_id=text_run_id,
-            analysis=text_analysis,
-            narrative_shift=narrative_shift,
-        )
+        if text_sentence_count:
+            persistence = self.repository.save_text_intelligence_result(
+                ticker=company.ticker,
+                run_id=text_run_id,
+                analysis=text_analysis,
+                narrative_shift=narrative_shift,
+            )
+        else:
+            persistence = {"text_model_runs": 0, "text_evidence": 0, "narrative_shift_results": 0}
 
         ai_analysis = None
         if include_gemini and financial_result.status == "completed" and AIFinancialAnalysisService.supports(company.subindustry):

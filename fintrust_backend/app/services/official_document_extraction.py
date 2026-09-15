@@ -9,6 +9,7 @@ from html import unescape
 from pathlib import Path
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 from app.official_event_models import (
@@ -38,6 +39,14 @@ PARAGRAPH_RE = re.compile(
 )
 TEXTISH_CONTENT_TYPES = ("text/", "json", "xml", "html", "javascript")
 DEFAULT_USER_AGENT = "FinTrustAlert-MIS-Project/0.1 (+https://github.com/UnaLu027/fintrust-alert)"
+ALLOWED_DOCUMENT_HOST_SUFFIXES = (
+    "mediatek.com",
+    "tsmc.com",
+    "umc.com",
+    "aseglobal.com",
+    "twse.com.tw",
+    "twse.com",
+)
 
 Opener = Callable[[Request, float], Any]
 
@@ -137,6 +146,14 @@ def _source_status_from_error(error: Exception) -> tuple[OfficialEvidenceSourceS
     return "error", "download_failed"
 
 
+def _is_allowed_document_url(url: str) -> bool:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"https", "http"}:
+        return False
+    hostname = (parsed.hostname or "").casefold()
+    return any(hostname == suffix or hostname.endswith(f".{suffix}") for suffix in ALLOWED_DOCUMENT_HOST_SUFFIXES)
+
+
 class OfficialDocumentExtractionService:
     """Download/preview official documents with explicit fallback/debug status.
 
@@ -160,6 +177,8 @@ class OfficialDocumentExtractionService:
             raise ValueError("Unsupported company for official document extraction.")
 
         source_url = request_payload.source_url or request_payload.document_url
+        if self.opener is None and not _is_allowed_document_url(request_payload.document_url):
+            raise ValueError("Official document URL host is not in the approved public-source allowlist.")
         initial_kind = infer_document_kind(request_payload.document_url, request_payload.document_title)
         now = datetime.now(timezone.utc)
         base_kwargs = {

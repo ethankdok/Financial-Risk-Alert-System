@@ -254,15 +254,35 @@ class NotificationService:
     @staticmethod
     def build_email(member: dict[str, Any], ticker: str, evidence: dict[str, Any], notification_type: str) -> EmailMessage:
         company = evidence.get("company_name") or ticker
-        severity = evidence.get("overall_severity") or evidence.get("evidence_readiness") or "unknown"
+        severity = evidence.get("overall_severity") or evidence.get("evidence_readiness") or evidence.get("status") or "unknown"
         subject = NotificationService._email_header(f"[FinTrust] {company} {notification_type} alert")
-        lines = [
-            f"{member.get('display_name') or member.get('email')}，您好：",
-            f"{company} 目前有新的 {notification_type} 通知。",
-            f"狀態：{severity}",
-            f"Run ID：{evidence.get('run_id') or evidence.get('evidence_identity') or 'unknown'}",
+        lines = [f"{member.get('display_name') or member.get('email')}，您好：", f"{company} 目前有新的 {notification_type} 通知。", f"狀態：{severity}"]
+        if notification_type == "material_event":
+            lines.extend([
+                f"事件日期：{evidence.get('event_date') or 'unknown'} {evidence.get('event_time') or ''}".strip(),
+                f"官方主旨：{evidence.get('title') or 'unknown'}",
+                f"來源：{evidence.get('source_name') or 'official source'}",
+                f"官方連結：{evidence.get('official_url') or evidence.get('source_url') or 'unavailable'}",
+            ])
+        elif notification_type == "investor_conference":
+            lines.extend([
+                f"法說會日期：{evidence.get('conference_date') or 'unknown'}",
+                f"標題：{evidence.get('title') or 'unknown'}",
+                f"來源：{evidence.get('source_name') or 'official source'}",
+                f"官方文件：{evidence.get('document_url') or evidence.get('official_url') or evidence.get('source_url') or 'unavailable'}",
+            ])
+        elif notification_type == "narrative_shift":
+            lines.extend([
+                f"比較期間：{evidence.get('baseline_period') or 'unknown'} → {evidence.get('current_period') or 'unknown'}",
+                f"JSD / Cosine：{evidence.get('metric_summary') or 'see FinTrust detail'}",
+                f"主要變化：{evidence.get('changed_topics') or evidence.get('changed_terms') or 'see FinTrust detail'}",
+            ])
+        else:
+            lines.append(f"Run ID：{evidence.get('run_id') or evidence.get('evidence_identity') or 'unknown'}")
+        lines.extend([
+            f"FinTrust：{evidence.get('fintrust_url') or '/official.html'}",
             "請回到系統查看官方資料、規則結果與來源限制；此通知不構成投資建議。",
-        ]
+        ])
         return EmailMessage(
             to_email=NotificationService._email_header(member["email"]),
             subject=subject,
@@ -284,7 +304,42 @@ class NotificationService:
             return "narrative_shift", identity or "narrative_shift"
         return None
 
-    def process_member(self, member_uid: str) -> list[dict[str, Any]]:
+    @staticmethod
+    def _notification_items(evidence: dict[str, Any], preferences: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]]]:
+        explicit_items = evidence.get("notification_items")
+        if isinstance(explicit_items, list):
+            output = []
+            for item in explicit_items:
+                if not isinstance(item, dict):
+                    continue
+                notification_type = str(item.get("notification_type") or "")
+                evidence_identity = str(item.get("evidence_identity") or item.get("event_id") or item.get("run_id") or "")
+                if notification_type and evidence_identity:
+                    output.append((notification_type, evidence_identity, {**evidence, **item}))
+            return output
+        decision = NotificationService.classify_evidence(evidence, preferences)
+        return [(decision[0], decision[1], evidence)] if decision else []
+
+    @staticmethod
+    def _preference_allows(notification_type: str, preferences: dict[str, Any], *, digest_frequency: str | None = None) -> bool:
+        preference_key = {
+            "important_alert": "important_alerts",
+            "material_event": "material_event_alerts",
+            "investor_conference": "conference_alerts",
+            "narrative_shift": "narrative_shift_alerts",
+        }.get(notification_type)
+        if preference_key and not bool_int(preferences.get(preference_key)):
+            return False
+        if notification_type == "important_alert":
+            return True
+        member_digest = str(preferences.get("digest_frequency") or "daily").strip().lower()
+        if member_digest == "off":
+            return False
+        if digest_frequency and member_digest != digest_frequency:
+            return False
+        return member_digest in {"daily", "weekly"}
+
+    def process_member(self, member_uid: str, *, digest_frequency: str | None = None) -> list[dict[str, Any]]:
         member = self.repository.get_member(member_uid)
         if not member or member.get("account_status") != "active":
             return []
@@ -298,49 +353,52 @@ class NotificationService:
                 continue
             ticker = str(watch["ticker"])
             evidence = self.evidence_provider(ticker)
-            decision = self.classify_evidence(evidence, preferences)
-            if not decision:
-                continue
-            notification_type, evidence_identity = decision
-            dedupe_key = notification_dedupe_key(member_uid, ticker, notification_type, evidence_identity)
-            now = utc_now_str()
-            existing = self.repository.find_notification_by_dedupe_key(dedupe_key)
-            if existing:
+            for notification_type, evidence_identity, item in self._notification_items(evidence, preferences):
+                if not self._preference_allows(notification_type, preferences, digest_frequency=digest_frequency):
+                    continue
+                dedupe_key = notification_dedupe_key(member_uid, ticker, notification_type, evidence_identity)
+                now = utc_now_str()
+                existing = self.repository.find_notification_by_dedupe_key(dedupe_key)
+                if existing:
+                    results.append(self.repository.append_notification_history({
+                        "member_uid": member_uid,
+                        "ticker": ticker,
+                        "notification_type": notification_type,
+                        "dedupe_key": f"{dedupe_key}:suppressed:{now}",
+                        "subject": existing.get("subject", "Duplicate suppressed"),
+                        "body": "Duplicate notification suppressed.",
+                        "status": "suppressed_duplicate",
+                        "provider_status": "suppressed_duplicate",
+                        "created_at": now,
+                        "metadata": {"original_dedupe_key": dedupe_key, "evidence_identity": evidence_identity},
+                    }))
+                    continue
+
+                message = self.build_email(member, ticker, item, notification_type)
+                provider_result = self.email_provider.send(message)
+                status = "sent" if provider_result.get("status") in {"sent", "dry_run"} else "failed"
                 results.append(self.repository.append_notification_history({
                     "member_uid": member_uid,
                     "ticker": ticker,
                     "notification_type": notification_type,
-                    "dedupe_key": f"{dedupe_key}:suppressed:{now}",
-                    "subject": existing.get("subject", "Duplicate suppressed"),
-                    "body": "Duplicate notification suppressed.",
-                    "status": "suppressed_duplicate",
-                    "provider_status": "suppressed_duplicate",
+                    "dedupe_key": dedupe_key,
+                    "subject": message.subject,
+                    "body": message.body,
+                    "status": status,
+                    "provider_status": str(provider_result.get("status") or ""),
+                    "safe_error_detail": provider_result.get("safe_error_detail"),
                     "created_at": now,
-                    "metadata": {"original_dedupe_key": dedupe_key},
+                    "sent_at": now if status == "sent" else None,
+                    "metadata": {
+                        "provider": provider_result.get("provider"),
+                        "evidence_identity": evidence_identity,
+                        "delivery_frequency": preferences.get("digest_frequency"),
+                    },
                 }))
-                continue
-
-            message = self.build_email(member, ticker, evidence, notification_type)
-            provider_result = self.email_provider.send(message)
-            status = "sent" if provider_result.get("status") in {"sent", "dry_run"} else "failed"
-            results.append(self.repository.append_notification_history({
-                "member_uid": member_uid,
-                "ticker": ticker,
-                "notification_type": notification_type,
-                "dedupe_key": dedupe_key,
-                "subject": message.subject,
-                "body": message.body,
-                "status": status,
-                "provider_status": str(provider_result.get("status") or ""),
-                "safe_error_detail": provider_result.get("safe_error_detail"),
-                "created_at": now,
-                "sent_at": now if status == "sent" else None,
-                "metadata": {"provider": provider_result.get("provider"), "evidence_identity": evidence_identity},
-            }))
         return results
 
-    def process_all_members(self, limit: int = 500) -> list[dict[str, Any]]:
+    def process_all_members(self, limit: int = 500, *, digest_frequency: str | None = None) -> list[dict[str, Any]]:
         output: list[dict[str, Any]] = []
         for member in self.repository.list_members(limit=limit):
-            output.extend(self.process_member(str(member["uid"])))
+            output.extend(self.process_member(str(member["uid"]), digest_frequency=digest_frequency))
         return output

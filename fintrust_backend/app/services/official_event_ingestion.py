@@ -10,6 +10,8 @@ from app.services.official_document_extraction import enrich_conferences_with_do
 from app.services.official_event_sources import (
     build_investor_conference_metadata,
     build_material_event_metadata,
+    is_persistable_investor_conference,
+    is_persistable_material_event,
 )
 
 
@@ -56,21 +58,43 @@ class OfficialEventIngestionService:
             outcomes["material_event"] = _source_outcome([item.status for item in material_events])
             limitations.extend(item for record in material_events for item in record.limitations)
 
+        persistable_conferences = [record for record in conferences if is_persistable_investor_conference(record)]
+        persistable_material_events = [record for record in material_events if is_persistable_material_event(record)]
         persisted = self.repository.save_official_events(
             ticker=company.ticker,
-            investor_conferences=conferences,
-            material_events=material_events,
+            investor_conferences=persistable_conferences,
+            material_events=persistable_material_events,
             refreshed_at=refreshed_at,
         )
+        if include_material_events and material_events and not persistable_material_events:
+            limitations.append("重大訊息 live refresh 僅取得來源診斷或查詢入口；未覆蓋既有 persisted material events。")
         return OfficialEventsRefreshResult(
             ticker=company.ticker,
             company_name=company.name,
             subindustry=company.subindustry,
             refreshed_at=refreshed_at,
-            investor_conference_count=len(conferences),
-            material_event_count=len(material_events),
+            investor_conference_count=len(persistable_conferences),
+            material_event_count=len(persistable_material_events),
             persisted=persisted,
             live_source_outcome=outcomes,
+            source_health=[
+                {
+                    "source": "investor_conference",
+                    "status": outcomes.get("investor_conference", "NO_DATA"),
+                    "records_found": len(conferences),
+                    "records_persistable": len(persistable_conferences),
+                    "last_attempt": refreshed_at.isoformat(),
+                    "last_success": refreshed_at.isoformat() if persistable_conferences else None,
+                },
+                {
+                    "source": "material_event",
+                    "status": outcomes.get("material_event", "NO_DATA"),
+                    "records_found": len(material_events),
+                    "records_persistable": len(persistable_material_events),
+                    "last_attempt": refreshed_at.isoformat(),
+                    "last_success": refreshed_at.isoformat() if persistable_material_events else None,
+                },
+            ],
             investor_conferences=conferences,
             material_events=material_events,
             limitations=list(dict.fromkeys(limitations)),

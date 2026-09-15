@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Text Intelligence Lab｜管理後台</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="admin-auth.js"></script>
+  <script>AdminAuth.requireAuth();</script>
+</head>
+<body class="admin-body">
+<header class="admin-topbar"><div class="admin-topbar-inner"><a class="brand" href="admin-dashboard.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Research Operations</span></div></a><div class="admin-user"></div></div></header>
+<main class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-title">管理後台</div>
+    <nav>
+      <a href="admin-dashboard.html"><span>▦</span> 儀表板</a>
+      <a href="admin-financial-evidence.html"><span>□</span> 財務與官方證據</a>
+      <a class="active" href="admin-text-intelligence-lab.html"><span>ML</span> Text Intelligence Lab</a>
+      <a href="admin-keyword-extract.html"><span>⌕</span> 關鍵字擷取</a>
+      <a href="admin-keyword-manage.html"><span>⌘</span> 關鍵字管理</a>
+      <a href="admin-risk-feature-manage.html"><span>!</span> 風險特徵管理</a>
+      <a href="admin-admin-manage.html"><span>♙</span> 管理員管理</a>
+      <a href="admin-audit-log.html"><span>≣</span> 操作紀錄</a>
+    </nav>
+    <div class="admin-sidebar-note"><strong>Research gate</strong><p>Weak-label metrics are exploratory and must not be presented as formal Human-GT performance.</p></div>
+  </aside>
+  <section class="admin-main">
+    <div class="admin-page-head"><div><span class="eyebrow">Admin Research Lab</span><h1>Text Intelligence Lab</h1><p>讀取既有 Phase 14 研究輸出摘要；不在瀏覽器 request 中訓練模型。</p></div></div>
+    <div class="admin-permission-banner"><strong>WEAK SUPERVISION</strong><span>NOT FORMAL HUMAN-GT PERFORMANCE. Human GT remains required before model-selection claims.</span></div>
+    <div id="labContent" class="member-grid"></div>
+  </section>
+</main>
+<script>
+const esc=AdminAuth.escapeHtml;
+function block(title,body){return `<section class="admin-panel"><div class="admin-panel-head"><div><h2>${esc(title)}</h2></div></div>${body}</section>`}
+function kv(obj){return `<div class="financial-compact-list">${Object.entries(obj||{}).slice(0,18).map(([k,v])=>`<div class="financial-compact-row"><strong>${esc(k)}</strong><span>${esc(typeof v==='object'?JSON.stringify(v):v)}</span></div>`).join('')||'<p class="muted-text">No metadata persisted yet.</p>'}</div>`}
+async function loadLab(){await AdminAuth.mountUser();try{const data=await AdminAuth.api('/api/admin/text-intelligence-lab/summary');const metrics=Array.isArray(data.model_comparison)?data.model_comparison:[];labContent.innerHTML=[
+block('Dataset',kv(data.dataset||{artifact_status:data.artifact_status,human_gt_status:data.human_gt_status})),
+block('Experiment',kv(data.experiment||{})),
+block('Model Comparison',`<p><b>${esc(data.weak_supervision_notice)}</b></p><div class="financial-compact-list">${metrics.slice(0,12).map(row=>`<div class="financial-compact-row"><strong>${esc(row.model||row.model_name||row.experiment_id||'model')}</strong><span>${esc(JSON.stringify(row))}</span></div>`).join('')||'<p class="muted-text">No persisted model metrics.</p>'}</div>`),
+block('Drift Lab',kv(data.drift_lab||{})),
+block('Analysis',kv(data.analysis||{})),
+block('Persistence Design',kv(data.persistence_design||{}))
+].join('')}catch(e){labContent.innerHTML=block('讀取失敗',`<p>${esc(e.message)}</p>`)}}
+loadLab();
+</script>
+</body>
+</html>

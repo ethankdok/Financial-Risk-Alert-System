@@ -77,6 +77,79 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(rules.status_code, 200)
         self.assertTrue(rules.json()["rule_results"][0]["triggered"])
 
+    def test_historical_snapshot_is_retained_when_latest_pointer_updates(self) -> None:
+        from datetime import datetime, timezone
+
+        from app.dependencies import get_analysis_repository
+        from app.financial_analysis_models import FinancialStatementAnalysisReport, NormalizedFinancialStatement, RuleSeverity
+        from app.historical_analysis_models import HistoricalFinancialAnalysisReport
+        from app.pipeline_models import FrontendAnalysisSnapshot
+
+        repository = get_analysis_repository()
+        now = datetime.now(timezone.utc)
+
+        def save(run_id: str, summary: str) -> None:
+            latest = FinancialStatementAnalysisReport(
+                ticker="2454",
+                company_name="聯發科",
+                subindustry="IC 設計",
+                report_period="2026Q2",
+                analyzed_at=now,
+                rule_version="test",
+                threshold_basis="test",
+                overall_severity=RuleSeverity.NORMAL,
+                summary=summary,
+                statement=NormalizedFinancialStatement(ticker="2454", company_name="聯發科", subindustry="IC 設計", report_period="2026Q2"),
+                metrics=[],
+                rule_results=[],
+            )
+            historical = HistoricalFinancialAnalysisReport(
+                ticker="2454",
+                company_name="聯發科",
+                subindustry="IC 設計",
+                requested_years=1,
+                available_years=0,
+                analyzed_at=now,
+                rule_version="test",
+                threshold_basis="test",
+                overall_severity=RuleSeverity.NORMAL,
+                summary=summary,
+                periods=[],
+                trend_metrics=[],
+                rule_results=[],
+            )
+            snapshot = FrontendAnalysisSnapshot(
+                analysis_run_id=run_id,
+                ticker="2454",
+                company_name="聯發科",
+                subindustry="IC 設計",
+                generated_at=now,
+                data_updated_at=now,
+                overall_severity=RuleSeverity.NORMAL,
+                summary=summary,
+                rule_version="test",
+                threshold_basis="test",
+            )
+            repository.save_pipeline_result(
+                run_id=run_id,
+                trigger="manual",
+                started_at=now,
+                completed_at=now,
+                latest_report=latest,
+                historical_report=historical,
+                snapshot=snapshot,
+            )
+
+        save("run-history-1", "first")
+        save("run-history-2", "second")
+
+        with sqlite3.connect(self.pipeline_path) as connection:
+            latest = connection.execute("SELECT run_id FROM latest_analysis_snapshots WHERE ticker='2454'").fetchone()[0]
+            retained = connection.execute("SELECT run_id FROM analysis_snapshots WHERE run_id LIKE 'run-history-%' ORDER BY run_id").fetchall()
+
+        self.assertEqual(latest, "run-history-2")
+        self.assertEqual([row[0] for row in retained], ["run-history-1", "run-history-2"])
+
     def test_claim_extract_contract(self) -> None:
         response = self.client.post(
             "/api/v1/financial/claims/extract",

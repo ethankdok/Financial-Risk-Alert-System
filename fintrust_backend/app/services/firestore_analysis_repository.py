@@ -18,7 +18,12 @@ from app.services.analysis_repository import (
     rule_rows,
     statement_type_for_metric,
 )
-from app.services.official_event_sources import investor_conference_identity, material_event_identity
+from app.services.official_event_sources import (
+    investor_conference_identity,
+    is_persistable_investor_conference,
+    is_persistable_material_event,
+    material_event_identity,
+)
 
 
 class FirestoreAnalysisRepository:
@@ -125,6 +130,16 @@ class FirestoreAnalysisRepository:
             self.client.collection("latest_analysis_snapshots").document(snapshot.ticker),
             {**snapshot.model_dump(mode="python"), "updated_at": completed_at},
         )
+        batch.set(
+            self.client.collection("analysis_snapshots").document(run_id),
+            {
+                "run_id": run_id,
+                "ticker": snapshot.ticker,
+                "snapshot": snapshot.model_dump(mode="python"),
+                "created_at": completed_at,
+            },
+            merge=True,
+        )
         batch.commit()
 
         return PersistenceCounts(
@@ -152,7 +167,11 @@ class FirestoreAnalysisRepository:
         refreshed_at: datetime,
     ) -> dict[str, int]:
         batch = self.client.batch()
+        conference_count = 0
+        material_count = 0
         for record in investor_conferences:
+            if not is_persistable_investor_conference(record):
+                continue
             event_id = investor_conference_identity(record)
             payload = record.model_copy(update={"event_id": event_id, "retrieved_at": record.retrieved_at or refreshed_at})
             batch.set(
@@ -173,7 +192,10 @@ class FirestoreAnalysisRepository:
                 },
                 merge=True,
             )
+            conference_count += 1
         for record in material_events:
+            if not is_persistable_material_event(record):
+                continue
             event_id = material_event_identity(record)
             payload = record.model_copy(update={"event_id": event_id, "retrieved_at": record.retrieved_at or refreshed_at})
             batch.set(
@@ -194,8 +216,10 @@ class FirestoreAnalysisRepository:
                 },
                 merge=True,
             )
-        batch.commit()
-        return {"investor_conferences": len(investor_conferences), "material_events": len(material_events)}
+            material_count += 1
+        if conference_count or material_count:
+            batch.commit()
+        return {"investor_conferences": conference_count, "material_events": material_count}
 
     def list_investor_conferences(self, ticker: str, limit: int = 20) -> list[InvestorConferenceRecord]:
         from google.cloud.firestore_v1.base_query import FieldFilter
@@ -208,7 +232,8 @@ class FirestoreAnalysisRepository:
         )
         rows = [document.to_dict() or {} for document in documents]
         rows.sort(key=lambda row: (str(row.get("event_date") or ""), str(row.get("retrieved_at") or "")), reverse=True)
-        return [InvestorConferenceRecord.model_validate(row.get("payload") or {}) for row in rows[:limit]]
+        records = [InvestorConferenceRecord.model_validate(row.get("payload") or {}) for row in rows]
+        return [record for record in records if is_persistable_investor_conference(record)][:limit]
 
     def list_material_events(self, ticker: str, limit: int = 50) -> list[MaterialEventRecord]:
         from google.cloud.firestore_v1.base_query import FieldFilter
@@ -228,7 +253,8 @@ class FirestoreAnalysisRepository:
             ),
             reverse=True,
         )
-        return [MaterialEventRecord.model_validate(row.get("payload") or {}) for row in rows[:limit]]
+        records = [MaterialEventRecord.model_validate(row.get("payload") or {}) for row in rows]
+        return [record for record in records if is_persistable_material_event(record)][:limit]
 
     def list_metrics(
         self,

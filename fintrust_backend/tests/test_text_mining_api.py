@@ -106,6 +106,7 @@ class TextMiningApiTests(unittest.TestCase):
                     title="MediaTek investor conference",
                     source_name="company_official_ir",
                     source_url="https://example.test/ir",
+                    status="available",
                     document_text_preview="Management expects product momentum and revenue growth to improve.",
                     document_extract_status="text_extracted",
                 )
@@ -150,4 +151,3 @@ class TextMiningApiTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
