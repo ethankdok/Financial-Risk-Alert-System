@@ -24,25 +24,33 @@
     .field input,.field select{min-height:38px;border:1px solid #ccd5e2;border-radius:6px;padding:0 10px;background:#fff;color:#172033}
     .summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:18px}
     .summary-card,.panel,.record-card{background:#fff;border:1px solid #dfe5ee;border-radius:8px}
-    .summary-card{padding:14px}
+    .summary-card{min-width:0;padding:14px;overflow:hidden}
     .summary-card span{display:block;font-size:12px;color:#6b7890;font-weight:800;text-transform:uppercase}
-    .summary-card strong{display:block;font-size:22px;margin-top:6px}
-    .summary-card small{display:block;color:#5d6b82;margin-top:4px;line-height:1.5}
+    .summary-card strong{display:block;font-size:22px;margin-top:6px;overflow-wrap:anywhere;word-break:break-word}
+    .summary-card small{display:block;color:#5d6b82;margin-top:4px;line-height:1.5;overflow-wrap:anywhere;word-break:break-word}
     .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
     .tabs button,.load-more{border:1px solid #c9d5e7;background:#fff;color:#1847a8;border-radius:6px;min-height:38px;padding:0 14px;font-weight:800;cursor:pointer}
     .tabs button.active{background:#1847a8;color:#fff;border-color:#1847a8}
     .panel{padding:16px;margin-bottom:18px}
     .panel h2{margin:0 0 12px;font-size:20px}
     .record-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-    .record-card{padding:16px;display:flex;flex-direction:column;gap:10px}
+    .record-card{min-width:0;padding:16px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
     .record-card h3{font-size:18px;margin:0;line-height:1.45}
     .meta{display:flex;flex-wrap:wrap;gap:8px;color:#526179;font-size:13px}
-    .meta span{background:#eef3f8;border-radius:6px;padding:4px 7px}
-    .preview{color:#35445d;line-height:1.7;white-space:pre-wrap}
+    .meta span{max-width:100%;background:#eef3f8;border-radius:6px;padding:4px 7px;overflow-wrap:anywhere;word-break:break-word}
+    .preview{color:#35445d;line-height:1.7;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+    .clamp{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+    .detail-text{max-height:260px;overflow:auto;background:#f7f9fc;border:1px solid #e0e7f0;border-radius:8px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+    .detail-list{display:grid;gap:8px;margin:10px 0 0;padding:0;list-style:none}
+    .detail-list li{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;color:#35445d;font-size:13px;line-height:1.5}
+    .detail-list strong{color:#5d6b82}
+    .detail-list span,.detail-list a{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+    details{min-width:0}
+    details summary{cursor:pointer;color:#1847a8;font-weight:800}
     .tag-list{display:flex;gap:6px;flex-wrap:wrap}
-    .tag-list span{border:1px solid #ccd8e8;border-radius:999px;padding:3px 8px;font-size:12px;color:#35445d}
+    .tag-list span{max-width:100%;border:1px solid #ccd8e8;border-radius:999px;padding:3px 8px;font-size:12px;color:#35445d;overflow-wrap:anywhere;word-break:break-word}
     .links{display:flex;gap:8px;flex-wrap:wrap}
-    .links a{color:#1847a8;font-weight:800;text-decoration:none}
+    .links a,.links span{max-width:100%;color:#1847a8;font-weight:800;text-decoration:none;overflow-wrap:anywhere;word-break:break-word}
     .empty{padding:18px;color:#6b7890;background:#fff;border:1px dashed #bfcbdb;border-radius:8px}
     .notice{background:#fff8e7;border:1px solid #f0d596;border-radius:8px;padding:12px;color:#6b520f;line-height:1.6;margin-bottom:14px}
     .metrics-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0}
@@ -134,7 +142,49 @@
     return text.length > limit ? `${text.slice(0, limit)}...` : text;
   };
   const link = (href, label) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : `<span>${esc(label)} unavailable</span>`;
-  const topicLabel = (item) => typeof item === 'object' ? JSON.stringify(item) : String(item);
+  const firstText = (...values) => values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
+  const topicLabel = (item) => {
+    if(item === undefined || item === null) return '';
+    if(typeof item !== 'object') return String(item);
+    return String(firstText(item.term, item.topic, item.label, item.name, item.metric, item.claim_type, item.source_type, item.document_id, item.evidence_id, 'metadata') || '');
+  };
+  const readableText = (item, limit=620) => compact(firstText(
+    item?.sentence_text,
+    item?.cleaned_text,
+    item?.original_text,
+    item?.text,
+    item?.snippet,
+    item?.preview,
+    item?.raw_text
+  ), limit);
+  const uniqueBy = (items, keyFn) => {
+    const seen = new Set();
+    return (items || []).filter(item => {
+      const key = keyFn(item);
+      if(!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+  const evidenceKey = (item) => firstText(
+    item?.evidence_id,
+    item?.text_hash,
+    [item?.run_id, item?.document_id, item?.sentence_id].filter(Boolean).join('|'),
+    [item?.document_id, readableText(item, 160)].filter(Boolean).join('|')
+  );
+  const tagList = (items, limit=10) => {
+    const labels = uniqueBy((items || []).map(topicLabel).filter(Boolean), item => item).slice(0, limit);
+    return labels.length ? `<div class="tag-list">${labels.map(item => `<span>${esc(item)}</span>`).join('')}</div>` : '';
+  };
+  const detailList = (pairs) => {
+    const rows = pairs.filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '');
+    if(!rows.length) return '';
+    return `<ul class="detail-list">${rows.map(([label, value]) => `<li><strong>${esc(label)}</strong><span>${esc(value)}</span></li>`).join('')}</ul>`;
+  };
+  const urlDetail = (label, href) => href ? `<li><strong>${esc(label)}</strong><span>${link(href, href)}</span></li>` : '';
+  const limitationsList = (items) => Array.isArray(items) && items.length
+    ? `<div class="tag-list">${items.slice(0,8).map(item => `<span>${esc(topicLabel(item))}</span>`).join('')}</div>`
+    : '';
 
   function params(reset=false){
     if(reset){state.page=1;state.records=[];}
@@ -190,19 +240,30 @@
   }
 
   function renderRecords(){
-    if(!state.records.length){
+    const records = uniqueBy(state.records, record => firstText(
+      record.id,
+      record.event_id,
+      [record.type, record.date, record.event_time, record.title].filter(Boolean).join('|')
+    ));
+    if(!records.length){
       $('records').innerHTML = '<div class="empty">目前沒有符合條件的可用官方紀錄。blocked_by_source、metadata_only 或診斷 placeholder 不會在此顯示為產品證據。</div>';
       return;
     }
-    $('records').innerHTML = state.records.map(recordCard).join('');
+    $('records').innerHTML = records.map(recordCard).join('');
   }
 
   function recordCard(record){
     const isConference = record.type === 'investor_conference';
     const title = record.title || (isConference ? 'Untitled investor conference' : 'Untitled material event');
     const dateLabel = isConference ? 'conference date' : 'event date';
-    const sentences = record.representative_evidence_sentences || [];
+    const sentences = uniqueBy(record.representative_evidence_sentences || [], evidenceKey);
     const preview = compact(record.preview || '', 620);
+    const topics = [
+      ...(record.topics || []),
+      ...(record.extracted_topics || []),
+      ...(record.related_metrics || []),
+      record.category
+    ].filter(Boolean);
     return `<article class="record-card">
       <div class="meta"><span>${esc(isConference ? 'Investor Conference' : 'Material Event')}</span><span>status: ${fmt(record.status)}</span><span>source: ${fmt(record.source_name)}</span></div>
       <h3>${esc(title)}</h3>
@@ -214,14 +275,28 @@
         <span>synchronized: ${fmt(record.retrieved_at)}</span>
         <span>relevant sentences: ${esc(record.relevant_sentence_count || 0)}</span>
       </div>
-      ${preview ? `<p class="preview">${esc(preview)}</p>` : '<p class="preview">No official disclosure preview persisted.</p>'}
-      ${(record.topics || []).length ? `<div class="tag-list">${record.topics.slice(0,10).map(item => `<span>${esc(topicLabel(item))}</span>`).join('')}</div>` : ''}
-      ${sentences.length ? `<details><summary>Representative evidence sentences</summary>${sentences.slice(0,5).map(item => `<p class="preview">${esc(item.sentence_text || item.text || topicLabel(item))}</p>`).join('')}</details>` : ''}
+      ${preview ? `<p class="preview clamp">${esc(preview)}</p>` : '<p class="preview">No official disclosure preview persisted.</p>'}
+      ${tagList(topics)}
+      ${sentences.length ? `<details><summary>Representative evidence sentences</summary><div class="record-grid">${sentences.slice(0,4).map(evidenceCard).join('')}</div></details>` : ''}
       <div class="links">
         ${link(record.source_url, 'official source URL')}
         ${link(record.detail_url, 'detail URL')}
         ${link(record.document_url, 'document URL')}
       </div>
+      <details>
+        <summary>Provenance details</summary>
+        ${detailList([
+          ['event_id', record.event_id || record.id],
+          ['source_name', record.source_name],
+          ['source_url', record.source_url],
+          ['detail_url', record.detail_url],
+          ['document_url', record.document_url],
+          ['document_extract_status', record.document_extract_status],
+          ['document_hash', record.document_hash],
+          ['retrieved_at', record.retrieved_at]
+        ])}
+        ${limitationsList(record.limitations)}
+      </details>
     </article>`;
   }
 
@@ -232,8 +307,44 @@
     return 'unavailable';
   }
 
+  function evidenceCard(item){
+    const snippet = readableText(item, 420);
+    const topics = [...(item.topics || []), ...(item.related_metrics || [])].filter(Boolean);
+    const limitations = item.limitations || [];
+    return `<article class="record-card">
+      <div class="meta">
+        <span>${esc(item.source_type || 'official text')}</span>
+        ${item.event_date ? `<span>date: ${esc(item.event_date)}</span>` : ''}
+        ${item.period ? `<span>period: ${esc(item.period)}</span>` : ''}
+        ${item.relevance_score !== undefined ? `<span>relevance: ${esc(item.relevance_score)}</span>` : ''}
+      </div>
+      ${snippet ? `<p class="preview clamp">${esc(snippet)}</p>` : '<p class="preview">No sentence preview available.</p>'}
+      ${tagList(topics, 8)}
+      <div class="links">
+        ${link(item.source_url, 'official source URL')}
+        ${link(item.document_url, 'document URL')}
+      </div>
+      <details>
+        <summary>Evidence details</summary>
+        ${detailList([
+          ['evidence_id', item.evidence_id],
+          ['document_id', item.document_id],
+          ['document_hash', item.document_hash],
+          ['text_hash', item.text_hash],
+          ['sentence_id', item.sentence_id],
+          ['source_name', item.source_name],
+          ['extraction_status', item.extraction_status],
+          ['parser_version', item.parser_version],
+          ['retrieved_at', item.retrieved_at]
+        ])}
+        ${limitationsList(limitations)}
+        ${item.original_text ? `<h4>Original text</h4><div class="detail-text">${esc(item.original_text)}</div>` : ''}
+      </details>
+    </article>`;
+  }
+
   function renderText(text, narrative, textError, cardError){
-    const evidence = Array.isArray(text?.text_evidence) ? text.text_evidence : [];
+    const evidence = uniqueBy(Array.isArray(text?.text_evidence) ? text.text_evidence : [], evidenceKey);
     const documents = Array.isArray(text?.documents) ? text.documents : [];
     const sentenceCount = evidence.length || documents.reduce((sum, item) => sum + Number(item.relevant_sentence_count || 0), 0);
     const modelTopics = new Set();
@@ -252,25 +363,41 @@
       ${cardError ? `<p class="empty">Live narrative card unavailable: ${esc(cardError.message || 'not found')}</p>` : ''}
       ${(modelTopics.size || terms.length) ? `<div class="tag-list">${[...modelTopics].slice(0,12).map(topic => `<span>${esc(topic)}</span>`).join('')}${terms.slice(0,12).map(term => `<span>${esc(topicLabel(term))}</span>`).join('')}</div>` : ''}
       ${narrativeSection(narrative, metrics)}
-      ${evidence.length ? `<h3>Representative Evidence</h3><div class="record-grid">${evidence.slice(0,8).map(item => `<article class="record-card"><p class="preview">${esc(item.sentence_text || item.text || '')}</p><div class="meta"><span>${esc(item.source_type || 'official text')}</span><span>${esc(item.document_id || '')}</span></div>${link(item.source_url, 'source URL')}</article>`).join('')}</div>` : ''}`;
+      ${evidence.length ? `<h3>Representative Evidence</h3><div class="record-grid">${evidence.slice(0,8).map(evidenceCard).join('')}</div>` : ''}`;
   }
 
   function narrativeSection(narrative, metrics){
     if(!narrative) return '<p class="empty">目前沒有足夠的可比較官方期間產生 Narrative Shift。</p>';
     const changes = narrative.topic_distribution_changes || narrative.topic_changes || {};
-    const support = narrative.supporting_sentences || narrative.representative_evidence || [];
+    const support = uniqueBy(narrative.supporting_sentences || narrative.representative_evidence || [], evidenceKey);
+    const changeItems = Array.isArray(changes)
+      ? changes
+      : Object.entries(changes || {}).map(([topic, value]) => typeof value === 'object' && value !== null ? {topic, ...value} : {topic, change: value});
+    const emerging = narrative.emerging_terms || [];
+    const disappearing = narrative.disappearing_terms || [];
     return `<section>
       <h3>與上一期比較 / Narrative Shift</h3>
       <div class="metrics-grid">
-        <div class="metric"><span>Baseline period</span><strong>${esc(narrative.baseline_period || narrative.previous_period || 'unavailable')}</strong></div>
-        <div class="metric"><span>Current period</span><strong>${esc(narrative.current_period || 'unavailable')}</strong></div>
+        <div class="metric"><span>Baseline period</span><strong>${esc(narrative.baseline_period || narrative.previous_period || narrative.period_1 || 'unavailable')}</strong></div>
+        <div class="metric"><span>Current period</span><strong>${esc(narrative.current_period || narrative.period_2 || 'unavailable')}</strong></div>
         <div class="metric"><span>Relevant-text JSD</span><strong>${esc(metricValue(metrics,'relevant_text_word_jsd','relevant_jsd'))}</strong></div>
         <div class="metric"><span>Topic JSD</span><strong>${esc(metricValue(metrics,'topic_distribution_jsd'))}</strong></div>
-        <div class="metric"><span>TF-IDF Cosine</span><strong>${esc(metricValue(metrics,'tfidf_cosine_similarity','tfidf_cosine'))}</strong></div>
+        <div class="metric"><span>TF-IDF Cosine</span><strong>${esc(metricValue(metrics,'semantic_tfidf_cosine_similarity','tfidf_cosine_similarity','tfidf_cosine'))}</strong></div>
         <div class="metric"><span>Semantic Cosine</span><strong>${esc(metricValue(metrics,'semantic_embedding_cosine_similarity'))}</strong></div>
       </div>
-      <details open><summary>Topic distribution changes</summary><pre>${esc(JSON.stringify(changes,null,2))}</pre></details>
-      ${support.length ? `<div class="record-grid">${support.slice(0,6).map(item => `<article class="record-card"><p class="preview">${esc(item.sentence_text || item.text || topicLabel(item))}</p>${item.source_url ? link(item.source_url, 'source URL') : ''}</article>`).join('')}</div>` : ''}
+      ${narrative.data_quality ? `<div class="notice">Data quality: ${esc(narrative.data_quality.passed === false ? 'limited / descriptive only' : 'passed')} ${esc(narrative.data_quality.reason || narrative.data_quality.limitation || '')}</div>` : ''}
+      ${changeItems.length ? `<details open><summary>Topic distribution changes</summary><div class="record-grid">${changeItems.slice(0,8).map(item => `<article class="record-card"><h3>${esc(topicLabel(item))}</h3>${detailList([
+        ['period_1_rate', item.period_1_rate],
+        ['period_2_rate', item.period_2_rate],
+        ['change', item.change],
+        ['period_1_count', item.period_1_count],
+        ['period_2_count', item.period_2_count]
+      ])}</article>`).join('')}</div></details>` : ''}
+      ${(emerging.length || disappearing.length) ? `<details open><summary>Emerging / disappearing terms</summary>
+        <h4>Emerging</h4>${tagList(emerging, 12)}
+        <h4>Disappearing</h4>${tagList(disappearing, 12)}
+      </details>` : ''}
+      ${support.length ? `<h3>Supporting official evidence</h3><div class="record-grid">${support.slice(0,6).map(evidenceCard).join('')}</div>` : ''}
     </section>`;
   }
 
