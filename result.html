@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>分析結果</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ui-humanize.css">
 
   <style>
     .drift-grid {
@@ -250,7 +250,7 @@
     </div>
 
     <div class="content-card">
-      <h3>AI 判定原因</h3>
+      <h3>判定依據</h3>
       <div class="reason-list">
         <div class="reason">
           <div>01</div>
@@ -284,11 +284,11 @@
       </p>
 
       <div class="drift-run-panel">
-        <strong>從 STRUX 法說會資料直接執行</strong>
+        <strong>法說會跨期比較</strong>
 
         <p style="margin:8px 0 12px;color:#718096;">
           輸入 STRUX 中的股票代號，系統會自動取得該公司最新兩期法說會文字並進行比較。
-          目前可先使用 AMT 驗證完整流程。
+          目前以 American Tower Corporation（AMT）作為完整流程驗證案例。
         </p>
 
         <div class="drift-run-row">
@@ -319,7 +319,7 @@
 
         <div class="drift-period">
           <span>
-            股票／公司：
+            公司／股票代號：
             <strong id="driftTicker">—</strong>
           </span>
 
@@ -442,7 +442,7 @@
         <div class="financial-block financial-llm-block">
           <div class="section-row">
             <div>
-              <h3>AI 財報解讀</h3>
+              <h3>財報文字解讀</h3>
               <p class="muted-text">此區為 FinTrust backend 的 Gemini 財報解讀，與原 AI 搜尋摘要分離。</p>
             </div>
             <span class="status-tag tag-blue" data-financial-llm-state>檢查中</span>
