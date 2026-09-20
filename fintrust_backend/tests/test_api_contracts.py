@@ -19,9 +19,16 @@ class ApiContractTests(unittest.TestCase):
         os.environ["FINANCIAL_DATABASE_PATH"] = str(cls.pipeline_path)
         os.environ["FINANCIAL_FACT_DATABASE_PATH"] = str(root / "facts.sqlite3")
         os.environ["APP_ENV"] = "development"
-        from app.dependencies import get_analysis_repository, get_fact_repository
+        from app.dependencies import (
+            get_analysis_repository,
+            get_company_master_repository,
+            get_fact_repository,
+            get_ingestion_run_repository,
+        )
         get_analysis_repository.cache_clear()
         get_fact_repository.cache_clear()
+        get_company_master_repository.cache_clear()
+        get_ingestion_run_repository.cache_clear()
         from app.main import app
         cls.client = TestClient(app, raise_server_exceptions=False)
 
@@ -50,6 +57,40 @@ class ApiContractTests(unittest.TestCase):
         rules = self.client.get("/api/v1/financial/companies/2330/rule-results?limit=10")
         self.assertEqual(rules.status_code, 200)
         self.assertEqual(rules.json()["rule_results"], [])
+
+    def test_direct_ingest_uses_canonical_analysis_repository(self) -> None:
+        response = self.client.post(
+            "/api/v1/financial/facts/ingest",
+            json={"facts": [{
+                "ticker": "3711",
+                "company_name": "日月光投控",
+                "semiconductor_subindustry": "封裝測試",
+                "metric": "revenue",
+                "period": "2025FY",
+                "value": 100,
+                "unit": "TWD",
+                "statement_type": "income_statement",
+                "source_kind": "mops_xbrl",
+                "source_url": "https://example.test/filing",
+                "statement_scope": "consolidated",
+            }]},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 1)
+        with sqlite3.connect(self.pipeline_path) as connection:
+            row = connection.execute(
+                """SELECT analysis_type, fact_key_version
+                   FROM normalized_financial_facts
+                   WHERE ticker = '3711' AND metric_code = 'revenue' AND period = '2025FY'"""
+            ).fetchone()
+        self.assertEqual(row, ("ingested", "financial-fact-v2"))
+
+    def test_refresh_all_rejects_ticker_outside_release_scope(self) -> None:
+        response = self.client.post(
+            "/api/v1/financial/admin/refresh-all?tickers=2303"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("isolated to 2330/2454", response.json()["detail"])
 
     def test_persisted_fact_and_rule_result_listing_contract(self) -> None:
         from app.dependencies import get_analysis_repository
@@ -149,6 +190,14 @@ class ApiContractTests(unittest.TestCase):
 
         self.assertEqual(latest, "run-history-2")
         self.assertEqual([row[0] for row in retained], ["run-history-1", "run-history-2"])
+
+        universe = self.client.get("/api/v1/financial/company-universe")
+        self.assertEqual(universe.status_code, 200)
+        self.assertEqual(universe.json(), [])
+
+        ingestion_runs = self.client.get("/api/v1/financial/admin/ingestion-runs")
+        self.assertEqual(ingestion_runs.status_code, 200)
+        self.assertEqual(ingestion_runs.json(), [])
 
     def test_claim_extract_contract(self) -> None:
         response = self.client.post(

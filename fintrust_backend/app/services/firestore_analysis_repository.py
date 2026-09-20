@@ -11,6 +11,7 @@ from app.pipeline_models import AnalysisRunSummary, FrontendAnalysisSnapshot, Pe
 from app.text_intelligence_models import NarrativeShiftResponse, TextMiningAnalysisResponse
 from app.services.analysis_repository import (
     document_id,
+    fact_document_id,
     financial_fact_from_row,
     historical_fact_rows,
     latest_fact_rows,
@@ -94,14 +95,9 @@ class FirestoreAnalysisRepository:
         for fact in facts:
             batch.set(
                 self.client.collection("normalized_financial_facts").document(
-                    document_id(
-                        fact["ticker"],
-                        fact["analysis_type"],
-                        fact["period"],
-                        fact["metric_code"],
-                    )
+                    fact_document_id(fact)
                 ),
-                {**fact, "retrieved_at": completed_at},
+                {**fact, "fact_key_version": "financial-fact-v2", "retrieved_at": completed_at},
                 merge=True,
             )
 
@@ -157,6 +153,24 @@ class FirestoreAnalysisRepository:
         payload = document.to_dict() or {}
         payload.pop("updated_at", None)
         return FrontendAnalysisSnapshot.model_validate(payload)
+
+    def ingest_facts(self, facts: list[FinancialFact]) -> int:
+        """Canonical direct-fact write path shared with the analysis pipeline."""
+        from app.services.fact_repository import fact_to_firestore_row
+
+        for start in range(0, len(facts), 200):
+            batch = self.client.batch()
+            for fact in facts[start : start + 200]:
+                row = fact_to_firestore_row(fact)
+                batch.set(
+                    self.client.collection("normalized_financial_facts").document(
+                        fact_document_id(row)
+                    ),
+                    row,
+                    merge=True,
+                )
+            batch.commit()
+        return len(facts)
 
     def save_official_events(
         self,

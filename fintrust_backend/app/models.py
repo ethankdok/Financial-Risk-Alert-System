@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import Literal
 
@@ -39,6 +39,37 @@ class CompanyProfile(BaseModel):
     aliases: list[str]
 
 
+class CompanyMasterRecord(BaseModel):
+    """Persisted company-universe row sourced from an official market dataset."""
+
+    ticker: str
+    name: str
+    legal_name: str
+    english_name: str | None = None
+    market: Literal["TWSE"] = "TWSE"
+    industry: str = "半導體業"
+    industry_code: str = "24"
+    subindustry: str = "待分類"
+    subindustry_source: str = "unclassified"
+    subindustry_confidence: Literal["reviewed", "high", "medium", "low", "unclassified"] = "unclassified"
+    aliases: list[str] = Field(default_factory=list)
+    listing_status: Literal["listed", "delisted", "suspended"] = "listed"
+    listed_at: date | None = None
+    source_kind: Literal["twse_openapi"] = "twse_openapi"
+    source_url: str
+    source_report_date: date | None = None
+    synced_at: datetime
+
+
+class CompanyUniverseSyncResult(BaseModel):
+    source_url: str
+    source_report_date: date | None = None
+    fetched_rows: int
+    semiconductor_rows: int
+    persisted_rows: int
+    synced_at: datetime
+
+
 class ExtractedFinancialClaim(BaseModel):
     original_text: str
     ticker: str | None = None
@@ -70,7 +101,7 @@ class FinancialFact(BaseModel):
     ]
     source_kind: Literal["mops_xbrl", "twse_openapi", "mvp_fixture"]
     source_url: str
-    filed_at: datetime
+    filed_at: datetime | None = None
     taxonomy_concept: str | None = None
     statement_scope: Literal["consolidated", "individual", "unknown"] = "unknown"
     is_demo: bool = False

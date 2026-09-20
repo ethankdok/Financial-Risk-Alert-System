@@ -3,11 +3,12 @@ from __future__ import annotations
 import os
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator, Protocol
 
 from app.models import FinancialFact
-from app.services.analysis_repository import document_id
+from app.services.analysis_repository import fact_document_id
 
 
 class FinancialFactRepository(Protocol):
@@ -29,14 +30,15 @@ def fact_to_firestore_row(fact: FinancialFact) -> dict[str, Any]:
         "metric_code": fact.metric,
         "value": fact.value,
         "unit": fact.unit,
-        "statement_type": fact.statement_type,
         "source_kind": fact.source_kind,
         "source_url": fact.source_url,
         "taxonomy_concept": fact.taxonomy_concept,
         "statement_scope": fact.statement_scope,
+        "statement_type": fact.statement_type,
         "filed_at": fact.filed_at,
-        "retrieved_at": fact.filed_at,
+        "retrieved_at": datetime.now(timezone.utc),
         "is_demo": fact.is_demo,
+        "fact_key_version": "financial-fact-v2",
     }
 
 
@@ -52,7 +54,7 @@ def firestore_row_to_fact(row: dict[str, Any]) -> FinancialFact:
         statement_type=str(row.get("statement_type") or "income_statement"),
         source_kind=str(row["source_kind"]),
         source_url=str(row["source_url"]),
-        filed_at=row.get("filed_at") or row.get("retrieved_at"),
+        filed_at=row.get("filed_at"),
         taxonomy_concept=row.get("taxonomy_concept"),
         statement_scope=str(row.get("statement_scope") or "unknown"),
         is_demo=bool(row.get("is_demo", False)),
@@ -97,7 +99,7 @@ class SqliteFinancialFactRepository:
                     statement_type TEXT NOT NULL,
                     source_kind TEXT NOT NULL,
                     source_url TEXT NOT NULL,
-                    filed_at TEXT NOT NULL,
+                    filed_at TEXT,
                     taxonomy_concept TEXT,
                     statement_scope TEXT NOT NULL,
                     is_demo INTEGER NOT NULL DEFAULT 0,
@@ -141,7 +143,7 @@ class SqliteFinancialFactRepository:
                         fact.statement_type,
                         fact.source_kind,
                         fact.source_url,
-                        fact.filed_at.isoformat(),
+                        fact.filed_at.isoformat() if fact.filed_at else None,
                         fact.taxonomy_concept,
                         fact.statement_scope,
                         int(fact.is_demo),
@@ -201,13 +203,7 @@ class FirestoreFinancialFactRepository:
             for fact in facts[start : start + chunk_size]:
                 row = fact_to_firestore_row(fact)
                 ref = self.client.collection("normalized_financial_facts").document(
-                    document_id(
-                        fact.ticker,
-                        "ingested",
-                        fact.period,
-                        fact.metric,
-                        fact.statement_scope,
-                    )
+                    fact_document_id(row)
                 )
                 batch.set(ref, row, merge=True)
             batch.commit()

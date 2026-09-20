@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.models import CompanyProfile
+from app.models import CompanyMasterRecord
 
 # Seed registry for the MVP. The architecture is intentionally not restricted to
 # wafer foundries; subindustry is retained so future peer comparisons can be
@@ -52,3 +53,13 @@ def find_company(text: str, ticker_hint: str | None = None) -> CompanyProfile | 
 
 def list_companies() -> list[CompanyProfile]:
     return list(SEMICONDUCTOR_COMPANIES.values())
+
+
+def profile_from_master(record: CompanyMasterRecord) -> CompanyProfile:
+    """Convert the persisted company-universe contract to the legacy service profile."""
+    return CompanyProfile(
+        ticker=record.ticker,
+        name=record.name,
+        subindustry=record.subindustry,
+        aliases=record.aliases or [record.ticker, record.name],
+    )

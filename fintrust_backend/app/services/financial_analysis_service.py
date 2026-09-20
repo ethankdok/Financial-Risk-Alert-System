@@ -7,6 +7,8 @@ from app.financial_analysis_models import (
     RuleSeverity,
 )
 from app.services.company_registry import get_company
+from app.services.company_registry import profile_from_master
+from app.services.company_master_repository import CompanyMasterRepository
 from app.services.financial_metrics import calculate_financial_metrics
 from app.services.financial_rule_engine import FinancialRuleEngine
 from app.services.statement_normalizer import normalize_twse_bundle
@@ -23,9 +25,11 @@ class FinancialAnalysisService:
         *,
         twse_client: TwseOpenApiClient | None = None,
         rule_engine: FinancialRuleEngine | None = None,
+        company_repository: CompanyMasterRepository | None = None,
     ) -> None:
         self.twse_client = twse_client or TwseOpenApiClient()
         self.rule_engine = rule_engine or FinancialRuleEngine()
+        self.company_repository = company_repository
 
     @staticmethod
     def _overall_severity(rule_results) -> RuleSeverity:
@@ -58,7 +62,8 @@ class FinancialAnalysisService:
         )
 
     async def analyze(self, ticker: str) -> FinancialStatementAnalysisReport:
-        profile = get_company(ticker)
+        master_record = self.company_repository.get(ticker) if self.company_repository else None
+        profile = profile_from_master(master_record) if master_record else get_company(ticker)
         if profile is None:
             raise UnsupportedCompanyError(
                 "MVP 僅分析已登錄的半導體公司；請先將公司加入 semiconductor registry。"

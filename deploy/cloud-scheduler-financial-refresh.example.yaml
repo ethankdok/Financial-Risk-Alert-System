@@ -1,0 +1,23 @@
+# Example only. Do not apply without production approval and secret review.
+# The FastAPI batch route also validates INGESTION_API_TOKEN in production.
+# Replace placeholders through an approved secret-delivery workflow; never commit
+# the token value. The route itself rejects tickers outside 2330/2454.
+
+name: fintrust-financial-refresh-2330-2454
+description: Refresh official financial analysis for the approved 2330/2454 scope
+schedule: "15 7 * * 1-5"
+timeZone: Asia/Taipei
+httpTarget:
+  uri: https://FINTRUST_API_URL/api/v1/financial/admin/refresh-all?years=5&trigger=scheduler&source_mode=official&tickers=2330&tickers=2454
+  httpMethod: POST
+  oidcToken:
+    serviceAccountEmail: fintrust-scheduler@PROJECT_ID.iam.gserviceaccount.com
+    audience: https://FINTRUST_API_URL
+  headers:
+    X-Ingestion-Token: SECRET_MANAGER_OR_APPROVED_RUNTIME_TOKEN_VALUE
+retryConfig:
+  retryCount: 2
+  maxRetryDuration: 600s
+  minBackoffDuration: 30s
+  maxBackoffDuration: 120s
+  maxDoublings: 2
