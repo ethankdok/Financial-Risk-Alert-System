@@ -17,9 +17,16 @@ class ApiContractTests(unittest.TestCase):
         os.environ["FINANCIAL_DATABASE_PATH"] = str(root / "pipeline.sqlite3")
         os.environ["FINANCIAL_FACT_DATABASE_PATH"] = str(root / "facts.sqlite3")
         os.environ["APP_ENV"] = "development"
-        from app.dependencies import get_analysis_repository, get_fact_repository
+        from app.dependencies import (
+            get_analysis_repository,
+            get_company_master_repository,
+            get_fact_repository,
+            get_ingestion_run_repository,
+        )
         get_analysis_repository.cache_clear()
         get_fact_repository.cache_clear()
+        get_company_master_repository.cache_clear()
+        get_ingestion_run_repository.cache_clear()
         from app.main import app
         cls.client = TestClient(app, raise_server_exceptions=False)
 
@@ -35,6 +42,14 @@ class ApiContractTests(unittest.TestCase):
         runs = self.client.get("/api/v1/financial/companies/2330/analysis-runs?limit=5")
         self.assertEqual(runs.status_code, 200)
         self.assertEqual(runs.json(), [])
+
+        universe = self.client.get("/api/v1/financial/company-universe")
+        self.assertEqual(universe.status_code, 200)
+        self.assertEqual(universe.json(), [])
+
+        ingestion_runs = self.client.get("/api/v1/financial/admin/ingestion-runs")
+        self.assertEqual(ingestion_runs.status_code, 200)
+        self.assertEqual(ingestion_runs.json(), [])
 
     def test_claim_extract_contract(self) -> None:
         response = self.client.post(

@@ -9,14 +9,25 @@ from uuid import uuid4
 from app.ai_analysis_models import AIFinancialAnalysisReport
 from app.financial_analysis_models import FinancialStatementAnalysisReport
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
-from app.pipeline_models import CompanyRefreshResult, RefreshAllResult
+from app.pipeline_models import (
+    CompanyRefreshResult,
+    IngestionRunRecord,
+    PersistenceCounts,
+    RefreshAllResult,
+)
 from app.services.ai_financial_analysis_service import AIFinancialAnalysisService
 from app.services.analysis_repository import AnalysisRepository, build_analysis_repository
 from app.services.company_registry import get_company, list_companies
+from app.services.company_registry import profile_from_master
+from app.services.company_master_repository import build_company_master_repository, CompanyMasterRepository
 from app.services.demo_fixture_sources import DEMO_SOURCE_URL, DemoMopsInlineXbrlClient, DemoTwseOpenApiClient
 from app.services.financial_analysis_service import FinancialAnalysisService, UnsupportedCompanyError
 from app.services.frontend_presenter import build_frontend_snapshot
 from app.services.historical_analysis_service import HistoricalFinancialAnalysisService
+from app.services.ingestion_run_repository import (
+    IngestionRunRepository,
+    build_ingestion_run_repository,
+)
 
 
 logger = logging.getLogger("fintrust.ingestion")
@@ -32,19 +43,27 @@ class FinancialIngestionPipeline:
         latest_service: FinancialAnalysisService | None = None,
         historical_service: HistoricalFinancialAnalysisService | None = None,
         ai_service: AIFinancialAnalysisService | None = None,
+        ingestion_run_repository: IngestionRunRepository | None = None,
+        company_repository: CompanyMasterRepository | None = None,
     ) -> None:
         self.repository = repository or build_analysis_repository()
         self.latest_service = latest_service or FinancialAnalysisService()
         self.historical_service = historical_service or HistoricalFinancialAnalysisService()
         self.ai_service = ai_service or AIFinancialAnalysisService()
+        self.ingestion_run_repository = ingestion_run_repository or build_ingestion_run_repository()
+        self.company_repository = company_repository or build_company_master_repository()
+        if latest_service is None:
+            self.latest_service = FinancialAnalysisService(company_repository=self.company_repository)
+        if historical_service is None:
+            self.historical_service = HistoricalFinancialAnalysisService(company_repository=self.company_repository)
 
     def _services_for_mode(self, source_mode: SourceMode) -> tuple[FinancialAnalysisService, HistoricalFinancialAnalysisService]:
         if source_mode == "official":
             return self.latest_service, self.historical_service
         if source_mode == "demo_fixture":
             return (
-                FinancialAnalysisService(twse_client=DemoTwseOpenApiClient()),
-                HistoricalFinancialAnalysisService(mops_client=DemoMopsInlineXbrlClient()),
+                FinancialAnalysisService(twse_client=DemoTwseOpenApiClient(), company_repository=self.company_repository),
+                HistoricalFinancialAnalysisService(mops_client=DemoMopsInlineXbrlClient(), company_repository=self.company_repository),
             )
         raise ValueError(f"Unsupported source mode: {source_mode}")
 
@@ -128,14 +147,30 @@ class FinancialIngestionPipeline:
         end_year: int | None = None,
         trigger: TriggerKind = "manual",
         source_mode: SourceMode = "official",
+        batch_id: str | None = None,
     ) -> CompanyRefreshResult:
-        profile = get_company(ticker)
+        master_record = self.company_repository.get(ticker)
+        profile = profile_from_master(master_record) if master_record else get_company(ticker)
         if profile is None:
             raise UnsupportedCompanyError("MVP 僅分析已登錄的半導體公司；請先將公司加入 semiconductor registry。")
 
         latest_service, historical_service = self._services_for_mode(source_mode)
         run_id = uuid4().hex
         started_at = datetime.now(timezone.utc)
+        ingestion_run = IngestionRunRecord(
+            run_id=run_id,
+            batch_id=batch_id,
+            ticker=profile.ticker,
+            company_name=profile.name,
+            subindustry=profile.subindustry,
+            trigger=trigger,
+            source_mode=source_mode,
+            requested_years=years,
+            end_year=end_year,
+            status="running",
+            started_at=started_at,
+        )
+        self.ingestion_run_repository.save(ingestion_run)
         logger.info(
             "pipeline_started run_id=%s ticker=%s subindustry=%s years=%s trigger=%s source_mode=%s",
             run_id, profile.ticker, profile.subindustry, years, trigger, source_mode,
@@ -193,8 +228,20 @@ class FinancialIngestionPipeline:
                 run_id, profile.ticker, source_mode, persistence.filings, persistence.facts,
                 persistence.metrics, persistence.rule_results, persistence.snapshots, ai_analysis is not None,
             )
+            self.ingestion_run_repository.save(
+                ingestion_run.model_copy(
+                    update={
+                        "status": "completed",
+                        "completed_at": completed_at,
+                        "records_found": persistence.total,
+                        "records_written": persistence.total,
+                        "persistence": persistence,
+                    }
+                )
+            )
             return CompanyRefreshResult(
                 run_id=run_id,
+                batch_id=batch_id,
                 ticker=profile.ticker,
                 company_name=profile.name,
                 subindustry=profile.subindustry,
@@ -212,8 +259,20 @@ class FinancialIngestionPipeline:
         except Exception as exc:
             completed_at = datetime.now(timezone.utc)
             logger.exception("pipeline_failed run_id=%s ticker=%s source_mode=%s error=%s", run_id, profile.ticker, source_mode, exc)
+            self.ingestion_run_repository.save(
+                ingestion_run.model_copy(
+                    update={
+                        "status": "failed",
+                        "completed_at": completed_at,
+                        "failed_records": 1,
+                        "persistence": PersistenceCounts(),
+                        "error_message": str(exc),
+                    }
+                )
+            )
             return CompanyRefreshResult(
                 run_id=run_id,
+                batch_id=batch_id,
                 ticker=profile.ticker,
                 company_name=profile.name,
                 subindustry=profile.subindustry,
@@ -234,8 +293,18 @@ class FinancialIngestionPipeline:
         source_mode: SourceMode = "official",
     ) -> RefreshAllResult:
         started_at = datetime.now(timezone.utc)
+        batch_id = uuid4().hex
         results: list[CompanyRefreshResult] = []
-        for company in list_companies():
+        if source_mode == "official":
+            master_companies = [
+                profile_from_master(company)
+                for company in self.company_repository.list_all()
+                if company.listing_status == "listed" and company.subindustry != "待分類"
+            ]
+            companies = master_companies or list_companies()
+        else:
+            companies = list_companies()
+        for company in companies:
             results.append(
                 await self.refresh_company(
                     company.ticker,
@@ -243,11 +312,13 @@ class FinancialIngestionPipeline:
                     end_year=end_year,
                     trigger=trigger,
                     source_mode=source_mode,
+                    batch_id=batch_id,
                 )
             )
         completed_at = datetime.now(timezone.utc)
         completed = sum(result.status == "completed" for result in results)
         return RefreshAllResult(
+            batch_id=batch_id,
             started_at=started_at,
             completed_at=completed_at,
             trigger=trigger,

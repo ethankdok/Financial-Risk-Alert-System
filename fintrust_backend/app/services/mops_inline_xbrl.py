@@ -324,6 +324,15 @@ class MopsInlineXbrlClient:
             )
         self.xbrl_client = xbrl_client or MOPSXBRLClient()
         self.parser = parser or XBRLParser()
+        parser_mode = os.getenv("MOPS_XBRL_PARSER_MODE", "arelle").strip().lower()
+        if parser is None and parser_mode == "lightweight":
+            # Arelle may attempt to resolve external taxonomy resources and can
+            # block in restricted runtimes. The bundled lxml path still parses
+            # facts and contexts and is sufficient for the canonical-field
+            # mapping used by this pipeline.
+            self.parser._arelle_available = False
+        elif parser_mode not in {"arelle", "lightweight"}:
+            raise ValueError("MOPS_XBRL_PARSER_MODE must be 'arelle' or 'lightweight'.")
         self.cache_enabled = cache_enabled
         self.cache_dir = Path(
             cache_dir

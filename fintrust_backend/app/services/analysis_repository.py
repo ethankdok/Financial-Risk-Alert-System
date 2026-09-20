@@ -5,7 +5,7 @@ import json
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from collections.abc import Iterator
 from typing import Any, Protocol
@@ -78,6 +78,7 @@ class AnalysisRepository(Protocol):
     ) -> list[dict[str, Any]]: ...
     def list_runs(self, ticker: str, limit: int = 20) -> list[AnalysisRunSummary]: ...
     def get_fact(self, ticker: str, metric: str, period: str) -> FinancialFact | None: ...
+    def ingest_facts(self, facts: list[FinancialFact]) -> int: ...
 
 
 def to_json(value: Any) -> str:
@@ -123,23 +124,40 @@ def historical_fact_rows(report: HistoricalFinancialAnalysisReport) -> list[dict
                 "source_kind": "mvp_fixture" if demo else "mops_xbrl",
                 "source_url": period.source_url,
                 "taxonomy_concept": period.concept_matches.get(field),
+                "statement_type": statement_type_for_metric(field),
+                "statement_scope": "consolidated",
             })
     return rows
 
 
 def latest_fact_rows(report: FinancialStatementAnalysisReport) -> list[dict[str, Any]]:
-    period = report.report_period or report.monthly_revenue_period or "latest"
-    coverage = next(
+    monthly_fields = {"monthly_revenue", "previous_month_revenue", "prior_year_month_revenue"}
+    source_by_field = {
+        field: coverage
+        for coverage in report.statement.source_coverage
+        if coverage.status == "available"
+        for field in coverage.fields_found
+    }
+    fallback = next(
         (item for item in report.statement.source_coverage if item.status == "available"),
         None,
     )
-    source_url = coverage.source_url if coverage else "https://openapi.twse.com.tw/"
-    demo = bool(coverage and "DEMO FIXTURE" in coverage.source_name.upper())
     rows: list[dict[str, Any]] = []
     for field in LATEST_FACT_FIELDS:
         value = getattr(report.statement, field)
         if value is None:
             continue
+        coverage = source_by_field.get(field) or fallback
+        source_url = coverage.source_url if coverage else "https://openapi.twse.com.tw/"
+        period = (
+            report.monthly_revenue_period
+            if field in monthly_fields
+            else report.report_period
+        ) or "latest"
+        if field in monthly_fields and not report.monthly_revenue_period:
+            # A monthly value without a parseable YYYY-MM is unsafe to publish.
+            continue
+        demo = bool(coverage and "DEMO FIXTURE" in coverage.source_name.upper())
         rows.append({
             "ticker": report.ticker,
             "company_name": report.company_name,
@@ -152,6 +170,8 @@ def latest_fact_rows(report: FinancialStatementAnalysisReport) -> list[dict[str,
             "source_kind": "mvp_fixture" if demo else "twse_openapi",
             "source_url": source_url,
             "taxonomy_concept": None,
+            "statement_type": statement_type_for_metric(field),
+            "statement_scope": "unknown",
         })
     return rows
 
@@ -228,13 +248,13 @@ def financial_fact_from_row(row: dict[str, Any]) -> FinancialFact:
         period=str(row["period"]),
         value=float(row["value"]),
         unit=str(row["unit"]),
-        statement_type=statement_type_for_metric(str(row["metric_code"])),
+        statement_type=str(row.get("statement_type") or statement_type_for_metric(str(row["metric_code"]))),
         source_kind=source_kind,
         source_url=str(row["source_url"]),
-        filed_at=row["retrieved_at"],
+        filed_at=row.get("filed_at") or row["retrieved_at"],
         taxonomy_concept=row.get("taxonomy_concept"),
-        statement_scope="consolidated" if analysis_type == "historical" else "unknown",
-        is_demo=source_kind == "mvp_fixture",
+        statement_scope=str(row.get("statement_scope") or ("consolidated" if analysis_type == "historical" else "unknown")),
+        is_demo=bool(row.get("is_demo", source_kind == "mvp_fixture")),
     )
 
 
@@ -271,7 +291,11 @@ class SqliteAnalysisRepository:
                 subindustry TEXT NOT NULL, analysis_type TEXT NOT NULL, period TEXT NOT NULL,
                 metric_code TEXT NOT NULL, value REAL NOT NULL, unit TEXT NOT NULL,
                 source_kind TEXT NOT NULL, source_url TEXT NOT NULL,
-                taxonomy_concept TEXT, retrieved_at TEXT NOT NULL
+                taxonomy_concept TEXT, retrieved_at TEXT NOT NULL,
+                statement_type TEXT NOT NULL DEFAULT 'income_statement',
+                statement_scope TEXT NOT NULL DEFAULT 'unknown',
+                filed_at TEXT,
+                is_demo INTEGER NOT NULL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS analysis_runs (
                 run_id TEXT PRIMARY KEY, ticker TEXT NOT NULL, company_name TEXT NOT NULL,
@@ -318,6 +342,20 @@ class SqliteAnalysisRepository:
             CREATE INDEX IF NOT EXISTS idx_official_events_ticker_type
                 ON official_events (ticker, event_type, event_date DESC, retrieved_at DESC);
             """)
+            columns = {
+                row["name"] for row in connection.execute(
+                    "PRAGMA table_info(normalized_financial_facts)"
+                ).fetchall()
+            }
+            migrations = {
+                "statement_type": "ALTER TABLE normalized_financial_facts ADD COLUMN statement_type TEXT NOT NULL DEFAULT 'income_statement'",
+                "statement_scope": "ALTER TABLE normalized_financial_facts ADD COLUMN statement_scope TEXT NOT NULL DEFAULT 'unknown'",
+                "filed_at": "ALTER TABLE normalized_financial_facts ADD COLUMN filed_at TEXT",
+                "is_demo": "ALTER TABLE normalized_financial_facts ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0",
+            }
+            for column, statement in migrations.items():
+                if column not in columns:
+                    connection.execute(statement)
 
     def save_pipeline_result(
         self,
@@ -354,13 +392,24 @@ class SqliteAnalysisRepository:
                      completed_at.isoformat()),
                 )
             for fact in facts:
-                fact_id = document_id(fact["ticker"], fact["analysis_type"], fact["period"], fact["metric_code"])
+                fact_id = document_id(
+                    fact["ticker"], fact["analysis_type"], fact["period"],
+                    fact["metric_code"], fact.get("statement_scope", "unknown"),
+                )
                 connection.execute(
-                    "INSERT OR REPLACE INTO normalized_financial_facts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    """INSERT OR REPLACE INTO normalized_financial_facts (
+                        fact_id, ticker, company_name, subindustry, analysis_type, period,
+                        metric_code, value, unit, source_kind, source_url,
+                        taxonomy_concept, retrieved_at, statement_type, statement_scope,
+                        filed_at, is_demo
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (fact_id, fact["ticker"], fact["company_name"], fact["subindustry"],
                      fact["analysis_type"], fact["period"], fact["metric_code"], fact["value"],
                      fact["unit"], fact["source_kind"], fact["source_url"],
-                     fact["taxonomy_concept"], completed_at.isoformat()),
+                     fact["taxonomy_concept"], completed_at.isoformat(),
+                     fact.get("statement_type", statement_type_for_metric(fact["metric_code"])),
+                     fact.get("statement_scope", "unknown"), completed_at.isoformat(),
+                     int(fact.get("source_kind") == "mvp_fixture")),
                 )
             for metric in metrics:
                 connection.execute(
@@ -533,6 +582,29 @@ class SqliteAnalysisRepository:
                 (ticker, metric, period),
             ).fetchone()
         return financial_fact_from_row(dict(row)) if row else None
+
+    def ingest_facts(self, facts: list[FinancialFact]) -> int:
+        with self._connect() as connection:
+            for fact in facts:
+                fact_id = document_id(
+                    fact.ticker, "ingested", fact.period, fact.metric, fact.statement_scope,
+                )
+                connection.execute(
+                    """INSERT OR REPLACE INTO normalized_financial_facts (
+                        fact_id, ticker, company_name, subindustry, analysis_type, period,
+                        metric_code, value, unit, source_kind, source_url,
+                        taxonomy_concept, retrieved_at, statement_type, statement_scope,
+                        filed_at, is_demo
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        fact_id, fact.ticker, fact.company_name, fact.semiconductor_subindustry,
+                        "ingested", fact.period, fact.metric, fact.value, fact.unit,
+                        fact.source_kind, fact.source_url, fact.taxonomy_concept,
+                        datetime.now(timezone.utc).isoformat(), fact.statement_type,
+                        fact.statement_scope, fact.filed_at.isoformat(), int(fact.is_demo),
+                    ),
+                )
+        return len(facts)
 
 
 def build_analysis_repository() -> AnalysisRepository:

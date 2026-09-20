@@ -92,6 +92,7 @@ class FirestoreAnalysisRepository:
                         fact["analysis_type"],
                         fact["period"],
                         fact["metric_code"],
+                        fact.get("statement_scope", "unknown"),
                     )
                 ),
                 {**fact, "retrieved_at": completed_at},
@@ -140,6 +141,27 @@ class FirestoreAnalysisRepository:
         payload = document.to_dict() or {}
         payload.pop("updated_at", None)
         return FrontendAnalysisSnapshot.model_validate(payload)
+
+    def ingest_facts(self, facts: list[FinancialFact]) -> int:
+        """Canonical direct-fact write path shared with the analysis pipeline."""
+        from app.services.fact_repository import fact_to_firestore_row
+
+        for start in range(0, len(facts), 200):
+            batch = self.client.batch()
+            for fact in facts[start : start + 200]:
+                row = fact_to_firestore_row(fact)
+                batch.set(
+                    self.client.collection("normalized_financial_facts").document(
+                        document_id(
+                            fact.ticker, "ingested", fact.period,
+                            fact.metric, fact.statement_scope,
+                        )
+                    ),
+                    {**row, "filed_at": fact.filed_at, "retrieved_at": fact.filed_at},
+                    merge=True,
+                )
+            batch.commit()
+        return len(facts)
 
     def save_official_events(
         self,

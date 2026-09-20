@@ -8,7 +8,11 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from app.ai_analysis_models import AIFinancialAnalysisReport, AnalysisRuleCatalogResponse
-from app.dependencies import get_analysis_repository, get_fact_repository
+from app.dependencies import (
+    get_analysis_repository,
+    get_company_master_repository,
+    get_ingestion_run_repository,
+)
 from app.financial_analysis_models import (
     FinancialStatementAnalysisReport,
     RuleCatalogResponse,
@@ -18,7 +22,9 @@ from app.models import (
     ClaimExtractionRequest,
     ClaimVerificationRequest,
     ClaimVerificationResult,
+    CompanyMasterRecord,
     CompanyListResponse,
+    CompanyUniverseSyncResult,
     FactIngestRequest,
     HealthResponse,
 )
@@ -35,13 +41,14 @@ from app.pipeline_models import (
     AnalysisRunSummary,
     CompanyRefreshResult,
     FrontendAnalysisSnapshot,
+    IngestionRunRecord,
     RefreshAllResult,
 )
 from app.services.ai_financial_analysis_service import AIFinancialAnalysisService
 from app.services.analysis_repository import AnalysisRepository
 from app.services.claim_parser import extract_claim
+from app.services.company_master_repository import CompanyMasterRepository
 from app.services.company_registry import list_companies
-from app.services.fact_repository import FinancialFactRepository
 from app.services.financial_analysis_service import (
     FinancialAnalysisService,
     UnsupportedCompanyError,
@@ -49,6 +56,7 @@ from app.services.financial_analysis_service import (
 from app.services.financial_rule_engine import FinancialRuleEngine
 from app.services.historical_analysis_service import HistoricalFinancialAnalysisService
 from app.services.ingestion_pipeline import FinancialIngestionPipeline
+from app.services.ingestion_run_repository import IngestionRunRepository
 from app.services.monitorable_rule_engine import MonitorableFinancialRuleEngine
 from app.services.mops_inline_xbrl import MopsInlineXbrlError
 from app.services.official_document_extraction import (
@@ -64,6 +72,7 @@ from app.services.official_event_sources import (
 from app.services.official_evidence_service import OfficialEvidenceService
 from app.services.pipeline_evidence_repository import PipelineEvidenceRepository
 from app.services.twse_openapi import TwseOpenApiError
+from app.services.twse_company_universe import TwseCompanyUniverseService
 from app.services.verifier import verify_claim
 
 
@@ -136,6 +145,37 @@ def companies() -> CompanyListResponse:
         companies=list_companies(),
         note="此為可擴充的半導體公司 seed registry；系統依晶圓代工、IC 設計、封裝測試載入共通規則與子產業複合規則。",
     )
+
+
+@router.get("/company-universe", response_model=list[CompanyMasterRecord])
+def company_universe(
+    repository: CompanyMasterRepository = Depends(get_company_master_repository),
+) -> list[CompanyMasterRecord]:
+    return repository.list_all()
+
+
+@router.post(
+    "/admin/company-universe/sync",
+    response_model=CompanyUniverseSyncResult,
+    dependencies=[Depends(require_ingestion_token)],
+)
+async def sync_company_universe(
+    repository: CompanyMasterRepository = Depends(get_company_master_repository),
+) -> CompanyUniverseSyncResult:
+    return await TwseCompanyUniverseService(repository=repository).sync()
+
+
+@router.get(
+    "/admin/ingestion-runs",
+    response_model=list[IngestionRunRecord],
+    dependencies=[Depends(require_ingestion_token)],
+)
+def ingestion_runs(
+    ticker: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    repository: IngestionRunRepository = Depends(get_ingestion_run_repository),
+) -> list[IngestionRunRecord]:
+    return repository.list(ticker=ticker, limit=limit)
 
 
 @router.get("/rules", response_model=RuleCatalogResponse)
@@ -387,8 +427,8 @@ def persisted_analysis_runs(
 
 
 @router.post("/facts/ingest", dependencies=[Depends(require_ingestion_token)])
-def ingest_fact(request: FactIngestRequest, repository: FinancialFactRepository = Depends(get_fact_repository)):
-    count = repository.upsert_many(request.facts)
+def ingest_fact(request: FactIngestRequest, repository: AnalysisRepository = Depends(get_analysis_repository)):
+    count = repository.ingest_facts(request.facts)
     return {"status": "ok", "count": count}
 
 

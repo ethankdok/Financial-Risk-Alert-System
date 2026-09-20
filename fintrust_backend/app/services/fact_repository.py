@@ -34,6 +34,7 @@ def fact_to_firestore_row(fact: FinancialFact) -> dict[str, Any]:
         "source_url": fact.source_url,
         "taxonomy_concept": fact.taxonomy_concept,
         "statement_scope": fact.statement_scope,
+        "statement_type": fact.statement_type,
         "filed_at": fact.filed_at,
         "retrieved_at": fact.filed_at,
         "is_demo": fact.is_demo,

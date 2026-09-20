@@ -71,9 +71,35 @@ class PersistenceCounts(BaseModel):
     rule_results: int = 0
     snapshots: int = 0
 
+    @property
+    def total(self) -> int:
+        return self.filings + self.facts + self.metrics + self.rule_results + self.snapshots
+
+
+class IngestionRunRecord(BaseModel):
+    run_id: str
+    batch_id: str | None = None
+    ticker: str
+    company_name: str
+    subindustry: str
+    pipeline: Literal["financial_backfill"] = "financial_backfill"
+    trigger: Literal["scheduler", "manual", "demo", "startup"]
+    source_mode: Literal["official", "demo_fixture"]
+    requested_years: int = Field(ge=1)
+    end_year: int | None = None
+    status: Literal["running", "completed", "failed"]
+    started_at: datetime
+    completed_at: datetime | None = None
+    records_found: int = 0
+    records_written: int = 0
+    failed_records: int = 0
+    persistence: PersistenceCounts = Field(default_factory=PersistenceCounts)
+    error_message: str | None = None
+
 
 class CompanyRefreshResult(BaseModel):
     run_id: str
+    batch_id: str | None = None
     ticker: str
     company_name: str
     subindustry: str
@@ -91,6 +117,7 @@ class CompanyRefreshResult(BaseModel):
 
 
 class RefreshAllResult(BaseModel):
+    batch_id: str | None = None
     started_at: datetime
     completed_at: datetime
     trigger: Literal["scheduler", "manual", "demo", "startup"]

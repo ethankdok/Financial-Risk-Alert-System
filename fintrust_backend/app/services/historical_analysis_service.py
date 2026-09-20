@@ -6,6 +6,8 @@ from typing import Any
 from app.financial_analysis_models import RuleSeverity
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.services.company_registry import get_company
+from app.services.company_registry import profile_from_master
+from app.services.company_master_repository import CompanyMasterRepository
 from app.services.financial_analysis_service import UnsupportedCompanyError
 from app.services.financial_field_extensions import (
     register_analysis_field_aliases,
@@ -22,11 +24,13 @@ class HistoricalFinancialAnalysisService:
         *,
         mops_client: Any | None = None,
         rule_engine: HistoricalFinancialRuleEngine | None = None,
+        company_repository: CompanyMasterRepository | None = None,
     ) -> None:
         register_analysis_field_aliases()
         register_persistence_fields()
         self.mops_client = mops_client or RobustMopsInlineXbrlClient()
         self.rule_engine = rule_engine
+        self.company_repository = company_repository
 
     @staticmethod
     def _overall_severity(rule_results) -> RuleSeverity:
@@ -65,7 +69,8 @@ class HistoricalFinancialAnalysisService:
         years: int = 5,
         end_roc_year: int | None = None,
     ) -> HistoricalFinancialAnalysisReport:
-        profile = get_company(ticker)
+        master_record = self.company_repository.get(ticker) if self.company_repository else None
+        profile = profile_from_master(master_record) if master_record else get_company(ticker)
         if profile is None:
             raise UnsupportedCompanyError(
                 "MVP 僅分析已登錄的半導體公司；請先將公司加入 semiconductor registry。"
