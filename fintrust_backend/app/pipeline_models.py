@@ -9,6 +9,9 @@ from app.ai_analysis_models import AIFinancialAnalysisReport
 from app.financial_analysis_models import RuleSeverity
 
 
+COMPLETED_RUN_STATUS = "completed"
+
+
 class FrontendMetricCard(BaseModel):
     code: str
     label: str

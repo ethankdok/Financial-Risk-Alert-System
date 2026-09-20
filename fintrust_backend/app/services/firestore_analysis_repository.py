@@ -10,12 +10,14 @@ from app.official_event_models import InvestorConferenceRecord, MaterialEventRec
 from app.pipeline_models import AnalysisRunSummary, FrontendAnalysisSnapshot, PersistenceCounts
 from app.text_intelligence_models import NarrativeShiftResponse, TextMiningAnalysisResponse
 from app.services.analysis_repository import (
+    deduplicate_financial_fact_rows,
     document_id,
     fact_document_id,
     financial_fact_from_row,
     historical_fact_rows,
     latest_fact_rows,
     metric_rows,
+    preferred_financial_fact_row,
     rule_rows,
     statement_type_for_metric,
 )
@@ -312,7 +314,14 @@ class FirestoreAnalysisRepository:
         )
         if period:
             query = query.where(filter=FieldFilter("period", "==", period))
-        rows = [document.to_dict() or {} for document in query.stream()]
+        source_rows = []
+        for document in query.stream():
+            row = document.to_dict() or {}
+            row["_document_id"] = document.id
+            source_rows.append(row)
+        rows = deduplicate_financial_fact_rows(source_rows)
+        for row in rows:
+            row.pop("_document_id", None)
         for row in rows:
             row["statement_type"] = statement_type_for_metric(str(row.get("metric_code") or ""))
             row["label"] = row.get("metric_code")
@@ -367,16 +376,16 @@ class FirestoreAnalysisRepository:
             .where(filter=FieldFilter("period", "==", period))
             .stream()
         )
-        rows = [document.to_dict() or {} for document in documents]
-        if not rows:
+        source_rows = []
+        for document in documents:
+            item = document.to_dict() or {}
+            item["_document_id"] = document.id
+            source_rows.append(item)
+        row = preferred_financial_fact_row(source_rows)
+        if row is None:
             return None
-        rows.sort(
-            key=lambda row: (
-                0 if row.get("analysis_type") == "historical" else 1,
-                str(row.get("retrieved_at") or ""),
-            )
-        )
-        return financial_fact_from_row(rows[0])
+        row.pop("_document_id", None)
+        return financial_fact_from_row(row)
 
     def save_text_intelligence_result(
         self,

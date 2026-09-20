@@ -141,6 +141,124 @@ def fact_document_id(row: dict[str, Any]) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def legacy_fact_document_ids(row: dict[str, Any]) -> list[str]:
+    metric_code = _fact_metric_code(row)
+    ids = {
+        document_id(row["ticker"], row.get("analysis_type"), row["period"], metric_code),
+        document_id(
+            row["ticker"],
+            row.get("analysis_type"),
+            row["period"],
+            metric_code,
+            row.get("statement_scope") or "unknown",
+        ),
+    }
+    ids.discard(fact_document_id(row))
+    return sorted(ids)
+
+
+def _fact_metric_code(row: dict[str, Any]) -> str:
+    return str(row.get("metric_code") or row.get("metric") or "")
+
+
+def _fact_core_key(row: dict[str, Any]) -> tuple[str, ...]:
+    source_kind = str(row.get("source_kind") or "")
+    return (
+        "demo" if bool(row.get("is_demo")) or source_kind == "mvp_fixture" else "official",
+        str(row.get("ticker") or ""),
+        _fact_metric_code(row),
+        str(row.get("period") or ""),
+        str(row.get("unit") or ""),
+        source_kind,
+        str(row.get("source_url") or ""),
+    )
+
+
+def _fact_dimension(row: dict[str, Any], name: str) -> str | None:
+    value = row.get(name)
+    if value not in (None, ""):
+        return str(value)
+    if name == "statement_type" and row.get("fact_key_version") == FACT_KEY_VERSION:
+        return statement_type_for_metric(_fact_metric_code(row))
+    return None
+
+
+def _facts_are_compatible(legacy: dict[str, Any], versioned: dict[str, Any]) -> bool:
+    legacy_document_id = legacy.get("_document_id")
+    if legacy_document_id and legacy_document_id in legacy_fact_document_ids(versioned):
+        return True
+    if _fact_core_key(legacy) != _fact_core_key(versioned):
+        return False
+    for dimension in ("statement_scope", "statement_type"):
+        legacy_value = _fact_dimension(legacy, dimension)
+        versioned_value = _fact_dimension(versioned, dimension)
+        if legacy_value is not None and legacy_value != versioned_value:
+            return False
+    return True
+
+
+def _fact_timestamp(row: dict[str, Any]) -> float:
+    value = row.get("filed_at") or row.get("retrieved_at")
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return 0.0
+    else:
+        return 0.0
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.timestamp()
+
+
+def _fact_preference_key(row: dict[str, Any]) -> tuple[int, int, int, float, str]:
+    stable = json.dumps(row, ensure_ascii=False, sort_keys=True, default=str, separators=(",", ":"))
+    return (
+        1 if row.get("fact_key_version") == FACT_KEY_VERSION else 0,
+        1 if row.get("statement_scope") == "consolidated" else 0,
+        1 if row.get("analysis_type") == "historical" else 0,
+        _fact_timestamp(row),
+        stable,
+    )
+
+
+def deduplicate_financial_fact_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Prefer v2 facts while retaining unmatched legacy facts and valid v2 variants."""
+    versioned: dict[tuple[str, ...], dict[str, Any]] = {}
+    legacy: dict[tuple[str, ...], dict[str, Any]] = {}
+    for row in rows:
+        core = _fact_core_key(row)
+        if row.get("fact_key_version") == FACT_KEY_VERSION:
+            key = core + (
+                _fact_dimension(row, "statement_scope") or "",
+                _fact_dimension(row, "statement_type") or "",
+            )
+            previous = versioned.get(key)
+            if previous is None or _fact_preference_key(row) > _fact_preference_key(previous):
+                versioned[key] = row
+        else:
+            key = core + (
+                _fact_dimension(row, "statement_scope") or "",
+                _fact_dimension(row, "statement_type") or "",
+            )
+            previous = legacy.get(key)
+            if previous is None or _fact_preference_key(row) > _fact_preference_key(previous):
+                legacy[key] = row
+
+    selected = list(versioned.values())
+    for row in legacy.values():
+        if not any(_facts_are_compatible(row, candidate) for candidate in versioned.values()):
+            selected.append(row)
+    return sorted(selected, key=_fact_preference_key, reverse=True)
+
+
+def preferred_financial_fact_row(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    selected = deduplicate_financial_fact_rows(rows)
+    return selected[0] if selected else None
+
+
 def statement_type_for_metric(metric: str) -> str:
     if metric in INCOME_FIELDS:
         return "income_statement"

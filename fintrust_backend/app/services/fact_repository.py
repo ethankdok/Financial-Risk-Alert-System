@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Iterator, Protocol
 
 from app.models import FinancialFact
-from app.services.analysis_repository import fact_document_id
+from app.services.analysis_repository import fact_document_id, preferred_financial_fact_row
 
 
 class FinancialFactRepository(Protocol):
@@ -219,17 +219,16 @@ class FirestoreFinancialFactRepository:
             .where(filter=FieldFilter("period", "==", period))
             .stream()
         )
-        rows = [document.to_dict() or {} for document in documents]
-        if not rows:
+        source_rows = []
+        for document in documents:
+            item = document.to_dict() or {}
+            item["_document_id"] = document.id
+            source_rows.append(item)
+        row = preferred_financial_fact_row(source_rows)
+        if row is None:
             return None
-        rows.sort(
-            key=lambda row: (
-                0 if row.get("statement_scope") == "consolidated" else 1,
-                str(row.get("filed_at") or row.get("retrieved_at") or ""),
-            ),
-            reverse=False,
-        )
-        return firestore_row_to_fact(rows[0])
+        row.pop("_document_id", None)
+        return firestore_row_to_fact(row)
 
     def get_fact(self, ticker: str, metric: str, period: str) -> FinancialFact | None:
         return self.get(ticker, metric, period)
