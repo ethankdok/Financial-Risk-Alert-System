@@ -3,7 +3,7 @@
 
 name: fintrust-material-events-semiconductor
 description: Poll recent TWSE official material-event disclosures for the classified semiconductor universe
-schedule: "5 * * * 1-5"
+schedule: "5 * * * *"
 timeZone: Asia/Taipei
 httpTarget:
   uri: https://FINTRUST_API_URL/api/v1/financial/admin/official-events/refresh-all?include_conferences=false&include_material_events=true&material_openapi_only=true&trigger=scheduler&batch_scope=classified
@@ -15,7 +15,8 @@ httpTarget:
     X-Ingestion-Token: SECRET_MANAGER_OR_APPROVED_RUNTIME_TOKEN_VALUE
   # The material-event batch fetches the TWSE OpenAPI feed once and fans it out
   # across the classified company universe, so hourly polling does not multiply
-  # the upstream feed request by company count.
+  # the upstream feed request by company count. Hourly polling also covers
+  # disclosures outside regular market hours.
 retryConfig:
   retryCount: 2
   maxRetryDuration: 600s
