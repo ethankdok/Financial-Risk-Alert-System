@@ -167,7 +167,7 @@ class FirestoreCompanyMasterRepository:
             for company in companies[start : start + chunk_size]:
                 batch.set(
                     self.client.collection("companies").document(company.ticker),
-                    company.model_dump(mode="python"),
+                    company.model_dump(mode="json"),
                     merge=True,
                 )
             batch.commit()
