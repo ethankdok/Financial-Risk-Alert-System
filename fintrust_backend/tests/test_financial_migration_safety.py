@@ -469,6 +469,30 @@ class FinancialMigrationSafetyTests(unittest.TestCase):
         self.assertEqual(client.rows[key], target)
         self.assertEqual(client.events, [])
 
+    def test_source_newer_is_bound_to_approved_preflight_version(self) -> None:
+        older = datetime(2026, 8, 1, tzinfo=timezone.utc)
+        newer = datetime(2026, 9, 1, tzinfo=timezone.utc)
+        source = {"ticker": "2454", "period": "2025FY", "source_url": "official", "retrieved_at": newer}
+        target = {**source, "retrieved_at": older, "warnings": ["approved"]}
+        plan = build_plan({"financial_filings": [source]})
+        client = FakeFirestore()
+        document = plan["documents"][0]
+        key = ("financial_filings", document["document_id"])
+        client.external_write(key, target)
+        approved_inspection = preflight(client, plan)
+
+        externally_updated = {**target, "warnings": ["changed after approval"]}
+        client.external_write(key, externally_updated)
+        with self.assertRaisesRegex(AtomicWriteConflict, "version changed after preflight"):
+            execute_plan(
+                client,
+                plan,
+                allow_source_newer_overwrite=True,
+                approved_inspection=approved_inspection,
+            )
+        self.assertEqual(client.rows[key], externally_updated)
+        self.assertEqual(client.events, [])
+
     def test_transaction_failure_commits_no_partial_writes(self) -> None:
         first = fact_row(metric_code="revenue")
         second = fact_row(metric_code="net_income")

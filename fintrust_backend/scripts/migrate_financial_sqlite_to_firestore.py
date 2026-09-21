@@ -445,10 +445,11 @@ def execute_plan(
     plan: dict[str, Any],
     *,
     allow_source_newer_overwrite: bool = False,
+    approved_inspection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if plan["source_conflicts"]:
         raise RuntimeError("Source rows collide under the v2 fact key; no writes performed.")
-    inspection = preflight(client, plan)
+    inspection = approved_inspection if approved_inspection is not None else preflight(client, plan)
     blocked = [
         entry for entry in inspection["entries"]
         if entry["classification"] in {"TARGET_NEWER", "DIVERGENT"}
@@ -700,6 +701,7 @@ def main() -> int:
                 client,
                 plan,
                 allow_source_newer_overwrite=args.allow_source_newer_overwrite,
+                approved_inspection=inspection,
             )
             report = _report_payload(
                 status="written",
