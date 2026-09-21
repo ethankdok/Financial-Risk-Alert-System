@@ -494,40 +494,49 @@ def execute_plan(
 
     # One company-scoped transaction keeps all reads ahead of all writes and
     # makes a concurrent target change abort the entire execution unit.
-    transaction = client.transaction()
-    transaction_reads: dict[str, Any] = {}
-    references: dict[str, Any] = {}
-    for document in mutations:
-        path = f"{document['collection']}/{document['document_id']}"
-        reference = client.collection(document["collection"]).document(document["document_id"])
-        references[path] = reference
-        transaction_reads[path] = reference.get(transaction=transaction)
+    def apply_transaction(transaction: Any) -> None:
+        transaction_reads: dict[str, Any] = {}
+        references: dict[str, Any] = {}
+        for document in mutations:
+            path = f"{document['collection']}/{document['document_id']}"
+            reference = client.collection(document["collection"]).document(document["document_id"])
+            references[path] = reference
+            transaction_reads[path] = reference.get(transaction=transaction)
 
-    for path in attempted_paths:
-        entry = entries_by_path[path]
-        snapshot = transaction_reads[path]
-        if entry["classification"] == "NEW":
-            if snapshot.exists:
+        for path in attempted_paths:
+            entry = entries_by_path[path]
+            snapshot = transaction_reads[path]
+            if entry["classification"] == "NEW":
+                if snapshot.exists:
+                    raise AtomicWriteConflict(
+                        path, "NEW target was created after preflight", attempted_paths=attempted_paths
+                    )
+                continue
+
+            expected_update_time = inspection["_target_update_times"].get(path)
+            current_update_time = getattr(snapshot, "update_time", None)
+            if not snapshot.exists or current_update_time != expected_update_time:
                 raise AtomicWriteConflict(
-                    path, "NEW target was created after preflight", attempted_paths=attempted_paths
+                    path,
+                    "SOURCE_NEWER target version changed after preflight",
+                    attempted_paths=attempted_paths,
                 )
-            continue
 
-        expected_update_time = inspection["_target_update_times"].get(path)
-        current_update_time = getattr(snapshot, "update_time", None)
-        if not snapshot.exists or current_update_time != expected_update_time:
-            raise AtomicWriteConflict(
-                path,
-                "SOURCE_NEWER target version changed after preflight",
-                attempted_paths=attempted_paths,
-            )
+        for document in mutations:
+            path = f"{document['collection']}/{document['document_id']}"
+            transaction.set(references[path], document["payload"], merge=False)
 
-    for document in mutations:
-        path = f"{document['collection']}/{document['document_id']}"
-        transaction.set(references[path], document["payload"], merge=False)
     try:
-        transaction.commit()
+        if hasattr(client, "run_transaction"):
+            client.run_transaction(apply_transaction)
+        else:
+            from google.cloud.firestore_v1.transaction import transactional
+
+            transaction = client.transaction(max_attempts=1)
+            transactional(apply_transaction)(transaction)
     except Exception as exc:
+        if isinstance(exc, AtomicWriteConflict):
+            raise
         path = attempted_paths[0] if attempted_paths else "<empty-plan>"
         raise AtomicWriteConflict(
             path,

@@ -106,6 +106,11 @@ class FakeFirestore:
     def transaction(self) -> FakeTransaction:
         return FakeTransaction(self)
 
+    def run_transaction(self, callback) -> None:
+        transaction = self.transaction()
+        callback(transaction)
+        transaction.commit()
+
     def version_for(self, key: tuple[str, str]) -> int | None:
         if key not in self.rows:
             return None
