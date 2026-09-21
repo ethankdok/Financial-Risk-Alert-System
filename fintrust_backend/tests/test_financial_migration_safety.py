@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from scripts.migrate_financial_sqlite_to_firestore import (
+    AtomicWriteConflict,
+    PostWriteVerificationError,
     NoValidRunError,
     build_plan,
     build_manifest,
@@ -21,9 +23,10 @@ from scripts.audit_database_contract import audit
 
 
 class FakeSnapshot:
-    def __init__(self, payload: dict | None) -> None:
+    def __init__(self, payload: dict | None, update_time: int | None = None) -> None:
         self._payload = payload
         self.exists = payload is not None
+        self.update_time = update_time
 
     def to_dict(self) -> dict | None:
         return None if self._payload is None else dict(self._payload)
@@ -35,8 +38,11 @@ class FakeDocument:
         self.collection_name = collection
         self.document_id = document_id
 
-    def get(self) -> FakeSnapshot:
-        return FakeSnapshot(self.client.rows.get((self.collection_name, self.document_id)))
+    def get(self, transaction: "FakeTransaction | None" = None) -> FakeSnapshot:
+        if transaction is not None:
+            return transaction.get(self)
+        key = (self.collection_name, self.document_id)
+        return FakeSnapshot(self.client.rows.get(key), self.client.version_for(key))
 
 
 class FakeCollection:
@@ -48,42 +54,66 @@ class FakeCollection:
         return FakeDocument(self.client, self.name, document_id)
 
 
-class FakeBatch:
+class FakePreconditionFailed(RuntimeError):
+    pass
+
+
+class FakeTransaction:
     def __init__(self, client: "FakeFirestore") -> None:
         self.client = client
-        self.operations: list[tuple[str, FakeDocument, dict | None]] = []
+        self.operations: list[tuple[FakeDocument, dict]] = []
+        self.read_versions: dict[tuple[str, str], int | None] = {}
+
+    def get(self, ref: FakeDocument) -> FakeSnapshot:
+        key = (ref.collection_name, ref.document_id)
+        payload = self.client.rows.get(key)
+        version = self.client.version_for(key)
+        self.read_versions[key] = version
+        return FakeSnapshot(payload, version)
 
     def set(self, ref: FakeDocument, payload: dict, merge: bool = False) -> None:
-        self.operations.append(("set", ref, dict(payload)))
-
-    def delete(self, ref: FakeDocument) -> None:
-        self.operations.append(("delete", ref, None))
+        self.operations.append((ref, dict(payload)))
 
     def commit(self) -> None:
-        for operation, ref, payload in self.operations:
+        if self.client.before_commit is not None:
+            callback = self.client.before_commit
+            self.client.before_commit = None
+            callback(self.client)
+        for key, expected_version in self.read_versions.items():
+            if self.client.version_for(key) != expected_version:
+                raise FakePreconditionFailed(f"version changed: {key}")
+        for ref, payload in self.operations:
             key = (ref.collection_name, ref.document_id)
-            self.client.events.append((operation, *key))
-            if operation == "set":
-                assert payload is not None
-                stored = dict(payload)
-                if self.client.corrupt_readback:
-                    stored["value"] = -999
-                self.client.rows[key] = stored
-            else:
-                self.client.rows.pop(key, None)
+            self.client.events.append(("set", *key))
+            stored = dict(payload)
+            if self.client.corrupt_readback:
+                stored["value"] = -999
+            self.client.rows[key] = stored
+            self.client.versions[key] = (self.client.version_for(key) or 0) + 1
 
 
 class FakeFirestore:
     def __init__(self) -> None:
         self.rows: dict[tuple[str, str], dict] = {}
+        self.versions: dict[tuple[str, str], int] = {}
         self.events: list[tuple[str, str, str]] = []
         self.corrupt_readback = False
+        self.before_commit = None
 
     def collection(self, name: str) -> FakeCollection:
         return FakeCollection(self, name)
 
-    def batch(self) -> FakeBatch:
-        return FakeBatch(self)
+    def transaction(self) -> FakeTransaction:
+        return FakeTransaction(self)
+
+    def version_for(self, key: tuple[str, str]) -> int | None:
+        if key not in self.rows:
+            return None
+        return self.versions.get(key, 1)
+
+    def external_write(self, key: tuple[str, str], payload: dict) -> None:
+        self.rows[key] = dict(payload)
+        self.versions[key] = (self.version_for(key) or 0) + 1
 
 
 def fact_row(**overrides: object) -> dict:
@@ -327,6 +357,51 @@ class FinancialMigrationSafetyTests(unittest.TestCase):
         self.assertIn(("normalized_financial_facts", legacy_id), client.rows)
         self.assertNotIn("delete", [event[0] for event in client.events])
 
+    def test_atomic_create_succeeds_when_target_remains_absent(self) -> None:
+        row = fact_row()
+        plan = build_plan({"normalized_financial_facts": [row]})
+        client = FakeFirestore()
+        result = execute_plan(client, plan)
+        self.assertEqual(result["writes"], 1)
+        self.assertEqual(result["created_paths"], [
+            f"normalized_financial_facts/{fact_document_id(row)}"
+        ])
+
+    def test_atomic_create_rejects_target_created_after_preflight(self) -> None:
+        row = fact_row()
+        plan = build_plan({"normalized_financial_facts": [row]})
+        client = FakeFirestore()
+        key = ("normalized_financial_facts", fact_document_id(row))
+        concurrent = {**row, "value": 777.0}
+        client.before_commit = lambda current: current.external_write(key, concurrent)
+        with self.assertRaisesRegex(AtomicWriteConflict, "transaction commit rejected"):
+            execute_plan(client, plan)
+        self.assertEqual(client.rows[key], concurrent)
+        self.assertEqual(client.events, [])
+
+    def test_existing_target_is_never_overwritten_as_new(self) -> None:
+        row = fact_row()
+        plan = build_plan({"normalized_financial_facts": [row]})
+        client = FakeFirestore()
+        key = ("normalized_financial_facts", fact_document_id(row))
+        existing = {**row, "value": 222.0}
+        client.external_write(key, existing)
+        with self.assertRaisesRegex(RuntimeError, "newer or divergent"):
+            execute_plan(client, plan)
+        self.assertEqual(client.rows[key], existing)
+        self.assertEqual(client.events, [])
+
+    def test_same_target_is_a_successful_no_op(self) -> None:
+        row = fact_row()
+        plan = build_plan({"normalized_financial_facts": [row]})
+        client = FakeFirestore()
+        key = ("normalized_financial_facts", fact_document_id(row))
+        client.external_write(key, row)
+        result = execute_plan(client, plan)
+        self.assertEqual(result["writes"], 0)
+        self.assertEqual(result["verification"], "PASS")
+        self.assertEqual(client.events, [])
+
     def test_readback_failure_preserves_legacy_document(self) -> None:
         row = fact_row()
         plan = build_plan({"normalized_financial_facts": [row]})
@@ -334,8 +409,10 @@ class FinancialMigrationSafetyTests(unittest.TestCase):
         client = FakeFirestore()
         client.rows[("normalized_financial_facts", legacy_id)] = dict(row)
         client.corrupt_readback = True
-        with self.assertRaisesRegex(RuntimeError, "read-back"):
+        with self.assertRaisesRegex(PostWriteVerificationError, "read-back") as raised:
             execute_plan(client, plan)
+        self.assertEqual(raised.exception.execution["writes"], 1)
+        self.assertEqual(raised.exception.execution["verification"], "FAIL")
         self.assertNotIn("delete", [event[0] for event in client.events])
         self.assertIn(("normalized_financial_facts", legacy_id), client.rows)
 
@@ -358,6 +435,53 @@ class FinancialMigrationSafetyTests(unittest.TestCase):
         self.assertEqual(client.events, [])
         result = execute_plan(client, plan, allow_source_newer_overwrite=True)
         self.assertEqual(result["writes"], 1)
+
+    def test_source_newer_overwrite_rejects_concurrent_target_change(self) -> None:
+        older = datetime(2026, 8, 1, tzinfo=timezone.utc)
+        newer = datetime(2026, 9, 1, tzinfo=timezone.utc)
+        source = {"ticker": "2454", "period": "2025FY", "source_url": "official", "retrieved_at": newer}
+        target = {**source, "retrieved_at": older, "warnings": ["old"]}
+        plan = build_plan({"financial_filings": [source]})
+        client = FakeFirestore()
+        document = plan["documents"][0]
+        key = ("financial_filings", document["document_id"])
+        client.external_write(key, target)
+        concurrent = {**target, "warnings": ["concurrent"]}
+        client.before_commit = lambda current: current.external_write(key, concurrent)
+        with self.assertRaisesRegex(AtomicWriteConflict, "transaction commit rejected"):
+            execute_plan(client, plan, allow_source_newer_overwrite=True)
+        self.assertEqual(client.rows[key], concurrent)
+        self.assertEqual(client.events, [])
+
+    def test_source_newer_rejects_same_content_with_new_update_version(self) -> None:
+        older = datetime(2026, 8, 1, tzinfo=timezone.utc)
+        newer = datetime(2026, 9, 1, tzinfo=timezone.utc)
+        source = {"ticker": "2454", "period": "2025FY", "source_url": "official", "retrieved_at": newer}
+        target = {**source, "retrieved_at": older, "warnings": ["old"]}
+        plan = build_plan({"financial_filings": [source]})
+        client = FakeFirestore()
+        document = plan["documents"][0]
+        key = ("financial_filings", document["document_id"])
+        client.external_write(key, target)
+        client.before_commit = lambda current: current.external_write(key, target)
+        with self.assertRaisesRegex(AtomicWriteConflict, "transaction commit rejected"):
+            execute_plan(client, plan, allow_source_newer_overwrite=True)
+        self.assertEqual(client.rows[key], target)
+        self.assertEqual(client.events, [])
+
+    def test_transaction_failure_commits_no_partial_writes(self) -> None:
+        first = fact_row(metric_code="revenue")
+        second = fact_row(metric_code="net_income")
+        plan = build_plan({"normalized_financial_facts": [first, second]})
+        client = FakeFirestore()
+        conflict_key = ("normalized_financial_facts", fact_document_id(second))
+        client.before_commit = lambda current: current.external_write(conflict_key, second)
+        with self.assertRaises(AtomicWriteConflict) as raised:
+            execute_plan(client, plan)
+        self.assertEqual(len(raised.exception.attempted_paths), 2)
+        self.assertEqual(client.events, [])
+        first_key = ("normalized_financial_facts", fact_document_id(first))
+        self.assertNotIn(first_key, client.rows)
 
     def test_manifest_is_deterministic_and_describes_rollback(self) -> None:
         new_row = fact_row(metric_code="revenue")

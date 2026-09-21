@@ -78,6 +78,22 @@ class NoValidRunError(RuntimeError):
         super().__init__(f"no-valid-run: {collection} has no completed run for {ticker}")
 
 
+class AtomicWriteConflict(RuntimeError):
+    def __init__(self, path: str, reason: str, *, attempted_paths: list[str]) -> None:
+        self.path = path
+        self.reason = reason
+        self.attempted_paths = attempted_paths
+        super().__init__(f"atomic-write-conflict: {path}: {reason}")
+
+
+class PostWriteVerificationError(RuntimeError):
+    def __init__(self, execution: dict[str, Any]) -> None:
+        self.execution = execution
+        super().__init__(
+            f"Firestore read-back verification failed: {execution['verification_failures']}"
+        )
+
+
 def _decode(value: Any) -> Any:
     if not isinstance(value, str):
         return value
@@ -322,6 +338,7 @@ def classify_target(collection: str, source: dict[str, Any], target: dict[str, A
 def preflight(client: Any, plan: dict[str, Any]) -> dict[str, Any]:
     entries: list[dict[str, Any]] = []
     legacy_documents: list[dict[str, str]] = []
+    target_update_times: dict[str, Any] = {}
     references: dict[str, Any] = {}
     for document in plan["documents"]:
         collection = document["collection"]
@@ -345,19 +362,23 @@ def preflight(client: Any, plan: dict[str, Any]) -> dict[str, Any]:
         collection = document["collection"]
         snapshot = read_snapshot(collection, document["document_id"])
         existing = snapshot.to_dict() if snapshot.exists else None
+        path = f"{collection}/{document['document_id']}"
+        target_update_times[path] = getattr(snapshot, "update_time", None)
         classification = classify_target(collection, document["payload"], existing)
         overlaps: list[str] = []
         for legacy_id in document["legacy_document_ids"]:
             legacy = read_snapshot(collection, legacy_id)
             if legacy.exists:
-                path = f"{collection}/{legacy_id}"
-                overlaps.append(path)
-                legacy_documents.append({"collection": collection, "document_id": legacy_id, "path": path})
+                legacy_path = f"{collection}/{legacy_id}"
+                overlaps.append(legacy_path)
+                legacy_documents.append(
+                    {"collection": collection, "document_id": legacy_id, "path": legacy_path}
+                )
         entries.append(
             {
                 "collection": collection,
                 "document_id": document["document_id"],
-                "path": f"{collection}/{document['document_id']}",
+                "path": path,
                 "ticker": str(document["payload"].get("ticker") or ""),
                 "classification": classification,
                 "source_fingerprint": document["fingerprint"],
@@ -376,6 +397,7 @@ def preflight(client: Any, plan: dict[str, Any]) -> dict[str, Any]:
         "classification_counts": counts,
         "legacy_documents": legacy_documents,
         "legacy_overlap_count": len(legacy_documents),
+        "_target_update_times": target_update_times,
     }
 
 
@@ -445,18 +467,82 @@ def execute_plan(
         if entry["classification"] == "NEW"
         or (entry["classification"] == "SOURCE_NEWER" and allow_source_newer_overwrite)
     }
-    writes = 0
     mutations = [
         document for document in plan["documents"]
         if f"{document['collection']}/{document['document_id']}" in allowed_paths
     ]
-    for start in range(0, len(mutations), 200):
-        batch = client.batch()
-        for document in mutations[start : start + 200]:
-            ref = client.collection(document["collection"]).document(document["document_id"])
-            batch.set(ref, document["payload"], merge=False)
-            writes += 1
-        batch.commit()
+    attempted_paths = [
+        f"{document['collection']}/{document['document_id']}" for document in mutations
+    ]
+    entries_by_path = {entry["path"]: entry for entry in inspection["entries"]}
+
+    if not mutations:
+        return {
+            **{key: value for key, value in inspection.items() if not key.startswith("_")},
+            "attempted_writes": 0,
+            "writes": 0,
+            "created_paths": [],
+            "overwritten_paths": [],
+            "failed_writes": 0,
+            "skipped_writes": 0,
+            "legacy_deletes": 0,
+            "legacy_documents_preserved": True,
+            "verification": "PASS",
+            "executed_at": datetime.now(timezone.utc),
+        }
+
+    # One company-scoped transaction keeps all reads ahead of all writes and
+    # makes a concurrent target change abort the entire execution unit.
+    transaction = client.transaction()
+    transaction_reads: dict[str, Any] = {}
+    references: dict[str, Any] = {}
+    for document in mutations:
+        path = f"{document['collection']}/{document['document_id']}"
+        reference = client.collection(document["collection"]).document(document["document_id"])
+        references[path] = reference
+        transaction_reads[path] = reference.get(transaction=transaction)
+
+    for path in attempted_paths:
+        entry = entries_by_path[path]
+        snapshot = transaction_reads[path]
+        if entry["classification"] == "NEW":
+            if snapshot.exists:
+                raise AtomicWriteConflict(
+                    path, "NEW target was created after preflight", attempted_paths=attempted_paths
+                )
+            continue
+
+        expected_update_time = inspection["_target_update_times"].get(path)
+        current_update_time = getattr(snapshot, "update_time", None)
+        if not snapshot.exists or current_update_time != expected_update_time:
+            raise AtomicWriteConflict(
+                path,
+                "SOURCE_NEWER target version changed after preflight",
+                attempted_paths=attempted_paths,
+            )
+
+    for document in mutations:
+        path = f"{document['collection']}/{document['document_id']}"
+        transaction.set(references[path], document["payload"], merge=False)
+    try:
+        transaction.commit()
+    except Exception as exc:
+        path = attempted_paths[0] if attempted_paths else "<empty-plan>"
+        raise AtomicWriteConflict(
+            path,
+            f"transaction commit rejected; no migration writes committed ({type(exc).__name__})",
+            attempted_paths=attempted_paths,
+        ) from exc
+
+    writes = len(mutations)
+    created_paths = [
+        path for path in attempted_paths if entries_by_path[path]["classification"] == "NEW"
+    ]
+    overwritten_paths = [
+        path
+        for path in attempted_paths
+        if entries_by_path[path]["classification"] == "SOURCE_NEWER"
+    ]
 
     verification_failures: list[dict[str, str]] = []
     for document in mutations:
@@ -467,14 +553,35 @@ def execute_plan(
                 {"collection": document["collection"], "document_id": document["document_id"]}
             )
     if verification_failures:
-        raise RuntimeError(f"Firestore read-back verification failed: {verification_failures}")
+        raise PostWriteVerificationError(
+            {
+                **{key: value for key, value in inspection.items() if not key.startswith("_")},
+                "attempted_writes": len(attempted_paths),
+                "writes": writes,
+                "created_paths": created_paths,
+                "overwritten_paths": overwritten_paths,
+                "failed_writes": len(verification_failures),
+                "skipped_writes": 0,
+                "legacy_deletes": 0,
+                "legacy_documents_preserved": True,
+                "verification": "FAIL",
+                "verification_failures": verification_failures,
+                "executed_at": datetime.now(timezone.utc),
+            }
+        )
 
     return {
-        **inspection,
+        **{key: value for key, value in inspection.items() if not key.startswith("_")},
+        "attempted_writes": len(attempted_paths),
         "writes": writes,
+        "created_paths": created_paths,
+        "overwritten_paths": overwritten_paths,
+        "failed_writes": 0,
+        "skipped_writes": 0,
         "legacy_deletes": 0,
         "legacy_documents_preserved": True,
         "verification": "PASS",
+        "executed_at": datetime.now(timezone.utc),
     }
 
 
@@ -588,20 +695,53 @@ def main() -> int:
             inspection=inspection, manifest=manifest,
         )
     else:
-        execution = execute_plan(
-            client,
-            plan,
-            allow_source_newer_overwrite=args.allow_source_newer_overwrite,
-        )
-        report = _report_payload(
-            status="written",
-            project=args.project,
-            tickers=args.tickers,
-            plan=plan,
-            execution=execution,
-            inspection=inspection,
-            manifest=manifest,
-        )
+        try:
+            execution = execute_plan(
+                client,
+                plan,
+                allow_source_newer_overwrite=args.allow_source_newer_overwrite,
+            )
+            report = _report_payload(
+                status="written",
+                project=args.project,
+                tickers=args.tickers,
+                plan=plan,
+                execution=execution,
+                inspection=inspection,
+                manifest=manifest,
+            )
+        except AtomicWriteConflict as exc:
+            report = _report_payload(
+                status="blocked",
+                project=args.project,
+                tickers=args.tickers,
+                plan=plan,
+                execution={
+                    "attempted_writes": len(exc.attempted_paths),
+                    "writes": 0,
+                    "created_paths": [],
+                    "overwritten_paths": [],
+                    "failed_writes": len(exc.attempted_paths),
+                    "skipped_writes": 0,
+                    "legacy_deletes": 0,
+                    "verification": "NOT_RUN",
+                    "conflict_path": exc.path,
+                    "conflict_reason": exc.reason,
+                    "executed_at": datetime.now(timezone.utc),
+                },
+                inspection=inspection,
+                manifest=manifest,
+            )
+        except PostWriteVerificationError as exc:
+            report = _report_payload(
+                status="partial",
+                project=args.project,
+                tickers=args.tickers,
+                plan=plan,
+                execution=exc.execution,
+                inspection=inspection,
+                manifest=manifest,
+            )
 
     if args.manifest:
         if manifest is None:
@@ -616,7 +756,7 @@ def main() -> int:
             json.dumps(_json_value(report), ensure_ascii=False, indent=2), encoding="utf-8"
         )
     print(json.dumps(_json_value(report), ensure_ascii=False, indent=2))
-    return 0
+    return 0 if report["status"] in {"dry_run", "written"} else 3
 
 
 if __name__ == "__main__":
