@@ -8,8 +8,8 @@ from app.services.ai_financial_analysis_service import AIFinancialAnalysisServic
 from app.services.historical_analysis_service import HistoricalFinancialAnalysisService
 
 
-_DEFAULT_MODEL = "gemini-2.5-flash"
-_DEFAULT_FALLBACK_MODEL = "gemini-2.5-flash-lite"
+_DEFAULT_MODEL = "gemini-3.6-flash"
+_DEFAULT_FALLBACK_MODEL = "gemini-3.5-flash-lite"
 
 
 async def main() -> None:

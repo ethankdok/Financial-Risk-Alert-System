@@ -370,7 +370,7 @@ class Phase12TextEvidenceE2ETests(unittest.TestCase):
         self.assertIn("official_text_evidence", client.models.last_prompt)
         self.assertIn("run-2454", client.models.last_prompt)
         self.assertEqual(client.models.last_request["config"]["temperature"], 0.1)
-        self.assertEqual(trace.model, "gemini-2.5-flash")
+        self.assertEqual(trace.model, "gemini-3.6-flash")
         self.assertIsNone(failed)
         self.assertEqual(failed_trace.error_code, 429)
         self.assertEqual(failed_trace.error_type, "RuntimeError")

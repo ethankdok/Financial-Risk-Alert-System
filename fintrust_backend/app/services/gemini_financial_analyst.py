@@ -9,8 +9,8 @@ from typing import Any
 from app.ai_analysis_models import DimensionAssessment, LLMAnalysisTrace, LLMNarrative, MonitoredRuleResult
 
 
-_DEFAULT_MODEL = "gemini-2.5-flash"
-_DEFAULT_FALLBACK_MODEL = "gemini-2.5-flash-lite"
+_DEFAULT_MODEL = "gemini-3.6-flash"
+_DEFAULT_FALLBACK_MODEL = "gemini-3.5-flash-lite"
 _DEFAULT_TIMEOUT_SECONDS = 45.0
 _TEMPERATURE = 0.1
 _RETRYABLE_API_CODES = {408, 429, 500, 502, 503, 504}
