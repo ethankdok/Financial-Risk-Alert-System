@@ -440,6 +440,26 @@ def build_manifest(plan: dict[str, Any], inspection: dict[str, Any]) -> dict[str
     return {**public, "manifest_fingerprint": fingerprint(public)}
 
 
+def validate_approved_overwrites(
+    approved_manifest: dict[str, Any],
+    inspection: dict[str, Any],
+) -> None:
+    approved = {
+        entry["path"]: (entry["target_fingerprint"], entry["source_fingerprint"])
+        for entry in approved_manifest.get("entries", [])
+        if entry.get("classification") == "SOURCE_NEWER"
+    }
+    current = {
+        entry["path"]: (entry["target_fingerprint"], entry["source_fingerprint"])
+        for entry in inspection["entries"]
+        if entry["classification"] == "SOURCE_NEWER"
+    }
+    if current != approved:
+        raise RuntimeError(
+            "SOURCE_NEWER targets do not match the approved backup manifest; no writes performed."
+        )
+
+
 def execute_plan(
     client: Any,
     plan: dict[str, Any],
@@ -659,10 +679,17 @@ def main() -> int:
     )
     parser.add_argument("--report", type=Path)
     parser.add_argument("--manifest", type=Path)
+    parser.add_argument(
+        "--approved-manifest",
+        type=Path,
+        help="Backup-time manifest required for SOURCE_NEWER execution approval",
+    )
     args = parser.parse_args()
 
     if args.allow_source_newer_overwrite and not args.execute:
         raise SystemExit("--allow-source-newer-overwrite requires --execute")
+    if args.allow_source_newer_overwrite and args.approved_manifest is None:
+        raise SystemExit("--allow-source-newer-overwrite requires --approved-manifest")
     if not args.source.is_file():
         raise SystemExit(f"Source database does not exist: {args.source}")
 
@@ -699,6 +726,11 @@ def main() -> int:
         client = firestore.Client(project=args.project)
         inspection = preflight(client, plan)
         manifest = build_manifest(plan, inspection)
+        if args.execute and args.allow_source_newer_overwrite:
+            if not args.approved_manifest.is_file():
+                raise SystemExit(f"Approved manifest does not exist: {args.approved_manifest}")
+            approved_manifest = json.loads(args.approved_manifest.read_text(encoding="utf-8"))
+            validate_approved_overwrites(approved_manifest, inspection)
     if not args.execute:
         report = _report_payload(
             status="dry_run", project=args.project, tickers=args.tickers, plan=plan,

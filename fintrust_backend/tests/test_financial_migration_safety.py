@@ -18,6 +18,7 @@ from scripts.migrate_financial_sqlite_to_firestore import (
     fact_document_id,
     preflight,
     _normalize_payload,
+    validate_approved_overwrites,
 )
 from scripts.audit_database_contract import audit
 
@@ -538,6 +539,32 @@ class FinancialMigrationSafetyTests(unittest.TestCase):
         self.assertEqual(by_class["SOURCE_NEWER"]["rollback_action"], "RESTORE_PRE_IMAGE")
         self.assertTrue(by_class["SOURCE_NEWER"]["pre_image_backup_required"])
         self.assertTrue(all(entry["legacy_documents_preserved"] for entry in first["entries"]))
+
+    def test_source_newer_execution_matches_approved_backup_manifest(self) -> None:
+        source = {
+            "ticker": "2454",
+            "period": "2025FY",
+            "source_url": "official",
+            "retrieved_at": datetime(2026, 9, 1, tzinfo=timezone.utc),
+        }
+        target = {
+            **source,
+            "retrieved_at": datetime(2026, 8, 1, tzinfo=timezone.utc),
+        }
+        plan = build_plan({"financial_filings": [source]})
+        client = FakeFirestore()
+        document = plan["documents"][0]
+        key = ("financial_filings", document["document_id"])
+        client.external_write(key, target)
+        inspection = preflight(client, plan)
+        approved = build_manifest(plan, inspection)
+        validate_approved_overwrites(approved, inspection)
+
+        changed_target = {**target, "warnings": ["changed after backup"]}
+        client.external_write(key, changed_target)
+        changed_inspection = preflight(client, plan)
+        with self.assertRaisesRegex(RuntimeError, "approved backup manifest"):
+            validate_approved_overwrites(approved, changed_inspection)
 
 
 if __name__ == "__main__":
