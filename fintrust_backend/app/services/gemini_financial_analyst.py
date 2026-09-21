@@ -12,6 +12,7 @@ from app.ai_analysis_models import DimensionAssessment, LLMAnalysisTrace, LLMNar
 _DEFAULT_MODEL = "gemini-3.6-flash"
 _DEFAULT_FALLBACK_MODEL = "gemini-3.5-flash-lite"
 _DEFAULT_TIMEOUT_SECONDS = 45.0
+_MINIMUM_API_KEY_LENGTH = 20
 _TEMPERATURE = 0.1
 _RETRYABLE_API_CODES = {408, 429, 500, 502, 503, 504}
 _DIMENSION_KEYS = [
@@ -85,8 +86,7 @@ class GeminiFinancialAnalyst:
     def configured(self) -> bool:
         return bool(
             self.model
-            and self._api_key.startswith("AIza")
-            and len(self._api_key) >= 35
+            and len(self._api_key) >= _MINIMUM_API_KEY_LENGTH
             and not any(character.isspace() for character in self._api_key)
         )
 

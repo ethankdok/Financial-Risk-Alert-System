@@ -427,6 +427,14 @@ class Phase12TextEvidenceE2ETests(unittest.TestCase):
         self.assertEqual(timeout_trace.status, "failed")
         self.assertTrue(timeout_trace.retryable)
 
+    def test_gemini_accepts_current_api_key_formats_without_legacy_prefix(self) -> None:
+        current_format = GeminiFinancialAnalyst(api_key="current_format_key_" + "A" * 35)
+        malformed = GeminiFinancialAnalyst(api_key="too-short")
+
+        self.assertTrue(current_format.configured)
+        self.assertIsNone(current_format.health()["configuration_error"])
+        self.assertFalse(malformed.configured)
+
     def test_unified_orchestrator_preserves_stage_level_status(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repository = SqliteAnalysisRepository(str(Path(directory) / "pipeline.sqlite3"))
