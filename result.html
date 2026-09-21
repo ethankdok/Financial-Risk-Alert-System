@@ -211,7 +211,7 @@
 <section class="page-hero">
   <div class="container">
     <div class="breadcrumb">首頁 / 金融資訊分析 / 分析結果</div>
-    <h1>可信度分析結果</h1>
+    <h1>金融資訊分析結果</h1>
     <p>查詢內容載入中</p>
   </div>
 </section>
@@ -276,12 +276,9 @@
     </div>
 
     <div class="content-card" id="dataShiftSection">
-      <h3>跨期文字變化分析</h3>
+      <h3>Data Shift 跨期文字變化</h3>
 
-      <p>
-        比較不同期間的財報、法說會或其他官方文字資料，
-        衡量公司資訊內容是否出現顯著變化。
-      </p>
+      <p class="section-lead">比較同一家公司不同期間的法說會文字，觀察詞彙分布與整體文本相似度是否出現異常變化。</p>
 
       <div class="drift-run-panel">
         <strong>法說會跨期比較</strong>
@@ -338,32 +335,27 @@
           </span>
         </div>
 
-        <div class="drift-grid">
-
-          <div class="drift-metric">
+        <div class="drift-report">
+          <div class="drift-report-row">
             <span>資料漂移程度</span>
             <strong id="driftLevel">—</strong>
           </div>
-
-          <div class="drift-metric">
+          <div class="drift-report-row">
             <span>Jensen-Shannon Divergence</span>
             <strong id="driftJsd">—</strong>
           </div>
-
-          <div class="drift-metric">
+          <div class="drift-report-row">
             <span>Cosine Similarity</span>
             <strong id="driftCosine">—</strong>
           </div>
-
-          <div class="drift-metric">
+          <div class="drift-report-row">
             <span>資料品質</span>
             <strong id="driftQuality">—</strong>
           </div>
-
         </div>
 
         <div class="drift-status">
-          <b>系統判讀</b>
+          <b>判定結果</b>
           <p id="driftInterpretation">—</p>
         </div>
 
