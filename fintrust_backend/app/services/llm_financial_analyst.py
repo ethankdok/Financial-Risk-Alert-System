@@ -47,11 +47,13 @@ class LLMFinancialAnalyst:
     def _evidence_payload(
         dimensions: list[DimensionAssessment],
         rules: list[MonitoredRuleResult],
+        source_context: dict[str, Any] | None = None,
         official_text_evidence: list[dict[str, Any]] | None = None,
         narrative_shift: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return {
             "dimensions": [item.model_dump(mode="json") for item in dimensions],
+            "source_context": source_context or {},
             "triggered_rules": [
                 item.model_dump(mode="json")
                 for item in rules
@@ -69,6 +71,7 @@ class LLMFinancialAnalyst:
         subindustry: str,
         dimensions: list[DimensionAssessment],
         rules: list[MonitoredRuleResult],
+        source_context: dict[str, Any] | None = None,
         official_text_evidence: list[dict[str, Any]] | None = None,
         narrative_shift: dict[str, Any] | None = None,
     ) -> tuple[LLMNarrative | None, LLMAnalysisTrace]:
@@ -85,7 +88,7 @@ class LLMFinancialAnalyst:
                 used_rule_ids=used_rule_ids,
             )
 
-        evidence = self._evidence_payload(dimensions, rules, official_text_evidence, narrative_shift)
+        evidence = self._evidence_payload(dimensions, rules, source_context, official_text_evidence, narrative_shift)
         system_prompt = (
             "你是金融資訊可信度系統中的財報分析 AI。只能使用提供的官方財報衍生證據與規則結果，"
             "不得自行補數字、不得預測股價、不得提供投資建議。分析時必須區分直接指標與間接指標，"

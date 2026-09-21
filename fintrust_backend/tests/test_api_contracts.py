@@ -58,6 +58,26 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(rules.status_code, 200)
         self.assertEqual(rules.json()["rule_results"], [])
 
+    def test_paid_ai_routes_require_ingestion_token(self) -> None:
+        previous = os.environ.get("INGESTION_API_TOKEN")
+        os.environ["INGESTION_API_TOKEN"] = "test-ingestion-token"
+        try:
+            live = self.client.post("/api/v1/financial/ai/companies/2330/analyze?years=3")
+            snapshot = self.client.post("/api/v1/financial/ai/companies/9999/narrative")
+            authorized_missing = self.client.post(
+                "/api/v1/financial/ai/companies/9999/narrative",
+                headers={"X-Ingestion-Token": "test-ingestion-token"},
+            )
+        finally:
+            if previous is None:
+                os.environ.pop("INGESTION_API_TOKEN", None)
+            else:
+                os.environ["INGESTION_API_TOKEN"] = previous
+
+        self.assertEqual(live.status_code, 401)
+        self.assertEqual(snapshot.status_code, 401)
+        self.assertEqual(authorized_missing.status_code, 404)
+
     def test_direct_ingest_uses_canonical_analysis_repository(self) -> None:
         response = self.client.post(
             "/api/v1/financial/facts/ingest",

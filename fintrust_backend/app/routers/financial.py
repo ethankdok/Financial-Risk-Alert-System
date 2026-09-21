@@ -124,7 +124,11 @@ def statement_coverage() -> FinancialStatementCoverageReport:
     return audit_financial_statement_coverage()
 
 
-@router.post("/ai/companies/{ticker}/analyze", response_model=AIFinancialAnalysisReport)
+@router.post(
+    "/ai/companies/{ticker}/analyze",
+    response_model=AIFinancialAnalysisReport,
+    dependencies=[Depends(require_ingestion_token)],
+)
 async def analyze_company_with_ai(
     ticker: str,
     years: int = Query(default=3, ge=3, le=5),
@@ -145,6 +149,25 @@ async def analyze_company_with_ai(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except MopsInlineXbrlError as exc:
         raise HTTPException(status_code=502, detail=f"無法取得 MOPS Inline XBRL 歷史財報：{exc}") from exc
+
+
+@router.post(
+    "/ai/companies/{ticker}/narrative",
+    response_model=AIFinancialAnalysisReport,
+    dependencies=[Depends(require_ingestion_token)],
+)
+async def generate_narrative_from_latest_snapshot(
+    ticker: str,
+    repository: AnalysisRepository = Depends(get_analysis_repository),
+) -> AIFinancialAnalysisReport:
+    """Generate an LLM supplement from the latest completed snapshot without persisting it."""
+    snapshot = repository.get_latest_snapshot(ticker)
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail="No completed analysis snapshot is available.")
+    try:
+        return await AIFinancialAnalysisService().analyze_snapshot(snapshot)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/companies", response_model=CompanyListResponse)

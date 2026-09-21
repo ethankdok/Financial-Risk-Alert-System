@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from app.ai_analysis_models import (
     AIFinancialAnalysisReport,
@@ -18,6 +19,9 @@ from app.services.analysis_feature_engine import AnalysisFeatureEngine
 from app.services.llm_provider_protocol import FinancialLLMProvider, create_financial_llm_provider
 from app.services.llm_evidence_selection import select_llm_text_evidence
 from app.services.monitorable_rule_engine import MonitorableFinancialRuleEngine
+
+if TYPE_CHECKING:
+    from app.pipeline_models import FrontendAnalysisSnapshot
 
 
 class AIFinancialAnalysisService:
@@ -139,6 +143,11 @@ class AIFinancialAnalysisService:
                 subindustry=report.subindustry,
                 dimensions=dimensions,
                 rules=rules,
+                source_context={
+                    "source_period_start": report.start_year,
+                    "source_period_end": report.end_year,
+                    "source_method": report.source_method,
+                },
                 official_text_evidence=selected_evidence,
                 narrative_shift=narrative_shift,
             )
@@ -197,4 +206,48 @@ class AIFinancialAnalysisService:
             narrative_shift=narrative_shift,
             llm_evidence_ids=llm_evidence_ids,
             limitations=list(dict.fromkeys(limitations)),
+        )
+
+    async def analyze_snapshot(self, snapshot: FrontendAnalysisSnapshot) -> AIFinancialAnalysisReport:
+        """Generate a narrative from the latest persisted deterministic analysis without writing data."""
+        analysis = snapshot.ai_analysis
+        if analysis is None:
+            raise ValueError("Latest completed snapshot does not contain deterministic AI analysis.")
+
+        selected_evidence, llm_evidence_ids = select_llm_text_evidence(
+            list(analysis.official_text_evidence),
+            narrative_shift=analysis.narrative_shift,
+        )
+        narrative, trace = await self.llm_analyst.analyze(
+            company_name=analysis.company_name,
+            ticker=analysis.ticker,
+            subindustry=analysis.subindustry,
+            dimensions=analysis.dimension_assessments,
+            rules=analysis.rule_monitoring,
+            source_context={
+                "analysis_run_id": snapshot.analysis_run_id,
+                "snapshot_generated_at": snapshot.generated_at.isoformat(),
+                "data_updated_at": snapshot.data_updated_at.isoformat(),
+                "source_period_start": analysis.source_period_start,
+                "source_period_end": analysis.source_period_end,
+                "source_method": analysis.source_method,
+            },
+            official_text_evidence=selected_evidence,
+            narrative_shift=analysis.narrative_shift,
+        )
+        trace.llm_evidence_ids = llm_evidence_ids
+        limitations = list(analysis.limitations)
+        if trace.status == "not_configured":
+            limitations.append("LLM 尚未設定；deterministic 分析結果仍可使用。")
+        elif trace.status == "failed":
+            limitations.append("LLM 分析呼叫失敗；deterministic 分析結果仍可使用。")
+        return analysis.model_copy(
+            update={
+                "analyzed_at": datetime.now(timezone.utc),
+                "llm_narrative": narrative,
+                "llm_trace": trace,
+                "official_text_evidence": selected_evidence,
+                "llm_evidence_ids": llm_evidence_ids,
+                "limitations": list(dict.fromkeys(limitations)),
+            }
         )

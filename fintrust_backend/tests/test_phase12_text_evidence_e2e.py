@@ -82,9 +82,11 @@ class _FakeGeminiModels:
     def __init__(self, *, fail: bool = False) -> None:
         self.fail = fail
         self.last_prompt = None
+        self.last_request = None
 
     async def generate_content(self, **kwargs):
         self.last_prompt = kwargs["contents"]
+        self.last_request = kwargs
         if self.fail:
             error = RuntimeError("quota exhausted")
             setattr(error, "code", 429)
@@ -350,6 +352,7 @@ class Phase12TextEvidenceE2ETests(unittest.TestCase):
                 rules=rules,
                 official_text_evidence=evidence,
                 narrative_shift={"metrics": {"topic_distribution_jsd": 0.1}},
+                source_context={"analysis_run_id": "run-2454", "source_period_end": 2025},
             )
         )
         failed, failed_trace = asyncio.run(
@@ -365,10 +368,61 @@ class Phase12TextEvidenceE2ETests(unittest.TestCase):
         self.assertIsNotNone(narrative)
         self.assertEqual(trace.status, "completed")
         self.assertIn("official_text_evidence", client.models.last_prompt)
+        self.assertIn("run-2454", client.models.last_prompt)
+        self.assertEqual(client.models.last_request["config"]["temperature"], 0.1)
+        self.assertEqual(trace.model, "gemini-2.5-flash")
         self.assertIsNone(failed)
         self.assertEqual(failed_trace.error_code, 429)
         self.assertEqual(failed_trace.error_type, "RuntimeError")
         self.assertTrue(failed_trace.retryable)
+
+    def test_gemini_handles_missing_key_malformed_json_and_timeout(self) -> None:
+        class Models:
+            def __init__(self, mode):
+                self.mode = mode
+
+            async def generate_content(self, **kwargs):
+                if self.mode == "timeout":
+                    await asyncio.sleep(0.02)
+
+                class Response:
+                    parsed = None
+                    text = "not-json"
+
+                return Response()
+
+        class Client:
+            def __init__(self, mode):
+                self.models = Models(mode)
+
+        kwargs = {
+            "company_name": "台積電",
+            "ticker": "2330",
+            "subindustry": "晶圓代工",
+            "dimensions": [],
+            "rules": [],
+        }
+        missing, missing_trace = asyncio.run(GeminiFinancialAnalyst(api_key="").analyze(**kwargs))
+        malformed, malformed_trace = asyncio.run(
+            GeminiFinancialAnalyst(api_key="test-key", client=Client("malformed"), fallback_model="").analyze(**kwargs)
+        )
+        timed_out, timeout_trace = asyncio.run(
+            GeminiFinancialAnalyst(
+                api_key="test-key",
+                client=Client("timeout"),
+                fallback_model="",
+                timeout_seconds=0.001,
+            ).analyze(**kwargs)
+        )
+
+        self.assertIsNone(missing)
+        self.assertEqual(missing_trace.status, "not_configured")
+        self.assertIsNone(malformed)
+        self.assertEqual(malformed_trace.status, "failed")
+        self.assertEqual(malformed_trace.error_type, "JSONDecodeError")
+        self.assertIsNone(timed_out)
+        self.assertEqual(timeout_trace.status, "failed")
+        self.assertTrue(timeout_trace.retryable)
 
     def test_unified_orchestrator_preserves_stage_level_status(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

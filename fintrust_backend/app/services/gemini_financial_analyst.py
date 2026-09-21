@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import time
@@ -8,8 +9,10 @@ from typing import Any
 from app.ai_analysis_models import DimensionAssessment, LLMAnalysisTrace, LLMNarrative, MonitoredRuleResult
 
 
-_DEFAULT_MODEL = "gemini-3.6-flash"
-_DEFAULT_FALLBACK_MODEL = "gemini-3.5-flash-lite"
+_DEFAULT_MODEL = "gemini-2.5-flash"
+_DEFAULT_FALLBACK_MODEL = "gemini-2.5-flash-lite"
+_DEFAULT_TIMEOUT_SECONDS = 45.0
+_TEMPERATURE = 0.1
 _RETRYABLE_API_CODES = {408, 429, 500, 502, 503, 504}
 _DIMENSION_KEYS = [
     "growth",
@@ -45,6 +48,7 @@ _SYSTEM_PROMPT = (
     "目標價或任何投資建議。你的任務是做跨面向的受約束整合：指出一致訊號、mixed signals、資料不足與限制。"
     "dimension_insights 必須涵蓋八個固定面向；若某面向 evidence 不足，直接說明資料不足，不得補造內容。"
     "若收到 official_text_evidence 或 narrative_shift，只能作為補充官方文字脈絡，不得用來改寫 deterministic rule results。"
+    "每項具體判斷必須引用輸入中的期間、rule_id 或 actual_values；若輸入沒有具體值，必須明說證據不足。"
 )
 
 
@@ -60,6 +64,7 @@ class GeminiFinancialAnalyst:
         api_key: str | None = None,
         model: str | None = None,
         fallback_model: str | None = None,
+        timeout_seconds: float | None = None,
         client: Any | None = None,
     ) -> None:
         self._api_key = (api_key if api_key is not None else os.getenv("GEMINI_API_KEY", "")).strip()
@@ -71,6 +76,8 @@ class GeminiFinancialAnalyst:
             else os.getenv("FINANCIAL_LLM_FALLBACK_MODEL", _DEFAULT_FALLBACK_MODEL)
         )
         self.fallback_model = (raw_fallback or "").strip()
+        raw_timeout = timeout_seconds if timeout_seconds is not None else os.getenv("FINANCIAL_LLM_TIMEOUT_SECONDS", "")
+        self.timeout_seconds = float(raw_timeout or _DEFAULT_TIMEOUT_SECONDS)
         self._client = client
         self._root_client: Any | None = None
 
@@ -88,6 +95,8 @@ class GeminiFinancialAnalyst:
             "fallback_model": self.fallback_model or None,
             "prompt_version": self.prompt_version,
             "structured_output": True,
+            "timeout_seconds": self.timeout_seconds,
+            "temperature": _TEMPERATURE,
         }
 
     def _get_client(self) -> Any:
@@ -102,11 +111,13 @@ class GeminiFinancialAnalyst:
     def _evidence_payload(
         dimensions: list[DimensionAssessment],
         rules: list[MonitoredRuleResult],
+        source_context: dict[str, Any] | None = None,
         official_text_evidence: list[dict[str, Any]] | None = None,
         narrative_shift: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return {
             "dimensions": [item.model_dump(mode="json") for item in dimensions],
+            "source_context": source_context or {},
             "rule_results": [
                 item.model_dump(mode="json")
                 for item in rules
@@ -123,6 +134,8 @@ class GeminiFinancialAnalyst:
 
     @staticmethod
     def _is_retryable_api_error(exc: Exception) -> bool:
+        if isinstance(exc, TimeoutError):
+            return True
         code = GeminiFinancialAnalyst._error_code(exc)
         try:
             return int(code) in _RETRYABLE_API_CODES
@@ -162,6 +175,7 @@ class GeminiFinancialAnalyst:
             contents=user_prompt,
             config={
                 "max_output_tokens": 2500,
+                "temperature": _TEMPERATURE,
                 "system_instruction": _SYSTEM_PROMPT,
                 "response_mime_type": "application/json",
                 "response_json_schema": _LLM_NARRATIVE_JSON_SCHEMA,
@@ -187,6 +201,7 @@ class GeminiFinancialAnalyst:
         subindustry: str,
         dimensions: list[DimensionAssessment],
         rules: list[MonitoredRuleResult],
+        source_context: dict[str, Any] | None = None,
         official_text_evidence: list[dict[str, Any]] | None = None,
         narrative_shift: dict[str, Any] | None = None,
     ) -> tuple[LLMNarrative | None, LLMAnalysisTrace]:
@@ -206,7 +221,7 @@ class GeminiFinancialAnalyst:
                 llm_evidence_ids=[str(item.get("evidence_id")) for item in official_text_evidence or [] if item.get("evidence_id")],
             )
 
-        evidence = self._evidence_payload(dimensions, rules, official_text_evidence, narrative_shift)
+        evidence = self._evidence_payload(dimensions, rules, source_context, official_text_evidence, narrative_shift)
         user_prompt = json.dumps(
             {
                 "company": {"name": company_name, "ticker": ticker, "subindustry": subindustry},
@@ -219,7 +234,10 @@ class GeminiFinancialAnalyst:
 
         try:
             try:
-                response = await self._generate(model=self.model, user_prompt=user_prompt)
+                response = await asyncio.wait_for(
+                    self._generate(model=self.model, user_prompt=user_prompt),
+                    timeout=self.timeout_seconds,
+                )
             except Exception as primary_exc:
                 should_fallback = (
                     self.fallback_model
@@ -231,7 +249,10 @@ class GeminiFinancialAnalyst:
 
                 effective_model = self.fallback_model
                 try:
-                    response = await self._generate(model=effective_model, user_prompt=user_prompt)
+                    response = await asyncio.wait_for(
+                        self._generate(model=effective_model, user_prompt=user_prompt),
+                        timeout=self.timeout_seconds,
+                    )
                 except Exception as fallback_exc:
                     raise RuntimeError(
                         f"Primary Gemini model {self.model} failed with a retryable error "

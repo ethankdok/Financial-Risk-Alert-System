@@ -24,6 +24,7 @@ class FinancialLLMProvider(Protocol):
         subindustry: str,
         dimensions: list[DimensionAssessment],
         rules: list[MonitoredRuleResult],
+        source_context: dict[str, Any] | None = None,
         official_text_evidence: list[dict[str, Any]] | None = None,
         narrative_shift: dict[str, Any] | None = None,
     ) -> tuple[LLMNarrative | None, LLMAnalysisTrace]: ...
@@ -62,6 +63,7 @@ class UnavailableFinancialLLMProvider:
         subindustry: str,
         dimensions: list[DimensionAssessment],
         rules: list[MonitoredRuleResult],
+        source_context: dict[str, Any] | None = None,
         official_text_evidence: list[dict[str, Any]] | None = None,
         narrative_shift: dict[str, Any] | None = None,
     ) -> tuple[LLMNarrative | None, LLMAnalysisTrace]:
