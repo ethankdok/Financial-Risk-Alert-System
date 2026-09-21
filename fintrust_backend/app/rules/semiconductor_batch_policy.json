@@ -1,0 +1,17 @@
+{
+  "version": "semiconductor-production-batch-2026-09-21",
+  "source_report": "docs/database/semiconductor-expansion-coverage-2026-09-21.json",
+  "statement_scope": "consolidated",
+  "eligibility_rule": "data_coverage != FAIL",
+  "excluded": [
+    {"ticker": "3135", "reason": "No valid consolidated MOPS content in five candidate fiscal years."},
+    {"ticker": "3150", "reason": "No valid consolidated MOPS content in five candidate fiscal years."},
+    {"ticker": "5222", "reason": "No valid consolidated MOPS content in five candidate fiscal years."},
+    {"ticker": "5236", "reason": "No valid consolidated MOPS content in five candidate fiscal years."},
+    {"ticker": "6552", "reason": "No valid consolidated MOPS content in five candidate fiscal years."},
+    {"ticker": "6789", "reason": "No valid consolidated MOPS content in five candidate fiscal years."},
+    {"ticker": "6909", "reason": "No valid consolidated MOPS content in five candidate fiscal years."},
+    {"ticker": "6921", "reason": "No valid consolidated MOPS content in five candidate fiscal years."},
+    {"ticker": "8131", "reason": "No valid consolidated MOPS content in five candidate fiscal years."}
+  ]
+}

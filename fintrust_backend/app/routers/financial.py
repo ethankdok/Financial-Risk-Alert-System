@@ -40,6 +40,7 @@ from app.official_event_models import (
 from app.phase12_models import FinancialStatementCoverageReport, UnifiedCompanyAnalysisResponse
 from app.pipeline_models import (
     AnalysisRunSummary,
+    BatchIngestionRunRecord,
     CompanyRefreshResult,
     FrontendAnalysisSnapshot,
     IngestionRunRecord,
@@ -236,6 +237,18 @@ def ingestion_runs(
     repository: IngestionRunRepository = Depends(get_ingestion_run_repository),
 ) -> list[IngestionRunRecord]:
     return repository.list(ticker=ticker, limit=limit)
+
+
+@router.get(
+    "/admin/ingestion-batches",
+    response_model=list[BatchIngestionRunRecord],
+    dependencies=[Depends(require_ingestion_token)],
+)
+def ingestion_batches(
+    limit: int = Query(default=50, ge=1, le=200),
+    repository: IngestionRunRepository = Depends(get_ingestion_run_repository),
+) -> list[BatchIngestionRunRecord]:
+    return repository.list_batches(limit=limit)
 
 
 @router.get("/rules", response_model=RuleCatalogResponse)
@@ -466,7 +479,8 @@ async def refresh_all_company_pipelines(
     end_year: int | None = Query(default=None, ge=2019, le=datetime.now().year),
     trigger: Literal["scheduler", "manual", "demo", "startup"] = Query(default="scheduler"),
     source_mode: Literal["official", "demo_fixture"] = Query(default="official"),
-    tickers: list[str] = Query(default=["2330", "2454"]),
+    tickers: list[str] | None = Query(default=None),
+    batch_scope: Literal["default", "eligible", "explicit"] = Query(default="default"),
     repository: AnalysisRepository = Depends(get_analysis_repository),
 ) -> RefreshAllResult:
     try:
@@ -476,6 +490,7 @@ async def refresh_all_company_pipelines(
             trigger=trigger,
             source_mode=source_mode,
             tickers=tickers,
+            batch_scope=batch_scope,
         )
     except (UnsupportedCompanyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

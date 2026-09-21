@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from datetime import datetime, timezone
@@ -10,6 +11,8 @@ from app.ai_analysis_models import AIFinancialAnalysisReport
 from app.financial_analysis_models import FinancialStatementAnalysisReport
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.pipeline_models import (
+    BatchCompanyResult,
+    BatchIngestionRunRecord,
     CompanyRefreshResult,
     IngestionRunRecord,
     PersistenceCounts,
@@ -29,6 +32,10 @@ from app.services.ingestion_run_repository import (
     build_ingestion_run_repository,
 )
 from app.services.semiconductor_subindustries import classified_tickers
+from app.services.semiconductor_coverage import (
+    production_eligible_tickers,
+    production_excluded_tickers,
+)
 
 
 logger = logging.getLogger("fintrust.ingestion")
@@ -36,6 +43,10 @@ TriggerKind = Literal["scheduler", "manual", "demo", "startup"]
 SourceMode = Literal["official", "demo_fixture"]
 DEFAULT_REFRESH_TICKERS = ("2330", "2454")
 ALLOWED_BATCH_REFRESH_TICKERS = frozenset(classified_tickers())
+TRANSIENT_ERROR_MARKERS = (
+    "timeout", "timed out", "connection", "http 429", "http 500",
+    "http 502", "http 503", "http 504", "rate limit", "temporarily unavailable",
+)
 
 
 def validate_refresh_tickers(tickers: list[str] | tuple[str, ...]) -> tuple[str, ...]:
@@ -87,6 +98,11 @@ class FinancialIngestionPipeline:
                 HistoricalFinancialAnalysisService(mops_client=DemoMopsInlineXbrlClient(), company_repository=self.company_repository),
             )
         raise ValueError(f"Unsupported source mode: {source_mode}")
+
+    def _save_batch(self, record: BatchIngestionRunRecord) -> None:
+        saver = getattr(self.ingestion_run_repository, "save_batch", None)
+        if saver is not None:
+            saver(record)
 
     @staticmethod
     def _auto_llm_enabled(source_mode: SourceMode) -> bool:
@@ -233,6 +249,15 @@ class FinancialIngestionPipeline:
             )
             snapshot.ai_analysis = ai_analysis
             completed_at = datetime.now(timezone.utc)
+            rule_coverage_status = historical_report.rule_coverage_status
+            ai_status = ai_analysis.llm_trace.status if ai_analysis is not None else "failed"
+            result_status = (
+                "partial"
+                if rule_coverage_status in {"partial", "common_only"}
+                or historical_report.available_years < years
+                or ai_status in {"failed", "not_configured"}
+                else "completed"
+            )
 
             logger.info("stage=persist run_id=%s ticker=%s backend=%s", run_id, profile.ticker, self.repository.backend_name)
             persistence = self.repository.save_pipeline_result(
@@ -252,7 +277,7 @@ class FinancialIngestionPipeline:
             self.ingestion_run_repository.save(
                 ingestion_run.model_copy(
                     update={
-                        "status": "completed",
+                        "status": result_status,
                         "completed_at": completed_at,
                         "records_found": persistence.facts,
                         "records_written": persistence.facts,
@@ -268,7 +293,7 @@ class FinancialIngestionPipeline:
                 subindustry=profile.subindustry,
                 trigger=trigger,
                 source_mode=source_mode,
-                status="completed",
+                status=result_status,
                 started_at=started_at,
                 completed_at=completed_at,
                 latest_report_period=latest_report.report_period,
@@ -313,12 +338,25 @@ class FinancialIngestionPipeline:
         trigger: TriggerKind = "scheduler",
         source_mode: SourceMode = "official",
         tickers: list[str] | tuple[str, ...] | None = None,
+        batch_scope: Literal["default", "eligible", "explicit"] = "default",
     ) -> RefreshAllResult:
         started_at = datetime.now(timezone.utc)
         batch_id = uuid4().hex
         results: list[CompanyRefreshResult] = []
+        if tickers is not None:
+            batch_scope = "explicit"
+        if batch_scope == "eligible" and source_mode != "official":
+            raise ValueError("The eligible production scope is available only for official sources.")
+        excluded_tickers = (
+            sorted(production_excluded_tickers()) if batch_scope == "eligible" else []
+        )
+        selected_tickers = (
+            production_eligible_tickers()
+            if batch_scope == "eligible"
+            else tuple(tickers or configured_refresh_tickers())
+        )
         if source_mode == "official":
-            requested = validate_refresh_tickers(tuple(tickers or configured_refresh_tickers()))
+            requested = validate_refresh_tickers(tuple(selected_tickers))
             master_by_ticker = {
                 company.ticker: company
                 for company in self.company_repository.list_all()
@@ -330,34 +368,110 @@ class FinancialIngestionPipeline:
                 master = master_by_ticker.get(ticker)
                 if master is not None:
                     if master.subindustry == "待分類":
-                        raise ValueError(
-                            f"Ticker {ticker} is not eligible for refresh: subindustry is unclassified."
-                        )
+                        continue
                     companies.append(profile_from_master(master))
                     continue
                 seed = seed_by_ticker.get(ticker)
                 if seed is None:
-                    raise UnsupportedCompanyError(
-                        f"Ticker {ticker} is not present in the company master or reviewed seed registry."
-                    )
+                    continue
                 companies.append(seed)
         else:
-            requested = validate_refresh_tickers(tuple(tickers or configured_refresh_tickers()))
+            requested = validate_refresh_tickers(tuple(selected_tickers))
             seed_by_ticker = {company.ticker: company for company in list_companies()}
             companies = [seed_by_ticker[ticker] for ticker in requested if ticker in seed_by_ticker]
-        for company in companies:
-            results.append(
-                await self.refresh_company(
-                    company.ticker,
-                    years=years,
-                    end_year=end_year,
+        company_by_ticker = {company.ticker: company for company in companies}
+        running_batch = BatchIngestionRunRecord(
+            batch_id=batch_id,
+            scope=batch_scope,
+            trigger=trigger,
+            source_mode=source_mode,
+            requested_years=years,
+            end_year=end_year,
+            status="running",
+            started_at=started_at,
+            target_tickers=list(requested),
+            excluded_tickers=excluded_tickers,
+        )
+        self._save_batch(running_batch)
+
+        concurrency = max(1, min(8, int(os.getenv("FINANCIAL_BATCH_CONCURRENCY", "2"))))
+        max_attempts = max(1, min(3, int(os.getenv("FINANCIAL_BATCH_MAX_ATTEMPTS", "2"))))
+        request_delay = max(0.0, float(os.getenv("FINANCIAL_BATCH_REQUEST_DELAY_SECONDS", "0.25")))
+        semaphore = asyncio.Semaphore(concurrency)
+
+        async def run_company(index: int, ticker: str) -> CompanyRefreshResult:
+            company = company_by_ticker.get(ticker)
+            if company is None:
+                now = datetime.now(timezone.utc)
+                return CompanyRefreshResult(
+                    run_id=f"missing-{batch_id}-{ticker}",
+                    batch_id=batch_id,
+                    ticker=ticker,
+                    company_name=ticker,
+                    subindustry="待分類",
                     trigger=trigger,
                     source_mode=source_mode,
-                    batch_id=batch_id,
+                    status="failed",
+                    started_at=now,
+                    completed_at=now,
+                    error="Ticker is absent from the current company master and seed registry.",
                 )
+            if request_delay:
+                await asyncio.sleep(index * request_delay)
+            async with semaphore:
+                last_result: CompanyRefreshResult | None = None
+                for attempt in range(1, max_attempts + 1):
+                    last_result = await self.refresh_company(
+                        ticker,
+                        years=years,
+                        end_year=end_year,
+                        trigger=trigger,
+                        source_mode=source_mode,
+                        batch_id=batch_id,
+                    )
+                    error = (last_result.error or "").casefold()
+                    transient = any(marker in error for marker in TRANSIENT_ERROR_MARKERS)
+                    if last_result.status != "failed" or not transient or attempt == max_attempts:
+                        return last_result
+                    await asyncio.sleep(min(30.0, 2.0 ** attempt))
+                assert last_result is not None
+                return last_result
+
+        results = list(
+            await asyncio.gather(
+                *(run_company(index, ticker) for index, ticker in enumerate(requested))
             )
+        )
         completed_at = datetime.now(timezone.utc)
         completed = sum(result.status == "completed" for result in results)
+        partial = sum(result.status == "partial" for result in results)
+        failed = sum(result.status == "failed" for result in results)
+        batch_status = "failed" if failed == len(results) else "partial" if failed or partial else "completed"
+        batch_record = running_batch.model_copy(
+            update={
+                "status": batch_status,
+                "completed_at": completed_at,
+                "completed_companies": completed,
+                "partial_companies": partial,
+                "failed_companies": failed,
+                "company_results": [
+                    BatchCompanyResult(
+                        ticker=result.ticker,
+                        run_id=result.run_id,
+                        status=result.status,
+                        rule_coverage_status=(
+                            result.ai_analysis.rule_coverage_status
+                            if result.ai_analysis is not None else None
+                        ),
+                        history_available_years=result.history_available_years,
+                        snapshot_updated_at=(result.completed_at if result.snapshot is not None else None),
+                        error=result.error,
+                    )
+                    for result in results
+                ],
+            }
+        )
+        self._save_batch(batch_record)
         return RefreshAllResult(
             batch_id=batch_id,
             started_at=started_at,
@@ -366,6 +480,8 @@ class FinancialIngestionPipeline:
             source_mode=source_mode,
             requested_companies=len(results),
             completed_companies=completed,
-            failed_companies=len(results) - completed,
+            partial_companies=partial,
+            failed_companies=failed,
+            excluded_tickers=excluded_tickers,
             results=results,
         )

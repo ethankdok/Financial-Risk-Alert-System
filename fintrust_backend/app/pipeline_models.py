@@ -90,7 +90,7 @@ class IngestionRunRecord(BaseModel):
     source_mode: Literal["official", "demo_fixture"]
     requested_years: int = Field(ge=1)
     end_year: int | None = None
-    status: Literal["running", "completed", "failed"]
+    status: Literal["running", "completed", "partial", "failed"]
     started_at: datetime
     completed_at: datetime | None = None
     records_found: int = 0
@@ -108,7 +108,7 @@ class CompanyRefreshResult(BaseModel):
     subindustry: str
     trigger: Literal["scheduler", "manual", "demo", "startup"]
     source_mode: Literal["official", "demo_fixture"] = "official"
-    status: Literal["completed", "failed"]
+    status: Literal["completed", "partial", "failed"]
     started_at: datetime
     completed_at: datetime
     latest_report_period: str | None = None
@@ -119,6 +119,34 @@ class CompanyRefreshResult(BaseModel):
     error: str | None = None
 
 
+class BatchCompanyResult(BaseModel):
+    ticker: str
+    run_id: str | None = None
+    status: Literal["completed", "partial", "failed", "excluded"]
+    rule_coverage_status: Literal["full", "partial", "common_only", "unsupported"] | None = None
+    history_available_years: int = 0
+    snapshot_updated_at: datetime | None = None
+    error: str | None = None
+
+
+class BatchIngestionRunRecord(BaseModel):
+    batch_id: str
+    scope: Literal["default", "eligible", "explicit"]
+    trigger: Literal["scheduler", "manual", "demo", "startup"]
+    source_mode: Literal["official", "demo_fixture"]
+    requested_years: int = Field(ge=1)
+    end_year: int | None = None
+    status: Literal["running", "completed", "partial", "failed"]
+    started_at: datetime
+    completed_at: datetime | None = None
+    target_tickers: list[str] = Field(default_factory=list)
+    excluded_tickers: list[str] = Field(default_factory=list)
+    completed_companies: int = 0
+    partial_companies: int = 0
+    failed_companies: int = 0
+    company_results: list[BatchCompanyResult] = Field(default_factory=list)
+
+
 class RefreshAllResult(BaseModel):
     batch_id: str | None = None
     started_at: datetime
@@ -127,7 +155,9 @@ class RefreshAllResult(BaseModel):
     source_mode: Literal["official", "demo_fixture"] = "official"
     requested_companies: int
     completed_companies: int
+    partial_companies: int = 0
     failed_companies: int
+    excluded_tickers: list[str] = Field(default_factory=list)
     results: list[CompanyRefreshResult] = Field(default_factory=list)
 
 

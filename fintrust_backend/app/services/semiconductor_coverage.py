@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import json
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.models import CompanyMasterRecord
+from app.services.semiconductor_subindustries import classified_tickers
 
 
 RuleCoverageStatus = Literal["full", "partial", "common_only", "unsupported"]
@@ -72,6 +75,24 @@ def rule_coverage_for(subindustry: str) -> RuleCoverageProfile:
 
 def technically_supported(subindustry: str) -> bool:
     return rule_coverage_for(subindustry).status != "unsupported"
+
+
+def production_batch_policy() -> dict[str, object]:
+    path = Path(__file__).resolve().parents[1] / "rules" / "semiconductor_batch_policy.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def production_excluded_tickers() -> dict[str, str]:
+    policy = production_batch_policy()
+    return {
+        str(item["ticker"]): str(item["reason"])
+        for item in policy.get("excluded", [])
+    }
+
+
+def production_eligible_tickers() -> tuple[str, ...]:
+    excluded = production_excluded_tickers()
+    return tuple(sorted(classified_tickers() - set(excluded)))
 
 
 class CompanyCoverageRecord(BaseModel):

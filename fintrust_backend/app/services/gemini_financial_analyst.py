@@ -49,6 +49,8 @@ _SYSTEM_PROMPT = (
     "目標價或任何投資建議。你的任務是做跨面向的受約束整合：指出一致訊號、mixed signals、資料不足與限制。"
     "dimension_insights 必須涵蓋八個固定面向；若某面向 evidence 不足，直接說明資料不足，不得補造內容。"
     "若收到 official_text_evidence 或 narrative_shift，只能作為補充官方文字脈絡，不得用來改寫 deterministic rule results。"
+    "rule_coverage_status 是規則涵蓋的權威標記；若為 common_only 或 partial，必須明確說明子產業專屬模型不完整，"
+    "不得描述成完整的 subindustry model；若為 unsupported，不得假稱已有子產業規則。"
     "每項具體判斷必須引用輸入中的期間、rule_id 或 actual_values；若輸入沒有具體值，必須明說證據不足。"
 )
 
