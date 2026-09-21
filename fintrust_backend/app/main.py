@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.financial import router as financial_router
+from app.routers.official_events import router as official_events_router
 from app.routers.text_mining import router as text_mining_router
 
 
@@ -42,6 +43,7 @@ app.add_middleware(
 )
 
 app.include_router(financial_router)
+app.include_router(official_events_router)
 app.include_router(text_mining_router)
 
 
@@ -52,6 +54,7 @@ def root():
         "version": "0.3.0",
         "docs": "/docs",
         "scheduled_refresh_endpoint": "/api/v1/financial/admin/companies/2330/refresh",
+        "official_event_batch_endpoint": "/api/v1/financial/admin/official-events/refresh-all",
         "frontend_snapshot_endpoint": "/api/v1/financial/companies/2330/analysis/latest",
         "persistence_backend": os.getenv("DATASTORE_BACKEND", "sqlite"),
         "disclaimer": "僅供財報分析與可信度風險提醒，非投資建議。",
