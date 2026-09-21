@@ -226,18 +226,19 @@
 
   <main>
 
-    <div class="content-card">
-      <div class="result-top">
-        <div class="score-ring"
-             style="background:conic-gradient(var(--orange) 0 0%,#dfe8f4 0% 100%)">
-          <strong>0</strong>
+    <div class="content-card result-summary-card">
+      <div class="result-report-head">
+        <div class="result-score-block">
+          <span class="result-kicker">風險分析分數</span>
+          <div class="score-ring"><strong>0</strong><span class="score-unit">/ 100</span></div>
         </div>
 
-        <div>
-          <h2>風險分析分數</h2>
+        <div class="result-report-main">
+          <h2>風險分析結果</h2>
           <p>正在載入分析結果。</p>
-          <div class="progress">
-            <span style="width:0%;background:linear-gradient(90deg,var(--orange),#f2b763)"></span>
+          <div class="progress"><span style="width:0%"></span></div>
+          <div class="result-scale">
+            <span>低風險</span><span>中風險</span><span>高風險</span>
           </div>
         </div>
 
@@ -263,7 +264,7 @@
     </div>
 
     <div class="content-card" id="externalVerification">
-      <h3>外部資訊查證</h3>
+      <h3>外部來源查證</h3>
       <div class="reason-list">
         <div class="reason">
           <div>—</div>
