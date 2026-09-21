@@ -1,0 +1,23 @@
+# Example only. Apply after the FastAPI official-event batch endpoint is deployed and smoke-tested.
+# Never commit the X-Ingestion-Token value. Deliver it from Secret Manager or an approved runtime workflow.
+
+name: fintrust-investor-conferences-semiconductor
+description: Refresh official investor-conference metadata for the classified semiconductor universe
+schedule: "15 19 * * 1-5"
+timeZone: Asia/Taipei
+httpTarget:
+  uri: https://FINTRUST_API_URL/api/v1/financial/admin/official-events/refresh-all?include_conferences=true&include_material_events=false&extract_documents=false&trigger=scheduler&batch_scope=classified
+  httpMethod: POST
+  oidcToken:
+    serviceAccountEmail: fintrust-scheduler@PROJECT_ID.iam.gserviceaccount.com
+    audience: https://FINTRUST_API_URL
+  headers:
+    X-Ingestion-Token: SECRET_MANAGER_OR_APPROVED_RUNTIME_TOKEN_VALUE
+  # Scheduled polling stores conference metadata and available official evidence.
+  # Heavy PDF/transcript extraction remains on-demand so the recurring job stays bounded.
+retryConfig:
+  retryCount: 2
+  maxRetryDuration: 600s
+  minBackoffDuration: 30s
+  maxBackoffDuration: 120s
+  maxDoublings: 2
