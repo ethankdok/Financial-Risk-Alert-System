@@ -1,0 +1,23 @@
+{
+  "version": "semiconductor-equipment-history-0.1.0",
+  "subindustry": "半導體設備",
+  "threshold_basis": "公司自身歷史趨勢＋待設備同業 calibration 的 MVP heuristic",
+  "rules": [
+    {
+      "rule_id": "EQUIP_HIST_CYCLE_001",
+      "name": "設備需求與營運資金壓力",
+      "category": "設備需求循環",
+      "rule_scope": "semiconductor_equipment",
+      "operator": "equipment_working_capital_pressure",
+      "logic_expression": "revenue_growth_yoy < 0 AND (inventory_gap >= threshold OR receivable_days_change >= threshold) AND gross_margin_change_pp <= threshold",
+      "thresholds": {"attention_inventory_gap": 15.0, "high_inventory_gap": 30.0, "attention_receivable_days": 10.0, "high_receivable_days": 15.0, "attention_margin_drop": -2.0, "high_margin_drop": -4.0},
+      "metrics": ["inventory_growth_yoy", "revenue_growth_yoy", "receivable_turnover_days", "gross_margin"],
+      "rationale": "設備商的主要週期來自客戶投資與訂單；自身 CapEx 不作 foundry-style 壓力訊號。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "peer_baseline_pending",
+      "evidence_basis": "營收下降需與庫存、應收與毛利交叉驗證；門檻待設備同業校準。",
+      "evidence_references": [],
+      "llm_interpretation_guardrail": "不得以設備商自身 CapEx 代替客戶訂單或下游 CapEx cycle。"
+    }
+  ]
+}

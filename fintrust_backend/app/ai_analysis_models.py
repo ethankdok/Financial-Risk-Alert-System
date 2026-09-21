@@ -59,7 +59,10 @@ class AnalysisFeatureValue(BaseModel):
 class MonitoredRuleResult(BaseModel):
     rule_id: str
     name: str
-    rule_scope: Literal["common", "semiconductor", "ic_design"]
+    rule_scope: Literal[
+        "common", "semiconductor", "ic_design", "memory_manufacturing",
+        "semiconductor_equipment", "memory_module_storage",
+    ]
     rule_version: str
     dimension: AnalysisDimension
     dimension_label: str
@@ -95,7 +98,10 @@ class DimensionAssessment(BaseModel):
 class AnalysisRuleCatalogItem(BaseModel):
     rule_id: str
     name: str
-    rule_scope: Literal["common", "semiconductor", "ic_design"]
+    rule_scope: Literal[
+        "common", "semiconductor", "ic_design", "memory_manufacturing",
+        "semiconductor_equipment", "memory_module_storage",
+    ]
     rule_version: str
     dimension: AnalysisDimension
     dimension_label: str
@@ -114,6 +120,8 @@ class AnalysisRuleCatalogItem(BaseModel):
 class AnalysisRuleCatalogResponse(BaseModel):
     version: str
     subindustry: str
+    coverage_status: Literal["full", "partial", "common_only", "unsupported"]
+    coverage_note: str
     rule_count: int
     rule_scope_counts: dict[str, int] = Field(default_factory=dict)
     dimensions: list[AnalysisDimension]
@@ -152,6 +160,8 @@ class AIFinancialAnalysisReport(BaseModel):
     company_name: str
     industry: Literal["半導體"] = "半導體"
     subindustry: str
+    rule_coverage_status: Literal["full", "partial", "common_only", "unsupported"] = "unsupported"
+    rule_coverage_note: str = ""
     analyzed_at: datetime
     source_period_start: int | None = None
     source_period_end: int | None = None

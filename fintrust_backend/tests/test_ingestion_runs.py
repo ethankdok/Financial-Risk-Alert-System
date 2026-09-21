@@ -138,8 +138,12 @@ class RefreshIsolationTests(unittest.IsolatedAsyncioTestCase):
         )
 
     def test_batch_refresh_rejects_out_of_scope_ticker(self) -> None:
-        with self.assertRaisesRegex(ValueError, "isolated to 2330/2454"):
-            validate_refresh_tickers(("2330", "2303"))
+        self.assertEqual(
+            validate_refresh_tickers(("2330", "2344", "3413", "2451")),
+            ("2330", "2344", "3413", "2451"),
+        )
+        with self.assertRaisesRegex(ValueError, "reviewed semiconductor taxonomy"):
+            validate_refresh_tickers(("2330", "9999"))
 
     def test_environment_configuration_is_deduplicated_and_scoped(self) -> None:
         with patch.dict("os.environ", {"FINANCIAL_REFRESH_TICKERS": "2454,2330,2454"}):

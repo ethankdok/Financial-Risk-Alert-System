@@ -14,6 +14,15 @@ from app.ai_analysis_models import (
     RuleEvaluationStatus,
 )
 from app.financial_analysis_models import RuleSeverity
+from app.services.semiconductor_coverage import rule_coverage_for
+
+
+SUBINDUSTRY_RULE_FILES = {
+    "IC 設計": "ic_design_analysis_rules.json",
+    "記憶體製造": "memory_manufacturing_analysis_rules.json",
+    "半導體設備": "semiconductor_equipment_analysis_rules.json",
+    "記憶體模組與儲存": "memory_module_storage_analysis_rules.json",
+}
 
 
 class MonitorableFinancialRuleEngine:
@@ -26,11 +35,14 @@ class MonitorableFinancialRuleEngine:
             self._load(rules_dir / "common_analysis_rules.json"),
             self._load(rules_dir / "semiconductor_analysis_rules.json"),
         ]
-        if subindustry == "IC 設計":
-            self.configs.append(self._load(rules_dir / "ic_design_analysis_rules.json"))
+        if subindustry in SUBINDUSTRY_RULE_FILES:
+            self.configs.append(self._load(rules_dir / SUBINDUSTRY_RULE_FILES[subindustry]))
         self.rules: list[dict[str, Any]] = []
         for config in self.configs:
             for raw_rule in config["rules"]:
+                applicable = raw_rule.get("applicable_subindustries")
+                if applicable and subindustry not in applicable:
+                    continue
                 rule = dict(raw_rule)
                 rule["rule_scope"] = config["scope"]
                 rule["rule_version"] = config["version"]
@@ -89,6 +101,7 @@ class MonitorableFinancialRuleEngine:
         raise ValueError("Rule condition must contain feature, all, any, or not.")
 
     def catalog(self) -> AnalysisRuleCatalogResponse:
+        coverage = rule_coverage_for(self.subindustry)
         items: list[AnalysisRuleCatalogItem] = []
         scope_counts: dict[str, int] = {}
         for rule in self.rules:
@@ -119,6 +132,8 @@ class MonitorableFinancialRuleEngine:
         return AnalysisRuleCatalogResponse(
             version=self.version,
             subindustry=self.subindustry,
+            coverage_status=coverage.status,
+            coverage_note=coverage.note,
             rule_count=len(items),
             rule_scope_counts=scope_counts,
             dimensions=sorted({item.dimension for item in items}, key=lambda item: item.value),

@@ -19,6 +19,7 @@ from app.services.analysis_feature_engine import AnalysisFeatureEngine
 from app.services.llm_provider_protocol import FinancialLLMProvider, create_financial_llm_provider
 from app.services.llm_evidence_selection import select_llm_text_evidence
 from app.services.monitorable_rule_engine import MonitorableFinancialRuleEngine
+from app.services.semiconductor_coverage import rule_coverage_for, technically_supported
 
 if TYPE_CHECKING:
     from app.pipeline_models import FrontendAnalysisSnapshot
@@ -26,7 +27,11 @@ if TYPE_CHECKING:
 
 class AIFinancialAnalysisService:
     version = "ai-financial-analysis-0.2.0"
-    supported_subindustries = {"晶圓代工", "IC 設計", "封裝測試"}
+    supported_subindustries = {
+        "晶圓代工", "IC 設計", "封裝測試", "記憶體製造", "半導體設備",
+        "記憶體模組與儲存", "分離元件與功率半導體", "半導體材料與零組件",
+        "光電與新型顯示半導體",
+    }
 
     def __init__(
         self,
@@ -41,7 +46,7 @@ class AIFinancialAnalysisService:
 
     @classmethod
     def supports(cls, subindustry: str) -> bool:
-        return subindustry in cls.supported_subindustries
+        return subindustry in cls.supported_subindustries and technically_supported(subindustry)
 
     @staticmethod
     def _signal(results: list[MonitoredRuleResult]) -> DimensionSignal:
@@ -109,6 +114,8 @@ class AIFinancialAnalysisService:
             "module": "ai_financial_analysis_engine",
             "version": self.version,
             "subindustry": subindustry,
+            "rule_coverage_status": catalog.coverage_status,
+            "rule_coverage_note": catalog.coverage_note,
             "rule_version": engine.version,
             "rule_count": catalog.rule_count,
             "rule_scope_counts": catalog.rule_scope_counts,
@@ -129,6 +136,7 @@ class AIFinancialAnalysisService:
         if not self.supports(report.subindustry):
             raise ValueError(f"AI analysis v2 尚未建立 {report.subindustry} 的完整產業規則層。")
         rule_engine = self.rule_engine or MonitorableFinancialRuleEngine(subindustry=report.subindustry)
+        coverage = rule_coverage_for(report.subindustry)
         features = self.feature_engine.build(report.trend_metrics)
         rules = rule_engine.evaluate(features)
         dimensions = self._dimension_assessments(rules)
@@ -172,13 +180,13 @@ class AIFinancialAnalysisService:
             )
 
         limitations = list(report.limitations)
-        if report.subindustry == "IC 設計":
+        if coverage.status == "full":
             limitations.append(
-                "AI v2 規則分為 common、semiconductor、ic_design 三層；heuristic_mvp 門檻僅供架構驗證，尚不是產業公認標準。"
+                "此子產業已載入 common 與專屬 overlay；heuristic_mvp 門檻僅供架構驗證，尚不是產業公認標準。"
             )
         else:
             limitations.append(
-                "AI v2 對此子產業使用 common + semiconductor 共同規則層；專屬 overlay 尚未校準，LLM 不得補造不存在的產業專屬判斷。"
+                f"規則涵蓋狀態為 {coverage.status}；{coverage.note} LLM 不得補造不存在的產業專屬判斷。"
             )
         if trace.status == "not_configured":
             limitations.append("LLM 尚未設定；目前仍完成財務特徵、規則監控與八大面向 deterministic 分析。")
@@ -189,6 +197,8 @@ class AIFinancialAnalysisService:
             ticker=report.ticker,
             company_name=report.company_name,
             subindustry=report.subindustry,
+            rule_coverage_status=coverage.status,
+            rule_coverage_note=coverage.note,
             analyzed_at=datetime.now(timezone.utc),
             source_period_start=report.start_year,
             source_period_end=report.end_year,

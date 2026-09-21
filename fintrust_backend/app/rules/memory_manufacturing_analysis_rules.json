@@ -1,0 +1,47 @@
+{
+  "version": "memory-manufacturing-analysis-0.1.0",
+  "scope": "memory_manufacturing",
+  "description": "記憶體製造 commodity cycle overlay；門檻為待 peer calibration 的 MVP heuristic。",
+  "rules": [
+    {
+      "rule_id": "MEM_CYCLE_001",
+      "name": "存貨、需求與毛利同步承壓",
+      "dimension": "operating_efficiency",
+      "assessment_type": "cross_factor",
+      "severity": "attention",
+      "logic_expression": "inventory_revenue_gap >= 15 AND revenue_growth_yoy < 0 AND gross_margin_change_pp <= -2",
+      "direct_metrics": ["inventory_growth_yoy", "revenue_growth_yoy", "gross_margin"],
+      "indirect_metrics": ["cash_conversion_ratio"],
+      "threshold_basis": "heuristic_mvp_peer_calibration_pending",
+      "evidence_basis": "記憶體製造的存貨須與需求及價格循環共同解讀；15pp 與 2pp 僅為 MVP 提示值。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "inventory_revenue_gap", "op": "gte", "value": 15},
+        {"feature": "revenue_growth_yoy", "op": "lt", "value": 0},
+        {"feature": "gross_margin_change_pp", "op": "lte", "value": -2}
+      ]},
+      "rationale": "存貨增速超前營收，且需求與毛利同步惡化時，才形成記憶體景氣循環壓力訊號。"
+    },
+    {
+      "rule_id": "MEM_CYCLE_002",
+      "name": "景氣循環與資本現金壓力同步",
+      "dimension": "investment_efficiency",
+      "assessment_type": "cross_factor",
+      "severity": "high_attention",
+      "logic_expression": "inventory_revenue_gap >= 30 AND revenue_growth_yoy < 0 AND gross_margin_change_pp <= -4 AND capex_intensity_change_pp >= 5 AND free_cash_flow < 0",
+      "direct_metrics": ["inventory_growth_yoy", "revenue_growth_yoy", "gross_margin"],
+      "indirect_metrics": ["capex_intensity", "free_cash_flow"],
+      "threshold_basis": "heuristic_mvp_peer_calibration_pending",
+      "evidence_basis": "高 CapEx 不單獨判負面；只有商品循環訊號、投入升高與負 FCF 同時出現才提高 severity。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "inventory_revenue_gap", "op": "gte", "value": 30},
+        {"feature": "revenue_growth_yoy", "op": "lt", "value": 0},
+        {"feature": "gross_margin_change_pp", "op": "lte", "value": -4},
+        {"feature": "capex_intensity_change_pp", "op": "gte", "value": 5},
+        {"feature": "free_cash_flow", "op": "lt", "value": 0}
+      ]},
+      "rationale": "高資本投入本身不是風險；本規則要求存貨、需求、毛利與現金流同時承壓。"
+    }
+  ]
+}

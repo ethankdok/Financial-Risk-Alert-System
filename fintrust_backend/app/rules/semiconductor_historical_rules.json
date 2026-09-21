@@ -55,6 +55,7 @@
     },
     {
       "rule_id": "SEM_HIST_INV_001",
+      "applicable_subindustries": ["晶圓代工", "IC 設計", "封裝測試"],
       "name": "存貨成長明顯高於營收",
       "category": "營運效率",
       "operator": "latest_gap_above",
@@ -120,6 +121,7 @@
     },
     {
       "rule_id": "SEM_HIST_CAPEX_001",
+      "applicable_subindustries": ["晶圓代工", "IC 設計", "封裝測試"],
       "name": "資本支出強度高於歷史基準且自由現金流為負",
       "category": "半導體資本投入",
       "operator": "latest_above_median_with_negative",

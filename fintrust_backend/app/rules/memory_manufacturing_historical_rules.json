@@ -1,0 +1,39 @@
+{
+  "version": "memory-manufacturing-history-0.1.0",
+  "subindustry": "記憶體製造",
+  "threshold_basis": "公司自身歷史趨勢＋待記憶體製造 peer calibration 的 MVP heuristic",
+  "rules": [
+    {
+      "rule_id": "MEM_HIST_CYCLE_001",
+      "name": "存貨、需求與毛利循環壓力",
+      "category": "記憶體景氣循環",
+      "rule_scope": "memory_manufacturing",
+      "operator": "memory_inventory_margin_pressure",
+      "logic_expression": "inventory_growth_yoy - revenue_growth_yoy >= gap AND revenue_growth_yoy < 0 AND gross_margin_change_pp <= margin_drop",
+      "thresholds": {"attention_inventory_gap": 15.0, "high_inventory_gap": 30.0, "attention_margin_drop": -2.0, "high_margin_drop": -4.0},
+      "metrics": ["inventory_growth_yoy", "revenue_growth_yoy", "gross_margin"],
+      "rationale": "記憶體製造的 commodity cycle 應同時觀察存貨、需求與毛利，存貨增加本身不直接判負面。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "peer_baseline_pending",
+      "evidence_basis": "門檻為 MVP 提示值，後續需以記憶體製造公司歷史與同業分布校準。",
+      "evidence_references": [],
+      "llm_interpretation_guardrail": "不得把存貨或價格循環單一訊號改寫成 deterministic verdict。"
+    },
+    {
+      "rule_id": "MEM_HIST_CAPEX_001",
+      "name": "循環、資本投入與自由現金流同步壓力",
+      "category": "記憶體資本與現金循環",
+      "rule_scope": "memory_manufacturing",
+      "operator": "memory_capex_cash_pressure",
+      "logic_expression": "cycle_pressure AND capex_intensity > historical_median + gap AND free_cash_flow < 0",
+      "thresholds": {"inventory_gap": 30.0, "margin_drop": -4.0, "capex_gap": 5.0},
+      "metrics": ["inventory_growth_yoy", "revenue_growth_yoy", "gross_margin", "capex_intensity", "free_cash_flow"],
+      "rationale": "高 CapEx 本身不是風險；只有商品循環壓力、投入高於自身歷史與負 FCF 同時出現才提高關注。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "company_history_threshold",
+      "evidence_basis": "以公司自身 CapEx 歷史中位數避免把記憶體正常擴產直接判負面。",
+      "evidence_references": [],
+      "llm_interpretation_guardrail": "不得把高 CapEx 單獨判定為負面。"
+    }
+  ]
+}

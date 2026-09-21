@@ -24,6 +24,7 @@
     },
     {
       "rule_id": "SEM_INV_001",
+      "applicable_subindustries": ["晶圓代工", "IC 設計", "封裝測試"],
       "name": "存貨增速明顯高於營收",
       "dimension": "operating_efficiency",
       "assessment_type": "indirect",
@@ -39,6 +40,7 @@
     },
     {
       "rule_id": "SEM_INV_002",
+      "applicable_subindustries": ["晶圓代工", "IC 設計", "封裝測試"],
       "name": "營收衰退且存貨逆勢增加",
       "dimension": "operating_efficiency",
       "assessment_type": "cross_factor",

@@ -1,0 +1,64 @@
+{
+  "version": "semiconductor-equipment-analysis-0.1.0",
+  "scope": "semiconductor_equipment",
+  "description": "半導體設備需求與營運資金 overlay；不以設備商自身 CapEx 代替客戶投資循環。",
+  "rules": [
+    {
+      "rule_id": "EQUIP_CYCLE_001",
+      "name": "需求轉弱與營運資金壓力",
+      "dimension": "operating_efficiency",
+      "assessment_type": "cross_factor",
+      "severity": "attention",
+      "logic_expression": "revenue_growth_yoy < 0 AND (inventory_revenue_gap >= 15 OR receivable_turnover_days_change_absolute >= 10) AND gross_margin_change_pp <= -2",
+      "direct_metrics": ["revenue_growth_yoy", "inventory_growth_yoy", "receivable_turnover_days", "gross_margin"],
+      "indirect_metrics": ["operating_cash_flow"],
+      "threshold_basis": "heuristic_mvp_peer_calibration_pending",
+      "evidence_basis": "設備需求轉弱須與庫存或應收惡化及毛利壓力交叉判斷；門檻待設備同業校準。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "revenue_growth_yoy", "op": "lt", "value": 0},
+        {"any": [
+          {"feature": "inventory_revenue_gap", "op": "gte", "value": 15},
+          {"feature": "receivable_turnover_days_change_absolute", "op": "gte", "value": 10}
+        ]},
+        {"feature": "gross_margin_change_pp", "op": "lte", "value": -2}
+      ]},
+      "rationale": "營收下降同時伴隨庫存或收款速度惡化，且毛利率下滑時，才提示設備需求與營運資金壓力。"
+    },
+    {
+      "rule_id": "EQUIP_CYCLE_002",
+      "name": "需求、庫存、應收與毛利全面承壓",
+      "dimension": "operating_efficiency",
+      "assessment_type": "cross_factor",
+      "severity": "high_attention",
+      "logic_expression": "revenue_growth_yoy < 0 AND inventory_revenue_gap >= 30 AND receivable_turnover_days_change_absolute >= 15 AND gross_margin_change_pp <= -4",
+      "direct_metrics": ["revenue_growth_yoy", "inventory_growth_yoy", "receivable_turnover_days", "gross_margin"],
+      "indirect_metrics": ["operating_cash_flow"],
+      "threshold_basis": "heuristic_mvp_peer_calibration_pending",
+      "evidence_basis": "四項訊號同步才提高 severity，避免把單一庫存或應收波動過度解讀。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "revenue_growth_yoy", "op": "lt", "value": 0},
+        {"feature": "inventory_revenue_gap", "op": "gte", "value": 30},
+        {"feature": "receivable_turnover_days_change_absolute", "op": "gte", "value": 15},
+        {"feature": "gross_margin_change_pp", "op": "lte", "value": -4}
+      ]},
+      "rationale": "需求、庫存、應收與毛利全面惡化時，提高週期壓力關注。"
+    },
+    {
+      "rule_id": "EQUIP_RD_001",
+      "name": "設備研發投入趨勢觀察",
+      "dimension": "rd_innovation",
+      "assessment_type": "trend",
+      "severity": "normal",
+      "logic_expression": "rd_expense_growth_yoy != 0",
+      "direct_metrics": ["rd_expense_growth_yoy", "rd_intensity"],
+      "indirect_metrics": ["revenue_growth_yoy"],
+      "threshold_basis": "informational_only",
+      "evidence_basis": "研發增加本身不構成風險，只保留為設備技術投入觀察。",
+      "evidence_references": [],
+      "condition": {"feature": "rd_expense_growth_yoy", "op": "ne", "value": 0},
+      "rationale": "本規則只揭露研發趨勢，不形成負面 severity。"
+    }
+  ]
+}

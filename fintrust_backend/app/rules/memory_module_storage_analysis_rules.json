@@ -1,0 +1,45 @@
+{
+  "version": "memory-module-storage-analysis-0.1.0",
+  "scope": "memory_module_storage",
+  "description": "記憶體模組與儲存的庫存價格、毛利與現金轉換 overlay；不套用重資本 CapEx 邏輯。",
+  "rules": [
+    {
+      "rule_id": "MEMMOD_WC_001",
+      "name": "庫存價格與現金轉換壓力",
+      "dimension": "operating_efficiency",
+      "assessment_type": "cross_factor",
+      "severity": "attention",
+      "logic_expression": "inventory_revenue_gap >= 15 AND gross_margin_change_pp <= -2 AND cash_conversion_ratio < 0.8",
+      "direct_metrics": ["inventory_growth_yoy", "gross_margin", "cash_conversion_ratio"],
+      "indirect_metrics": ["revenue_growth_yoy", "current_ratio"],
+      "threshold_basis": "heuristic_mvp_peer_calibration_pending",
+      "evidence_basis": "模組商存貨受到 DRAM/NAND 價格波動影響，須與毛利及現金轉換共同判斷。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "inventory_revenue_gap", "op": "gte", "value": 15},
+        {"feature": "gross_margin_change_pp", "op": "lte", "value": -2},
+        {"feature": "cash_conversion_ratio", "op": "lt", "value": 0.8}
+      ]},
+      "rationale": "庫存增速超前營收，且毛利與現金轉換同步轉弱時，才提示庫存價格與營運資金壓力。"
+    },
+    {
+      "rule_id": "MEMMOD_WC_002",
+      "name": "庫存價格與營運資金高度承壓",
+      "dimension": "cash_flow",
+      "assessment_type": "cross_factor",
+      "severity": "high_attention",
+      "logic_expression": "inventory_revenue_gap >= 30 AND gross_margin_change_pp <= -4 AND cash_conversion_ratio < 0.5",
+      "direct_metrics": ["inventory_growth_yoy", "gross_margin", "cash_conversion_ratio"],
+      "indirect_metrics": ["revenue_growth_yoy", "current_ratio", "debt_ratio"],
+      "threshold_basis": "heuristic_mvp_peer_calibration_pending",
+      "evidence_basis": "較嚴格的複合門檻仍屬 MVP heuristic，後續需用模組與儲存同業分布校準。",
+      "evidence_references": [],
+      "condition": {"all": [
+        {"feature": "inventory_revenue_gap", "op": "gte", "value": 30},
+        {"feature": "gross_margin_change_pp", "op": "lte", "value": -4},
+        {"feature": "cash_conversion_ratio", "op": "lt", "value": 0.5}
+      ]},
+      "rationale": "庫存、毛利與現金轉換同時大幅惡化時，提高營運資金關注。"
+    }
+  ]
+}

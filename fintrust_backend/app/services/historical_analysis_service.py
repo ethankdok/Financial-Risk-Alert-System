@@ -16,6 +16,7 @@ from app.services.financial_field_extensions import (
 from app.services.historical_metrics import calculate_historical_metrics
 from app.services.historical_rule_engine import HistoricalFinancialRuleEngine
 from app.services.robust_mops_inline_xbrl import RobustMopsInlineXbrlClient
+from app.services.semiconductor_coverage import rule_coverage_for
 
 
 class HistoricalFinancialAnalysisService:
@@ -80,6 +81,7 @@ class HistoricalFinancialAnalysisService:
         available = [period for period in periods if period.status == "available"]
         metrics = calculate_historical_metrics(periods)
         rule_engine = self.rule_engine or HistoricalFinancialRuleEngine(subindustry=profile.subindustry)
+        rule_coverage = rule_coverage_for(profile.subindustry)
         rule_results = rule_engine.evaluate(periods, metrics)
         overall = self._overall_severity(rule_results)
 
@@ -109,6 +111,8 @@ class HistoricalFinancialAnalysisService:
             ticker=profile.ticker,
             company_name=profile.name,
             subindustry=profile.subindustry,
+            rule_coverage_status=rule_coverage.status,
+            rule_coverage_note=rule_coverage.note,
             requested_years=years,
             available_years=len(available),
             start_year=min(years_present) if years_present else None,

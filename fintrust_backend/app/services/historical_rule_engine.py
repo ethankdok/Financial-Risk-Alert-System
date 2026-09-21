@@ -17,6 +17,9 @@ SUBINDUSTRY_RULE_FILES = {
     "晶圓代工": "foundry_historical_rules.json",
     "IC 設計": "ic_design_historical_rules.json",
     "封裝測試": "packaging_testing_historical_rules.json",
+    "記憶體製造": "memory_manufacturing_historical_rules.json",
+    "半導體設備": "semiconductor_equipment_historical_rules.json",
+    "記憶體模組與儲存": "memory_module_storage_historical_rules.json",
 }
 
 
@@ -31,7 +34,13 @@ class HistoricalFinancialRuleEngine:
         default_path = rules_dir / "semiconductor_historical_rules.json"
         selected_path = Path(rules_path) if rules_path else default_path
         common = json.loads(selected_path.read_text(encoding="utf-8"))
-        combined_rules = list(common["rules"])
+        combined_rules = [
+            rule
+            for rule in common["rules"]
+            if not rule.get("applicable_subindustries")
+            or subindustry is None
+            or subindustry in rule["applicable_subindustries"]
+        ]
         versions = [str(common["version"])]
         threshold_bases = [str(common["threshold_basis"])]
 
@@ -514,6 +523,187 @@ class HistoricalFinancialRuleEngine:
                             "inventory_revenue_gap_percentage_points": inventory_gap,
                             "operating_cash_flow_change": ocf_change,
                             "debt_ratio_change_percentage_points": debt_change,
+                        },
+                    )
+                )
+                continue
+
+            if operator == "memory_inventory_margin_pressure":
+                inventory_growth, revenue_growth, gross_margin = required
+                common = sorted(
+                    set(inventory_growth.period_values)
+                    & set(revenue_growth.period_values)
+                    & set(gross_margin.period_values)
+                )
+                margin_change = gross_margin.change_percentage_points
+                if not common or margin_change is None:
+                    results.append(self._insufficient(rule, "缺少記憶體存貨、營收或毛利率變化資料。"))
+                    continue
+                latest = common[-1]
+                revenue_value = revenue_growth.period_values[latest]
+                inventory_gap = inventory_growth.period_values[latest] - revenue_value
+                high_condition = (
+                    inventory_gap >= float(thresholds["high_inventory_gap"])
+                    and revenue_value < 0
+                    and margin_change <= float(thresholds["high_margin_drop"])
+                )
+                attention_condition = (
+                    inventory_gap >= float(thresholds["attention_inventory_gap"])
+                    and revenue_value < 0
+                    and margin_change <= float(thresholds["attention_margin_drop"])
+                )
+                severity = RuleSeverity.HIGH_ATTENTION if high_condition else RuleSeverity.ATTENTION if attention_condition else RuleSeverity.NORMAL
+                results.append(
+                    self._result(
+                        rule,
+                        severity,
+                        f"{latest} 存貨與營收成長差距 {inventory_gap:.2f} 個百分點、營收年增率 {revenue_value:.2f}%、毛利率變化 {margin_change:.2f} 個百分點。{rule['rationale']}",
+                        "存貨相對營收惡化、營收下滑與毛利率下降同步出現才提高關注",
+                        [latest],
+                        actual_values={
+                            "inventory_revenue_gap_percentage_points": inventory_gap,
+                            "revenue_growth_yoy": revenue_value,
+                            "gross_margin_change_percentage_points": margin_change,
+                        },
+                    )
+                )
+                continue
+
+            if operator == "memory_capex_cash_pressure":
+                inventory_growth, revenue_growth, gross_margin, capex, fcf = required
+                common = sorted(
+                    set(inventory_growth.period_values)
+                    & set(revenue_growth.period_values)
+                    & set(gross_margin.period_values)
+                    & set(capex.period_values)
+                    & set(fcf.period_values)
+                )
+                capex_values = self._values(capex)
+                margin_change = gross_margin.change_percentage_points
+                if not common or len(capex_values) < 2 or margin_change is None:
+                    results.append(self._insufficient(rule, "缺少記憶體循環、資本支出或自由現金流歷史資料。"))
+                    continue
+                latest = common[-1]
+                revenue_value = revenue_growth.period_values[latest]
+                inventory_gap = inventory_growth.period_values[latest] - revenue_value
+                capex_latest = capex.period_values[latest]
+                capex_baseline_values = [value for period, value in capex_values if period != latest]
+                if not capex_baseline_values:
+                    results.append(self._insufficient(rule, "缺少記憶體資本支出歷史基準。"))
+                    continue
+                capex_gap = capex_latest - median(capex_baseline_values)
+                fcf_latest = fcf.period_values[latest]
+                high_condition = (
+                    inventory_gap >= float(thresholds["inventory_gap"])
+                    and revenue_value < 0
+                    and margin_change <= float(thresholds["margin_drop"])
+                    and capex_gap >= float(thresholds["capex_gap"])
+                    and fcf_latest < 0
+                )
+                severity = RuleSeverity.HIGH_ATTENTION if high_condition else RuleSeverity.NORMAL
+                results.append(
+                    self._result(
+                        rule,
+                        severity,
+                        f"{latest} 存貨與營收成長差距 {inventory_gap:.2f} 個百分點、毛利率變化 {margin_change:.2f} 個百分點、資本支出強度較歷史中位數高 {capex_gap:.2f} 個百分點、自由現金流 {fcf_latest:,.0f}{fcf.unit}。{rule['rationale']}",
+                        "完整循環壓力、資本投入高於自身基準與負自由現金流同時出現才列高關注",
+                        [latest],
+                        actual_values={
+                            "inventory_revenue_gap_percentage_points": inventory_gap,
+                            "revenue_growth_yoy": revenue_value,
+                            "gross_margin_change_percentage_points": margin_change,
+                            "capex_gap_percentage_points": capex_gap,
+                            "free_cash_flow": fcf_latest,
+                        },
+                    )
+                )
+                continue
+
+            if operator == "equipment_working_capital_pressure":
+                inventory_growth, revenue_growth, receivable_days, gross_margin = required
+                common = sorted(
+                    set(inventory_growth.period_values)
+                    & set(revenue_growth.period_values)
+                    & set(receivable_days.period_values)
+                    & set(gross_margin.period_values)
+                )
+                margin_change = gross_margin.change_percentage_points
+                if len(common) < 2 or margin_change is None:
+                    results.append(self._insufficient(rule, "設備需求規則至少需要兩年存貨、營收、應收與毛利資料。"))
+                    continue
+                previous, latest = common[-2], common[-1]
+                revenue_value = revenue_growth.period_values[latest]
+                inventory_gap = inventory_growth.period_values[latest] - revenue_value
+                receivable_change = receivable_days.period_values[latest] - receivable_days.period_values[previous]
+                high_condition = (
+                    revenue_value < 0
+                    and inventory_gap >= float(thresholds["high_inventory_gap"])
+                    and receivable_change >= float(thresholds["high_receivable_days"])
+                    and margin_change <= float(thresholds["high_margin_drop"])
+                )
+                attention_condition = (
+                    revenue_value < 0
+                    and (
+                        inventory_gap >= float(thresholds["attention_inventory_gap"])
+                        or receivable_change >= float(thresholds["attention_receivable_days"])
+                    )
+                    and margin_change <= float(thresholds["attention_margin_drop"])
+                )
+                severity = RuleSeverity.HIGH_ATTENTION if high_condition else RuleSeverity.ATTENTION if attention_condition else RuleSeverity.NORMAL
+                results.append(
+                    self._result(
+                        rule,
+                        severity,
+                        f"{latest} 營收年增率 {revenue_value:.2f}%、存貨與營收成長差距 {inventory_gap:.2f} 個百分點、應收週轉天數增加 {receivable_change:.2f} 天、毛利率變化 {margin_change:.2f} 個百分點。{rule['rationale']}",
+                        "需求轉弱需與存貨或應收惡化及毛利率下降交叉驗證",
+                        [previous, latest],
+                        actual_values={
+                            "revenue_growth_yoy": revenue_value,
+                            "inventory_revenue_gap_percentage_points": inventory_gap,
+                            "receivable_days_change": receivable_change,
+                            "gross_margin_change_percentage_points": margin_change,
+                        },
+                    )
+                )
+                continue
+
+            if operator == "memory_module_working_capital_pressure":
+                inventory_growth, revenue_growth, gross_margin, cash_conversion = required
+                common = sorted(
+                    set(inventory_growth.period_values)
+                    & set(revenue_growth.period_values)
+                    & set(gross_margin.period_values)
+                    & set(cash_conversion.period_values)
+                )
+                margin_change = gross_margin.change_percentage_points
+                if not common or margin_change is None:
+                    results.append(self._insufficient(rule, "缺少模組與儲存存貨、營收、毛利或現金轉換資料。"))
+                    continue
+                latest = common[-1]
+                inventory_gap = inventory_growth.period_values[latest] - revenue_growth.period_values[latest]
+                cash_value = cash_conversion.period_values[latest]
+                high_condition = (
+                    inventory_gap >= float(thresholds["high_inventory_gap"])
+                    and margin_change <= float(thresholds["high_margin_drop"])
+                    and cash_value < float(thresholds["high_cash_conversion"])
+                )
+                attention_condition = (
+                    inventory_gap >= float(thresholds["attention_inventory_gap"])
+                    and margin_change <= float(thresholds["attention_margin_drop"])
+                    and cash_value < float(thresholds["attention_cash_conversion"])
+                )
+                severity = RuleSeverity.HIGH_ATTENTION if high_condition else RuleSeverity.ATTENTION if attention_condition else RuleSeverity.NORMAL
+                results.append(
+                    self._result(
+                        rule,
+                        severity,
+                        f"{latest} 存貨與營收成長差距 {inventory_gap:.2f} 個百分點、毛利率變化 {margin_change:.2f} 個百分點、現金轉換比 {cash_value:.2f}。{rule['rationale']}",
+                        "存貨相對營收、毛利與現金轉換同步惡化才提高關注",
+                        [latest],
+                        actual_values={
+                            "inventory_revenue_gap_percentage_points": inventory_gap,
+                            "gross_margin_change_percentage_points": margin_change,
+                            "cash_conversion_ratio": cash_value,
                         },
                     )
                 )

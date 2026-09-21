@@ -28,13 +28,14 @@ from app.services.ingestion_run_repository import (
     IngestionRunRepository,
     build_ingestion_run_repository,
 )
+from app.services.semiconductor_subindustries import classified_tickers
 
 
 logger = logging.getLogger("fintrust.ingestion")
 TriggerKind = Literal["scheduler", "manual", "demo", "startup"]
 SourceMode = Literal["official", "demo_fixture"]
 DEFAULT_REFRESH_TICKERS = ("2330", "2454")
-ALLOWED_BATCH_REFRESH_TICKERS = frozenset(DEFAULT_REFRESH_TICKERS)
+ALLOWED_BATCH_REFRESH_TICKERS = frozenset(classified_tickers())
 
 
 def validate_refresh_tickers(tickers: list[str] | tuple[str, ...]) -> tuple[str, ...]:
@@ -44,7 +45,7 @@ def validate_refresh_tickers(tickers: list[str] | tuple[str, ...]) -> tuple[str,
     unsupported = sorted(set(normalized) - ALLOWED_BATCH_REFRESH_TICKERS)
     if unsupported:
         raise ValueError(
-            "Batch refresh is isolated to 2330/2454 for this release; "
+            "Batch refresh is limited to the reviewed semiconductor taxonomy; "
             f"unsupported tickers: {', '.join(unsupported)}"
         )
     return normalized

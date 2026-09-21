@@ -1,0 +1,23 @@
+{
+  "version": "memory-module-storage-history-0.1.0",
+  "subindustry": "記憶體模組與儲存",
+  "threshold_basis": "公司自身歷史趨勢＋待模組/儲存同業 calibration 的 MVP heuristic",
+  "rules": [
+    {
+      "rule_id": "MEMMOD_HIST_WC_001",
+      "name": "庫存價格、毛利與現金轉換壓力",
+      "category": "模組與儲存營運資金",
+      "rule_scope": "memory_module_storage",
+      "operator": "memory_module_working_capital_pressure",
+      "logic_expression": "inventory_growth_yoy - revenue_growth_yoy >= gap AND gross_margin_change_pp <= margin_drop AND cash_conversion_ratio < threshold",
+      "thresholds": {"attention_inventory_gap": 15.0, "high_inventory_gap": 30.0, "attention_margin_drop": -2.0, "high_margin_drop": -4.0, "attention_cash_conversion": 0.8, "high_cash_conversion": 0.5},
+      "metrics": ["inventory_growth_yoy", "revenue_growth_yoy", "gross_margin", "cash_conversion_ratio"],
+      "rationale": "模組商持有 DRAM/NAND 庫存，需以相對營收、毛利與現金轉換共同判斷價格與營運資金壓力。",
+      "credibility_level": "industry_theory",
+      "calibration_status": "peer_baseline_pending",
+      "evidence_basis": "不使用 foundry 或 memory manufacturing 的重資本 CapEx 邏輯；門檻待同業校準。",
+      "evidence_references": [],
+      "llm_interpretation_guardrail": "不得把單一存貨或負債增加直接判定為風險。"
+    }
+  ]
+}

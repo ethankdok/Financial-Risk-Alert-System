@@ -107,12 +107,12 @@ class ApiContractTests(unittest.TestCase):
             ).fetchone()
         self.assertEqual(row, ("ingested", "financial-fact-v2"))
 
-    def test_refresh_all_rejects_ticker_outside_release_scope(self) -> None:
+    def test_refresh_all_rejects_ticker_outside_taxonomy_scope(self) -> None:
         response = self.client.post(
-            "/api/v1/financial/admin/refresh-all?tickers=2303"
+            "/api/v1/financial/admin/refresh-all?tickers=9999"
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("isolated to 2330/2454", response.json()["detail"])
+        self.assertIn("reviewed semiconductor taxonomy", response.json()["detail"])
 
     def test_persisted_fact_and_rule_result_listing_contract(self) -> None:
         from app.dependencies import get_analysis_repository

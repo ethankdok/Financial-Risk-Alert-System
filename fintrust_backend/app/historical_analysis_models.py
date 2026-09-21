@@ -109,6 +109,8 @@ class HistoricalFinancialAnalysisReport(BaseModel):
     company_name: str
     industry: Literal["半導體"] = "半導體"
     subindustry: str
+    rule_coverage_status: Literal["full", "partial", "common_only", "unsupported"] = "unsupported"
+    rule_coverage_note: str = ""
     requested_years: int
     available_years: int
     start_year: int | None = None

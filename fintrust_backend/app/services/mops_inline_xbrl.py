@@ -63,7 +63,9 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
         "營業毛利（毛損）",
         "營業毛利(毛損)",
         "營業毛利",
+        "GrossProfit",
         "GrossProfitLoss",
+        "GrossProfitLossFromOperations",
     ),
     "operating_income": (
         "營業利益（損失）",
