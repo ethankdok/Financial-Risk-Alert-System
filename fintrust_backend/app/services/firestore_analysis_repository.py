@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
+from app.ai_analysis_models import AIFinancialAnalysisReport
 from app.financial_analysis_models import FinancialStatementAnalysisReport
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.models import FinancialFact
@@ -16,6 +17,7 @@ from app.services.analysis_repository import (
     financial_fact_from_row,
     historical_fact_rows,
     latest_fact_rows,
+    merge_snapshot_narrative,
     metric_rows,
     preferred_financial_fact_row,
     rule_rows,
@@ -155,6 +157,51 @@ class FirestoreAnalysisRepository:
         payload = document.to_dict() or {}
         payload.pop("updated_at", None)
         return FrontendAnalysisSnapshot.model_validate(payload)
+
+    def persist_snapshot_narrative(
+        self,
+        *,
+        ticker: str,
+        expected_run_id: str,
+        report: AIFinancialAnalysisReport,
+    ) -> FrontendAnalysisSnapshot:
+        from google.cloud import firestore
+
+        reference = self.client.collection("latest_analysis_snapshots").document(ticker)
+        transaction = self.client.transaction()
+
+        @firestore.transactional
+        def persist(current_transaction):
+            document = reference.get(transaction=current_transaction)
+            if not document.exists:
+                raise ValueError("No completed analysis snapshot is available.")
+            payload = document.to_dict() or {}
+            payload.pop("updated_at", None)
+            payload.pop("narrative_updated_at", None)
+            payload.pop("narrative_analysis_run_id", None)
+            snapshot = FrontendAnalysisSnapshot.model_validate(payload)
+            merged = merge_snapshot_narrative(
+                snapshot,
+                expected_run_id=expected_run_id,
+                report=report,
+            )
+            if merged.ai_analysis is None:
+                raise ValueError("Latest snapshot does not contain deterministic AI analysis.")
+            analysis = merged.ai_analysis
+            current_transaction.update(
+                reference,
+                {
+                    "ai_analysis.analyzed_at": analysis.analyzed_at,
+                    "ai_analysis.llm_narrative": analysis.llm_narrative.model_dump(mode="python"),
+                    "ai_analysis.llm_trace": analysis.llm_trace.model_dump(mode="python"),
+                    "ai_analysis.llm_evidence_ids": list(analysis.llm_evidence_ids),
+                    "narrative_analysis_run_id": expected_run_id,
+                    "narrative_updated_at": datetime.now(timezone.utc),
+                },
+            )
+            return merged
+
+        return persist(transaction)
 
     def ingest_facts(self, facts: list[FinancialFact]) -> int:
         """Canonical direct-fact write path shared with the analysis pipeline."""

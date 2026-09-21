@@ -64,6 +64,7 @@ class ApiContractTests(unittest.TestCase):
         try:
             live = self.client.post("/api/v1/financial/ai/companies/2330/analyze?years=3")
             snapshot = self.client.post("/api/v1/financial/ai/companies/9999/narrative")
+            persist = self.client.post("/api/v1/financial/ai/companies/9999/narrative/persist")
             authorized_missing = self.client.post(
                 "/api/v1/financial/ai/companies/9999/narrative",
                 headers={"X-Ingestion-Token": "test-ingestion-token"},
@@ -76,6 +77,7 @@ class ApiContractTests(unittest.TestCase):
 
         self.assertEqual(live.status_code, 401)
         self.assertEqual(snapshot.status_code, 401)
+        self.assertEqual(persist.status_code, 401)
         self.assertEqual(authorized_missing.status_code, 404)
 
     def test_direct_ingest_uses_canonical_analysis_repository(self) -> None:

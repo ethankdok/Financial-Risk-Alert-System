@@ -46,7 +46,7 @@ from app.pipeline_models import (
     RefreshAllResult,
 )
 from app.services.ai_financial_analysis_service import AIFinancialAnalysisService
-from app.services.analysis_repository import AnalysisRepository
+from app.services.analysis_repository import AnalysisRepository, SnapshotConcurrencyError
 from app.services.claim_parser import extract_claim
 from app.services.company_master_repository import CompanyMasterRepository
 from app.services.company_registry import list_companies
@@ -166,6 +166,35 @@ async def generate_narrative_from_latest_snapshot(
         raise HTTPException(status_code=404, detail="No completed analysis snapshot is available.")
     try:
         return await AIFinancialAnalysisService().analyze_snapshot(snapshot)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
+    "/ai/companies/{ticker}/narrative/persist",
+    response_model=AIFinancialAnalysisReport,
+    dependencies=[Depends(require_ingestion_token)],
+)
+async def generate_and_persist_narrative_from_latest_snapshot(
+    ticker: str,
+    repository: AnalysisRepository = Depends(get_analysis_repository),
+) -> AIFinancialAnalysisReport:
+    """Generate and atomically attach an LLM supplement to the current snapshot."""
+    snapshot = repository.get_latest_snapshot(ticker)
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail="No completed analysis snapshot is available.")
+    try:
+        report = await AIFinancialAnalysisService().analyze_snapshot(snapshot)
+        if report.llm_narrative is None or report.llm_trace.status != "completed":
+            raise HTTPException(status_code=502, detail="Gemini narrative generation did not complete.")
+        repository.persist_snapshot_narrative(
+            ticker=ticker,
+            expected_run_id=snapshot.analysis_run_id,
+            report=report,
+        )
+        return report
+    except SnapshotConcurrencyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

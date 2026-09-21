@@ -11,6 +11,7 @@ from pathlib import Path
 from collections.abc import Iterator
 from typing import Any, Protocol
 
+from app.ai_analysis_models import AIFinancialAnalysisReport
 from app.financial_analysis_models import FinancialStatementAnalysisReport
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.models import FinancialFact
@@ -68,6 +69,13 @@ class AnalysisRepository(Protocol):
     ) -> PersistenceCounts: ...
 
     def get_latest_snapshot(self, ticker: str) -> FrontendAnalysisSnapshot | None: ...
+    def persist_snapshot_narrative(
+        self,
+        *,
+        ticker: str,
+        expected_run_id: str,
+        report: AIFinancialAnalysisReport,
+    ) -> FrontendAnalysisSnapshot: ...
     def save_official_events(
         self,
         *,
@@ -112,6 +120,36 @@ class AnalysisRepository(Protocol):
     ) -> dict[str, int]: ...
     def get_latest_text_intelligence_result(self, ticker: str) -> dict[str, Any] | None: ...
     def ingest_facts(self, facts: list[FinancialFact]) -> int: ...
+
+
+class SnapshotConcurrencyError(RuntimeError):
+    pass
+
+
+def merge_snapshot_narrative(
+    snapshot: FrontendAnalysisSnapshot,
+    *,
+    expected_run_id: str,
+    report: AIFinancialAnalysisReport,
+) -> FrontendAnalysisSnapshot:
+    if snapshot.analysis_run_id != expected_run_id:
+        raise SnapshotConcurrencyError("Latest snapshot changed after narrative generation.")
+    if snapshot.ticker != report.ticker:
+        raise ValueError("Narrative ticker does not match the current snapshot.")
+    if snapshot.ai_analysis is None:
+        raise ValueError("Latest snapshot does not contain deterministic AI analysis.")
+    if report.llm_narrative is None or report.llm_trace.status != "completed":
+        raise ValueError("Only a completed narrative can be persisted.")
+
+    merged_analysis = snapshot.ai_analysis.model_copy(
+        update={
+            "analyzed_at": report.analyzed_at,
+            "llm_narrative": report.llm_narrative,
+            "llm_trace": report.llm_trace,
+            "llm_evidence_ids": list(report.llm_evidence_ids),
+        }
+    )
+    return snapshot.model_copy(update={"ai_analysis": merged_analysis})
 
 
 def to_json(value: Any) -> str:
@@ -692,6 +730,36 @@ class SqliteAnalysisRepository:
                 "SELECT snapshot_json FROM latest_analysis_snapshots WHERE ticker = ?", (ticker,)
             ).fetchone()
         return FrontendAnalysisSnapshot.model_validate_json(row["snapshot_json"]) if row else None
+
+    def persist_snapshot_narrative(
+        self,
+        *,
+        ticker: str,
+        expected_run_id: str,
+        report: AIFinancialAnalysisReport,
+    ) -> FrontendAnalysisSnapshot:
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT run_id, snapshot_json FROM latest_analysis_snapshots WHERE ticker = ?",
+                (ticker,),
+            ).fetchone()
+            if row is None:
+                raise ValueError("No completed analysis snapshot is available.")
+            snapshot = FrontendAnalysisSnapshot.model_validate_json(row["snapshot_json"])
+            merged = merge_snapshot_narrative(
+                snapshot,
+                expected_run_id=expected_run_id,
+                report=report,
+            )
+            updated = connection.execute(
+                """UPDATE latest_analysis_snapshots SET snapshot_json = ?
+                WHERE ticker = ? AND run_id = ?""",
+                (to_json(merged.model_dump(mode="json")), ticker, expected_run_id),
+            )
+            if updated.rowcount != 1:
+                raise SnapshotConcurrencyError("Latest snapshot changed before narrative persistence.")
+        return merged
 
     def save_official_events(
         self,
