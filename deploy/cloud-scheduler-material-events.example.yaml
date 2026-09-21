@@ -1,0 +1,24 @@
+# Example only. Apply after the FastAPI official-event batch endpoint is deployed and smoke-tested.
+# Never commit the X-Ingestion-Token value. Deliver it from Secret Manager or an approved runtime workflow.
+
+name: fintrust-material-events-semiconductor
+description: Poll recent TWSE official material-event disclosures for the classified semiconductor universe
+schedule: "5 * * * 1-5"
+timeZone: Asia/Taipei
+httpTarget:
+  uri: https://FINTRUST_API_URL/api/v1/financial/admin/official-events/refresh-all?include_conferences=false&include_material_events=true&material_openapi_only=true&trigger=scheduler&batch_scope=classified
+  httpMethod: POST
+  oidcToken:
+    serviceAccountEmail: fintrust-scheduler@PROJECT_ID.iam.gserviceaccount.com
+    audience: https://FINTRUST_API_URL
+  headers:
+    X-Ingestion-Token: SECRET_MANAGER_OR_APPROVED_RUNTIME_TOKEN_VALUE
+  # The material-event batch fetches the TWSE OpenAPI feed once and fans it out
+  # across the classified company universe, so hourly polling does not multiply
+  # the upstream feed request by company count.
+retryConfig:
+  retryCount: 2
+  maxRetryDuration: 600s
+  minBackoffDuration: 30s
+  maxBackoffDuration: 120s
+  maxDoublings: 2
