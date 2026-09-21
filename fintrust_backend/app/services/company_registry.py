@@ -34,8 +34,27 @@ SEMICONDUCTOR_COMPANIES: dict[str, CompanyProfile] = {
 }
 
 
+def register_company_profile(company: CompanyProfile) -> CompanyProfile:
+    """Cache a persisted company profile for legacy services that still resolve by ticker."""
+    SEMICONDUCTOR_COMPANIES[company.ticker.strip()] = company
+    return company
+
+
 def get_company(ticker: str) -> CompanyProfile | None:
-    return SEMICONDUCTOR_COMPANIES.get(ticker.strip())
+    normalized = ticker.strip()
+    company = SEMICONDUCTOR_COMPANIES.get(normalized)
+    if company is not None:
+        return company
+
+    # Production now persists the full semiconductor company master in Firestore.
+    # Keep legacy source/parsing services compatible by resolving a missing seed
+    # from that master and caching it for the remainder of the process.
+    from app.services.company_master_repository import build_company_master_repository
+
+    record = build_company_master_repository().get(normalized)
+    if record is None:
+        return None
+    return register_company_profile(profile_from_master(record))
 
 
 def find_company(text: str, ticker_hint: str | None = None) -> CompanyProfile | None:
