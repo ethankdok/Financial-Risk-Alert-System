@@ -83,7 +83,12 @@ class GeminiFinancialAnalyst:
 
     @property
     def configured(self) -> bool:
-        return bool(self._api_key and self.model)
+        return bool(
+            self.model
+            and self._api_key.startswith("AIza")
+            and len(self._api_key) >= 35
+            and not any(character.isspace() for character in self._api_key)
+        )
 
     def health(self) -> dict[str, Any]:
         return {
@@ -97,6 +102,7 @@ class GeminiFinancialAnalyst:
             "structured_output": True,
             "timeout_seconds": self.timeout_seconds,
             "temperature": _TEMPERATURE,
+            "configuration_error": None if self.configured else "GEMINI_API_KEY is missing or malformed.",
         }
 
     def _get_client(self) -> Any:

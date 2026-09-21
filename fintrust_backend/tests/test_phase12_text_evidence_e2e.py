@@ -341,7 +341,7 @@ class Phase12TextEvidenceE2ETests(unittest.TestCase):
         ]
         evidence = [{"evidence_id": "e1", "text": "official sentence", "source_url": "https://example.test"}]
         client = _FakeGeminiClient()
-        analyst = GeminiFinancialAnalyst(api_key="test-key", client=client)
+        analyst = GeminiFinancialAnalyst(api_key="AIzaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", client=client)
 
         narrative, trace = asyncio.run(
             analyst.analyze(
@@ -356,7 +356,7 @@ class Phase12TextEvidenceE2ETests(unittest.TestCase):
             )
         )
         failed, failed_trace = asyncio.run(
-            GeminiFinancialAnalyst(api_key="test-key", client=_FakeGeminiClient(fail=True)).analyze(
+            GeminiFinancialAnalyst(api_key="AIzaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", client=_FakeGeminiClient(fail=True)).analyze(
                 company_name="聯發科",
                 ticker="2454",
                 subindustry="IC 設計",
@@ -403,12 +403,13 @@ class Phase12TextEvidenceE2ETests(unittest.TestCase):
             "rules": [],
         }
         missing, missing_trace = asyncio.run(GeminiFinancialAnalyst(api_key="").analyze(**kwargs))
+        malformed_key, malformed_key_trace = asyncio.run(GeminiFinancialAnalyst(api_key="x").analyze(**kwargs))
         malformed, malformed_trace = asyncio.run(
-            GeminiFinancialAnalyst(api_key="test-key", client=Client("malformed"), fallback_model="").analyze(**kwargs)
+            GeminiFinancialAnalyst(api_key="AIzaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", client=Client("malformed"), fallback_model="").analyze(**kwargs)
         )
         timed_out, timeout_trace = asyncio.run(
             GeminiFinancialAnalyst(
-                api_key="test-key",
+                api_key="AIzaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
                 client=Client("timeout"),
                 fallback_model="",
                 timeout_seconds=0.001,
@@ -417,6 +418,8 @@ class Phase12TextEvidenceE2ETests(unittest.TestCase):
 
         self.assertIsNone(missing)
         self.assertEqual(missing_trace.status, "not_configured")
+        self.assertIsNone(malformed_key)
+        self.assertEqual(malformed_key_trace.status, "not_configured")
         self.assertIsNone(malformed)
         self.assertEqual(malformed_trace.status, "failed")
         self.assertEqual(malformed_trace.error_type, "JSONDecodeError")
