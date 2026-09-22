@@ -28,6 +28,7 @@ class OfficialEventsBatchRefreshResult(BaseModel):
     scope: OfficialEventBatchScope
     started_at: datetime
     completed_at: datetime
+    elapsed_seconds: float
     status: OfficialEventBatchStatus
     requested_companies: int
     completed_companies: int

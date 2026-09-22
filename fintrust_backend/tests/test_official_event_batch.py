@@ -101,6 +101,12 @@ class OfficialEventBatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.failed_companies, 1)
         self.assertEqual(result.status, "partial")
         self.assertEqual([item.ticker for item in result.results], ["2330", "2454"])
+        self.assertGreaterEqual(result.elapsed_seconds, 0)
+        self.assertAlmostEqual(
+            result.elapsed_seconds,
+            (result.completed_at - result.started_at).total_seconds(),
+            places=3,
+        )
 
     async def test_no_data_is_a_successful_poll_but_blocked_source_is_partial(self) -> None:
         companies = {

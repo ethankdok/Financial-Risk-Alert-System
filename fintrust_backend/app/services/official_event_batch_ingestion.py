@@ -314,6 +314,7 @@ class OfficialEventBatchIngestionService:
             )
         )
         completed_at = datetime.now(timezone.utc)
+        elapsed_seconds = (completed_at - started_at).total_seconds()
         completed_count = sum(item.status == "completed" for item in results)
         partial_count = sum(item.status == "partial" for item in results)
         failed_count = sum(item.status == "failed" for item in results)
@@ -332,7 +333,7 @@ class OfficialEventBatchIngestionService:
             completed_count,
             partial_count,
             failed_count,
-            (completed_at - started_at).total_seconds(),
+            elapsed_seconds,
         )
         return OfficialEventsBatchRefreshResult(
             batch_id=batch_id,
@@ -340,6 +341,7 @@ class OfficialEventBatchIngestionService:
             scope=batch_scope,
             started_at=started_at,
             completed_at=completed_at,
+            elapsed_seconds=elapsed_seconds,
             status=aggregate_status,
             requested_companies=len(results),
             completed_companies=completed_count,
