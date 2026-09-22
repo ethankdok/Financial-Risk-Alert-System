@@ -37,13 +37,14 @@ git clone --branch feature/release-delivery \
   https://github.com/ethankdok/Financial-Risk-Alert-System.git \
   /tmp/fintrust-round3-release
 cd /tmp/fintrust-round3-release
-chmod +x deploy/round3_cloud_shell_release.sh
 ```
+
+Run the helper with `bash` directly. Do not run `chmod +x` inside the checkout before preflight because changing the tracked execute bit can make the working tree appear dirty and intentionally fail the release guard.
 
 ### 2. Read-only preflight
 
 ```bash
-./deploy/round3_cloud_shell_release.sh preflight
+bash deploy/round3_cloud_shell_release.sh preflight
 ```
 
 This checks:
@@ -60,7 +61,7 @@ Do not continue unless the script ends with `PRECHECK_OK`.
 ### 3. Deploy Round 3
 
 ```bash
-./deploy/round3_cloud_shell_release.sh deploy
+bash deploy/round3_cloud_shell_release.sh deploy
 ```
 
 The helper reruns backend and root test suites, builds the FastAPI image using the repository Cloud Build config, deploys a new Cloud Run revision, checks `/health`, and verifies that OpenAPI contains:
@@ -85,7 +86,7 @@ Expected classified scope is 96 companies. External source blocking can produce 
 ### 5. Create/update the two Scheduler jobs
 
 ```bash
-./deploy/round3_cloud_shell_release.sh schedulers
+bash deploy/round3_cloud_shell_release.sh schedulers
 ```
 
 This creates or updates:
@@ -104,7 +105,7 @@ Both jobs use OIDC with the existing Scheduler service account and the existing 
 ### 6. Safe verification
 
 ```bash
-./deploy/round3_cloud_shell_release.sh verify
+bash deploy/round3_cloud_shell_release.sh verify
 ```
 
 The output deliberately excludes Scheduler headers.
