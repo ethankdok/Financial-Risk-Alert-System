@@ -59,6 +59,16 @@ current_image() {
   printf '%s\n' "$image"
 }
 
+image_repository() {
+  local image="$1" without_digest last_segment
+  without_digest="${image%@*}"
+  last_segment="${without_digest##*/}"
+  if [[ "$last_segment" == *:* ]]; then
+    without_digest="${without_digest%:*}"
+  fi
+  printf '%s\n' "$without_digest"
+}
+
 verify_git() {
   require_cmd git
   git fetch origin "$BRANCH" --quiet
@@ -128,12 +138,7 @@ deploy_round3() {
 
   local image base_image sha short_sha new_image suffix url
   image="$(current_image)"
-  base_image="${image%@*}"
-  if [[ "$base_image" == *:* && "${base_image##*/}" == *:* ]]; then
-    base_image="${base_image%:*}"
-  elif [[ "$base_image" == *:* ]]; then
-    base_image="${base_image%:*}"
-  fi
+  base_image="$(image_repository "$image")"
 
   sha="$(git rev-parse HEAD)"
   short_sha="$(git rev-parse --short=12 HEAD)"
@@ -220,11 +225,10 @@ create_schedulers() {
   conference_uri="${url}/api/v1/financial/admin/official-events/refresh-all?include_conferences=true&include_material_events=false&extract_documents=false&trigger=scheduler&batch_scope=classified"
 
   # Security critical: never enable xtrace around secret access or gcloud commands
-  # that contain the header value.
+  # that contain the header value. The variable only exists inside this script process.
   set +x
   token="$(gcloud secrets versions access latest --secret="$INGESTION_SECRET" --project="$PROJECT")"
   [[ -n "$token" ]] || fail "Ingestion token could not be loaded."
-  trap 'unset token' RETURN
 
   upsert_scheduler_job \
     "$MATERIAL_JOB" \
@@ -243,7 +247,6 @@ create_schedulers() {
     "$token"
 
   unset token
-  trap - RETURN
 
   printf '%s\n' 'material_scheduler:'
   safe_scheduler_show "$MATERIAL_JOB"
