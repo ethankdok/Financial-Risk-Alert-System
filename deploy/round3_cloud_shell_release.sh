@@ -17,6 +17,7 @@ FINANCIAL_JOB="fintrust-financial-refresh-semiconductor-eligible"
 MATERIAL_JOB="fintrust-material-events-semiconductor"
 CONFERENCE_JOB="fintrust-investor-conferences-semiconductor"
 TEST_VENV="${ROUND3_TEST_VENV:-/tmp/fintrust-round3-test-venv}"
+CANDIDATE_TAG="${ROUND3_CANDIDATE_TAG:-round3-candidate}"
 
 MODE="${1:-preflight}"
 
@@ -162,11 +163,107 @@ run_tests() {
   "$py" -m unittest discover -s tests
 }
 
+revision_ready_status() {
+  local revision="$1"
+  gcloud run revisions describe "$revision" \
+    --project="$PROJECT" \
+    --region="$REGION" \
+    --format=json | python3 -c '
+import json, sys
+payload = json.load(sys.stdin)
+conditions = payload.get("status", {}).get("conditions", [])
+print(next((str(c.get("status", "")) for c in conditions if c.get("type") == "Ready"), ""))
+'
+}
+
+tagged_revision_url() {
+  local tag="$1"
+  gcloud run services describe "$SERVICE" \
+    --project="$PROJECT" \
+    --region="$REGION" \
+    --format=json | python3 -c '
+import json, sys
+wanted = sys.argv[1]
+payload = json.load(sys.stdin)
+traffic = payload.get("status", {}).get("traffic", [])
+print(next((str(item.get("url", "")) for item in traffic if item.get("tag") == wanted), ""))
+' "$tag"
+}
+
+smoke_candidate_revision() {
+  local revision="$1" candidate_url ready
+  ready="$(revision_ready_status "$revision")"
+  printf 'candidate_revision=%s\n' "$revision"
+  printf 'candidate_ready=%s\n' "$ready"
+  [[ "$ready" == "True" ]] || fail "Candidate revision is not Ready=True; production traffic was not changed."
+
+  # Add/update only this traffic tag. This does not change traffic percentages.
+  gcloud run services update-traffic "$SERVICE" \
+    --project="$PROJECT" \
+    --region="$REGION" \
+    --update-tags="${CANDIDATE_TAG}=${revision}" \
+    --quiet >/dev/null
+
+  candidate_url="$(tagged_revision_url "$CANDIDATE_TAG")"
+  [[ -n "$candidate_url" ]] || fail "Could not determine tagged candidate URL."
+  printf 'candidate_url=%s\n' "$candidate_url"
+
+  curl -fsS "$candidate_url/health"
+  printf '\n'
+  curl -fsS "$candidate_url/openapi.json" | python3 -c 'import json,sys; d=json.load(sys.stdin); p="/api/v1/financial/admin/official-events/refresh-all"; assert p in d.get("paths",{}), p; print("candidate_official_event_route=present")'
+  printf 'CANDIDATE_SMOKE_OK\n'
+}
+
+rollout_revision() {
+  local revision="$1" url serving_revision traffic_percent
+  smoke_candidate_revision "$revision"
+
+  # Preserve the service's pinned-revision traffic model: explicitly move 100%
+  # to the validated revision instead of changing the service to floating LATEST.
+  gcloud run services update-traffic "$SERVICE" \
+    --project="$PROJECT" \
+    --region="$REGION" \
+    --to-revisions="${revision}=100" \
+    --quiet >/dev/null
+
+  url="$(service_url)"
+  serving_revision="$(gcloud run services describe "$SERVICE" --project="$PROJECT" --region="$REGION" --format='value(status.traffic[0].revisionName)')"
+  traffic_percent="$(gcloud run services describe "$SERVICE" --project="$PROJECT" --region="$REGION" --format='value(status.traffic[0].percent)')"
+  printf 'production_revision=%s\n' "$serving_revision"
+  printf 'production_traffic_percent=%s\n' "$traffic_percent"
+  [[ "$serving_revision" == "$revision" && "$traffic_percent" == "100" ]] \
+    || fail "Production traffic did not converge to the validated candidate revision."
+
+  curl -fsS "$url/health"
+  printf '\n'
+  curl -fsS "$url/openapi.json" | python3 -c 'import json,sys; d=json.load(sys.stdin); p="/api/v1/financial/admin/official-events/refresh-all"; assert p in d.get("paths",{}), p; print("production_official_event_route=present")'
+
+  # The temporary tag is no longer needed after the exact revision receives 100% traffic.
+  gcloud run services update-traffic "$SERVICE" \
+    --project="$PROJECT" \
+    --region="$REGION" \
+    --remove-tags="$CANDIDATE_TAG" \
+    --quiet >/dev/null || true
+
+  printf 'ROLLOUT_OK\n'
+}
+
+rollout_latest_created() {
+  verify_git
+  local revision
+  revision="$(gcloud run services describe "$SERVICE" \
+    --project="$PROJECT" \
+    --region="$REGION" \
+    --format='value(status.latestCreatedRevisionName)')"
+  [[ -n "$revision" ]] || fail "No latest created Cloud Run revision was found."
+  rollout_revision "$revision"
+}
+
 deploy_round3() {
   verify_git
   run_tests
 
-  local image base_image sha short_sha new_image suffix url
+  local image base_image sha short_sha new_image suffix revision
   image="$(current_image)"
   base_image="$(image_repository "$image")"
 
@@ -183,25 +280,31 @@ deploy_round3() {
     --config=deploy/cloudbuild-fastapi.yaml \
     --substitutions="_IMAGE=${new_image}"
 
-  # Existing service settings (environment variables, secrets, service account,
-  # ingress and IAM policy) are intentionally not replaced here.
+  # Deploy safely with zero production traffic first. A traffic tag gives us a
+  # revision-specific URL for smoke testing without touching the default URL.
+  # Existing environment variables, secrets, service account, ingress and IAM
+  # remain inherited from the current Cloud Run service.
   gcloud run deploy "$SERVICE" \
     --project="$PROJECT" \
     --region="$REGION" \
     --image="$new_image" \
     --revision-suffix="$suffix" \
+    --no-traffic \
+    --tag="$CANDIDATE_TAG" \
     --quiet
 
-  url="$(service_url)"
-  printf 'deployed_url=%s\n' "$url"
+  revision="$(gcloud run services describe "$SERVICE" \
+    --project="$PROJECT" \
+    --region="$REGION" \
+    --format='value(status.latestCreatedRevisionName)')"
+  [[ -n "$revision" ]] || fail "Deployment completed but no latest created revision was reported."
+
+  rollout_revision "$revision"
+
   gcloud run services describe "$SERVICE" \
     --project="$PROJECT" \
     --region="$REGION" \
-    --format='yaml(status.latestReadyRevisionName,status.traffic,spec.template.spec.serviceAccountName,spec.template.spec.timeoutSeconds)'
-
-  curl -fsS "$url/health"
-  printf '\n'
-  curl -fsS "$url/openapi.json" | python3 -c 'import json,sys; d=json.load(sys.stdin); p="/api/v1/financial/admin/official-events/refresh-all"; assert p in d.get("paths",{}), p; print("official_event_route=present")'
+    --format='yaml(status.latestCreatedRevisionName,status.latestReadyRevisionName,status.traffic,spec.template.spec.serviceAccountName,spec.template.spec.timeoutSeconds)'
   printf 'DEPLOY_OK\n'
 }
 
@@ -292,7 +395,7 @@ verify_safe() {
   gcloud run services describe "$SERVICE" \
     --project="$PROJECT" \
     --region="$REGION" \
-    --format='yaml(status.url,status.latestReadyRevisionName,status.traffic,spec.template.spec.timeoutSeconds)'
+    --format='yaml(status.url,status.latestCreatedRevisionName,status.latestReadyRevisionName,status.traffic,spec.template.spec.timeoutSeconds)'
   printf '%s\n' 'financial_scheduler_unchanged_check:'
   safe_scheduler_show "$FINANCIAL_JOB"
   printf '%s\n' 'material_scheduler:'
@@ -316,6 +419,10 @@ case "$MODE" in
     preflight
     deploy_round3
     ;;
+  rollout)
+    preflight
+    rollout_latest_created
+    ;;
   schedulers)
     preflight
     create_schedulers
@@ -330,6 +437,6 @@ case "$MODE" in
     verify_safe
     ;;
   *)
-    fail "Usage: $0 {preflight|test|deploy|schedulers|verify|all}"
+    fail "Usage: $0 {preflight|test|deploy|rollout|schedulers|verify|all}"
     ;;
 esac
