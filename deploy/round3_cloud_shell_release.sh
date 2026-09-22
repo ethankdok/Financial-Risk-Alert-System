@@ -16,6 +16,7 @@ INGESTION_SECRET="${INGESTION_SECRET:-fintrust-ingestion-token}"
 FINANCIAL_JOB="fintrust-financial-refresh-semiconductor-eligible"
 MATERIAL_JOB="fintrust-material-events-semiconductor"
 CONFERENCE_JOB="fintrust-investor-conferences-semiconductor"
+TEST_VENV="${ROUND3_TEST_VENV:-/tmp/fintrust-round3-test-venv}"
 
 MODE="${1:-preflight}"
 
@@ -124,12 +125,41 @@ preflight() {
   printf '\nPRECHECK_OK\n'
 }
 
+ensure_test_env() {
+  require_cmd python3
+  if [[ ! -x "$TEST_VENV/bin/python" ]]; then
+    printf 'Creating isolated test virtualenv at %s...\n' "$TEST_VENV"
+    python3 -m venv "$TEST_VENV"
+  fi
+
+  local py="$TEST_VENV/bin/python"
+  printf '%s\n' 'Installing repository requirements into isolated test virtualenv...'
+  "$py" -m pip install --disable-pip-version-check --quiet \
+    -r requirements.txt \
+    -r fintrust_backend/requirements.txt
+
+  "$py" - <<'PY'
+import fastapi
+import httpx
+import pydantic
+from google.cloud import firestore
+print(
+    "test_environment_ok "
+    f"fastapi={fastapi.__version__} "
+    f"httpx={httpx.__version__} "
+    f"pydantic={pydantic.__version__} "
+    f"firestore_module={firestore.__name__}"
+)
+PY
+}
+
 run_tests() {
-  require_cmd python
-  printf '%s\n' 'Running backend tests...'
-  (cd fintrust_backend && python -m unittest discover -s tests)
-  printf '%s\n' 'Running root tests...'
-  python -m unittest discover -s tests
+  ensure_test_env
+  local py="$TEST_VENV/bin/python"
+  printf '%s\n' 'Running backend tests in isolated project virtualenv...'
+  (cd fintrust_backend && "$py" -m unittest discover -s tests)
+  printf '%s\n' 'Running root tests in isolated project virtualenv...'
+  "$py" -m unittest discover -s tests
 }
 
 deploy_round3() {
@@ -171,7 +201,7 @@ deploy_round3() {
 
   curl -fsS "$url/health"
   printf '\n'
-  curl -fsS "$url/openapi.json" | python -c 'import json,sys; d=json.load(sys.stdin); p="/api/v1/financial/admin/official-events/refresh-all"; assert p in d.get("paths",{}), p; print("official_event_route=present")'
+  curl -fsS "$url/openapi.json" | python3 -c 'import json,sys; d=json.load(sys.stdin); p="/api/v1/financial/admin/official-events/refresh-all"; assert p in d.get("paths",{}), p; print("official_event_route=present")'
   printf 'DEPLOY_OK\n'
 }
 
