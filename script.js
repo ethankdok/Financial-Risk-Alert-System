@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const resultTitle =
       document.querySelector(
-        '.result-top h2'
+        '.result-report-main h2'
       );
 
 
@@ -583,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const resultDescription =
       document.querySelector(
-        '.result-top p'
+        '.result-report-main p'
       );
 
 
