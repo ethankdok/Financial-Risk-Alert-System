@@ -1,0 +1,21 @@
+name: TSMC quarterly corpus tests
+on:
+  push:
+    branches: [feature/tsmc-quarterly-corpus]
+  pull_request:
+    paths:
+      - 'scripts/build_tsmc_corpus.py'
+      - 'scripts/calibrate_tsmc_shift.py'
+      - 'tests/test_tsmc_corpus.py'
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -p 'test_tsmc_corpus.py' -v
