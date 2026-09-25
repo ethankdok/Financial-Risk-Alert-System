@@ -5,6 +5,9 @@ on:
     paths:
       - '.github/workflows/tsmc-live-retrieval.yml'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/tsmc-live-retrieval.yml'
 
 jobs:
   limited-official-source-check:
