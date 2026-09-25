@@ -26,9 +26,16 @@ def main() -> int:
     args = parser.parse_args()
     result = run_mops_pdf_pipeline(ticker=args.ticker, year=args.year, market=args.market,
                                    output_dir=args.output, ocr=args.ocr)
-    print(json.dumps({key: result[key] for key in
-                      ("status", "ticker", "year", "rows", "expected_pdfs", "downloaded_pdfs",
-                       "errors", "manifest_path")}, ensure_ascii=False, indent=2))
+    integrity = result.get("integrity", {})
+    print(json.dumps({
+        **{key: result[key] for key in
+           ("status", "ticker", "year", "rows", "expected_pdfs", "downloaded_pdfs",
+            "errors", "manifest_path")},
+        "listing_pages": result.get("listing_pages", []),
+        "parsed_pages": integrity.get("total_page_count", 0),
+        "pages_requiring_manual_review": integrity.get("pages_requiring_manual_review", 0),
+        "unverified_chart_page_count": integrity.get("unverified_chart_page_count", 0),
+    }, ensure_ascii=False, indent=2))
     return 0 if result["status"] == "complete" else 2
 
 

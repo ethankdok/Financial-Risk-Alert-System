@@ -15,6 +15,10 @@ httpTarget:
     X-Ingestion-Token: SECRET_MANAGER_OR_APPROVED_RUNTIME_TOKEN_VALUE
   # Scheduled polling stores conference metadata and available official evidence.
   # Heavy PDF/transcript extraction remains on-demand so the recurring job stays bounded.
+  # The MOPS PDF archive sync endpoint is separate:
+  #   /api/v1/financial/admin/companies/{ticker}/conference-pdfs/sync?year=YYYY
+  # Do not schedule it in production until durable object storage and metadata
+  # persistence are approved; Cloud Run local disk must not hold the only copy.
 retryConfig:
   retryCount: 2
   maxRetryDuration: 600s

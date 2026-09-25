@@ -18,6 +18,7 @@ class ApiContractTests(unittest.TestCase):
         os.environ["DATASTORE_BACKEND"] = "sqlite"
         os.environ["FINANCIAL_DATABASE_PATH"] = str(cls.pipeline_path)
         os.environ["FINANCIAL_FACT_DATABASE_PATH"] = str(root / "facts.sqlite3")
+        os.environ["CONFERENCE_PDF_ARCHIVE_ROOT"] = str(root / "official-ir-pdfs")
         os.environ["APP_ENV"] = "development"
         from app.dependencies import (
             get_analysis_repository,
@@ -57,6 +58,51 @@ class ApiContractTests(unittest.TestCase):
         rules = self.client.get("/api/v1/financial/companies/2330/rule-results?limit=10")
         self.assertEqual(rules.status_code, 200)
         self.assertEqual(rules.json()["rule_results"], [])
+
+    def test_conference_pdf_archive_query_contract_reads_manifest_pages_and_analysis(self) -> None:
+        root = Path(os.environ["CONFERENCE_PDF_ARCHIVE_ROOT"]) / "2330" / "2025"
+        root.mkdir(parents=True, exist_ok=True)
+        pages = root / "233020250116M001.pages.json"
+        analysis = root / "233020250116M001.analysis.json"
+        pages.write_text(
+            '[{"page":1,"text":"Revenue 100 gross margin 55%","text_length":28,'
+            '"analysis_results":[],"visual_review_required":true}]',
+            encoding="utf-8",
+        )
+        analysis.write_text(
+            '[{"kind":"chart_or_image_region","filename":"233020250116M001.pdf","page":1,'
+            '"verification_status":"needs_manual_chart_value_verification"}]',
+            encoding="utf-8",
+        )
+        (root / "manifest.json").write_text(
+            """{
+              "ticker":"2330","year":2025,"market":"sii","status":"failed",
+              "retrieved_at":"2026-09-26T00:00:00+00:00","rows":16,
+              "listing_pages":[1],"expected_pdfs":1,"downloaded_pdfs":1,
+              "integrity":{"pages_requiring_manual_review":1,"unverified_chart_page_count":1},
+              "errors":[],
+              "documents":[{
+                "filename":"233020250116M001.pdf","status":"needs_review",
+                "page_count":1,"analysis_results":1,
+                "pages_path":"%s","analysis_path":"%s"
+              }]
+            }""" % (str(pages).replace("\\", "\\\\"), str(analysis).replace("\\", "\\\\")),
+            encoding="utf-8",
+        )
+
+        status = self.client.get("/api/v1/financial/companies/2330/conference-pdfs/2025/status?year=2025")
+        documents = self.client.get("/api/v1/financial/companies/2330/conference-pdfs/2025/documents?year=2025")
+        page_response = self.client.get("/api/v1/financial/companies/2330/conference-pdfs/2025/documents/233020250116M001.pdf/pages?year=2025")
+        analysis_response = self.client.get("/api/v1/financial/companies/2330/conference-pdfs/2025/documents/233020250116M001.pdf/analysis?year=2025")
+
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "failed")
+        self.assertEqual(documents.status_code, 200)
+        self.assertEqual(documents.json()["count"], 1)
+        self.assertEqual(page_response.status_code, 200)
+        self.assertEqual(page_response.json()["pages"][0]["page"], 1)
+        self.assertEqual(analysis_response.status_code, 200)
+        self.assertEqual(analysis_response.json()["analysis"][0]["verification_status"], "needs_manual_chart_value_verification")
 
     def test_paid_ai_routes_require_ingestion_token(self) -> None:
         previous = os.environ.get("INGESTION_API_TOKEN")
