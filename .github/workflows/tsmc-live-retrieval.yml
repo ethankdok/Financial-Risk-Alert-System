@@ -35,6 +35,8 @@ jobs:
           python scripts/calibrate_tsmc_shift.py --period1 2025Q3 --period2 2025Q4 || echo 'Pilot comparison not possible; inspect source index.'
       - name: Diagnose 2025Q3 vs 2025Q4 metric discrepancy
         run: python scripts/diagnose_tsmc_shift.py --period1 2025Q3 --period2 2025Q4
+      - name: Compare vendor/repetition sensitivity with separately recalibrated thresholds
+        run: python scripts/sensitivity_tsmc_shift.py
       - uses: actions/upload-artifact@v4
         with:
           name: tsmc-source-index-and-metrics
@@ -42,4 +44,5 @@ jobs:
             data/tsmc_corpus/tsmc_source_index.csv
             data/tsmc_corpus/calibration_result.json
             data/tsmc_corpus/diagnostic_report.json
+            data/tsmc_corpus/sensitivity_report.json
           retention-days: 7
