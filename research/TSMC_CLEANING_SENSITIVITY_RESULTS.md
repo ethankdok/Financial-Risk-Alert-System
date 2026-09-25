@@ -34,3 +34,9 @@ GitHub CI 再次成功取得 2017Q1～2025Q4 共 **36/36** 份官方法說會逐
 - `scripts/diagnose_tsmc_shift.py`：2025Q3/Q4 PDF 品質／詞彙重疊／歷史近似比較。
 - `scripts/sensitivity_tsmc_shift.py`：四種版本獨立估門檻及評估，一致排除目標期之後的歷史資料。
 - 以上程式的離線自動化測試於 https://github.com/ethankdok/Financial-Risk-Alert-System/actions/runs/36167258956 通過。
+
+## 維持原版並新增可追溯候選計算版本
+- 新增 `scripts/calibrate_tsmc_vendor_candidate.py`，只進行少量供應商名稱正規化；使用**完整**歷史相鄰季度重新校準，另存 `vendor_calibration_result.json`，不覆蓋 `calibration_result.json`。
+- 原 `scripts/calibrate_tsmc_shift.py` 的 Firestore 文件 ID 現包含報告中的 `method.version`，避免不同前處理版本的結果覆寫同一筆。
+- Firestore 寫入要求明確 `--upload-firestore --ack-reviewed-sources` 且滿足有效歷史對數；還需要組員驗證 GCP 專案、權限與人工文件品質，不代表系統已正式部署。
+- 實測供應商清理版 JSD 0.167852、Cosine 0.901470；其自身歷史 JSD P90 0.212370、Cosine P10 0.823775，因此**兩指標均未超門檻**。這是台積電候選研究版本，不能宣稱整個半導體產業或所有公司普遍成立。
