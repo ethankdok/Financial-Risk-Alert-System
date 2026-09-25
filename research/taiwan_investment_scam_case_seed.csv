@@ -1,0 +1,7 @@
+case_id,publication_date,sector_tags,case_type,case_description,loss_claim_twd,loss_note,source_url,source_type,classification_note
+SEM-2026-001,2026-06-04,半導體|再生能源,假投資網站,"刑事局偵破以AI半導體與再生能源題材設假投資網站案件",30000000,報導稱逾3000萬且兩種題材合計不能分配產業,https://www.cib.npa.gov.tw/ch/app/news/view?id=1885&module=news&serno=6b1c2c2d-4597-4b14-b1f0-d8fa2ab597c6,刑事警察局,同一案件兩種題材不可當成兩件案
+BIO-2024-001,2024-03-08,生技醫療,未上市股票推銷涉詐,"假券商以看好生技醫療前景推銷未上市股票；警方移送17人",,新聞未列總財損,https://www.cna.com.tw/news/asoc/202403080308.aspx,中央社,以新聞發布日起算而非犯案日期
+BIO-2026-002,2026-03-10,生技醫療,未上市股票詐偽嫌疑,"生技公司涉虛增營收並透過地下盤商販售未上市股票；檢調偵辦",400000000,報導稱涉詐偽販售逾4億元另有詐貸應排除,https://www.cna.com.tw/news/asoc/202603100260.aspx,中央社,2026-04-22是同案追蹤不可重複計案
+BIO-2026-003,2026-06-18,生技醫療,技術投資涉嫌詐欺,"檢方起訴以蟲草素萃取技術投資話術涉詐案件",152920000,此為特定公司投資非一般散戶證券推銷,https://www.cna.com.tw/news/asoc/202606180178.aspx,中央社,依研究範圍決定是否納入
+MIX-2021-001,2021-10-26,生技醫療|電動車|通訊,未上市股票推銷詐騙,"警方偵破利用疫苗防疫概念股、電動車、5G包裝的未上市股票案件",500000000,官方稱五億元以上為整起案件總財損,https://www.cib.npa.gov.tw/ch/app/news/view?id=1885&module=news&serno=d753118f-4b12-47bc-928d-baeca2ae5eea,刑事警察局,跨題材混合案件不得將全案財損歸給生技
+GREEN-2025-001,2025-01-08,綠能,未上市股票投資涉詐,"刑事局查緝勾結綠能公司兜售未上市股票案",,受害逾200人近2億元為警廣報導且中央社另涉擴大集團需避免重複,https://www.pbs.npa.gov.tw/ch/app/data/view?id=18740&module=wg183&serno=2877190f-ed51-446c-ad51-8b6793a0ba85,警察廣播電臺,待對照2025-01-08另一篇同案及集團範圍
