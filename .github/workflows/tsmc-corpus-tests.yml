@@ -7,6 +7,8 @@ on:
       - 'scripts/build_tsmc_corpus.py'
       - 'scripts/calibrate_tsmc_shift.py'
       - 'tests/test_tsmc_corpus.py'
+      - 'scripts/diagnose_tsmc_shift.py'
+      - 'tests/test_tsmc_diagnostics.py'
 
 jobs:
   offline-tests:
@@ -18,4 +20,4 @@ jobs:
           python-version: '3.11'
           cache: pip
       - run: pip install -r requirements.txt
-      - run: python -m unittest discover -s tests -p 'test_tsmc_corpus.py' -v
+      - run: python -m unittest discover -s tests -p 'test_tsmc_*.py' -v
