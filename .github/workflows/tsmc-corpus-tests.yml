@@ -9,6 +9,8 @@ on:
       - 'tests/test_tsmc_corpus.py'
       - 'scripts/diagnose_tsmc_shift.py'
       - 'tests/test_tsmc_diagnostics.py'
+      - 'scripts/sensitivity_tsmc_shift.py'
+      - 'tests/test_tsmc_sensitivity.py'
 
 jobs:
   offline-tests:
