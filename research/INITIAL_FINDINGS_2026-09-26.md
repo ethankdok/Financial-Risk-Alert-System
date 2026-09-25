@@ -33,3 +33,9 @@
 - TWSE 法說會簡報付費主動派送 https://eshop.twse.com.tw/zh/mops/detail/8a82e9e69b05c644019b2b7a58a7001d
 - 台股法說會索引 https://finmoconf.diveinvest.net/
 - 財報 OCR 公開資料 https://huggingface.co/datasets/andynoodles/Taiwan-Financial
+
+## 查核到可立即取得的「完整逐字稿」實際範例（2026-09-26 補充）
+- **TSMC (2330) 官方 Investor Relations** 連續季度首頁列有 Earnings Conference Transcript，年分入口從 1997 至 2026；要**逐份確認**年份、語言及逐字稿內容，不可僅依選單存在推定每期都有 PDF：https://investor.tsmc.com/english/quarterly-results/2024/q4
+- 目前已實際查到 2025Q4 官方逐字稿 PDF，日期 2026-01-15：https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-01/51d09df96cd89ac19d65af39032b038dc2896a24/TSMC%204Q25%20Transcript.pdf
+- 官方 2024Q4、2025Q1、2025Q2、2025Q3、2025Q4 頁均顯示逐字稿項目，可先逐季取得做**半導體完整法說會演示**。此批語料預期主要英語，請沿用英文 tokenizer 並重新按「臺灣半導體同型文件」校準；不要拿英文語料配新繁中 tokenizer，也不要沿用多產業 STRUX 舊門檻。
+- TSMC 是建立法說會系統的**資料可行性示例**，不是警方確認被仿冒的上述詐欺案件標的。切忌將正常公司跨季文字漂移誤述成該公司與詐欺案件有關。
