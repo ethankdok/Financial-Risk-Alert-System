@@ -9,6 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 from flask import Blueprint, jsonify, request
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -59,7 +60,7 @@ def compare_groups(texts_a: list[str], texts_b: list[str]) -> dict:
     tfidf = TfidfVectorizer(token_pattern=r"(?u)\b\w+\b").fit_transform(documents)
     mean_a = tfidf[:len(texts_a)].mean(axis=0)
     mean_b = tfidf[len(texts_a):].mean(axis=0)
-    cosine = float(cosine_similarity(mean_a, mean_b)[0][0])
+    cosine = float(cosine_similarity(np.asarray(mean_a), np.asarray(mean_b))[0][0])
     changes = [(word, round(q.get(word,0)-p.get(word,0),6)) for word in p.keys() | q.keys()]
     return {
         "jsd": round(jsd, 6),
