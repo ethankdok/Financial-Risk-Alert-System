@@ -19,8 +19,8 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt
-      - name: Retrieve 2024–2025 official quarterly transcript PDF links
-        run: python scripts/build_tsmc_corpus.py --start 2024 --end 2025 --delay 1.0
+      - name: Retrieve 2017–2025 official quarterly transcript PDF links
+        run: python scripts/build_tsmc_corpus.py --start 2017 --end 2025 --delay 1.0
       - name: Report source completeness and available pilot metrics
         shell: bash
         run: |
@@ -32,7 +32,7 @@ jobs:
           print("SOURCE_STATUS", dict(Counter(row["status"] for row in rows)))
           print("OFFICIAL_PDF_PERIODS", [row["period"] for row in rows if row["status"] == "ok"])
           PY
-          python scripts/calibrate_tsmc_shift.py --period1 2024Q1 --period2 2024Q2 || echo 'Pilot comparison not possible; inspect source index.'
+          python scripts/calibrate_tsmc_shift.py --period1 2025Q3 --period2 2025Q4 || echo 'Pilot comparison not possible; inspect source index.'
       - uses: actions/upload-artifact@v4
         with:
           name: tsmc-source-index-and-metrics
