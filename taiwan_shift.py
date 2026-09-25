@@ -78,7 +78,7 @@ def _read_csv_cached(path: str, mtime: float) -> pd.DataFrame:
     df = df.copy()
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df = df.loc[df["date"].notna() & df["text"].str.strip().ne("")].copy()
-    df["quarter"] = df["date"].dt.to_period("Q")
+    df["month"] = df["date"].dt.to_period("M")
     return df
 
 
@@ -93,12 +93,12 @@ def load_dataset() -> tuple[pd.DataFrame, str]:
 
 
 def group_texts(df: pd.DataFrame, period: pd.Period) -> list[str]:
-    return df.loc[df["quarter"] == period, "text"].astype(str).tolist()
+    return df.loc[df["month"] == period, "text"].astype(str).tolist()
 
 
 def calibrate(df: pd.DataFrame, before: pd.Period, min_documents: int) -> dict:
-    """只採目標區間開始前，同產業／同來源、連續季度的相鄰組合。"""
-    historical = sorted(p for p in df["quarter"].unique() if p < before)
+    """只採目標區間開始前，同產業／同來源、連續月份的相鄰組合。"""
+    historical = sorted(p for p in df["month"].unique() if p < before)
     observations = []
     for old, new in zip(historical, historical[1:]):
         if new != old + 1:
@@ -114,7 +114,7 @@ def calibrate(df: pd.DataFrame, before: pd.Period, min_documents: int) -> dict:
             "historical_pairs": len(observations),
             "minimum_pairs": 30,
             "thresholds": None,
-            "note": "歷史相鄰季度不足 30 對：只顯示量測值，不判定高低或詐騙。",
+            "note": "歷史相鄰月份不足 30 對：只顯示量測值，不判定高低或詐騙。",
         }
     jsd_vals = pd.Series([v[0] for v in observations])
     cosine_vals = pd.Series([v[1] for v in observations])
@@ -128,18 +128,18 @@ def calibrate(df: pd.DataFrame, before: pd.Period, min_documents: int) -> dict:
             "cosine_p10": round(float(cosine_vals.quantile(.10)), 6),
             "cosine_p05": round(float(cosine_vals.quantile(.05)), 6),
         },
-        "note": "同來源／同產業歷史相鄰季度經驗百分位；不是通用詐騙判定標準。",
+        "note": "同來源／同產業歷史相鄰月份經驗百分位；不是通用詐騙判定標準。",
     }
 
 
 def analyze_taiwan_shift(*, df: pd.DataFrame, sector: str, source: str,
                          period_1: str, period_2: str, min_documents: int = 5) -> dict:
     try:
-        q1, q2 = pd.Period(period_1, freq="Q"), pd.Period(period_2, freq="Q")
+        q1, q2 = pd.Period(period_1, freq="M"), pd.Period(period_2, freq="M")
     except (ValueError, TypeError) as exc:
-        raise ValueError("period_1／period_2 請填 YYYYQ1 等季度格式") from exc
+        raise ValueError("period_1／period_2 請填 YYYY-MM 等月份格式") from exc
     if q2 != q1 + 1:
-        raise ValueError("請選連續兩季，避免時間跨度使指標不可比")
+        raise ValueError("請選連續兩月，避免時間跨度使指標不可比")
     subset = df.loc[(df["sector"] == sector) & (df["source"] == source)].copy()
     a, b = group_texts(subset, q1), group_texts(subset, q2)
     if len(a) < min_documents or len(b) < min_documents:
