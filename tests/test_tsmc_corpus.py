@@ -46,12 +46,21 @@ class TsmcPilotTests(unittest.TestCase):
 
     def test_thresholds_only_use_earlier_quarters(self):
         rows = []
+        vocabulary = ["wafer", "packaging", "substrate", "assembly", "lithography",
+                      "foundry", "capacity", "automation", "shipping", "suppliers",
+                      "electrical", "industrial", "transistors", "production"]
+        index = 0
         for year in range(2017, 2026):
             for quarter in range(1, 5):
-                # Variability makes percentiles computable; still the same document type.
-                text = (f"revenue manufacturing demand global capacity outlook "
-                        f"period{year} growth{quarter} semiconductor process " * 140)
+                # Vary token mix and relative proportions; repeated digits alone
+                # would disappear in the English tokenizer.
+                word = vocabulary[index % len(vocabulary)]
+                other = vocabulary[(index + 3) % len(vocabulary)]
+                text = ("revenue manufacturing demand global quarterly outlook " * 130
+                        + (word + " ") * (55 + index * 2)
+                        + (other + " ") * (18 + (index % 5) * 11))
                 rows.append(make_record(f"{year}Q{quarter}", text))
+                index += 1
         result = analyze(rows, "2025Q3", "2025Q4")
         self.assertEqual(result["calibration"]["history_pair_count"], 33)
         self.assertIsNotNone(result["calibration"]["thresholds"])
