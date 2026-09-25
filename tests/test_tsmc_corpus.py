@@ -53,7 +53,7 @@ class TsmcPilotTests(unittest.TestCase):
                         f"period{year} growth{quarter} semiconductor process " * 140)
                 rows.append(make_record(f"{year}Q{quarter}", text))
         result = analyze(rows, "2025Q3", "2025Q4")
-        self.assertEqual(result["calibration"]["history_pair_count"], 32)
+        self.assertEqual(result["calibration"]["history_pair_count"], 33)
         self.assertIsNotNone(result["calibration"]["thresholds"])
         self.assertIn("jsd_p90", result["calibration"]["thresholds"])
         self.assertTrue(all(
