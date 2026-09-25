@@ -53,12 +53,13 @@ def compare_groups(texts_a: list[str], texts_b: list[str]) -> dict:
     p = average_distribution(texts_a)
     q = average_distribution(texts_b)
     jsd = js_divergence(p, q)
-    # 與 JSD 一樣使用每篇平均詞頻向量；先建立共同詞彙表，再用 TF-IDF 權重。
-    # 這裡的 IDF 以「兩個跨期聚合文本」建立；更換方法須重做門檻。
-    periods = [" ".join(tokenize_zh(t) for t in texts_a),
-               " ".join(tokenize_zh(t) for t in texts_b)]
-    tfidf = TfidfVectorizer(token_pattern=r"(?u)\b\w+\b").fit_transform(periods)
-    cosine = float(cosine_similarity(tfidf[0], tfidf[1])[0][0])
+    # 每篇文件共享詞彙表與 IDF，再平均 TF-IDF 向量，避免長篇文章獨占。
+    # 任何斷詞／IDF 定義變更，都必須重算歷史門檻。
+    documents = [" ".join(tokenize_zh(t)) for t in (texts_a + texts_b)]
+    tfidf = TfidfVectorizer(token_pattern=r"(?u)\b\w+\b").fit_transform(documents)
+    mean_a = tfidf[:len(texts_a)].mean(axis=0)
+    mean_b = tfidf[len(texts_a):].mean(axis=0)
+    cosine = float(cosine_similarity(mean_a, mean_b)[0][0])
     changes = [(word, round(q.get(word,0)-p.get(word,0),6)) for word in p.keys() | q.keys()]
     return {
         "jsd": round(jsd, 6),
