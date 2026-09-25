@@ -173,10 +173,10 @@ def write_firestore(report: dict, project: str | None) -> None:
     from google.cloud import firestore
     db = firestore.Client(project=project) if project else firestore.Client()
     method_id = hashlib.sha256(
-        f"{report['industry']}:{report['ticker']}:{METHOD}:{report['period_1']}".encode()
+        f"{report['industry']}:{report['ticker']}:{report['method']['version']}:{report['period_1']}".encode()
     ).hexdigest()[:24]
     run_id = hashlib.sha256(
-        f"{report['ticker']}:{report['period_1']}:{report['period_2']}:{METHOD}".encode()
+        f"{report['ticker']}:{report['period_1']}:{report['period_2']}:{report['method']['version']}".encode()
     ).hexdigest()[:24]
     for doc in report["source_documents"]:
         db.collection("document_sources").document(doc["sha256"]).set(doc, merge=True)
@@ -192,7 +192,7 @@ def write_firestore(report: dict, project: str | None) -> None:
         "target": report["target"], "combined_rule": report["combined_rule"],
         "drift_result": report["drift_result"], "warnings": report["warnings"],
         "source_documents": [x["sha256"] for x in report["source_documents"]],
-        "method_version": METHOD, "created_at": report["created_at"],
+        "method_version": report["method"]["version"], "created_at": report["created_at"],
     })
     print(f"Uploaded Firestore metadata: shift_runs/{run_id} calibration/{method_id}")
 
@@ -205,6 +205,8 @@ if __name__ == "__main__":
     parser.add_argument("--period2", default="2025Q4")
     parser.add_argument("--output", type=Path, default=Path("data/tsmc_corpus/calibration_result.json"))
     parser.add_argument("--upload-firestore", action="store_true")
+    parser.add_argument("--ack-reviewed-sources", action="store_true",
+                        help="Explicitly confirm manual review of source PDFs and extraction quality before production DB writes")
     parser.add_argument("--gcp-project", default=None)
     args = parser.parse_args()
     data = analyze(load(args.csv, args.ticker), args.period1, args.period2)
@@ -216,6 +218,8 @@ if __name__ == "__main__":
                       "drift": data["drift_result"]}, ensure_ascii=False, indent=2))
     print(f"Saved {args.output}")
     if args.upload_firestore:
+        if not args.ack_reviewed_sources:
+            raise SystemExit("Blocked Firestore upload: pass --ack-reviewed-sources only after manually checking source and extracted text")
         if data["calibration"]["thresholds"] is None:
             raise SystemExit("Blocked Firestore upload: not enough history for calibration")
         write_firestore(data, args.gcp_project)
