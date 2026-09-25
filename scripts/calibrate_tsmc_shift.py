@@ -112,19 +112,27 @@ def analyze(rows: list[dict], start: str, end: str, min_pairs: int = MIN_HISTORY
     else:
         jsd = pd.Series([x["metrics"]["jsd"] for x in history])
         cosine = pd.Series([x["metrics"]["cosine_similarity"] for x in history])
-        thresholds = {
-            "jsd_p90": round(float(jsd.quantile(.90)), 6),
-            "jsd_p95": round(float(jsd.quantile(.95)), 6),
-            "cosine_p10": round(float(cosine.quantile(.10)), 6),
-            "cosine_p05": round(float(cosine.quantile(.05)), 6),
-        }
-        high = target["metrics"]["jsd"] >= thresholds["jsd_p90"]
-        low = target["metrics"]["cosine_similarity"] <= thresholds["cosine_p10"]
-        decision = {"jsd_high": bool(high), "cosine_low": bool(low),
-                    "rule": "JSD >= historical P90 AND Cosine <= historical P10"}
-        drift = ("雙指標顯著文字漂移（需人工確認）" if high and low else
-                 "單一指標異常（待觀察）" if high or low else
-                 "未達雙指標歷史漂移門檻")
+        # Nearly constant baselines make percentile classification meaningless.
+        if jsd.nunique() < 3 or cosine.nunique() < 3:
+            thresholds = None
+            decision = None
+            drift = "歷史分布變化不足：不可判定漂移等級"
+        else:
+            thresholds = {
+                "jsd_p90": round(float(jsd.quantile(.90)), 6),
+                "jsd_p95": round(float(jsd.quantile(.95)), 6),
+                "cosine_p10": round(float(cosine.quantile(.10)), 6),
+                "cosine_p05": round(float(cosine.quantile(.05)), 6),
+            }
+            high = (target["metrics"]["jsd"] >= thresholds["jsd_p90"]
+                    and target["metrics"]["jsd"] > 0)
+            low = (target["metrics"]["cosine_similarity"] <= thresholds["cosine_p10"]
+                   and target["metrics"]["cosine_similarity"] < 1)
+            decision = {"jsd_high": bool(high), "cosine_low": bool(low),
+                        "rule": "JSD >= historical P90 AND Cosine <= historical P10"}
+            drift = ("雙指標顯著文字漂移（需人工確認）" if high and low else
+                     "單一指標異常（待觀察）" if high or low else
+                     "未達雙指標歷史漂移門檻")
 
     first = by_period[p1]
     source_documents = [
