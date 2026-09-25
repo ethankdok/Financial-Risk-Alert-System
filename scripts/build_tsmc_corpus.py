@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse, unquote
 
 import requests
+import pandas as pd
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
@@ -126,6 +127,11 @@ def build(start: int, end: int, dest: Path, overrides: Path, delay: float) -> No
         writer = csv.DictWriter(file, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(corpus_rows)
+    # STRUX-compatible portable local format; raw full text stays gitignored.
+    if corpus_rows:
+        pd.DataFrame(corpus_rows, columns=FIELDS).to_parquet(
+            dest / "tsmc_quarterly_text.parquet", index=False
+        )
     with index_file.open("w", encoding="utf-8-sig", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=INDEX_FIELDS)
         writer.writeheader()
