@@ -20,7 +20,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.services.conference_pdf_evidence_validator import validate_region_interpretation
-from app.services.mops_conference_pdf_semantics import RegionContext, load_pymupdf
+from app.services.mops_conference_pdf_semantics import RegionContext, render_region_png
 
 REGION_TYPES = ("chart", "table", "image", "diagram", "decorative", "unknown")
 TRENDS = ("increasing", "decreasing", "stable", "mixed", "unknown")
@@ -75,6 +75,8 @@ _SYSTEM_PROMPT = (
     "Use trend 'unknown' unless the printed values make the direction clear. "
     "Mark periods with E/F suffixes or words like guidance/outlook/forecast as is_forecast. "
     "Logos, icons, photos without data, and backgrounds are 'decorative' or 'image'. "
+    "ocr_candidates, when present, come from local OCR of the same crop: they are evidence, not guaranteed "
+    "truth. Do not invent or correct OCR values unless the image clearly supports them; report what is printed. "
     "When unsure, use region_type 'unknown' and requires_review true. Do not give investment advice."
 )
 
@@ -117,16 +119,15 @@ def _request_text(record: dict[str, Any], source: RegionContext) -> str:
             "labels": record.get("labels") or [],
             "columns": record.get("columns") or [],
         },
+        "ocr_candidates": [
+            {"text": token.raw_text, "confidence": round(token.confidence, 3)}
+            for token in source.ocr_tokens[:80]
+        ],
     }, ensure_ascii=False)
 
 
 def crop_png(page: Any, bbox: tuple[float, float, float, float]) -> bytes:
-    fitz = load_pymupdf()
-    rect = fitz.Rect(
-        max(page.rect.x0, bbox[0] - _CROP_PADDING), max(page.rect.y0, bbox[1] - _CROP_PADDING),
-        min(page.rect.x1, bbox[2] + _CROP_PADDING), min(page.rect.y1, bbox[3] + _CROP_PADDING),
-    )
-    return page.get_pixmap(clip=rect, dpi=_CROP_DPI).tobytes("png")
+    return render_region_png(page, bbox, dpi=_CROP_DPI, padding=_CROP_PADDING)[0]
 
 
 class GeminiRegionInterpreter:
@@ -290,7 +291,10 @@ def apply_interpretation(
             {**{key: value for key, value in item.items() if value is not None},
              "source": provider,
              "value_supported": check["value_supported"],
-             "mapping_supported": check["mapping_supported"]}
+             "supported_by": check["supported_by"],
+             "mapping_supported": check["mapping_supported"],
+             **{key: check[key] for key in ("ocr_confidence", "ocr_low_confidence_match", "ocr_disagreement")
+                if key in check}}
             for item, check in zip(interpretation["values"], report["values"])
         ]
         record["mapping_status"] = "source_aligned" if report["mapping_established"] else "provider_only"
@@ -333,6 +337,31 @@ def semantic_gating_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
         ),
         "gemini_successes": statuses.count("completed"),
         "gemini_failures": statuses.count("failed"),
+        **ocr_gating_metrics(regions),
+    }
+
+
+def ocr_gating_metrics(regions: list[dict[str, Any]]) -> dict[str, int]:
+    statuses = [item.get("ocr_status", "not_requested") for item in regions]
+    processed = sum(1 for status in statuses if status in {"completed", "failed"})
+    return {
+        "ocr_eligible": sum(1 for item in regions if item.get("ocr_eligible")),
+        "ocr_processed": processed,
+        "ocr_skipped": len(regions) - processed,
+        "ocr_successes": statuses.count("completed"),
+        "ocr_failures": statuses.count("failed"),
+        "ocr_unavailable": statuses.count("unavailable"),
+        "ocr_tokens": sum(int((item.get("ocr") or {}).get("token_count") or 0) for item in regions),
+        "ocr_tokens_accepted": sum(int((item.get("ocr") or {}).get("accepted_count") or 0) for item in regions),
+        "ocr_regions_supporting_gemini_values": sum(
+            1 for item in regions if (item.get("validation") or {}).get("ocr_supported_values")
+        ),
+        "ocr_gemini_values_supported": sum(
+            int((item.get("validation") or {}).get("ocr_supported_values") or 0) for item in regions
+        ),
+        "ocr_regions_disagreeing_with_gemini": sum(
+            1 for item in regions if (item.get("validation") or {}).get("ocr_disagreements")
+        ),
     }
 
 

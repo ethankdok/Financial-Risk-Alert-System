@@ -95,10 +95,42 @@ class RegionContext:
     region_text: str
     page_text: str
     words: list[Word] = field(default_factory=list)
+    # Local OCR tokens for raster regions (conference_pdf_ocr.OcrToken); never PDF text.
+    ocr_tokens: list[Any] = field(default_factory=list)
 
 
 class RegionInterpreter(Protocol):
     def interpret_page(self, page: Any, items: list[tuple[dict[str, Any], RegionContext]]) -> None: ...
+
+
+class RegionOcr(Protocol):
+    def process_page(self, page: Any, items: list[tuple[dict[str, Any], RegionContext]]) -> None: ...
+
+
+RASTER_SHARE_FOR_OCR = 0.3
+
+
+def render_region_png(page: Any, bbox: BBox, *, dpi: int, padding: float = 8.0) -> tuple[bytes, BBox]:
+    """Render one padded region of the original page; returns the PNG and the clip actually used."""
+    fitz = load_pymupdf()
+    clip = fitz.Rect(
+        max(page.rect.x0, bbox[0] - padding), max(page.rect.y0, bbox[1] - padding),
+        min(page.rect.x1, bbox[2] + padding), min(page.rect.y1, bbox[3] + padding),
+    )
+    return page.get_pixmap(clip=clip, dpi=dpi).tobytes("png"), rect_tuple(clip)
+
+
+def ocr_eligible(record: dict[str, Any], images: list["Primitive"], words: list[Word]) -> bool:
+    """OCR only meaningful regions whose evidence is in pixels, not selectable text."""
+    if not record.get("gemini_eligible") or record.get("evidence_type") not in {"chart", "image", "unknown"}:
+        return False
+    box = (record["region"]["x0"], record["region"]["y0"], record["region"]["x1"], record["region"]["y1"])
+    area = bbox_area(box) or 1.0
+    raster = sum(bbox_area(item.bbox) * overlap_ratio(item.bbox, box) for item in images)
+    if raster / area >= RASTER_SHARE_FOR_OCR:
+        return True
+    # Vector marks with (almost) no selectable text, e.g. labels drawn as outlines.
+    return len(words) < 3
 
 
 def bbox_dict(bbox: BBox) -> dict[str, float]:
@@ -272,6 +304,8 @@ def semantic_record(
         "gemini_eligible": False,
         "semantic_provider": "deterministic",
         "semantic_provider_status": "not_requested",
+        "ocr_eligible": False,
+        "ocr_status": "not_requested",
     }
     record.update(extra)
     return record
@@ -740,6 +774,7 @@ def extract_visual_evidence(
                 evidence_type="unknown", confidence=0.35, verification_status="needs_review",
                 gemini_eligible=True, **base,
             )
+        record["ocr_eligible"] = ocr_eligible(record, images, words)
         results.append(record)
         if contexts is not None and record["gemini_eligible"]:
             contexts.append((record, RegionContext(
@@ -776,6 +811,7 @@ def extract_semantic_evidence(
     *,
     filename: str,
     interpreter: RegionInterpreter | None = None,
+    region_ocr: RegionOcr | None = None,
 ) -> list[list[dict[str, Any]]]:
     fitz = load_pymupdf()
     document = fitz.open(stream=raw, filetype="pdf")
@@ -803,6 +839,9 @@ def extract_semantic_evidence(
                 )))
         for number, record in enumerate(semantic, start=1):
             record["region_id"] = f"{filename}#p{page_no}r{number}"
+        # OCR first so its tokens reach both the Gemini request and the validator.
+        if region_ocr is not None and contexts:
+            region_ocr.process_page(page, [item for item in contexts if item[0].get("ocr_eligible")])
         if interpreter is not None and contexts:
             interpreter.interpret_page(page, contexts)
         pages.append(semantic)

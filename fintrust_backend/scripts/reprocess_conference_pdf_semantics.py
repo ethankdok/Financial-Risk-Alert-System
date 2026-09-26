@@ -5,7 +5,12 @@ manifest.json. Without --write the run only prints the aggregate summary.
 
 Run from fintrust_backend:
   python -m scripts.reprocess_conference_pdf_semantics --archive data/official-ir-pdfs-live-test \
-      --ticker 2330 --year 2025 [--multimodal gemini --max-calls 60] [--write] [--sanity FILE]
+      --ticker 2330 --year 2025 [--multimodal gemini|replay --max-calls 60] [--ocr rapidocr]
+      [--write] [--sanity FILE]
+
+--multimodal replay re-validates the Gemini interpretations already stored in
+the semantic.json files (for example against new OCR evidence) without calling
+the provider again.
 
 --summary-only reports on the semantic.json files already on disk.
 """
@@ -20,13 +25,50 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.services.conference_pdf_ocr import build_region_ocr
 from app.services.conference_pdf_multimodal import (
+    _mark,
+    apply_interpretation,
     GeminiRegionInterpreter,
     merge_gating_metrics,
     semantic_gating_metrics,
 )
 from app.services.mops_conference_pdf_pipeline import _atomic_bytes, extract_pages
 from app.services.mops_conference_pdf_semantics import load_pymupdf
+
+class ReplayRegionInterpreter:
+    """Re-applies stored provider interpretations; never calls a provider."""
+
+    def __init__(self) -> None:
+        self.stored: dict[tuple, dict] = {}
+
+    @staticmethod
+    def key(record: dict) -> tuple:
+        region = record["region"]
+        return (record["filename"], record["page"], *(round(region[k], 1) for k in ("x0", "y0", "x1", "y1")))
+
+    def load(self, records: list[dict]) -> None:
+        for record in records:
+            if record.get("semantic_provider") == "gemini":
+                self.stored[self.key(record)] = record
+
+    def interpret_page(self, page, items) -> None:
+        for record, source in items:
+            previous = self.stored.get(self.key(record))
+            if previous is None:
+                _mark(record, "skipped", error={"error_type": "NoStoredInterpretation"})
+            elif previous.get("provider_interpretation") is not None:
+                apply_interpretation(record, source, previous["provider_interpretation"],
+                                     provider="gemini", model=previous.get("semantic_model"))
+                record["semantic_provider_replayed"] = True
+            else:
+                _mark(record, previous.get("semantic_provider_status") or "failed",
+                      error=previous.get("semantic_provider_error"))
+                record["semantic_provider_replayed"] = True
+
+    def close(self) -> None:
+        pass
+
 
 EVIDENCE_TYPES = ("text", "table", "chart", "image", "diagram", "decorative", "unknown")
 STATUSES = ("verified", "partially_verified", "needs_review")
@@ -106,6 +148,16 @@ def evaluate_sanity(path: Path, records_by_file: dict[str, list[dict]]) -> list[
             "trend_expected": trend,
             "trend_found": sorted({item["trend"] for item in page_records if item.get("trend")}),
             "statuses": dict(Counter(item["verification_status"] for item in page_records)),
+            "ocr_statuses": dict(Counter(
+                item.get("ocr_status") for item in page_records if item.get("ocr_eligible")
+            )),
+            "ocr_supported_values": [
+                value["value_text"] for item in page_records for value in item.get("values", [])
+                if isinstance(value, dict) and "ocr" in (value.get("supported_by") or [])
+            ],
+            "ocr_disagreements": [
+                d for item in page_records for d in (item.get("validation") or {}).get("ocr_disagreements", [])
+            ],
             "provider_statuses": dict(Counter(
                 item.get("semantic_provider_status") for item in page_records if item.get("gemini_eligible")
             )),
@@ -118,7 +170,9 @@ def main() -> int:
     parser.add_argument("--archive", type=Path, default=Path("data/official-ir-pdfs"))
     parser.add_argument("--ticker", required=True)
     parser.add_argument("--year", required=True, type=int)
-    parser.add_argument("--multimodal", choices=("none", "gemini"), default="none")
+    parser.add_argument("--multimodal", choices=("none", "gemini", "replay"), default="none")
+    parser.add_argument("--ocr", choices=("none", "rapidocr"), default="none",
+                        help="targeted local OCR of eligible raster regions")
     parser.add_argument("--max-calls", type=int, default=None)
     parser.add_argument("--write", action="store_true", help="rewrite .pages/.analysis/.semantic JSON and manifest")
     parser.add_argument("--summary-only", action="store_true", help="summarize existing semantic.json files")
@@ -131,6 +185,9 @@ def main() -> int:
     interpreter = None
     if args.multimodal == "gemini" and not args.summary_only:
         interpreter = GeminiRegionInterpreter(max_calls=args.max_calls)
+    elif args.multimodal == "replay" and not args.summary_only:
+        interpreter = ReplayRegionInterpreter()
+    region_ocr = None if args.summary_only else build_region_ocr(args.ocr)
 
     records_by_file: dict[str, list[dict]] = {}
     areas_by_file: dict[str, dict[int, float]] = {}
@@ -149,8 +206,11 @@ def main() -> int:
                 records_by_file[doc["filename"]] = json.loads(base.with_suffix(".semantic.json").read_text(encoding="utf-8"))
                 continue
             previous_pages = json.loads(base.with_suffix(".pages.json").read_text(encoding="utf-8"))
-            ocr = any(page.get("text_extraction_method") == "ocr" for page in previous_pages)
-            pages, _problems = extract_pages(raw, filename=doc["filename"], ocr=ocr, interpreter=interpreter)
+            page_ocr = any(page.get("text_extraction_method") == "ocr" for page in previous_pages)
+            if isinstance(interpreter, ReplayRegionInterpreter):
+                interpreter.load(json.loads(base.with_suffix(".semantic.json").read_text(encoding="utf-8")))
+            pages, _problems = extract_pages(raw, filename=doc["filename"], ocr=page_ocr,
+                                             interpreter=interpreter, region_ocr=region_ocr)
             for page, previous in zip(pages, previous_pages):
                 for key in ("review_image_path", "review_image_error"):
                     if key in previous:
@@ -174,6 +234,8 @@ def main() -> int:
     finally:
         if interpreter is not None:
             interpreter.close()
+        if region_ocr is not None:
+            region_ocr.close()
 
     if args.write and not args.summary_only:
         integrity = manifest.setdefault("integrity", {})

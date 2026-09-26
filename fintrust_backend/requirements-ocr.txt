@@ -1,0 +1,4 @@
+# Optional local OCR for raster conference-PDF regions (CONFERENCE_PDF_OCR_PROVIDER=rapidocr).
+# Kept out of requirements.txt so the default API image does not carry ~200 MB of OCR runtime.
+rapidocr>=3.9,<4.0
+onnxruntime>=1.23,<2.0
