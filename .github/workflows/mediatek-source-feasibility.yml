@@ -18,10 +18,35 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install requests beautifulsoup4
+      - run: pip install -r requirements.txt
       - run: python scripts/discover_mediatek_transcripts.py
+      - name: Build independently verified 2022-2025 quarterly PDF corpus
+        run: python scripts/build_mediatek_corpus.py --start 2022 --end 2025
+      - name: Compare raw metrics using same paired method; no inherited thresholds
+        shell: bash
+        run: |
+          python scripts/calibrate_tsmc_shift.py --csv data/mediatek_corpus/mediatek_quarterly_text.csv --ticker 2454 --period1 2025Q3 --period2 2025Q4 --output data/mediatek_corpus/uncalibrated_raw_metrics.json || echo "Insufficient adjacent official MediaTek PDFs"
+          python - <<'PY'
+          from pathlib import Path
+          import json,sys
+          sys.path.insert(0,str(Path('scripts').resolve()))
+          from calibrate_tsmc_shift import load
+          from sensitivity_tsmc_shift import compare_versions
+          path=Path('data/mediatek_corpus/mediatek_quarterly_text.csv')
+          try:
+              report=compare_versions(load(path,'2454'))
+              Path('data/mediatek_corpus/sensitivity_report.json').write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding='utf-8')
+              for name,result in report['results'].items():
+                  print("MEDIATEK_VARIANT",name,"target",result['target'],"history_pairs",result['history_pairs'],"thresholds",result['thresholds'])
+          except (ValueError,KeyError) as e:
+              print("MEDIATEK_REVIEW",e)
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: mediatek-official-source-candidates
-          path: data/mediatek_corpus/official_link_candidates.csv
+          path: |
+            data/mediatek_corpus/official_link_candidates.csv
+            data/mediatek_corpus/mediatek_source_index.csv
+            data/mediatek_corpus/uncalibrated_raw_metrics.json
+            data/mediatek_corpus/sensitivity_report.json
           retention-days: 7
