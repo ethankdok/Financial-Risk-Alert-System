@@ -312,6 +312,17 @@ def _atomic_bytes(path: Path, data: bytes) -> None:
 NUMBER_RE = re.compile(r"(?<![A-Za-z0-9])[-+]?\d{1,3}(?:,\d{3})*(?:\.\d+)?%?(?![A-Za-z0-9])")
 
 
+def _load_pymupdf():
+    try:
+        import pymupdf
+
+        return pymupdf
+    except ImportError:
+        import fitz
+
+        return fitz
+
+
 def _numeric_evidence(filename: str, page_no: int, text: str, method: str) -> list[dict]:
     results: list[dict] = []
     for match in NUMBER_RE.finditer(text):
@@ -363,16 +374,16 @@ def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = Fal
     except Exception as exc:
         raise AcquisitionError(f"PDF cannot be parsed: {type(exc).__name__}") from exc
 
-    visuals: list[bool | None] = [None] * len(texts)
+    visuals: list[dict[str, bool] | None] = [None] * len(texts)
     try:
-        import fitz
+        fitz = _load_pymupdf()
 
         document = fitz.open(stream=raw, filetype="pdf")
         for i, page in enumerate(document):
             if len(texts[i]) < 30 and ocr:
                 texts[i] = _ocr_page(page, "chi_tra+eng").strip()
             # Charts, tables made from paths, and figures need visual checking.
-            visuals[i] = bool(page.get_drawings() or page.get_images())
+            visuals[i] = {"has_drawings": bool(page.get_drawings()), "has_images": bool(page.get_images())}
     except ImportError:
         visuals = [None] * len(texts)
     pages = []
@@ -380,18 +391,23 @@ def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = Fal
         method = "selectable_text" if selectable_texts[i] else "ocr" if value else "none"
         analysis = _numeric_evidence(filename, i + 1, value, method)
         analysis.extend(_table_like_evidence(filename, i + 1, value, method))
-        if visuals[i] is True:
+        visual_info = visuals[i]
+        has_drawings = bool(visual_info and visual_info["has_drawings"])
+        has_images = bool(visual_info and visual_info["has_images"])
+        if has_drawings or has_images:
             analysis.append({
                 "kind": "chart_or_image_region",
                 "filename": filename,
                 "page": i + 1,
                 "region": "full_page_visual_layer",
+                "contains_drawings": has_drawings,
+                "contains_images": has_images,
                 "source_excerpt": None,
                 "extraction_method": "pdf_visual_heuristic",
                 "confidence": "low",
                 "verification_status": "needs_manual_chart_value_verification",
             })
-        elif visuals[i] is None:
+        elif visual_info is None:
             analysis.append({
                 "kind": "visual_detection_unavailable",
                 "filename": filename,
@@ -410,7 +426,9 @@ def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = Fal
             "analysis_results": analysis,
             "numeric_candidate_count": sum(1 for item in analysis if item["kind"] == "numeric_text"),
             "table_candidate_count": sum(1 for item in analysis if item["kind"] == "table_or_metric_row"),
-            "visual_review_required": visuals[i] is not False,
+            "contains_drawings": has_drawings,
+            "contains_images": has_images,
+            "visual_review_required": visual_info is None or has_drawings or has_images,
         })
     problems = [f"page_{p['page']}:low_text" for p in pages if p["text_length"] < 30]
     problems += [f"page_{p['page']}:visual_review_required" for p in pages if p["visual_review_required"]]
@@ -430,7 +448,7 @@ def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = Fal
 def render_review_pages(raw: bytes, pages: list[dict], directory: Path) -> None:
     """Keep page images alongside unresolved visual evidence for human checking."""
     try:
-        import fitz
+        fitz = _load_pymupdf()
     except ImportError:
         for item in pages:
             if item["visual_review_required"] or item["text_length"] < 30:

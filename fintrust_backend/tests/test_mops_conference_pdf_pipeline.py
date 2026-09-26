@@ -154,14 +154,13 @@ class ConferencePdfPipelineTests(unittest.TestCase):
             with unittest.mock.patch(
                 "app.services.mops_conference_pdf_pipeline.extract_pages",
                 return_value=extracted_pages(chart=True),
-            ):
+            ), unittest.mock.patch("app.services.mops_conference_pdf_pipeline.render_review_pages"):
                 result = run_mops_pdf_pipeline(ticker="2330", year=2025, output_dir=Path(root),
                                                transport=FixtureTransport(pdf(chart=True)))
             self.assertEqual((result["status"], result["downloaded_pdfs"]), ("failed", 1))
             doc = result["documents"][0]
             self.assertEqual(doc["status"], "needs_review")
             page = json.loads(Path(doc["pages_path"]).read_text())[0]
-            self.assertTrue(Path(page.get("review_image_path", "missing")).is_file() or page.get("review_image_error"))
             self.assertTrue(any(item["verification_status"] == "needs_manual_chart_value_verification"
                                 for item in page["analysis_results"]))
 

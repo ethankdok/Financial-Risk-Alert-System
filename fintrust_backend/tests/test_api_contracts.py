@@ -4,6 +4,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -97,12 +98,44 @@ class ApiContractTests(unittest.TestCase):
 
         self.assertEqual(status.status_code, 200)
         self.assertEqual(status.json()["status"], "failed")
+        self.assertFalse(status.json()["storage_contract"]["is_durable"])
+        self.assertFalse(status.json()["storage_contract"]["survives_container_replacement"])
+        self.assertEqual(status.json()["storage_contract"]["durability"], "local_file_archive_only")
         self.assertEqual(documents.status_code, 200)
         self.assertEqual(documents.json()["count"], 1)
         self.assertEqual(page_response.status_code, 200)
         self.assertEqual(page_response.json()["pages"][0]["page"], 1)
         self.assertEqual(analysis_response.status_code, 200)
         self.assertEqual(analysis_response.json()["analysis"][0]["verification_status"], "needs_manual_chart_value_verification")
+
+    def test_conference_pdf_admin_sync_uses_ingestion_token(self) -> None:
+        previous = os.environ.get("INGESTION_API_TOKEN")
+        os.environ["INGESTION_API_TOKEN"] = "test-ingestion-token"
+        try:
+            with unittest.mock.patch(
+                "app.routers.conference_pdfs.run_mops_pdf_pipeline",
+                return_value={"status": "failed", "ticker": "2330", "year": 2025},
+            ) as sync:
+                unauthorized = self.client.post("/api/v1/financial/admin/companies/2330/conference-pdfs/sync?year=2025")
+                wrong = self.client.post(
+                    "/api/v1/financial/admin/companies/2330/conference-pdfs/sync?year=2025",
+                    headers={"X-Ingestion-Token": "wrong-token"},
+                )
+                authorized = self.client.post(
+                    "/api/v1/financial/admin/companies/2330/conference-pdfs/sync?year=2025",
+                    headers={"X-Ingestion-Token": "test-ingestion-token"},
+                )
+                calls = sync.call_count
+        finally:
+            if previous is None:
+                os.environ.pop("INGESTION_API_TOKEN", None)
+            else:
+                os.environ["INGESTION_API_TOKEN"] = previous
+
+        self.assertEqual(unauthorized.status_code, 401)
+        self.assertEqual(wrong.status_code, 401)
+        self.assertEqual(authorized.status_code, 409)
+        self.assertEqual(calls, 1)
 
     def test_paid_ai_routes_require_ingestion_token(self) -> None:
         previous = os.environ.get("INGESTION_API_TOKEN")

@@ -40,6 +40,9 @@ class FileConferencePdfArchiveRepository:
             manifest["storage_contract"] = {
                 "backend": self.backend_name,
                 "durability": "local_file_archive_only",
+                "is_durable": False,
+                "survives_container_replacement": False,
+                "warning": "Local file archive is for development and verification only; Cloud Run instance or container replacement can discard it, so it must not be treated as durable production evidence.",
                 "cloud_ready_contract": "Store PDFs and page artifacts in durable object storage, persist manifest metadata in Firestore, and keep paths as replaceable storage URIs.",
             }
             return manifest
