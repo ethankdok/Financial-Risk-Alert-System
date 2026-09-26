@@ -277,108 +277,36 @@
     </div>
 
     <div class="content-card" id="dataShiftSection">
-      <h3>Data Shift 跨期文字變化</h3>
+      <h3>FinTrust 官方法說會跨期文字變化</h3>
 
-      <p class="section-lead">比較同一家公司不同期間的法說會文字，觀察詞彙分布與整體文本相似度是否出現異常變化。</p>
+      <p class="section-lead">比較同一家公司、相同文件類型與語言的相鄰兩季官方法說會文件，量測詞彙分布（JSD）與整體文本相似度（Cosine）的變化。</p>
 
       <div class="drift-run-panel">
-        <strong>法說會跨期比較</strong>
+        <strong>官方法說會跨期比較</strong>
 
         <p style="margin:8px 0 12px;color:#718096;">
-          輸入 STRUX 中的股票代號，系統會自動取得該公司最新兩期法說會文字並進行比較。
-          目前以 American Tower Corporation（AMT）作為完整流程驗證案例。
+          資料來源為公開資訊觀測站法說會官方簡報。期間可留空，系統會自動選擇最新一組可比較的相鄰季度。
         </p>
 
         <div class="drift-run-row">
-          <input
-            id="driftTickerInput"
-            type="text"
-            value="AMT"
-            placeholder="例如 AMT"
-            autocomplete="off"
-          >
-
-          <button
-            id="runDataShiftButton"
-            type="button"
-          >
-            執行跨期分析
-          </button>
+          <input id="officialShiftTicker" type="text" inputmode="numeric" maxlength="6" placeholder="公司代號，例如 2330" autocomplete="off" aria-label="公司代號">
+          <input id="officialShiftPeriod1" type="text" maxlength="6" placeholder="期間一（選填，如 2025Q2）" autocomplete="off" aria-label="期間一">
+          <input id="officialShiftPeriod2" type="text" maxlength="6" placeholder="期間二（選填，如 2025Q3）" autocomplete="off" aria-label="期間二">
+          <button id="officialShiftRun" type="button">執行跨期分析</button>
         </div>
 
-        <div id="driftRunStatus"></div>
+        <div id="officialShiftStatus" role="status"></div>
       </div>
 
-      <div class="drift-empty" id="dataShiftEmpty">
-        尚未取得可進行跨期比較的兩期資料。
+      <div class="drift-empty" id="officialShiftEmpty">
+        尚未執行官方法說會跨期比較。
       </div>
 
-      <div id="dataShiftContent" style="display:none;">
+      <div id="officialShiftResult" hidden></div>
 
-        <div class="drift-period">
-          <span>
-            公司／股票代號：
-            <strong id="driftTicker">—</strong>
-          </span>
-
-          <span>|</span>
-
-          <span>
-            比較期間：
-            <strong id="driftPeriod">—</strong>
-          </span>
-
-          <span>|</span>
-
-          <span>
-            資料來源：
-            <strong id="driftSource">—</strong>
-          </span>
-        </div>
-
-        <div class="drift-report">
-          <div class="drift-report-row">
-            <span>資料漂移程度</span>
-            <strong id="driftLevel">—</strong>
-          </div>
-          <div class="drift-report-row">
-            <span>Jensen-Shannon Divergence</span>
-            <strong id="driftJsd">—</strong>
-          </div>
-          <div class="drift-report-row">
-            <span>Cosine Similarity</span>
-            <strong id="driftCosine">—</strong>
-          </div>
-          <div class="drift-report-row">
-            <span>資料品質</span>
-            <strong id="driftQuality">—</strong>
-          </div>
-        </div>
-
-        <div class="drift-status">
-          <b>判定結果</b>
-          <p id="driftInterpretation">—</p>
-        </div>
-
-        <div class="term-columns">
-
-          <div class="term-box">
-            <h4>主要增加詞彙</h4>
-            <div class="term-tags" id="emergingTerms"></div>
-          </div>
-
-          <div class="term-box">
-            <h4>主要下降詞彙</h4>
-            <div class="term-tags" id="disappearingTerms"></div>
-          </div>
-
-        </div>
-
-        <div class="drift-status" style="margin-top:20px;">
-          <b>判定門檻</b>
-          <p id="driftThresholdText">—</p>
-        </div>
-
+      <div class="drift-status" style="margin-top:20px;">
+        <b>使用說明</b>
+        <p>JSD / Cosine 只衡量跨期文字分布差異，不等同資訊真假、詐騙認定或財務風險。</p>
       </div>
     </div>
 
@@ -463,6 +391,7 @@
 
 <script src="member-auth.js"></script>
 <script src="script.js"></script>
+<script src="official-data-shift.js"></script>
 
 </body>
 </html>
