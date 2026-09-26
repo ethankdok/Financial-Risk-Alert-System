@@ -188,7 +188,7 @@ class Phase15FlaskReleaseReadinessTests(unittest.TestCase):
         response = self.client.get("/result")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("可信度分析結果", response.get_data(as_text=True))
+        self.assertIn("金融資訊分析結果", response.get_data(as_text=True))
 
     def test_fintrust_client_health_uses_service_health_endpoint(self) -> None:
         seen = {}
