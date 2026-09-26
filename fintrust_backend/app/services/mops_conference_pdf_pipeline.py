@@ -26,6 +26,7 @@ from urllib.request import HTTPSHandler, HTTPRedirectHandler, HTTPCookieProcesso
 
 from app.services.official_ir_pdf_archive import AcquisitionError, MAX_PAGES, _ocr_page
 from app.services.mops_conference_pdf_semantics import extract_semantic_evidence, load_pymupdf
+from app.services.conference_pdf_archive_storage import publish_after_ingestion
 from app.services.conference_pdf_ocr import build_region_ocr_from_env
 from app.services.conference_pdf_multimodal import (
     build_region_interpreter_from_env,
@@ -611,4 +612,7 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
     manifest = directory / "manifest.json"
     _atomic_bytes(manifest, json.dumps(result, ensure_ascii=False, indent=2).encode("utf-8"))
     result["manifest_path"] = str(manifest)
+    durable = publish_after_ingestion(result, directory)
+    if durable is not None:
+        result["durable_archive"] = durable
     return result

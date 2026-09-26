@@ -67,18 +67,26 @@ class FileConferencePdfArchiveRepository:
                 return document
         return None
 
+    def _artifact_path(self, ticker: str, year: int, recorded: str) -> Path:
+        """Recorded paths may be working-directory relative (pipeline output) or
+        archive-relative names (portable manifests restored from object storage)."""
+        path = Path(str(recorded))
+        if path.is_file():
+            return path
+        return self.root / ticker / str(year) / Path(str(recorded).replace("\\", "/")).name
+
     def pages(self, ticker: str, year: int, filename: str) -> list[dict[str, Any]]:
         document = self.document(ticker, year, filename)
         if not document or not document.get("pages_path"):
             return []
-        pages = self._read_json(Path(str(document["pages_path"])), [])
+        pages = self._read_json(self._artifact_path(ticker, year, document["pages_path"]), [])
         return pages if isinstance(pages, list) else []
 
     def analysis(self, ticker: str, year: int, filename: str) -> list[dict[str, Any]]:
         document = self.document(ticker, year, filename)
         if not document or not document.get("analysis_path"):
             return []
-        analysis = self._read_json(Path(str(document["analysis_path"])), [])
+        analysis = self._read_json(self._artifact_path(ticker, year, document["analysis_path"]), [])
         return analysis if isinstance(analysis, list) else []
 
     def semantic(self, ticker: str, year: int, filename: str) -> list[dict[str, Any]]:
@@ -86,7 +94,7 @@ class FileConferencePdfArchiveRepository:
         if not document:
             return []
         if document.get("semantic_path"):
-            semantic = self._read_json(Path(str(document["semantic_path"])), [])
+            semantic = self._read_json(self._artifact_path(ticker, year, document["semantic_path"]), [])
             return semantic if isinstance(semantic, list) else []
         return [
             item
@@ -96,7 +104,27 @@ class FileConferencePdfArchiveRepository:
 
 
 def build_conference_pdf_archive_repository() -> ConferencePdfArchiveRepository:
+    """CONFERENCE_PDF_ARCHIVE_BACKEND=file (default, local development) or gcs.
+
+    gcs reads CONFERENCE_PDF_ARCHIVE_GCS_BUCKET and CONFERENCE_PDF_ARCHIVE_GCS_PREFIX
+    (default "conference-pdf-archive"), authenticating with Application Default
+    Credentials or the Cloud Run service identity.
+    """
     backend = os.getenv("CONFERENCE_PDF_ARCHIVE_BACKEND", "file").strip().lower()
+    if backend == "gcs":
+        from app.services.conference_pdf_archive_storage import (
+            DEFAULT_PREFIX,
+            GcsConferencePdfArchiveRepository,
+            shared_cache,
+        )
+
+        cache_seconds = float(os.getenv("CONFERENCE_PDF_ARCHIVE_CACHE_SECONDS", "") or 300)
+        return GcsConferencePdfArchiveRepository(
+            os.getenv("CONFERENCE_PDF_ARCHIVE_GCS_BUCKET", "").strip(),
+            os.getenv("CONFERENCE_PDF_ARCHIVE_GCS_PREFIX", "").strip() or DEFAULT_PREFIX,
+            project=os.getenv("GOOGLE_CLOUD_PROJECT", "").strip() or None,
+            cache=shared_cache(cache_seconds),
+        )
     if backend != "file":
         raise ValueError(f"Unsupported CONFERENCE_PDF_ARCHIVE_BACKEND: {backend}")
     root = os.getenv("CONFERENCE_PDF_ARCHIVE_ROOT", "./data/official-ir-pdfs")
