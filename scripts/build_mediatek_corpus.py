@@ -77,7 +77,7 @@ def collect(start=2022,end=2025,out=Path("data/mediatek_corpus"),delay=.8):
                         r.raise_for_status()
                         text=extract_pdf(r.content)
                         if p=="2024Q3" and url==fallback_2024q3 and not re.search(
-                            r"MediaTek\\s+3Q24\\s+Earnings\\s+Call", text[:1200], re.I
+                            r"MediaTek\s+3Q24\s+Earnings\s+Call", text[:1200], re.I
                         ):
                             raise ValueError("Alternate PDF cover does not confirm 3Q24 call")
                         sha=hashlib.sha256(r.content).hexdigest()
