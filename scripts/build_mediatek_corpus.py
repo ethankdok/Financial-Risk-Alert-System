@@ -46,6 +46,14 @@ def collect(start=2022,end=2025,out=Path("data/mediatek_corpus"),delay=.8):
                 links.setdefault(period,[]).append((candidate["href"],source_page))
         except requests.RequestException as exc:
             print("ALTERNATE_LISTING_UNAVAILABLE",source_page,str(exc)[:100])
+    # Independently indexed official 3Q24 PDF (correct quarter printed on cover).
+    # Original English listing currently serves byte-identical 2023Q3 PDF.
+    fallback_2024q3 = ("https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/"
+                       "Quarterly%20Earnings%20Release/2024/"
+                       "Quarterly%20Earnings%20Release-2024Q3/"
+                       "%E8%AF%B4%E6%98%8E%E4%BC%9A%E9%80%90%E5%AD%97%E7%A8%BF.pdf")
+    if period_from_official_url(fallback_2024q3)=="2024Q3":
+        links.setdefault("2024Q3",[]).append((fallback_2024q3,fallback_2024q3))
     docs,index=[],[]
     seen_sha={}
     for y in range(start,end+1):
@@ -68,6 +76,10 @@ def collect(start=2022,end=2025,out=Path("data/mediatek_corpus"),delay=.8):
                         r=sess.get(url,timeout=80)
                         r.raise_for_status()
                         text=extract_pdf(r.content)
+                        if p=="2024Q3" and url==fallback_2024q3 and not re.search(
+                            r"MediaTek\\s+3Q24\\s+Earnings\\s+Call", text[:1200], re.I
+                        ):
+                            raise ValueError("Alternate PDF cover does not confirm 3Q24 call")
                         sha=hashlib.sha256(r.content).hexdigest()
                         if sha in seen_sha:
                             print("DUPLICATE_PDF",p,"same_as",seen_sha[sha],
