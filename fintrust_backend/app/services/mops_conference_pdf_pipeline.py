@@ -26,6 +26,11 @@ from urllib.request import HTTPSHandler, HTTPRedirectHandler, HTTPCookieProcesso
 
 from app.services.official_ir_pdf_archive import AcquisitionError, MAX_PAGES, _ocr_page
 from app.services.mops_conference_pdf_semantics import extract_semantic_evidence, load_pymupdf
+from app.services.conference_pdf_multimodal import (
+    build_region_interpreter_from_env,
+    merge_gating_metrics,
+    semantic_gating_metrics,
+)
 
 LIST_URL = "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1"
 DOWNLOAD_URL = "https://mopsov.twse.com.tw/server-java/FileDownLoad"
@@ -354,7 +359,8 @@ def _table_like_evidence(filename: str, page_no: int, text: str, method: str) ->
     return results[:100]
 
 
-def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = False) -> tuple[list[dict], list[str]]:
+def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = False,
+                  interpreter=None) -> tuple[list[dict], list[str]]:
     from pypdf import PdfReader
 
     try:
@@ -379,7 +385,7 @@ def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = Fal
                 texts[i] = _ocr_page(page, "chi_tra+eng").strip()
             # Charts, tables made from paths, and figures need visual checking.
             visuals[i] = {"has_drawings": bool(page.get_drawings()), "has_images": bool(page.get_images())}
-        semantic_pages = extract_semantic_evidence(raw, filename=filename)
+        semantic_pages = extract_semantic_evidence(raw, filename=filename, interpreter=interpreter)
     except ImportError:
         visuals = [None] * len(texts)
     pages = []
@@ -467,12 +473,14 @@ def render_review_pages(raw: bytes, pages: list[dict], directory: Path) -> None:
 
 def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
                           market: str = "sii", ocr: bool = False,
-                          transport: MopsTransport | None = None) -> dict:
+                          transport: MopsTransport | None = None, interpreter=None) -> dict:
     if not re.fullmatch(r"\d{4,6}", ticker) or not 1990 <= year <= datetime.now(timezone.utc).year:
         raise ValueError("Specify a valid company code and Gregorian announcement year")
     if market not in {"sii", "otc", "rotc", "pub"}:
         raise ValueError("Specify a supported MOPS market")
     source = transport or HttpMopsTransport()
+    owns_interpreter = interpreter is None
+    interpreter = interpreter if interpreter is not None else build_region_interpreter_from_env()
     result: dict = {"ticker": ticker, "year": year, "market": market,
                     "listing_url": f"{LIST_URL}?{urlencode({'step':'1','firstin':'1','off':'1','TYPEK':market,'year':year-1911,'co_id':ticker})}",
                     "retrieved_at": datetime.now(timezone.utc).isoformat(),
@@ -519,7 +527,7 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
                 if not raw.startswith(b"%PDF-") or len(raw) > MAX_PDF_BYTES:
                     raise AcquisitionError("MOPS attachment is missing or is not a PDF")
                 digest = hashlib.sha256(raw).hexdigest()
-                pages, problems = extract_pages(raw, filename=attachment.filename, ocr=ocr)
+                pages, problems = extract_pages(raw, filename=attachment.filename, ocr=ocr, interpreter=interpreter)
                 base = directory / attachment.filename.removesuffix(".pdf")
                 _atomic_bytes(base.with_suffix(".pdf"), raw)
                 _atomic_bytes(base.with_suffix(".txt"), "\n\n".join(
@@ -552,6 +560,7 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
                             "semantic_region_types": sorted({
                                 item["evidence_type"] for item in semantic_results
                             }),
+                            "semantic_multimodal": semantic_gating_metrics(semantic_results),
                             "needs_manual_review_pages": [
                                 p["page"] for p in pages if p["visual_review_required"] or p["text_length"] < 30
                             ],
@@ -578,12 +587,18 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
             "pages_requiring_manual_review": unresolved_pages,
             "unverified_chart_page_count": unverified_charts,
             "semantic_evidence_count": sum(int(doc.get("semantic_results") or 0) for doc in result["documents"]),
+            "semantic_multimodal": merge_gating_metrics(
+                [doc["semantic_multimodal"] for doc in result["documents"] if "semantic_multimodal" in doc]
+            ),
             "complete_requires_no_missing_pdfs_no_low_text_no_unverified_visuals": True,
         }
         result["status"] = "complete" if result["downloaded_pdfs"] == result["expected_pdfs"] and all(
             doc["status"] == "complete" for doc in result["documents"]) else "failed"
     except Exception as exc:
         result["errors"].append(str(exc))
+    finally:
+        if owns_interpreter and interpreter is not None:
+            interpreter.close()
     manifest = directory / "manifest.json"
     _atomic_bytes(manifest, json.dumps(result, ensure_ascii=False, indent=2).encode("utf-8"))
     result["manifest_path"] = str(manifest)

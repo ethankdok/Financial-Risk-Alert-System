@@ -190,6 +190,55 @@ class GeminiFinancialAnalyst:
             },
         )
 
+    async def generate_structured(
+        self,
+        contents: Any,
+        *,
+        system_instruction: str,
+        schema: dict[str, Any],
+        max_output_tokens: int = 2000,
+    ) -> tuple[dict[str, Any], str]:
+        """Structured JSON generation for other server-side evidence tasks.
+
+        Reuses this provider's key, model, fallback, and timeout configuration.
+        Returns the parsed JSON object and the model that produced it; raises on
+        any provider, timeout, or JSON failure so callers can fail closed.
+        """
+        if not self.configured:
+            raise RuntimeError("Gemini provider is not configured.")
+        config = {
+            "max_output_tokens": max_output_tokens,
+            "temperature": _TEMPERATURE,
+            "system_instruction": system_instruction,
+            "response_mime_type": "application/json",
+            "response_json_schema": schema,
+        }
+
+        async def call(model: str) -> Any:
+            return await asyncio.wait_for(
+                self._get_client().models.generate_content(model=model, contents=contents, config=config),
+                timeout=self.timeout_seconds,
+            )
+
+        effective_model = self.model
+        try:
+            response = await call(self.model)
+        except Exception as exc:
+            if not (self.fallback_model and self.fallback_model != self.model and self._is_retryable_api_error(exc)):
+                raise
+            effective_model = self.fallback_model
+            response = await call(effective_model)
+
+        parsed = getattr(response, "parsed", None)
+        if not isinstance(parsed, dict):
+            text = str(getattr(response, "text", "") or "").strip()
+            if not text:
+                raise ValueError("Gemini response contained no text output.")
+            parsed = json.loads(text)
+        if not isinstance(parsed, dict):
+            raise ValueError("Gemini response was not a JSON object.")
+        return parsed, effective_model
+
     @staticmethod
     def _parse_narrative(response: Any) -> LLMNarrative:
         parsed = getattr(response, "parsed", None)
