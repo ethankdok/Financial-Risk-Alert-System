@@ -52,9 +52,12 @@ FinTrust extraction (`mops_conference_pipeline:pypdf_extract_text_per_page`,
 `fintrust-conference-document-text-v1`). No calibration profile matches them, so they
 return raw JSD / cosine with `calibration.status = unavailable` and no drift level.
 
-## Cloud Run prerequisite (not deployed)
+## Cloud Run runtime
 
-The FastAPI image does not contain `data_shift.py` or its import dependencies
-(`pandas`, `scikit-learn`, `Flask` for its module-level `Blueprint`). Until the image adds
-them (`COPY data_shift.py` in `Dockerfile.fastapi` plus requirements), the cloud endpoint
-fails closed with `method_unavailable`.
+`Dockerfile.fastapi` copies the unmodified root `data_shift.py` to `/app/data_shift.py`
+(the container location `jsd_method.py` looks up), and `fintrust_backend/requirements.txt`
+adds only its import dependencies: `pandas`, `scikit-learn` and `Flask` (for its
+module-level `Blueprint`; no pyarrow — the bridge never loads parquet). The SHA-256 check
+is unchanged, so a missing or different module still fails closed with
+`method_unavailable`. Calibration profiles are read from Firestore `shift_calibrations`
+(runtime service account: `roles/datastore.user`, read-only use).

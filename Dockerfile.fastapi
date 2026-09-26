@@ -9,5 +9,7 @@ COPY fintrust_backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY fintrust_backend/app ./app
+# Frozen teammate JSD calculator (Method A); jsd_method.py checks its SHA-256 at load.
+COPY data_shift.py ./data_shift.py
 
 CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
