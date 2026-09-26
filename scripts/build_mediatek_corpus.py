@@ -36,7 +36,7 @@ def collect(start=2022,end=2025,out=Path("data/mediatek_corpus"),delay=.8):
     response=sess.get(listing,timeout=30)
     response.raise_for_status()
     links={}
-    for source_page in (listing, BASE+"/zh-tw/investor-relations/financial-information"):
+    for source_page in (listing, BASE+"/zh-tw/investor-relations/financial-information", BASE+"/zh-cn/investor-relations/financial-information"):
         try:
             page_response = response if source_page == listing else sess.get(source_page,timeout=30)
             page_response.raise_for_status()
