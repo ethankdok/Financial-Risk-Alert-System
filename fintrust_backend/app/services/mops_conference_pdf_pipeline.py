@@ -26,6 +26,7 @@ from urllib.request import HTTPSHandler, HTTPRedirectHandler, HTTPCookieProcesso
 
 from app.services.official_ir_pdf_archive import AcquisitionError, MAX_PAGES, _ocr_page
 from app.services.mops_conference_pdf_semantics import extract_semantic_evidence, load_pymupdf
+from app.services.conference_document_identity import assess_document_identity, reconcile_documents
 from app.services.conference_pdf_archive_storage import publish_after_ingestion
 from app.services.conference_pdf_ocr import build_region_ocr_from_env
 from app.services.conference_pdf_multimodal import (
@@ -136,6 +137,9 @@ class ListedAttachment:
     file_path: str = ""
     function_name: str = ""
     step: str = ""
+    company_name: str = ""
+    # MOPS 法人說明會擇要訊息 of every listing row that references this file.
+    summaries: tuple[str, ...] = ()
 
     def download_fields(self) -> dict[str, str]:
         return {
@@ -259,10 +263,13 @@ def parse_listing(raw: bytes, *, ticker: str, roc_year: int) -> tuple[list[Liste
                 if filename in languages and languages[filename] != language:
                     raise AcquisitionError("An attachment appears in conflicting language columns")
                 languages[filename] = language
-                entry = documents.setdefault(filename, {"dates": [], "fields": fields})
+                entry = documents.setdefault(filename, {"dates": [], "fields": fields, "summaries": [],
+                                                        "company": cells[1]})
                 if entry["fields"] != fields:
                     raise AcquisitionError("An attachment appears with conflicting download fields")
                 entry["dates"].append(cells[2])
+                if cells[5]:
+                    entry["summaries"].append(cells[5])
     if not documents:
         raise AcquisitionError("No downloadable PDFs appear in the verified listing")
     return ([ListedAttachment(
@@ -272,6 +279,8 @@ def parse_listing(raw: bytes, *, ticker: str, roc_year: int) -> tuple[list[Liste
         file_path=value["fields"].get("filePath", ""),
         function_name=value["fields"].get("functionName", ""),
         step=value["fields"].get("step", ""),
+        company_name=value["company"],
+        summaries=tuple(dict.fromkeys(value["summaries"])),
     ) for name, value in sorted(documents.items())], len(parser.rows))
 
 
@@ -302,11 +311,66 @@ def merge_attachments(groups: list[list[ListedAttachment]]) -> list[ListedAttach
                 item.filename,
                 item.language,
                 dates,
+                company_name=previous.company_name or item.company_name,
+                summaries=tuple(dict.fromkeys((*previous.summaries, *item.summaries))),
                 file_path=item.file_path,
                 function_name=item.function_name,
                 step=item.step,
             )
     return [by_name[name] for name in sorted(by_name)]
+
+
+def _collect_listing(source: "MopsTransport", ticker: str, year: int, market: str
+                     ) -> tuple[list[int], dict[int, bytes], list[ListedAttachment], int]:
+    """Fetch and verify every MOPS listing page for one company and announcement year."""
+    first_listing = source.listing(ticker, year - 1911, market, page=1)
+    listing_page_numbers = sorted(listing_pages(first_listing))
+    if 1 not in listing_page_numbers:
+        raise AcquisitionError("PAGINATION_UNVERIFIED: first listing page is missing from pagination controls")
+    page_payloads: dict[int, bytes] = {1: first_listing}
+    page_attachments = []
+    rows_total = 0
+    for page_no in listing_page_numbers:
+        listing_html = page_payloads.get(page_no)
+        if listing_html is None:
+            listing_html = source.listing(ticker, year - 1911, market, page=page_no)
+            page_payloads[page_no] = listing_html
+        discovered = listing_pages(listing_html)
+        if not set(listing_page_numbers).issuperset(discovered):
+            raise AcquisitionError("PAGINATION_CHANGED: MOPS pagination changed during the run")
+        attachments_on_page, rows = parse_listing(listing_html, ticker=ticker, roc_year=year - 1911)
+        rows_total += rows
+        page_attachments.append(attachments_on_page)
+    return listing_page_numbers, page_payloads, merge_attachments(page_attachments), rows_total
+
+
+def discover_mops_conference_documents(*, ticker: str, year: int, market: str = "sii",
+                                       transport: "MopsTransport | None" = None) -> dict:
+    """Listing-only discovery: official MOPS metadata, no PDF download."""
+    from app.services.conference_document_identity import claimed_period_from_listing
+
+    source = transport or HttpMopsTransport()
+    listing_url = f"{LIST_URL}?{urlencode({'step': '1', 'firstin': '1', 'off': '1', 'TYPEK': market, 'year': year - 1911, 'co_id': ticker})}"
+    result: dict = {"ticker": ticker, "year": year, "market": market, "listing_url": listing_url,
+                    "retrieved_at": datetime.now(timezone.utc).isoformat(), "status": "failed", "documents": []}
+    try:
+        pages, _payloads, attachments, rows = _collect_listing(source, ticker, year, market)
+    except AcquisitionError as exc:
+        text = str(exc)
+        empty = "no downloadable pdfs" in text.lower() or "no verifiable" in text.lower()
+        result["status"] = "no_listing" if empty else "failed"
+        result["error"] = text
+        return result
+    result.update(status="ok", listing_pages=pages, rows=rows)
+    for attachment in attachments:
+        claim, claims = claimed_period_from_listing(attachment.summaries)
+        result["documents"].append({
+            "filename": attachment.filename, "language": attachment.language,
+            "company_name": attachment.company_name, "conference_dates": list(attachment.conference_dates),
+            "listing_summaries": list(attachment.summaries), "period_claimed_by_listing": claim,
+            "period_claims_all": claims, "listing_rows": len(attachment.conference_dates),
+        })
+    return result
 
 
 def _atomic_bytes(path: Path, data: bytes) -> None:
@@ -361,13 +425,35 @@ def _table_like_evidence(filename: str, page_no: int, text: str, method: str) ->
     return results[:100]
 
 
+def _opens_without_password(pdf) -> bool:
+    """Owner-password-only PDFs (print/copy restrictions) open with an empty user password."""
+    try:
+        return bool(pdf.decrypt(""))
+    except Exception:  # unsupported cipher or missing crypto backend: stay fail-closed
+        return False
+
+
+def pdf_encryption(raw: bytes) -> str:
+    from pypdf import PdfReader
+
+    try:
+        pdf = PdfReader(io.BytesIO(raw), strict=True)
+    except Exception:
+        return "unreadable"
+    if not pdf.is_encrypted:
+        return "none"
+    return "empty_user_password" if _opens_without_password(pdf) else "password_protected"
+
+
 def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = False,
                   interpreter=None, region_ocr=None) -> tuple[list[dict], list[str]]:
     from pypdf import PdfReader
 
     try:
         pdf = PdfReader(io.BytesIO(raw), strict=True)
-        if pdf.is_encrypted or not 1 <= len(pdf.pages) <= MAX_PAGES:
+        if pdf.is_encrypted and not _opens_without_password(pdf):
+            raise AcquisitionError("PDF is password protected")
+        if not 1 <= len(pdf.pages) <= MAX_PAGES:
             raise AcquisitionError("PDF is encrypted, empty, or exceeds the page limit")
         selectable_texts = [(page.extract_text() or "").strip() for page in pdf.pages]
         texts = list(selectable_texts)
@@ -478,7 +564,9 @@ def render_review_pages(raw: bytes, pages: list[dict], directory: Path) -> None:
 def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
                           market: str = "sii", ocr: bool = False,
                           transport: MopsTransport | None = None, interpreter=None,
-                          region_ocr=None) -> dict:
+                          region_ocr=None, select_documents=None) -> dict:
+    """select_documents: optional callable(list[ListedAttachment]) -> subset to acquire.
+    Unselected listed files are recorded in result["selection"], never silently dropped."""
     if not re.fullmatch(r"\d{4,6}", ticker) or not 1990 <= year <= datetime.now(timezone.utc).year:
         raise ValueError("Specify a valid company code and Gregorian announcement year")
     if market not in {"sii", "otc", "rotc", "pub"}:
@@ -502,31 +590,27 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
     except (OSError, KeyError, ValueError, TypeError):
         pass
     try:
-        first_listing = source.listing(ticker, year - 1911, market, page=1)
-        listing_page_numbers = sorted(listing_pages(first_listing))
-        if 1 not in listing_page_numbers:
-            raise AcquisitionError("PAGINATION_UNVERIFIED: first listing page is missing from pagination controls")
+        listing_page_numbers, page_payloads, attachments, rows = _collect_listing(source, ticker, year, market)
+        if select_documents is not None:
+            chosen = list(select_documents(list(attachments)))
+            chosen_names = {item.filename for item in chosen}
+            result["selection"] = {
+                "mode": "bounded", "listed_documents": len(attachments),
+                "selected": sorted(chosen_names),
+                "not_selected": sorted(item.filename for item in attachments if item.filename not in chosen_names),
+            }
+            attachments = [item for item in attachments if item.filename in chosen_names]
         result["listing_pages"] = listing_page_numbers
-        page_payloads: dict[int, bytes] = {1: first_listing}
-        page_attachments = []
-        for page_no in listing_page_numbers:
-            listing_html = page_payloads.get(page_no)
-            if listing_html is None:
-                listing_html = source.listing(ticker, year - 1911, market, page=page_no)
-                page_payloads[page_no] = listing_html
-            discovered = listing_pages(listing_html)
-            if not set(listing_page_numbers).issuperset(discovered):
-                raise AcquisitionError("PAGINATION_CHANGED: MOPS pagination changed during the run")
-            attachments_on_page, rows = parse_listing(listing_html, ticker=ticker, roc_year=year - 1911)
-            result["rows"] += rows
-            page_attachments.append(attachments_on_page)
+        result["rows"] = rows
+        for page_no, listing_html in sorted(page_payloads.items()):
             result.setdefault("listing_page_sha256", {})[str(page_no)] = hashlib.sha256(listing_html).hexdigest()
             _atomic_bytes(directory / f"listing-page-{page_no}.html", listing_html)
-        attachments = merge_attachments(page_attachments)
         result["expected_pdfs"] = len(attachments)
         for attachment in attachments:
             doc = {"filename": attachment.filename, "language": attachment.language,
+                   "ticker": ticker, "company_name": attachment.company_name,
                    "conference_dates": attachment.conference_dates,
+                   "listing_summaries": list(attachment.summaries),
                    "download_fields": attachment.download_fields(), "status": "failed"}
             result["documents"].append(doc)
             try:
@@ -560,6 +644,7 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
                 _atomic_bytes(semantic_path, json.dumps(semantic_results, ensure_ascii=False, indent=2).encode("utf-8"))
                 doc.update({"status": "complete" if not problems else "needs_review",
                             "sha256": digest, "page_count": len(pages),
+                            "pdf_encryption": pdf_encryption(raw),
                             "change": "new" if attachment.filename not in previous else
                                       "unchanged" if previous[attachment.filename] == digest else "updated",
                             "text_pages": sum(p["text_length"] >= 30 for p in pages),
@@ -577,9 +662,14 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
                             "pages_path": str(base.with_suffix(".pages.json")),
                             "analysis_path": str(analysis_path),
                             "semantic_path": str(semantic_path)})
+                identity = assess_document_identity(pages, language=attachment.language,
+                                                    summaries=attachment.summaries)
+                doc.update({key: value for key, value in identity.items() if key != "language"},
+                           document_language=identity["language"])
             except Exception as exc:
                 doc["error"] = str(exc)
                 result["errors"].append(f"{attachment.filename}: {exc}")
+        reconcile_documents([doc for doc in result["documents"] if "sha256" in doc])
         result["downloaded_pdfs"] = sum("sha256" in doc for doc in result["documents"])
         missing = [doc["filename"] for doc in result["documents"] if "sha256" not in doc]
         unresolved_pages = sum(len(doc.get("needs_manual_review_pages", [])) for doc in result["documents"])
