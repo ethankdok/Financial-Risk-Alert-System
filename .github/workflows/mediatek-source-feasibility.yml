@@ -20,7 +20,7 @@ jobs:
           python-version: '3.11'
       - run: pip install -r requirements.txt
       - run: python scripts/discover_mediatek_transcripts.py
-      - name: Build bilingual-official-link-recovered 2022-2025 quarterly PDF corpus
+      - name: Build multilingual-official-link-recovered 2022-2025 quarterly PDF corpus
         run: python scripts/build_mediatek_corpus.py --start 2022 --end 2025
       - name: Compare raw metrics using same paired method; no inherited thresholds
         shell: bash
