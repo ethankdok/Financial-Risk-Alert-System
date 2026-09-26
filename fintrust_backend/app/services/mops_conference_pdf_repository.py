@@ -13,6 +13,7 @@ class ConferencePdfArchiveRepository(Protocol):
     def document(self, ticker: str, year: int, filename: str) -> dict[str, Any] | None: ...
     def pages(self, ticker: str, year: int, filename: str) -> list[dict[str, Any]]: ...
     def analysis(self, ticker: str, year: int, filename: str) -> list[dict[str, Any]]: ...
+    def semantic(self, ticker: str, year: int, filename: str) -> list[dict[str, Any]]: ...
 
 
 class FileConferencePdfArchiveRepository:
@@ -70,6 +71,19 @@ class FileConferencePdfArchiveRepository:
             return []
         analysis = self._read_json(Path(str(document["analysis_path"])), [])
         return analysis if isinstance(analysis, list) else []
+
+    def semantic(self, ticker: str, year: int, filename: str) -> list[dict[str, Any]]:
+        document = self.document(ticker, year, filename)
+        if not document:
+            return []
+        if document.get("semantic_path"):
+            semantic = self._read_json(Path(str(document["semantic_path"])), [])
+            return semantic if isinstance(semantic, list) else []
+        return [
+            item
+            for page in self.pages(ticker, year, filename)
+            for item in page.get("semantic_evidence", [])
+        ]
 
 
 def build_conference_pdf_archive_repository() -> ConferencePdfArchiveRepository:

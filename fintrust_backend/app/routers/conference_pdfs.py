@@ -109,3 +109,16 @@ def conference_pdf_analysis(
     if not analysis:
         raise HTTPException(status_code=404, detail="No analysis evidence is available for this document.")
     return {"ticker": ticker, "year": year, "filename": filename, "count": len(analysis), "analysis": analysis}
+
+
+@router.get("/companies/{ticker}/conference-pdfs/{year}/documents/{filename}/semantic")
+def conference_pdf_semantic_evidence(
+    ticker: str,
+    filename: str,
+    year: int = Path(..., ge=2019, le=datetime.now().year),
+    repository: ConferencePdfArchiveRepository = Depends(get_conference_pdf_repository),
+):
+    semantic = repository.semantic(ticker, year, filename)
+    if not semantic:
+        raise HTTPException(status_code=404, detail="No semantic evidence is available for this document.")
+    return {"ticker": ticker, "year": year, "filename": filename, "count": len(semantic), "semantic_evidence": semantic}

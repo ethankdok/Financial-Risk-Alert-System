@@ -25,6 +25,7 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import HTTPSHandler, HTTPRedirectHandler, HTTPCookieProcessor, Request, build_opener
 
 from app.services.official_ir_pdf_archive import AcquisitionError, MAX_PAGES, _ocr_page
+from app.services.mops_conference_pdf_semantics import extract_semantic_evidence, load_pymupdf
 
 LIST_URL = "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1"
 DOWNLOAD_URL = "https://mopsov.twse.com.tw/server-java/FileDownLoad"
@@ -313,14 +314,7 @@ NUMBER_RE = re.compile(r"(?<![A-Za-z0-9])[-+]?\d{1,3}(?:,\d{3})*(?:\.\d+)?%?(?![
 
 
 def _load_pymupdf():
-    try:
-        import pymupdf
-
-        return pymupdf
-    except ImportError:
-        import fitz
-
-        return fitz
+    return load_pymupdf()
 
 
 def _numeric_evidence(filename: str, page_no: int, text: str, method: str) -> list[dict]:
@@ -375,6 +369,7 @@ def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = Fal
         raise AcquisitionError(f"PDF cannot be parsed: {type(exc).__name__}") from exc
 
     visuals: list[dict[str, bool] | None] = [None] * len(texts)
+    semantic_pages: list[list[dict]] = [[] for _ in texts]
     try:
         fitz = _load_pymupdf()
 
@@ -384,6 +379,7 @@ def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = Fal
                 texts[i] = _ocr_page(page, "chi_tra+eng").strip()
             # Charts, tables made from paths, and figures need visual checking.
             visuals[i] = {"has_drawings": bool(page.get_drawings()), "has_images": bool(page.get_images())}
+        semantic_pages = extract_semantic_evidence(raw, filename=filename)
     except ImportError:
         visuals = [None] * len(texts)
     pages = []
@@ -394,6 +390,7 @@ def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = Fal
         visual_info = visuals[i]
         has_drawings = bool(visual_info and visual_info["has_drawings"])
         has_images = bool(visual_info and visual_info["has_images"])
+        semantic_evidence = semantic_pages[i] if i < len(semantic_pages) else []
         if has_drawings or has_images:
             analysis.append({
                 "kind": "chart_or_image_region",
@@ -424,6 +421,9 @@ def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = Fal
             "text_length": len(value),
             "text_extraction_method": method,
             "analysis_results": analysis,
+            "semantic_evidence": semantic_evidence,
+            "semantic_evidence_count": len(semantic_evidence),
+            "semantic_region_types": sorted({item["evidence_type"] for item in semantic_evidence}),
             "numeric_candidate_count": sum(1 for item in analysis if item["kind"] == "numeric_text"),
             "table_candidate_count": sum(1 for item in analysis if item["kind"] == "table_or_metric_row"),
             "contains_drawings": has_drawings,
@@ -529,25 +529,37 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
                 _atomic_bytes(base.with_suffix(".pages.json"), json.dumps(
                     pages, ensure_ascii=False, indent=2).encode("utf-8"))
                 analysis_path = base.with_suffix(".analysis.json")
+                semantic_path = base.with_suffix(".semantic.json")
                 analysis_results = [
                     {key: value for key, value in item.items() if key != "text"}
                     for page in pages
                     for item in page["analysis_results"]
                 ]
+                semantic_results = [
+                    item
+                    for page in pages
+                    for item in page.get("semantic_evidence", [])
+                ]
                 _atomic_bytes(analysis_path, json.dumps(analysis_results, ensure_ascii=False, indent=2).encode("utf-8"))
+                _atomic_bytes(semantic_path, json.dumps(semantic_results, ensure_ascii=False, indent=2).encode("utf-8"))
                 doc.update({"status": "complete" if not problems else "needs_review",
                             "sha256": digest, "page_count": len(pages),
                             "change": "new" if attachment.filename not in previous else
                                       "unchanged" if previous[attachment.filename] == digest else "updated",
                             "text_pages": sum(p["text_length"] >= 30 for p in pages),
                             "analysis_results": len(analysis_results),
+                            "semantic_results": len(semantic_results),
+                            "semantic_region_types": sorted({
+                                item["evidence_type"] for item in semantic_results
+                            }),
                             "needs_manual_review_pages": [
                                 p["page"] for p in pages if p["visual_review_required"] or p["text_length"] < 30
                             ],
                             "issues": problems, "pdf_path": str(base.with_suffix(".pdf")),
                             "text_path": str(base.with_suffix(".txt")),
                             "pages_path": str(base.with_suffix(".pages.json")),
-                            "analysis_path": str(analysis_path)})
+                            "analysis_path": str(analysis_path),
+                            "semantic_path": str(semantic_path)})
             except Exception as exc:
                 doc["error"] = str(exc)
                 result["errors"].append(f"{attachment.filename}: {exc}")
@@ -565,6 +577,7 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
             "total_page_count": sum(int(doc.get("page_count") or 0) for doc in result["documents"]),
             "pages_requiring_manual_review": unresolved_pages,
             "unverified_chart_page_count": unverified_charts,
+            "semantic_evidence_count": sum(int(doc.get("semantic_results") or 0) for doc in result["documents"]),
             "complete_requires_no_missing_pdfs_no_low_text_no_unverified_visuals": True,
         }
         result["status"] = "complete" if result["downloaded_pdfs"] == result["expected_pdfs"] and all(

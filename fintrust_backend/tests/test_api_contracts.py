@@ -65,6 +65,7 @@ class ApiContractTests(unittest.TestCase):
         root.mkdir(parents=True, exist_ok=True)
         pages = root / "233020250116M001.pages.json"
         analysis = root / "233020250116M001.analysis.json"
+        semantic = root / "233020250116M001.semantic.json"
         pages.write_text(
             '[{"page":1,"text":"Revenue 100 gross margin 55%","text_length":28,'
             '"analysis_results":[],"visual_review_required":true}]',
@@ -73,6 +74,14 @@ class ApiContractTests(unittest.TestCase):
         analysis.write_text(
             '[{"kind":"chart_or_image_region","filename":"233020250116M001.pdf","page":1,'
             '"verification_status":"needs_manual_chart_value_verification"}]',
+            encoding="utf-8",
+        )
+        semantic.write_text(
+            '[{"filename":"233020250116M001.pdf","page":1,"evidence_type":"chart",'
+            '"region":{"x0":1,"y0":2,"x1":3,"y1":4},"title":"Revenue",'
+            '"labels":["2025"],"values":[{"value_text":"120"}],"trend":"increasing",'
+            '"source_text":"Revenue 2025 120","extraction_method":"pdf_visual_structure",'
+            '"confidence":0.68,"verification_status":"partially_verified"}]',
             encoding="utf-8",
         )
         (root / "manifest.json").write_text(
@@ -85,9 +94,13 @@ class ApiContractTests(unittest.TestCase):
               "documents":[{
                 "filename":"233020250116M001.pdf","status":"needs_review",
                 "page_count":1,"analysis_results":1,
-                "pages_path":"%s","analysis_path":"%s"
+                "pages_path":"%s","analysis_path":"%s","semantic_path":"%s"
               }]
-            }""" % (str(pages).replace("\\", "\\\\"), str(analysis).replace("\\", "\\\\")),
+            }""" % (
+                str(pages).replace("\\", "\\\\"),
+                str(analysis).replace("\\", "\\\\"),
+                str(semantic).replace("\\", "\\\\"),
+            ),
             encoding="utf-8",
         )
 
@@ -95,6 +108,7 @@ class ApiContractTests(unittest.TestCase):
         documents = self.client.get("/api/v1/financial/companies/2330/conference-pdfs/2025/documents?year=2025")
         page_response = self.client.get("/api/v1/financial/companies/2330/conference-pdfs/2025/documents/233020250116M001.pdf/pages?year=2025")
         analysis_response = self.client.get("/api/v1/financial/companies/2330/conference-pdfs/2025/documents/233020250116M001.pdf/analysis?year=2025")
+        semantic_response = self.client.get("/api/v1/financial/companies/2330/conference-pdfs/2025/documents/233020250116M001.pdf/semantic?year=2025")
 
         self.assertEqual(status.status_code, 200)
         self.assertEqual(status.json()["status"], "failed")
@@ -107,6 +121,9 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(page_response.json()["pages"][0]["page"], 1)
         self.assertEqual(analysis_response.status_code, 200)
         self.assertEqual(analysis_response.json()["analysis"][0]["verification_status"], "needs_manual_chart_value_verification")
+        self.assertEqual(semantic_response.status_code, 200)
+        self.assertEqual(semantic_response.json()["semantic_evidence"][0]["evidence_type"], "chart")
+        self.assertEqual(semantic_response.json()["semantic_evidence"][0]["trend"], "increasing")
 
     def test_conference_pdf_admin_sync_uses_ingestion_token(self) -> None:
         previous = os.environ.get("INGESTION_API_TOKEN")
