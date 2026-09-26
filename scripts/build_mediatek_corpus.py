@@ -36,10 +36,16 @@ def collect(start=2022,end=2025,out=Path("data/mediatek_corpus"),delay=.8):
     response=sess.get(listing,timeout=30)
     response.raise_for_status()
     links={}
-    for candidate in find_candidates(response.text,listing):
-        period=period_from_official_url(candidate["href"])
-        if not period or not start <= int(period[:4]) <= end:continue
-        links.setdefault(period,set()).add(candidate["href"])
+    for source_page in (listing, BASE+"/zh-tw/investor-relations/financial-information"):
+        try:
+            page_response = response if source_page == listing else sess.get(source_page,timeout=30)
+            page_response.raise_for_status()
+            for candidate in find_candidates(page_response.text,source_page):
+                period=period_from_official_url(candidate["href"])
+                if not period or not start <= int(period[:4]) <= end:continue
+                links.setdefault(period,[]).append((candidate["href"],source_page))
+        except requests.RequestException as exc:
+            print("ALTERNATE_LISTING_UNAVAILABLE",source_page,str(exc)[:100])
     docs,index=[],[]
     seen_sha={}
     for y in range(start,end+1):
@@ -49,30 +55,40 @@ def collect(start=2022,end=2025,out=Path("data/mediatek_corpus"),delay=.8):
             meta={"period":p,"source_page":listing,"source_pdf":"",
                   "status":"","note":"","sha256":"","text_length":""}
             try:
-                if len(urls)!=1:
-                    raise ValueError(f"Expected one official exact-period URL, found {len(urls)}")
-                url=next(iter(urls))
-                if not valid(url) or period_from_official_url(url)!=p:
-                    raise ValueError("PDF provenance/period mismatch")
-                meta["source_pdf"]=url
-                r=sess.get(url,timeout=80)
-                r.raise_for_status()
-                # Identical extraction method to TSMC; see method caveats.
-                text=extract_pdf(r.content)
-                sha=hashlib.sha256(r.content).hexdigest()
-                meta.update(sha256=sha,text_length=len(text))
-                if sha in seen_sha:
-                    print("DUPLICATE_PDF",p,"same_as",seen_sha[sha],
-                          "current_url",url)
-                    raise ValueError(f"Same PDF bytes as {seen_sha[sha]}; exclude for manual review")
+                if not urls:
+                    raise ValueError("No listed official PDF for period")
+                # Prefer English-listing version; only fall back to a verified
+                # alternative from the publisher's Traditional Chinese page.
+                failure_notes=[]
+                chosen=None
+                for url,source_page in dict.fromkeys(urls):
+                    try:
+                        if not valid(url) or period_from_official_url(url)!=p:
+                            raise ValueError("PDF provenance/period mismatch")
+                        r=sess.get(url,timeout=80)
+                        r.raise_for_status()
+                        text=extract_pdf(r.content)
+                        sha=hashlib.sha256(r.content).hexdigest()
+                        if sha in seen_sha:
+                            print("DUPLICATE_PDF",p,"same_as",seen_sha[sha],
+                                  "current_url",url)
+                            raise ValueError(f"Same PDF bytes as {seen_sha[sha]}")
+                        chosen=(url,source_page,text,sha)
+                        break
+                    except (ValueError,requests.RequestException) as error:
+                        failure_notes.append(f"{url}: {error}")
+                if chosen is None:
+                    raise ValueError("; ".join(failure_notes)[:250])
+                url,source_page,text,sha=chosen
+                meta.update(status="ok",source_pdf=url,source_page=source_page,
+                            sha256=sha,text_length=len(text))
                 seen_sha[sha]=p
-                meta["status"]="ok"
                 docs.append({
                     "ticker":"2454","company":"MediaTek",
                     "industry":"semiconductor_fabless","year":y,"quarter":q,
                     "period":p,"document_type":"full_earnings_transcript",
                     "language":"en_may_include_translation","text":text,
-                    "source_page":listing,"source_pdf":url,
+                    "source_page":source_page,"source_pdf":url,
                     "sha256":sha,"text_length":len(text),
                 })
                 print("OK",p,len(text))
