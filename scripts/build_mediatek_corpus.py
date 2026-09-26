@@ -41,6 +41,7 @@ def collect(start=2022,end=2025,out=Path("data/mediatek_corpus"),delay=.8):
         if not period or not start <= int(period[:4]) <= end:continue
         links.setdefault(period,set()).add(candidate["href"])
     docs,index=[],[]
+    seen_sha={}
     for y in range(start,end+1):
         for q in range(1,5):
             p=f"{y}Q{q}"
@@ -59,7 +60,13 @@ def collect(start=2022,end=2025,out=Path("data/mediatek_corpus"),delay=.8):
                 # Identical extraction method to TSMC; see method caveats.
                 text=extract_pdf(r.content)
                 sha=hashlib.sha256(r.content).hexdigest()
-                meta.update(status="ok",sha256=sha,text_length=len(text))
+                meta.update(sha256=sha,text_length=len(text))
+                if sha in seen_sha:
+                    print("DUPLICATE_PDF",p,"same_as",seen_sha[sha],
+                          "current_url",url)
+                    raise ValueError(f"Same PDF bytes as {seen_sha[sha]}; exclude for manual review")
+                seen_sha[sha]=p
+                meta["status"]="ok"
                 docs.append({
                     "ticker":"2454","company":"MediaTek",
                     "industry":"semiconductor_fabless","year":y,"quarter":q,
