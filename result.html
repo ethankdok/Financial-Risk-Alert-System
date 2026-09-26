@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>分析結果</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ui-humanize.css">
 
   <style>
     .drift-grid {
@@ -211,7 +211,7 @@
 <section class="page-hero">
   <div class="container">
     <div class="breadcrumb">首頁 / 金融資訊分析 / 分析結果</div>
-    <h1>可信度分析結果</h1>
+    <h1>金融資訊分析結果</h1>
     <p>查詢內容載入中</p>
   </div>
 </section>
@@ -226,18 +226,19 @@
 
   <main>
 
-    <div class="content-card">
-      <div class="result-top">
-        <div class="score-ring"
-             style="background:conic-gradient(var(--orange) 0 0%,#dfe8f4 0% 100%)">
-          <strong>0</strong>
+    <div class="content-card result-summary-card">
+      <div class="result-report-head">
+        <div class="result-score-block">
+          <span class="result-kicker">風險分析分數</span>
+          <div class="score-ring"><strong>0</strong><span class="score-unit">/ 100</span></div>
         </div>
 
-        <div>
-          <h2>風險分析分數</h2>
+        <div class="result-report-main">
+          <h2>風險分析結果</h2>
           <p>正在載入分析結果。</p>
-          <div class="progress">
-            <span style="width:0%;background:linear-gradient(90deg,var(--orange),#f2b763)"></span>
+          <div class="progress"><span style="width:0%"></span></div>
+          <div class="result-scale">
+            <span>低風險</span><span>中風險</span><span>高風險</span>
           </div>
         </div>
 
@@ -250,7 +251,7 @@
     </div>
 
     <div class="content-card">
-      <h3>AI 判定原因</h3>
+      <h3>判定依據</h3>
       <div class="reason-list">
         <div class="reason">
           <div>01</div>
@@ -263,7 +264,7 @@
     </div>
 
     <div class="content-card" id="externalVerification">
-      <h3>外部資訊查證</h3>
+      <h3>外部來源查證</h3>
       <div class="reason-list">
         <div class="reason">
           <div>—</div>
@@ -276,19 +277,16 @@
     </div>
 
     <div class="content-card" id="dataShiftSection">
-      <h3>跨期文字變化分析</h3>
+      <h3>Data Shift 跨期文字變化</h3>
 
-      <p>
-        比較不同期間的財報、法說會或其他官方文字資料，
-        衡量公司資訊內容是否出現顯著變化。
-      </p>
+      <p class="section-lead">比較同一家公司不同期間的法說會文字，觀察詞彙分布與整體文本相似度是否出現異常變化。</p>
 
       <div class="drift-run-panel">
-        <strong>從 STRUX 法說會資料直接執行</strong>
+        <strong>法說會跨期比較</strong>
 
         <p style="margin:8px 0 12px;color:#718096;">
           輸入 STRUX 中的股票代號，系統會自動取得該公司最新兩期法說會文字並進行比較。
-          目前可先使用 AMT 驗證完整流程。
+          目前以 American Tower Corporation（AMT）作為完整流程驗證案例。
         </p>
 
         <div class="drift-run-row">
@@ -319,7 +317,7 @@
 
         <div class="drift-period">
           <span>
-            股票／公司：
+            公司／股票代號：
             <strong id="driftTicker">—</strong>
           </span>
 
@@ -338,32 +336,27 @@
           </span>
         </div>
 
-        <div class="drift-grid">
-
-          <div class="drift-metric">
+        <div class="drift-report">
+          <div class="drift-report-row">
             <span>資料漂移程度</span>
             <strong id="driftLevel">—</strong>
           </div>
-
-          <div class="drift-metric">
+          <div class="drift-report-row">
             <span>Jensen-Shannon Divergence</span>
             <strong id="driftJsd">—</strong>
           </div>
-
-          <div class="drift-metric">
+          <div class="drift-report-row">
             <span>Cosine Similarity</span>
             <strong id="driftCosine">—</strong>
           </div>
-
-          <div class="drift-metric">
+          <div class="drift-report-row">
             <span>資料品質</span>
             <strong id="driftQuality">—</strong>
           </div>
-
         </div>
 
         <div class="drift-status">
-          <b>系統判讀</b>
+          <b>判定結果</b>
           <p id="driftInterpretation">—</p>
         </div>
 
@@ -445,7 +438,7 @@
         <div class="financial-block financial-llm-block">
           <div class="section-row">
             <div>
-              <h3>AI 財報解讀</h3>
+              <h3>財報文字解讀</h3>
               <p class="muted-text">此區為 FinTrust backend 的 Gemini 財報解讀，與原 AI 搜尋摘要分離。</p>
             </div>
             <span class="status-tag tag-blue" data-financial-llm-state>檢查中</span>
