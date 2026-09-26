@@ -36,6 +36,10 @@ from app.services.conference_document_identity import (
 from app.services.semiconductor_subindustries import classify_semiconductor_company
 
 ADAPTER_VERSION = "conference-jsd-adapter-v1"
+# Measurement identity of adapter text: calibration applies only to the same identity.
+SOURCE_FAMILY = "mops_t100sb02_1_conference_pdf"
+EXTRACTION_METHOD = "mops_conference_pipeline:pypdf_extract_text_per_page"
+PREPROCESSING_VERSION = "fintrust-conference-document-text-v1"
 # Field order of the teammate research corpus (tsmc_quarterly_text.csv).
 CORPUS_FIELDS = [
     "ticker", "company", "industry", "year", "quarter", "period", "document_type",
@@ -183,6 +187,9 @@ def build_records(repository: Any, ticker: str, years: Iterable[int] | None = No
             }
             provenance = {
                 "adapter_version": ADAPTER_VERSION,
+                "source_family": SOURCE_FAMILY,
+                "extraction_method": EXTRACTION_METHOD,
+                "preprocessing_version": PREPROCESSING_VERSION,
                 "archive_backend": backend,
                 "announcement_year": year,
                 "filename": document["filename"],

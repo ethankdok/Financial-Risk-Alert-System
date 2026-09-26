@@ -1,0 +1,324 @@
+{
+  "schema_version": "fintrust.jsd_calibration_profile.v1",
+  "calibration_id": "jsdcal-2330-d0bcbeb14e2f72be10a1",
+  "scope": {
+    "ticker": "2330",
+    "company": "Taiwan Semiconductor Manufacturing Company",
+    "industry": "semiconductor_foundry",
+    "document_type": "full_earnings_transcript",
+    "language": "en_may_include_translation",
+    "source_family": "investor_tsmc_com_earnings_call_transcript"
+  },
+  "method": {
+    "method_version": "earnings-en-full-pairwise-tfidf-v1",
+    "calculator_module_sha256": "aa94cf9ed19bcd30ad0666ecddf3c7c5ea10a17868f66bf389278a649f86318b",
+    "extraction_method": "pypdf_layout_mode (build_tsmc_corpus.extract_pdf)",
+    "preprocessing_version": "tsmc-corpus-extract_pdf@5b914937",
+    "tokenizer": "Original STRUX English tokenizer",
+    "tfidf": "TF-IDF fit independently on each paired English transcripts",
+    "jsd_log_base": 2,
+    "comparison": "Same-company adjacent-quarter full earnings transcripts",
+    "minimum_history_pairs": 30
+  },
+  "calibration": {
+    "history_pair_count": 33,
+    "history_pairs": [
+      {
+        "period_1": "2017Q1",
+        "period_2": "2017Q2",
+        "metrics": {
+          "jsd": 0.159109,
+          "cosine_similarity": 0.930393
+        }
+      },
+      {
+        "period_1": "2017Q2",
+        "period_2": "2017Q3",
+        "metrics": {
+          "jsd": 0.192625,
+          "cosine_similarity": 0.896044
+        }
+      },
+      {
+        "period_1": "2017Q3",
+        "period_2": "2017Q4",
+        "metrics": {
+          "jsd": 0.201679,
+          "cosine_similarity": 0.849781
+        }
+      },
+      {
+        "period_1": "2017Q4",
+        "period_2": "2018Q1",
+        "metrics": {
+          "jsd": 0.182944,
+          "cosine_similarity": 0.908827
+        }
+      },
+      {
+        "period_1": "2018Q1",
+        "period_2": "2018Q2",
+        "metrics": {
+          "jsd": 0.179853,
+          "cosine_similarity": 0.889752
+        }
+      },
+      {
+        "period_1": "2018Q2",
+        "period_2": "2018Q3",
+        "metrics": {
+          "jsd": 0.170997,
+          "cosine_similarity": 0.926961
+        }
+      },
+      {
+        "period_1": "2018Q3",
+        "period_2": "2018Q4",
+        "metrics": {
+          "jsd": 0.171326,
+          "cosine_similarity": 0.935925
+        }
+      },
+      {
+        "period_1": "2018Q4",
+        "period_2": "2019Q1",
+        "metrics": {
+          "jsd": 0.17403,
+          "cosine_similarity": 0.934778
+        }
+      },
+      {
+        "period_1": "2019Q1",
+        "period_2": "2019Q2",
+        "metrics": {
+          "jsd": 0.163465,
+          "cosine_similarity": 0.944714
+        }
+      },
+      {
+        "period_1": "2019Q2",
+        "period_2": "2019Q3",
+        "metrics": {
+          "jsd": 0.178643,
+          "cosine_similarity": 0.917509
+        }
+      },
+      {
+        "period_1": "2019Q3",
+        "period_2": "2019Q4",
+        "metrics": {
+          "jsd": 0.173886,
+          "cosine_similarity": 0.901709
+        }
+      },
+      {
+        "period_1": "2019Q4",
+        "period_2": "2020Q1",
+        "metrics": {
+          "jsd": 0.183204,
+          "cosine_similarity": 0.897928
+        }
+      },
+      {
+        "period_1": "2020Q1",
+        "period_2": "2020Q2",
+        "metrics": {
+          "jsd": 0.351505,
+          "cosine_similarity": 0.529317
+        }
+      },
+      {
+        "period_1": "2020Q2",
+        "period_2": "2020Q3",
+        "metrics": {
+          "jsd": 0.203464,
+          "cosine_similarity": 0.865092
+        }
+      },
+      {
+        "period_1": "2020Q3",
+        "period_2": "2020Q4",
+        "metrics": {
+          "jsd": 0.29522,
+          "cosine_similarity": 0.605561
+        }
+      },
+      {
+        "period_1": "2020Q4",
+        "period_2": "2021Q1",
+        "metrics": {
+          "jsd": 0.150391,
+          "cosine_similarity": 0.933607
+        }
+      },
+      {
+        "period_1": "2021Q1",
+        "period_2": "2021Q2",
+        "metrics": {
+          "jsd": 0.174038,
+          "cosine_similarity": 0.93502
+        }
+      },
+      {
+        "period_1": "2021Q2",
+        "period_2": "2021Q3",
+        "metrics": {
+          "jsd": 0.172473,
+          "cosine_similarity": 0.932993
+        }
+      },
+      {
+        "period_1": "2021Q3",
+        "period_2": "2021Q4",
+        "metrics": {
+          "jsd": 0.150621,
+          "cosine_similarity": 0.947816
+        }
+      },
+      {
+        "period_1": "2021Q4",
+        "period_2": "2022Q1",
+        "metrics": {
+          "jsd": 0.159204,
+          "cosine_similarity": 0.93666
+        }
+      },
+      {
+        "period_1": "2022Q1",
+        "period_2": "2022Q2",
+        "metrics": {
+          "jsd": 0.154892,
+          "cosine_similarity": 0.946687
+        }
+      },
+      {
+        "period_1": "2022Q2",
+        "period_2": "2022Q3",
+        "metrics": {
+          "jsd": 0.159128,
+          "cosine_similarity": 0.945521
+        }
+      },
+      {
+        "period_1": "2022Q3",
+        "period_2": "2022Q4",
+        "metrics": {
+          "jsd": 0.155232,
+          "cosine_similarity": 0.941889
+        }
+      },
+      {
+        "period_1": "2022Q4",
+        "period_2": "2023Q1",
+        "metrics": {
+          "jsd": 0.157186,
+          "cosine_similarity": 0.947098
+        }
+      },
+      {
+        "period_1": "2023Q1",
+        "period_2": "2023Q2",
+        "metrics": {
+          "jsd": 0.154565,
+          "cosine_similarity": 0.946766
+        }
+      },
+      {
+        "period_1": "2023Q2",
+        "period_2": "2023Q3",
+        "metrics": {
+          "jsd": 0.153114,
+          "cosine_similarity": 0.934264
+        }
+      },
+      {
+        "period_1": "2023Q3",
+        "period_2": "2023Q4",
+        "metrics": {
+          "jsd": 0.183454,
+          "cosine_similarity": 0.919008
+        }
+      },
+      {
+        "period_1": "2023Q4",
+        "period_2": "2024Q1",
+        "metrics": {
+          "jsd": 0.194029,
+          "cosine_similarity": 0.90843
+        }
+      },
+      {
+        "period_1": "2024Q1",
+        "period_2": "2024Q2",
+        "metrics": {
+          "jsd": 0.238454,
+          "cosine_similarity": 0.801571
+        }
+      },
+      {
+        "period_1": "2024Q2",
+        "period_2": "2024Q3",
+        "metrics": {
+          "jsd": 0.205685,
+          "cosine_similarity": 0.887719
+        }
+      },
+      {
+        "period_1": "2024Q3",
+        "period_2": "2024Q4",
+        "metrics": {
+          "jsd": 0.185761,
+          "cosine_similarity": 0.901324
+        }
+      },
+      {
+        "period_1": "2024Q4",
+        "period_2": "2025Q1",
+        "metrics": {
+          "jsd": 0.190267,
+          "cosine_similarity": 0.903161
+        }
+      },
+      {
+        "period_1": "2025Q1",
+        "period_2": "2025Q2",
+        "metrics": {
+          "jsd": 0.182001,
+          "cosine_similarity": 0.914317
+        }
+      }
+    ],
+    "history_latest_period": "2025Q2",
+    "thresholds": {
+      "jsd_p90": 0.205241,
+      "jsd_p95": 0.26116,
+      "cosine_p10": 0.852843,
+      "cosine_p05": 0.723167
+    },
+    "calibrated_for_target": {
+      "period_1": "2025Q3",
+      "period_2": "2025Q4"
+    }
+  },
+  "decision_rule": {
+    "rule": "JSD >= historical P90 AND Cosine <= historical P10",
+    "dual": "雙指標顯著文字漂移（需人工確認）",
+    "single": "單一指標異常（待觀察）",
+    "neither": "未達雙指標歷史漂移門檻"
+  },
+  "source_document_hashes": [
+    "cefac776f6b3aaa763786abb3ac210cde51adf3815765d0374ff0a875c6ed974",
+    "ee9ea0fa8cd18e3bea90f5f082687492a2ce3900a16e217226811ae2a58d08b0"
+  ],
+  "source_research_commit": "5b914937dc3cb2294851e0386c67270d20547e7e",
+  "created_at": "2026-09-26T17:05:52.637147+00:00",
+  "imported_at": "2026-09-26T17:06:20.365672+00:00",
+  "status": "active",
+  "warnings": [
+    "This is textual change, NOT a fraud/legality verdict.",
+    "TSMC is an ordinary public-company corpus demo, not the company named in a scam case.",
+    "Pilot thresholds are corpus and method-specific; validate on held-out companies/periods.",
+    "Manually review PDF extraction quality, language and Q&A boundaries before treating as research evidence.",
+    "History pair document hashes are not part of the research report; only the target pair hashes are stored."
+  ]
+}
