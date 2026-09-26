@@ -9,6 +9,7 @@ from typing import Any, Protocol
 class ConferencePdfArchiveRepository(Protocol):
     backend_name: str
 
+    def available_years(self, ticker: str) -> list[int]: ...
     def latest_manifest(self, ticker: str, year: int) -> dict[str, Any] | None: ...
     def document(self, ticker: str, year: int, filename: str) -> dict[str, Any] | None: ...
     def pages(self, ticker: str, year: int, filename: str) -> list[dict[str, Any]]: ...
@@ -31,6 +32,14 @@ class FileConferencePdfArchiveRepository:
             return json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return default
+
+    def available_years(self, ticker: str) -> list[int]:
+        """Announcement years that have an archived manifest for this company, newest first."""
+        company = self.root / ticker
+        if not company.is_dir():
+            return []
+        years = [int(item.name) for item in company.iterdir() if item.name.isdigit() and (item / "manifest.json").is_file()]
+        return sorted(years, reverse=True)
 
     def latest_manifest(self, ticker: str, year: int) -> dict[str, Any] | None:
         path = self._manifest_path(ticker, year)

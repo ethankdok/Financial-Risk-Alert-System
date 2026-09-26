@@ -81,6 +81,7 @@ class ExtractedFinancialClaim(BaseModel):
     comparison_kind: ComparisonKind | None = None
     direction: ClaimDirection = ClaimDirection.UNSPECIFIED
     claimed_value: float | None = None
+    claimed_value_text: str | None = None
     claimed_change_percent: float | None = None
     claimed_percentage_points: float | None = None
     unit: str | None = None

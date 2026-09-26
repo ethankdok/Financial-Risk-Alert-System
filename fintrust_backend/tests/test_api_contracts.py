@@ -328,12 +328,36 @@ class ApiContractTests(unittest.TestCase):
         self.assertIn("verdict", payload)
 
     def test_claim_verify_returns_structured_insufficient_evidence(self) -> None:
-        response = self.client.post(
-            "/api/v1/financial/claims/verify",
-            json={"text": "台積電 2025 年營收成長 10%", "ticker": "2330", "period": "2025FY"},
+        from app.main import app
+        from app.routers.financial import get_claim_llm
+
+        app.dependency_overrides[get_claim_llm] = lambda: None
+        try:
+            legacy = self.client.post(
+                "/api/v1/financial/claims/verify",
+                json={"text": "台積電 2025 年營收成長 10%", "ticker": "2330", "period": "2025FY"},
+            )
+            canonical = self.client.post(
+                "/api/v1/financial/claims/verify",
+                json={"company_code": "2330", "claim": "台積電 2025 年第三季毛利率為 59.5%"},
+            )
+            invalid = self.client.post("/api/v1/financial/claims/verify", json={"company_code": "2330"})
+        finally:
+            app.dependency_overrides.pop(get_claim_llm, None)
+        self.assertEqual(legacy.status_code, 200)
+        self.assertEqual(legacy.json()["verdict"], "insufficient_evidence")
+        self.assertEqual(canonical.status_code, 200)
+        payload = canonical.json()
+        self.assertEqual(
+            set(payload),
+            {"request", "structured_claim", "verdict", "reason_code", "summary", "evidence",
+             "verification_detail", "limitations", "requires_review"},
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["verdict"], "insufficient_evidence")
+        self.assertIn(payload["verdict"], {"supported", "conflicting", "insufficient_evidence"})
+        self.assertEqual(payload["request"], {"company_code": "2330", "claim": "台積電 2025 年第三季毛利率為 59.5%"})
+        self.assertEqual(payload["structured_claim"]["period"], "2025Q3")
+        self.assertIsInstance(payload["evidence"], list)
+        self.assertEqual(invalid.status_code, 422)
 
 
 if __name__ == "__main__":

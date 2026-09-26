@@ -20,7 +20,6 @@ from app.financial_analysis_models import (
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.models import (
     ClaimExtractionRequest,
-    ClaimVerificationRequest,
     ClaimVerificationResult,
     CompanyMasterRecord,
     CompanyListResponse,
@@ -77,7 +76,11 @@ from app.services.pipeline_evidence_repository import PipelineEvidenceRepository
 from app.services.twse_openapi import TwseOpenApiError
 from app.services.unified_analysis_orchestrator import UnifiedAnalysisOrchestrator
 from app.services.twse_company_universe import TwseCompanyUniverseService
-from app.services.verifier import verify_claim
+from app.claim_verification_models import ClaimVerifyRequest, ClaimVerifyResponse
+from app.services.claim_evidence_adapter import ClaimEvidenceAdapter
+from app.services.claim_llm import ClaimLLM
+from app.services.claim_verification_service import ClaimVerificationService
+from app.services.mops_conference_pdf_repository import build_conference_pdf_archive_repository
 
 
 router = APIRouter(prefix="/api/v1/financial", tags=["financial-evidence"])
@@ -588,25 +591,38 @@ def extract_financial_claim(request: ClaimExtractionRequest) -> ClaimVerificatio
     )
 
 
-def get_pipeline_evidence_repository(
+def get_claim_llm() -> ClaimLLM | None:
+    """Server-side Gemini assistance only when the existing provider is selected and configured."""
+    if os.getenv("FINANCIAL_LLM_PROVIDER", "").strip().lower() != "gemini":
+        return None
+    llm = ClaimLLM()
+    return llm if llm.configured else None
+
+
+def get_claim_verification_service(
     repository: AnalysisRepository = Depends(get_analysis_repository),
-) -> PipelineEvidenceRepository:
-    return PipelineEvidenceRepository(repository)
+    llm: ClaimLLM | None = Depends(get_claim_llm),
+) -> ClaimVerificationService:
+    try:
+        conference_repository = build_conference_pdf_archive_repository()
+    except ValueError:
+        conference_repository = None
+    adapter = ClaimEvidenceAdapter(
+        fact_repository=PipelineEvidenceRepository(repository),
+        conference_repository=conference_repository,
+        event_repository=repository,
+    )
+    return ClaimVerificationService(adapter, llm=llm)
 
 
-@router.post("/claims/verify", response_model=ClaimVerificationResult)
+@router.post("/claims/verify", response_model=ClaimVerifyResponse)
 def verify_financial_claim(
-    request: ClaimVerificationRequest,
-    repository: PipelineEvidenceRepository = Depends(get_pipeline_evidence_repository),
-) -> ClaimVerificationResult:
-    claim = extract_claim(
-        request.text,
-        ticker_hint=request.ticker,
-        period_hint=request.period,
-        comparison_period_hint=request.comparison_period,
-    )
-    return verify_claim(
-        claim,
-        repository=repository,
-        tolerance_percentage_points=request.tolerance_percentage_points,
-    )
+    request: ClaimVerifyRequest,
+    service: ClaimVerificationService = Depends(get_claim_verification_service),
+) -> ClaimVerifyResponse:
+    """Verify a claim against stored official evidence.
+
+    Accepts {company_code, claim} or the legacy {ticker, text}. The verdict is
+    supported | conflicting | insufficient_evidence; evidence is always a list.
+    """
+    return service.verify(request)
