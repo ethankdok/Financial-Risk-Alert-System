@@ -1,0 +1,5491 @@
+{
+  "source_policy": "official MOPS listing only; no PDF downloaded during discovery",
+  "companies": [
+    {
+      "ticker": "2330",
+      "company": "台積電",
+      "industry": "semiconductor_foundry",
+      "source": "MOPS t100sb02_1 法人說明會 (official)",
+      "years": {
+        "2024": {
+          "status": "ok",
+          "documents": 8,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=113&co_id=2330",
+          "error": null
+        },
+        "2025": {
+          "status": "ok",
+          "documents": 8,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2330",
+          "error": null
+        },
+        "2026": {
+          "status": "ok",
+          "documents": 6,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=115&co_id=2330",
+          "error": null
+        }
+      },
+      "discovered_documents": 22,
+      "languages": {
+        "en": 11,
+        "zh": 11
+      },
+      "listing_claimed_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "documents_without_listing_period": 0,
+      "files_reused_across_listing_rows": 22,
+      "anomalies": [],
+      "documents": [
+        {
+          "filename": "233020240118E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "113/01/18",
+            "113/02/19",
+            "113/03/05 至 113/03/07",
+            "113/03/19"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2023年第4季財務報告及2024年第1季業績展望。(2) 參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2023/q4",
+            "本公司受邀參加摩根大通證券所舉辦之『J.P. Morgan Taiwan CEO-CFO Conference』，會中就本公司1/18法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Technology, Media & Telecom Conference』，會中就本公司1/18法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加美銀證券所舉辦之『2024 APAC TMT Conference』，會中就本公司1/18法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "233020240118M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "113/01/18",
+            "113/02/19",
+            "113/03/05 至 113/03/07",
+            "113/03/19"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2023年第4季財務報告及2024年第1季業績展望。(2) 參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2023/q4",
+            "本公司受邀參加摩根大通證券所舉辦之『J.P. Morgan Taiwan CEO-CFO Conference』，會中就本公司1/18法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Technology, Media & Telecom Conference』，會中就本公司1/18法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加美銀證券所舉辦之『2024 APAC TMT Conference』，會中就本公司1/18法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "233020240418E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "113/04/18",
+            "113/05/27 至 113/05/29"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2024年第1季財務報告及2024年第2季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2024/q1",
+            "本公司受邀參加瑞銀證券所舉辦之『UBS Asian Investment Conference 2024』，會中就本公司4/18法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "233020240418M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "113/04/18",
+            "113/05/27 至 113/05/29"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2024年第1季財務報告及2024年第2季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2024/q1",
+            "本公司受邀參加瑞銀證券所舉辦之『UBS Asian Investment Conference 2024』，會中就本公司4/18法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "233020240718E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "113/07/18",
+            "113/09/09 至 113/09/13",
+            "113/09/23"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2024年第2季財務報告及2024年第3季業績展望。 (2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2024/q2",
+            "本公司受邀參加美商高盛證券所舉辦之『Goldman Sachs Communacopia + Technology Conference』，會中就本公司7/18法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『UBS Taiwan Summit 2024』，會中就本公司7/18法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "233020240718M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "113/07/18",
+            "113/09/09 至 113/09/13",
+            "113/09/23"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2024年第2季財務報告及2024年第3季業績展望。 (2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2024/q2",
+            "本公司受邀參加美商高盛證券所舉辦之『Goldman Sachs Communacopia + Technology Conference』，會中就本公司7/18法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『UBS Taiwan Summit 2024』，會中就本公司7/18法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "233020241017E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "113/10/17",
+            "113/11/20 至 113/11/21",
+            "113/12/03 至 113/12/06"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2024年第3季財務報告及2024年第4季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2024/q3",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Twenty-Third Annual Asia Pacific Summit』，會中就本公司10/17法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『2024 UBS Global Technology Conference』，會中就本公司10/17法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "233020241017M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "113/10/17",
+            "113/11/20 至 113/11/21",
+            "113/12/03 至 113/12/06"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2024年第3季財務報告及2024年第4季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2024/q3",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Twenty-Third Annual Asia Pacific Summit』，會中就本公司10/17法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『2024 UBS Global Technology Conference』，會中就本公司10/17法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "233020250116E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "114/01/16",
+            "114/02/17 至 114/02/18",
+            "114/03/04 至 114/03/07",
+            "114/03/18"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2024年第4季財務報告及2025年第1季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2024/q4",
+            "本公司受邀參加摩根大通證券所舉辦之『J.P. Morgan Taiwan CEO-CFO Conference』，會中就本公司1/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Morgan Stanley Technology, Media & Telecom Conference』，會中就本公司1/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加美銀證券所舉辦之『2025 Asia Tech Conference』，會中就本公司1/16法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "233020250116M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "114/01/16",
+            "114/02/17 至 114/02/18",
+            "114/03/04 至 114/03/07",
+            "114/03/18"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2024年第4季財務報告及2025年第1季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2024/q4",
+            "本公司受邀參加摩根大通證券所舉辦之『J.P. Morgan Taiwan CEO-CFO Conference』，會中就本公司1/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Morgan Stanley Technology, Media & Telecom Conference』，會中就本公司1/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加美銀證券所舉辦之『2025 Asia Tech Conference』，會中就本公司1/16法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "233020250417E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "114/04/17",
+            "114/04/25",
+            "114/05/13 至 114/05/15",
+            "114/05/21",
+            "114/05/27 至 114/05/29"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2025年第1季財務報告及2025年第2季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2025/q1",
+            "本公司將舉辦『TSMC 2025 Investor Day』，會中就本公司4/17法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加摩根大通證券所舉辦之『J.P. Morgan 53rd Annual Global Technology, Media and Communications Conference』，會中就本公司4/17法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加花旗環球證券所舉辦之『Citi's 2025 Taiwan Tech Conference』，會中就本公司4/17法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『Asian Investment Conference 2025』，會中就本公司4/17法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 5
+        },
+        {
+          "filename": "233020250417M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "114/04/17",
+            "114/04/25",
+            "114/05/13 至 114/05/15",
+            "114/05/21",
+            "114/05/27 至 114/05/29"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2025年第1季財務報告及2025年第2季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2025/q1",
+            "本公司將舉辦『TSMC 2025 Investor Day』，會中就本公司4/17法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加摩根大通證券所舉辦之『J.P. Morgan 53rd Annual Global Technology, Media and Communications Conference』，會中就本公司4/17法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加花旗環球證券所舉辦之『Citi's 2025 Taiwan Tech Conference』，會中就本公司4/17法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『Asian Investment Conference 2025』，會中就本公司4/17法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 5
+        },
+        {
+          "filename": "233020250721E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "114/07/17",
+            "114/09/08 至 114/09/12",
+            "114/09/16"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2025年第2季財務報告及2025年第3季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2025/q2",
+            "本公司受邀參加美商高盛證券所舉辦之『Goldman Sachs Communacopia + Technology Conference 2025』，會中就本公司7/17法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『UBS Taiwan Summit 2025』，會中就本公司7/17法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "233020250721M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "114/07/17",
+            "114/09/08 至 114/09/12",
+            "114/09/16"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2025年第2季財務報告及2025年第3季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2025/q2",
+            "本公司受邀參加美商高盛證券所舉辦之『Goldman Sachs Communacopia + Technology Conference 2025』，會中就本公司7/17法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『UBS Taiwan Summit 2025』，會中就本公司7/17法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "233020251016E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "114/10/16",
+            "114/11/20 至 114/11/21",
+            "114/11/25",
+            "114/12/01 至 114/12/05"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2025年第3季財務報告及2025年第4季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2025/q3",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Twenty-Fourth Annual Asia Pacific Summit』，會中就本公司10/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加花旗環球證券所舉辦之『Citi's 2025 Taiwan Corporate Day』，會中就本公司10/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『UBS Global Technology and AI Conference』，會中就本公司10/16法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "233020251016M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "114/10/16",
+            "114/11/20 至 114/11/21",
+            "114/11/25",
+            "114/12/01 至 114/12/05"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2025年第3季財務報告及2025年第4季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2025/q3",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Twenty-Fourth Annual Asia Pacific Summit』，會中就本公司10/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加花旗環球證券所舉辦之『Citi's 2025 Taiwan Corporate Day』，會中就本公司10/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『UBS Global Technology and AI Conference』，會中就本公司10/16法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "233020260115E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "115/01/15",
+            "115/03/03 至 115/03/06",
+            "115/03/12"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2025年第4季財務報告及2026年第1季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2025/q4",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Morgan Stanley Technology, Media & Telecom Conference』，會中就本公司1/15法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加摩根大通證券所舉辦之『Taiwan CEO-CFO Conference』，會中就本公司1/15法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "233020260115M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "115/01/15",
+            "115/03/03 至 115/03/06",
+            "115/03/12"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2025年第4季財務報告及2026年第1季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2025/q4",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Morgan Stanley Technology, Media & Telecom Conference』，會中就本公司1/15法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加摩根大通證券所舉辦之『Taiwan CEO-CFO Conference』，會中就本公司1/15法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "233020260416E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "115/04/16",
+            "115/04/25",
+            "115/05/26 至 115/05/27",
+            "115/05/29"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2026年第1季財務報告及2026年第2季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2026/q1",
+            "本公司將舉辦『TSMC 2026 Investor Day』，會中就本公司4/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『Asian Investment Conference 2026』，會中就本公司4/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Asia AI Summit 2026』，會中就本公司4/16法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "233020260416M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "115/04/16",
+            "115/04/25",
+            "115/05/26 至 115/05/27",
+            "115/05/29"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2026年第1季財務報告及2026年第2季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2026/q1",
+            "本公司將舉辦『TSMC 2026 Investor Day』，會中就本公司4/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『Asian Investment Conference 2026』，會中就本公司4/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加摩根士丹利證券所舉辦之『Asia AI Summit 2026』，會中就本公司4/16法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "233020260716E001.pdf",
+          "language": "en",
+          "company_name": "台積電",
+          "conference_dates": [
+            "115/07/16",
+            "115/08/24 至 115/08/27",
+            "115/09/08 至 115/09/11",
+            "115/09/14"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2026年第2季財務報告及2026年第3季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2026/q2",
+            "本公司受邀參加傑富瑞(Jefferies)舉辦之『Jefferies 2026 Semiconductor, IT Hardware & Communications Technology Conference』，會中就本公司7/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加美商高盛證券所舉辦之『Goldman Sachs Communacopia + Technology Conference 2026』，會中就本公司7/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『UBS Taiwan Summit 2026』，會中就本公司7/16法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "233020260716M001.pdf",
+          "language": "zh",
+          "company_name": "台積電",
+          "conference_dates": [
+            "115/07/16",
+            "115/08/24 至 115/08/27",
+            "115/09/08 至 115/09/11",
+            "115/09/14"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2026年第2季財務報告及2026年第3季業績展望。(2)參加方式：請參見https://investor.tsmc.com/chinese/quarterly-results/2026/q2",
+            "本公司受邀參加傑富瑞(Jefferies)舉辦之『Jefferies 2026 Semiconductor, IT Hardware & Communications Technology Conference』，會中就本公司7/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加美商高盛證券所舉辦之『Goldman Sachs Communacopia + Technology Conference 2026』，會中就本公司7/16法說會已公開之財務數字、經營績效等相關資訊進行說明。",
+            "本公司受邀參加瑞銀證券所舉辦之『UBS Taiwan Summit 2026』，會中就本公司7/16法說會已公開之財務數字、經營績效等相關資訊進行說明。"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 4
+        }
+      ]
+    },
+    {
+      "ticker": "2454",
+      "company": "聯發科",
+      "industry": "semiconductor_fabless",
+      "source": "MOPS t100sb02_1 法人說明會 (official)",
+      "years": {
+        "2024": {
+          "status": "ok",
+          "documents": 10,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=113&co_id=2454",
+          "error": null
+        },
+        "2025": {
+          "status": "ok",
+          "documents": 10,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2454",
+          "error": null
+        },
+        "2026": {
+          "status": "ok",
+          "documents": 8,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=115&co_id=2454",
+          "error": null
+        }
+      },
+      "discovered_documents": 28,
+      "languages": {
+        "en": 14,
+        "zh": 14
+      },
+      "listing_claimed_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "documents_without_listing_period": 6,
+      "files_reused_across_listing_rows": 22,
+      "anomalies": [],
+      "documents": [
+        {
+          "filename": "245420231027E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "113/01/08"
+          ],
+          "listing_summaries": [
+            "公告本公司113年1月8日受邀參加野村證券於拉斯維加斯舉辦之Nomura @CES 2024，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "245420231027M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "113/01/08"
+          ],
+          "listing_summaries": [
+            "公告本公司113年1月8日受邀參加野村證券於拉斯維加斯舉辦之Nomura @CES 2024，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "245420240131E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "113/01/31",
+            "113/02/20",
+            "113/03/04 至 113/03/21"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2023年第4季財務報告及2024年第1季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司113年2月20日受邀參加摩根大通證券於台北舉辦之Taiwan CEO-CFO Conference，簡報資料請參閱公開資訊觀測站。",
+            "公告本公司113年3月4日受邀參加花旗證券於台北舉辦之Taiwan Corporate Day 2024、113年3月19日至3月20日受邀參加美林證券於台北舉辦之2024 APAC TMT Conference及113年3月20日至3月21日受邀參加Jefferies證券於香港舉辦之Jefferies 5th Asia Forum，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "245420240131M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "113/01/31",
+            "113/02/20",
+            "113/03/04 至 113/03/21"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2023年第4季財務報告及2024年第1季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司113年2月20日受邀參加摩根大通證券於台北舉辦之Taiwan CEO-CFO Conference，簡報資料請參閱公開資訊觀測站。",
+            "公告本公司113年3月4日受邀參加花旗證券於台北舉辦之Taiwan Corporate Day 2024、113年3月19日至3月20日受邀參加美林證券於台北舉辦之2024 APAC TMT Conference及113年3月20日至3月21日受邀參加Jefferies證券於香港舉辦之Jefferies 5th Asia Forum，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "245420240426E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "113/04/26",
+            "113/05/28 至 113/06/07"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2024年第1季財務報告及2024年第2季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司113年5月28日至5月29日受邀參加瑞銀證券於香港舉辦之Asian Investment Conference 2024、113年6月4日受邀參加匯豐證券於台北舉辦之HSBC x TWSE Taiwan Conference 2024 及113年6月7日受邀參加花旗證券於台北舉辦之2024 Taiwan Tech Conference，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "245420240426M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "113/04/26",
+            "113/05/28 至 113/06/07"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2024年第1季財務報告及2024年第2季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司113年5月28日至5月29日受邀參加瑞銀證券於香港舉辦之Asian Investment Conference 2024、113年6月4日受邀參加匯豐證券於台北舉辦之HSBC x TWSE Taiwan Conference 2024 及113年6月7日受邀參加花旗證券於台北舉辦之2024 Taiwan Tech Conference，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "245420240731E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "113/07/31",
+            "113/09/02 至 113/09/20",
+            "113/09/23"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2024年第2季財務報告及2024年第3季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司113年9月2日受邀參加摩根史丹利證券於台北舉辦之Taiwan AI Forum 2024、113年9月3日受邀參加高盛證券於台北舉辦之 Taiwan Corporate Day、113年9月9日至9月11日受邀參加里昂證券於香港舉辦之 Investors’ Forum 2024及113年9月19日至9月20日受邀參加麥格里證券於香港舉辦之Asia TMT Conference ，簡報資料請參閱公開資訊觀測站。",
+            "公告本公司113年9月23日受邀參加瑞銀證券於台北舉辦之Taiwan Summit 2024 ，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "245420240731M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "113/07/31",
+            "113/09/02 至 113/09/20",
+            "113/09/23"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2024年第2季財務報告及2024年第3季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司113年9月2日受邀參加摩根史丹利證券於台北舉辦之Taiwan AI Forum 2024、113年9月3日受邀參加高盛證券於台北舉辦之 Taiwan Corporate Day、113年9月9日至9月11日受邀參加里昂證券於香港舉辦之 Investors’ Forum 2024及113年9月19日至9月20日受邀參加麥格里證券於香港舉辦之Asia TMT Conference ，簡報資料請參閱公開資訊觀測站。",
+            "公告本公司113年9月23日受邀參加瑞銀證券於台北舉辦之Taiwan Summit 2024 ，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "245420241030E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "113/10/30",
+            "113/11/12 至 113/11/25"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2024年第3季財務報告及2024年第4季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司113年11月12日受邀參加台灣匯立證券於台北舉辦之Taiwan Market Mover 2025 Access Day、113年11月18日至11月19日受邀參加摩根大通證券於香港舉辦之Global TMT Conference in Asia、113年11月20日受邀參加麥格里證券於台北舉辦之Taiwan Conference、113年11月20日至11月21日受邀參加摩根史丹利證券於新加坡舉辦之Twenty-Third Annual Asia Pacific Summit及113年11月25日受邀參加花旗證券於台北舉辦之Taiwan Corporate Day，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "245420241030M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "113/10/30",
+            "113/11/12 至 113/11/25"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2024年第3季財務報告及2024年第4季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司113年11月12日受邀參加台灣匯立證券於台北舉辦之Taiwan Market Mover 2025 Access Day、113年11月18日至11月19日受邀參加摩根大通證券於香港舉辦之Global TMT Conference in Asia、113年11月20日受邀參加麥格里證券於台北舉辦之Taiwan Conference、113年11月20日至11月21日受邀參加摩根史丹利證券於新加坡舉辦之Twenty-Third Annual Asia Pacific Summit及113年11月25日受邀參加花旗證券於台北舉辦之Taiwan Corporate Day，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "245420241030E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "114/01/06 至 114/01/07"
+          ],
+          "listing_summaries": [
+            "公告本公司114年1月6日至1月7日受邀參加野村證券於拉斯維加斯舉辦之Nomura @CES 2025，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "245420241030M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "114/01/06 至 114/01/07"
+          ],
+          "listing_summaries": [
+            "公告本公司114年1月6日至1月7日受邀參加野村證券於拉斯維加斯舉辦之Nomura @CES 2025，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "245420250207E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "114/02/07",
+            "114/02/17 至 114/02/18",
+            "114/02/25",
+            "114/03/18 至 114/03/20"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2024年第4季財務報告及2025年第1季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司114年2月17日至2月18日受邀參加摩根大通證券於台北舉辦之Taiwan CEO-CFO Conference，簡報資料請參閱公開資訊觀測站。",
+            "公告本公司114年2月25日受邀參加花旗證券於台北舉辦之 Taiwan Corporate Day，簡報資料請參閱公開資訊觀測站。",
+            "公告本公司114年3月18日至3月19日受邀參加美林證券於台北舉辦之2025 Asia Tech Conference及114年3月20日受邀參加Jefferies證券於香港舉辦之Jefferies 6th Asia Forum，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "245420250207M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "114/02/07",
+            "114/02/17 至 114/02/18",
+            "114/02/25",
+            "114/03/18 至 114/03/20"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2024年第4季財務報告及2025年第1季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司114年2月17日至2月18日受邀參加摩根大通證券於台北舉辦之Taiwan CEO-CFO Conference，簡報資料請參閱公開資訊觀測站。",
+            "公告本公司114年2月25日受邀參加花旗證券於台北舉辦之 Taiwan Corporate Day，簡報資料請參閱公開資訊觀測站。",
+            "公告本公司114年3月18日至3月19日受邀參加美林證券於台北舉辦之2025 Asia Tech Conference及114年3月20日受邀參加Jefferies證券於香港舉辦之Jefferies 6th Asia Forum，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "245420250430E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "114/04/30",
+            "114/05/19 至 114/06/04"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2025年第1季財務報告及2025年第2季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司114年5月19日受邀參加高盛證券於台北舉辦之Goldman Sachs TechNet Taiwan、114年5月19日受邀參加野村證券於台北舉辦之APAC Tech Forum 2025、114年5月19日受邀參加匯豐證券於台北舉辦之HSBC Taiwan Conference、114年5月22日至5月23日受邀參加花旗證券於台北舉辦之Taiwan Tech Conference、114年5月23日受邀參加證交所於台北舉辦之臺灣智慧科技島主題式業績展望會、114年5月27日至5月28日受邀參加瑞銀證券於香港舉辦之Asian Investment Conference及114年6月4日受邀參加摩根大通證券舉辦之Asia Pacific All Star Forum，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "245420250430M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "114/04/30",
+            "114/05/19 至 114/06/04"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2025年第1季財務報告及2025年第2季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司114年5月19日受邀參加高盛證券於台北舉辦之Goldman Sachs TechNet Taiwan、114年5月19日受邀參加野村證券於台北舉辦之APAC Tech Forum 2025、114年5月19日受邀參加匯豐證券於台北舉辦之HSBC Taiwan Conference、114年5月22日至5月23日受邀參加花旗證券於台北舉辦之Taiwan Tech Conference、114年5月23日受邀參加證交所於台北舉辦之臺灣智慧科技島主題式業績展望會、114年5月27日至5月28日受邀參加瑞銀證券於香港舉辦之Asian Investment Conference及114年6月4日受邀參加摩根大通證券舉辦之Asia Pacific All Star Forum，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "245420250730E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "114/07/30",
+            "114/08/20",
+            "114/09/08 至 114/09/18"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2025年第2季財務報告及2025年第3季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司114年8月20日受邀參加美林證券於台北舉辦之2025 Taiwan Tech Forum，簡報資料請參閱公開資訊觀測站。",
+            "公告本公司114年9月8日至9月10日受邀參加里昂證券於香港舉辦之Investors' Forum 2025、114年9月11日受邀參加花旗證券於台北舉辦之Tech Forum、114年9月15日至9月17日受邀參加瑞銀證券於台北舉辦之Taiwan Summit 2025及114年9月17日至9月18日受邀參加麥格里證券於香港舉辦之Asia Technology & Internet Conference 2025，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "245420250730M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "114/07/30",
+            "114/08/20",
+            "114/09/08 至 114/09/18"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2025年第2季財務報告及2025年第3季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+            "公告本公司114年8月20日受邀參加美林證券於台北舉辦之2025 Taiwan Tech Forum，簡報資料請參閱公開資訊觀測站。",
+            "公告本公司114年9月8日至9月10日受邀參加里昂證券於香港舉辦之Investors' Forum 2025、114年9月11日受邀參加花旗證券於台北舉辦之Tech Forum、114年9月15日至9月17日受邀參加瑞銀證券於台北舉辦之Taiwan Summit 2025及114年9月17日至9月18日受邀參加麥格里證券於香港舉辦之Asia Technology & Internet Conference 2025，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "245420251031E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "114/10/31",
+            "114/11/17 至 114/11/25"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2025年第3季財務報告及2025年第4季業績展望。 (2) 參加方式：請參見https://www.mediatek.com/zh-tw/investor-relations/financial-information#quarterly-earnings-release",
+            "公告本公司114年11月17日至11月18日受邀參加摩根大通證券於香港舉辦之Global TMT Conference in Asia、114年11月17日受邀參加麥格里證券於台北舉辦之Macquarie Taiwan Conference、114年11月19日至11月20日受邀參加摩根史丹利證券於新加坡舉辦之Asia Pacific Summit 、114年11月21日受邀參加高盛證券於台北舉辦之AI Ecosystem & Global Expansion Conference、 114年11月24日至11月25日受邀參加花旗證券於台北舉辦之Taiwan Corporate Day 及114年11月25日受邀參加Jefferies證券舉辦之GEMs Conference 2025，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "245420251031M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "114/10/31",
+            "114/11/17 至 114/11/25"
+          ],
+          "listing_summaries": [
+            "(1) 公布本公司2025年第3季財務報告及2025年第4季業績展望。 (2) 參加方式：請參見https://www.mediatek.com/zh-tw/investor-relations/financial-information#quarterly-earnings-release",
+            "公告本公司114年11月17日至11月18日受邀參加摩根大通證券於香港舉辦之Global TMT Conference in Asia、114年11月17日受邀參加麥格里證券於台北舉辦之Macquarie Taiwan Conference、114年11月19日至11月20日受邀參加摩根史丹利證券於新加坡舉辦之Asia Pacific Summit 、114年11月21日受邀參加高盛證券於台北舉辦之AI Ecosystem & Global Expansion Conference、 114年11月24日至11月25日受邀參加花旗證券於台北舉辦之Taiwan Corporate Day 及114年11月25日受邀參加Jefferies證券舉辦之GEMs Conference 2025，簡報資料請參閱公開資訊觀測站。"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "245420251031E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "115/01/05 至 115/01/06"
+          ],
+          "listing_summaries": [
+            "公告本公司115年1月5日至1月6日受邀參加野村證券於拉斯維加斯舉辦之Nomura @CES 2026，簡報資料請參閱公開資‎訊觀測站。‎"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "245420251031M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "115/01/05 至 115/01/06"
+          ],
+          "listing_summaries": [
+            "公告本公司115年1月5日至1月6日受邀參加野村證券於拉斯維加斯舉辦之Nomura @CES 2026，簡報資料請參閱公開資‎訊觀測站。‎"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "245420260204E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "115/02/04",
+            "115/03/10",
+            "115/03/11 至 115/03/12",
+            "115/03/17 至 115/03/19"
+          ],
+          "listing_summaries": [
+            "‎(1) 公布本公司2025年第4季財務報告及2026年第1季業績展望。 (2) 參加方式：請參見https://www.mediatek.com/zh-‎tw/investor-relations/financial-information#quarterly-earnings-‎release ‎",
+            "公告本公司115年3月10日受邀參加花旗證券於台北舉辦之Corporate Day，簡報資料請參閱公開資訊觀測站。‎",
+            "公告本公司115年3月11日至3月12日受邀參加摩根大通證券於台北舉辦之Taiwan CEO-CFO Conference，簡報資料請參閱公開資訊觀測站。‎",
+            "公告本公司115年3月17日至3月18日受邀參加美林證券於台北舉辦之2026 Asia Tech Conference及115年3月18日至3月19‎日受邀參加Jefferies證券於香港舉辦之Asia Forum，簡報資料請參閱公開資訊觀測站。‎"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "245420260204M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "115/02/04",
+            "115/03/10",
+            "115/03/11 至 115/03/12",
+            "115/03/17 至 115/03/19"
+          ],
+          "listing_summaries": [
+            "‎(1) 公布本公司2025年第4季財務報告及2026年第1季業績展望。 (2) 參加方式：請參見https://www.mediatek.com/zh-‎tw/investor-relations/financial-information#quarterly-earnings-‎release ‎",
+            "公告本公司115年3月10日受邀參加花旗證券於台北舉辦之Corporate Day，簡報資料請參閱公開資訊觀測站。‎",
+            "公告本公司115年3月11日至3月12日受邀參加摩根大通證券於台北舉辦之Taiwan CEO-CFO Conference，簡報資料請參閱公開資訊觀測站。‎",
+            "公告本公司115年3月17日至3月18日受邀參加美林證券於台北舉辦之2026 Asia Tech Conference及115年3月18日至3月19‎日受邀參加Jefferies證券於香港舉辦之Asia Forum，簡報資料請參閱公開資訊觀測站。‎"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "245420260430E001.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "115/04/30",
+            "115/05/18 至 115/06/04",
+            "115/06/23"
+          ],
+          "listing_summaries": [
+            "‎(1) 公布本公司2026年第1季財務報告及2026年第2季業績展望。 (2) 參加方式：請參見https://www.mediatek.com/zh-‎tw/investor-relations/financial-information#quarterly-earnings-‎release ‎",
+            "公告本公司115年5月18日受邀參加麥格里證券於香港舉辦之Asia Conference 2026、115年5月26日至5月27日受邀參加瑞銀證券於香港舉辦之Asian Investment Conference 2026、115年5‎月28日受邀參加摩根史丹利證券於台北舉辦之Asia AI Summit ‎‎2026、115年6月1日受邀參加高盛證券於台北舉辦之Taiwan ‎Computex & Corporate Day 2026、115年6月3日受邀參加麥格里證券於台北舉辦之Corporate Day及115年6月4日受邀參加花旗證券於台北舉辦之2026 Taiwan Conference，簡報資料請參閱公開資訊觀測站。‎",
+            "公告本公司115年 6月23日受邀參加摩根大通證券舉辦之Asia Pacific All Star Forum，簡報資料請參閱公開資訊觀測‎站。‎"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "245420260430M001.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "115/04/30",
+            "115/05/18 至 115/06/04",
+            "115/06/23"
+          ],
+          "listing_summaries": [
+            "‎(1) 公布本公司2026年第1季財務報告及2026年第2季業績展望。 (2) 參加方式：請參見https://www.mediatek.com/zh-‎tw/investor-relations/financial-information#quarterly-earnings-‎release ‎",
+            "公告本公司115年5月18日受邀參加麥格里證券於香港舉辦之Asia Conference 2026、115年5月26日至5月27日受邀參加瑞銀證券於香港舉辦之Asian Investment Conference 2026、115年5‎月28日受邀參加摩根史丹利證券於台北舉辦之Asia AI Summit ‎‎2026、115年6月1日受邀參加高盛證券於台北舉辦之Taiwan ‎Computex & Corporate Day 2026、115年6月3日受邀參加麥格里證券於台北舉辦之Corporate Day及115年6月4日受邀參加花旗證券於台北舉辦之2026 Taiwan Conference，簡報資料請參閱公開資訊觀測站。‎",
+            "公告本公司115年 6月23日受邀參加摩根大通證券舉辦之Asia Pacific All Star Forum，簡報資料請參閱公開資訊觀測‎站。‎"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "245420260731E002.pdf",
+          "language": "en",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "115/07/31",
+            "115/09/03 至 115/09/23"
+          ],
+          "listing_summaries": [
+            "‎(1) 公布本公司2026年第2季財務報告及2026年第3季業績展望。 (2) 參加方式：請參見https://www.mediatek.com/zh-‎tw/investor-relations/financial-information#quarterly-earnings-‎release",
+            "公告本公司115年9月3日至9月8日受邀參加臺灣證券交易所與永豐金證券於紐約及倫敦舉辦之Corporate Access Day、115‎年9月7日至9月8日受邀參加麥格里證券於香港舉辦之Macquarie NEXT INNOVATIONS Tech Conference 2026、115年9‎月14日受邀參加瑞銀證券於台北舉辦之Taiwan Summit ‎‎2026、115年9月21日至9月22日受邀參加中信證券於香港舉辦之 International Investors’ Forum 2026及115年9月23日受邀參加美林證券於香港舉辦之2026 Asia Pacific Conference，簡報資料請參閱公開資訊觀測站。‎"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "245420260731M002.pdf",
+          "language": "zh",
+          "company_name": "聯發科",
+          "conference_dates": [
+            "115/07/31",
+            "115/09/03 至 115/09/23"
+          ],
+          "listing_summaries": [
+            "‎(1) 公布本公司2026年第2季財務報告及2026年第3季業績展望。 (2) 參加方式：請參見https://www.mediatek.com/zh-‎tw/investor-relations/financial-information#quarterly-earnings-‎release",
+            "公告本公司115年9月3日至9月8日受邀參加臺灣證券交易所與永豐金證券於紐約及倫敦舉辦之Corporate Access Day、115‎年9月7日至9月8日受邀參加麥格里證券於香港舉辦之Macquarie NEXT INNOVATIONS Tech Conference 2026、115年9‎月14日受邀參加瑞銀證券於台北舉辦之Taiwan Summit ‎‎2026、115年9月21日至9月22日受邀參加中信證券於香港舉辦之 International Investors’ Forum 2026及115年9月23日受邀參加美林證券於香港舉辦之2026 Asia Pacific Conference，簡報資料請參閱公開資訊觀測站。‎"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 2
+        }
+      ]
+    },
+    {
+      "ticker": "2303",
+      "company": "聯電",
+      "industry": "semiconductor_foundry",
+      "source": "MOPS t100sb02_1 法人說明會 (official)",
+      "years": {
+        "2024": {
+          "status": "ok",
+          "documents": 8,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=113&co_id=2303",
+          "error": null
+        },
+        "2025": {
+          "status": "ok",
+          "documents": 8,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2303",
+          "error": null
+        },
+        "2026": {
+          "status": "ok",
+          "documents": 10,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=115&co_id=2303",
+          "error": null
+        }
+      },
+      "discovered_documents": 26,
+      "languages": {
+        "en": 13,
+        "zh": 13
+      },
+      "listing_claimed_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "documents_without_listing_period": 4,
+      "files_reused_across_listing_rows": 20,
+      "anomalies": [],
+      "documents": [
+        {
+          "filename": "230320240131E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "113/01/31",
+            "113/02/19",
+            "113/03/04",
+            "113/03/19 至 113/03/20"
+          ],
+          "listing_summaries": [
+            "本公司2023年第四季財務暨營運報告。",
+            "本公司受邀參加摩根大通證券舉辦之法人說明會「Taiwan CEO-CFO Conference 2024」。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2024 Taiwan Corporate Day」。",
+            "本公司受邀參加美銀證券舉辦之法人說明會「2024 APAC TMT Conference」。"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "230320240131M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "113/01/31",
+            "113/02/19",
+            "113/03/04",
+            "113/03/19 至 113/03/20"
+          ],
+          "listing_summaries": [
+            "本公司2023年第四季財務暨營運報告。",
+            "本公司受邀參加摩根大通證券舉辦之法人說明會「Taiwan CEO-CFO Conference 2024」。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2024 Taiwan Corporate Day」。",
+            "本公司受邀參加美銀證券舉辦之法人說明會「2024 APAC TMT Conference」。"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "230320240424E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "113/04/24",
+            "113/05/23 至 113/05/24",
+            "113/06/06 至 113/06/07"
+          ],
+          "listing_summaries": [
+            "本公司2024年第一季財務暨營運報告。",
+            "本公司受邀參加CGS-CIMB證券舉辦之法人說明會「EV and Tech Virtual Conference 2024」。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2024 Taiwan Conference」。"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "230320240424M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "113/04/24",
+            "113/05/23 至 113/05/24",
+            "113/06/06 至 113/06/07"
+          ],
+          "listing_summaries": [
+            "本公司2024年第一季財務暨營運報告。",
+            "本公司受邀參加CGS-CIMB證券舉辦之法人說明會「EV and Tech Virtual Conference 2024」。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2024 Taiwan Conference」。"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "230320240731E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "113/07/31",
+            "113/09/04",
+            "113/09/23 至 113/09/24"
+          ],
+          "listing_summaries": [
+            "本公司2024年第二季財務暨營運報告。",
+            "本公司受邀參加高盛證券舉辦之法人說明會「Taiwan Corporate Day 2024」。",
+            "本公司受邀參加瑞銀證券舉辦之法人說明會「Taiwan Summit 2024」。"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "230320240731M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "113/07/31",
+            "113/09/04",
+            "113/09/23 至 113/09/24"
+          ],
+          "listing_summaries": [
+            "本公司2024年第二季財務暨營運報告。",
+            "本公司受邀參加高盛證券舉辦之法人說明會「Taiwan Corporate Day 2024」。",
+            "本公司受邀參加瑞銀證券舉辦之法人說明會「Taiwan Summit 2024」。"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "230320241030E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "113/10/30",
+            "113/11/25 至 113/11/26"
+          ],
+          "listing_summaries": [
+            "本公司2024年第三季財務暨營運報告。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2024 Taiwan Corporate Day」。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "230320241030M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "113/10/30",
+            "113/11/25 至 113/11/26"
+          ],
+          "listing_summaries": [
+            "本公司2024年第三季財務暨營運報告。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2024 Taiwan Corporate Day」。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "230320250121E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "114/01/21",
+            "114/02/17",
+            "114/02/26",
+            "114/03/18 至 114/03/19"
+          ],
+          "listing_summaries": [
+            "本公司2024年第四季財務暨營運報告。",
+            "本公司受邀參加摩根大通證券舉辦之法人說明會「Taiwan CEO-CFO Conference」。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2025 Taiwan Corporate Day」。",
+            "本公司受邀參加美銀證券舉辦之法人說明會「2025 Asia Tech Conference」。"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "230320250121M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "114/01/21",
+            "114/02/17",
+            "114/02/26",
+            "114/03/18 至 114/03/19"
+          ],
+          "listing_summaries": [
+            "本公司2024年第四季財務暨營運報告。",
+            "本公司受邀參加摩根大通證券舉辦之法人說明會「Taiwan CEO-CFO Conference」。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2025 Taiwan Corporate Day」。",
+            "本公司受邀參加美銀證券舉辦之法人說明會「2025 Asia Tech Conference」。"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "230320250423E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "114/04/23",
+            "114/05/19",
+            "114/05/21 至 114/05/23"
+          ],
+          "listing_summaries": [
+            "本公司2025年第一季財務暨營運報告。",
+            "本公司受邀參加高盛證券舉辦之法人說明會「TechNet Taiwan 2025」。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2025 Taiwan Tech Conference」。"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "230320250423M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "114/04/23",
+            "114/05/19",
+            "114/05/21 至 114/05/23"
+          ],
+          "listing_summaries": [
+            "本公司2025年第一季財務暨營運報告。",
+            "本公司受邀參加高盛證券舉辦之法人說明會「TechNet Taiwan 2025」。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2025 Taiwan Tech Conference」。"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "230320250730E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "114/07/30",
+            "114/09/15 至 114/09/17"
+          ],
+          "listing_summaries": [
+            "本公司2025年第二季財務暨營運報告。",
+            "本公司受邀參加瑞銀證券舉辦之法人說明會「Taiwan Summit 2025」。"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "230320250730M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "114/07/30",
+            "114/09/15 至 114/09/17"
+          ],
+          "listing_summaries": [
+            "本公司2025年第二季財務暨營運報告。",
+            "本公司受邀參加瑞銀證券舉辦之法人說明會「Taiwan Summit 2025」。"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "230320251029E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "114/10/29",
+            "114/11/24"
+          ],
+          "listing_summaries": [
+            "本公司2025年第三季財務暨營運報告。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2025 Taiwan Corporate Day」。"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "230320251029M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "114/10/29",
+            "114/11/24"
+          ],
+          "listing_summaries": [
+            "本公司2025年第三季財務暨營運報告。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2025 Taiwan Corporate Day」。"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "230320260128E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "115/01/28"
+          ],
+          "listing_summaries": [
+            "本公司2025年第四季財務暨營運報告。"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "230320260128M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "115/01/28"
+          ],
+          "listing_summaries": [
+            "本公司2025年第四季財務暨營運報告。"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "230320260302E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "115/03/11 至 115/03/12"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加摩根大通證券舉辦之法人說明會「Taiwan CEO-CFO Conference」。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "230320260302E002.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "115/03/09 至 115/03/10"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之法人說明會「2026 Taiwan Corporate Day」。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "230320260302M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "115/03/11 至 115/03/12"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加摩根大通證券舉辦之法人說明會「Taiwan CEO-CFO Conference」。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "230320260302M002.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "115/03/09 至 115/03/10"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之法人說明會「2026 Taiwan Corporate Day」。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "230320260429E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "115/04/29",
+            "115/05/29",
+            "115/06/05"
+          ],
+          "listing_summaries": [
+            "本公司2026年第一季財務暨營運報告。",
+            "本公司受邀參加摩根士丹利證券舉辦之法人說明會「Asia AI Summit 2026」。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2026 Taiwan Tech Conference」。"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "230320260429M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "115/04/29",
+            "115/05/29",
+            "115/06/05"
+          ],
+          "listing_summaries": [
+            "本公司2026年第一季財務暨營運報告。",
+            "本公司受邀參加摩根士丹利證券舉辦之法人說明會「Asia AI Summit 2026」。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2026 Taiwan Tech Conference」。"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "230320260729E001.pdf",
+          "language": "en",
+          "company_name": "聯電",
+          "conference_dates": [
+            "115/07/29",
+            "115/09/10",
+            "115/09/14 至 115/09/15"
+          ],
+          "listing_summaries": [
+            "本公司2026年第二季財務暨營運報告。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2026 GEMs Conference」。",
+            "本公司受邀參加瑞銀證券舉辦之法人說明會「Taiwan Summit 2026」。"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "230320260729M001.pdf",
+          "language": "zh",
+          "company_name": "聯電",
+          "conference_dates": [
+            "115/07/29",
+            "115/09/10",
+            "115/09/14 至 115/09/15"
+          ],
+          "listing_summaries": [
+            "本公司2026年第二季財務暨營運報告。",
+            "本公司受邀參加花旗證券舉辦之法人說明會「2026 GEMs Conference」。",
+            "本公司受邀參加瑞銀證券舉辦之法人說明會「Taiwan Summit 2026」。"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 3
+        }
+      ]
+    },
+    {
+      "ticker": "3711",
+      "company": "日月光投控",
+      "industry": "semiconductor_osat",
+      "source": "MOPS t100sb02_1 法人說明會 (official)",
+      "years": {
+        "2024": {
+          "status": "ok",
+          "documents": 10,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=113&co_id=3711",
+          "error": null
+        },
+        "2025": {
+          "status": "ok",
+          "documents": 12,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=3711",
+          "error": null
+        },
+        "2026": {
+          "status": "ok",
+          "documents": 6,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=115&co_id=3711",
+          "error": null
+        }
+      },
+      "discovered_documents": 28,
+      "languages": {
+        "en": 14,
+        "zh": 14
+      },
+      "listing_claimed_periods": [],
+      "documents_without_listing_period": 28,
+      "files_reused_across_listing_rows": 20,
+      "anomalies": [],
+      "documents": [
+        {
+          "filename": "371120240201E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "113/02/01",
+            "113/02/19 至 113/02/20",
+            "113/03/04",
+            "113/03/06 至 113/03/07",
+            "113/03/19"
+          ],
+          "listing_summaries": [
+            "詳113年02月01日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "371120240201M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "113/02/01",
+            "113/02/19 至 113/02/20",
+            "113/03/04",
+            "113/03/06 至 113/03/07",
+            "113/03/19"
+          ],
+          "listing_summaries": [
+            "詳113年02月01日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "371120240425E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "113/04/25",
+            "113/05/24",
+            "113/05/27",
+            "113/06/03 至 113/06/04",
+            "113/06/11"
+          ],
+          "listing_summaries": [
+            "詳113年04月25日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "371120240425M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "113/04/25",
+            "113/05/24",
+            "113/05/27",
+            "113/06/03 至 113/06/04",
+            "113/06/11"
+          ],
+          "listing_summaries": [
+            "詳113年04月25日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "371120240725E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "113/07/25",
+            "113/09/03",
+            "113/09/12",
+            "113/09/19 至 113/09/20",
+            "113/09/23 至 113/09/24"
+          ],
+          "listing_summaries": [
+            "詳113年07月25日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "371120240725M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "113/07/25",
+            "113/09/03",
+            "113/09/12",
+            "113/09/19 至 113/09/20",
+            "113/09/23 至 113/09/24"
+          ],
+          "listing_summaries": [
+            "詳113年07月25日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "371120240924E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "113/09/25"
+          ],
+          "listing_summaries": [
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "371120240924M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "113/09/25"
+          ],
+          "listing_summaries": [
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "371120241031E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "113/10/31"
+          ],
+          "listing_summaries": [
+            "詳113年10月31日公開資訊觀測站之重大訊息與公告-法說會專區。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "371120241031M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "113/10/31"
+          ],
+          "listing_summaries": [
+            "詳113年10月31日公開資訊觀測站之重大訊息與公告-法說會專區。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "371120250213E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/02/13",
+            "114/02/17",
+            "114/02/25",
+            "114/03/04 至 114/03/05",
+            "114/03/17 至 114/03/18"
+          ],
+          "listing_summaries": [
+            "詳114年02月13日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "371120250213M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/02/13",
+            "114/02/17",
+            "114/02/25",
+            "114/03/04 至 114/03/05",
+            "114/03/17 至 114/03/18"
+          ],
+          "listing_summaries": [
+            "詳114年02月13日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "371120250430E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/04/30",
+            "114/05/16",
+            "114/05/20",
+            "114/05/22",
+            "114/05/27",
+            "114/06/03 至 114/06/04",
+            "114/06/10"
+          ],
+          "listing_summaries": [
+            "詳114年04月30日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 7
+        },
+        {
+          "filename": "371120250430M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/04/30",
+            "114/05/16",
+            "114/05/20",
+            "114/05/22",
+            "114/05/27",
+            "114/06/03 至 114/06/04",
+            "114/06/10"
+          ],
+          "listing_summaries": [
+            "詳114年04月30日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 7
+        },
+        {
+          "filename": "371120250521E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/05/21"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加證交所舉辦之上市櫃公司與機構投資人法說會。(完整財務業務資訊請至公開資訊觀測站之法人說明會一覽表或法說會項目下查閱。)"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "371120250521M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/05/21"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加證交所舉辦之上市櫃公司與機構投資人法說會。(完整財務業務資訊請至公開資訊觀測站之法人說明會一覽表或法說會項目下查閱。)"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "371120250731E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/07/31",
+            "114/09/08 至 114/09/09",
+            "114/09/15"
+          ],
+          "listing_summaries": [
+            "詳114年07月31日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "371120250731M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/07/31",
+            "114/09/08 至 114/09/09",
+            "114/09/15"
+          ],
+          "listing_summaries": [
+            "詳114年07月31日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "371120251030E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/10/30",
+            "114/11/17",
+            "114/11/17 至 114/11/18",
+            "114/11/19 至 114/11/20",
+            "114/12/09"
+          ],
+          "listing_summaries": [
+            "詳114年10月30日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "371120251030M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/10/30",
+            "114/11/17",
+            "114/11/17 至 114/11/18",
+            "114/11/19 至 114/11/20",
+            "114/12/09"
+          ],
+          "listing_summaries": [
+            "詳114年10月30日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "371120251202E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/12/03"
+          ],
+          "listing_summaries": [
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "371120251202M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "114/12/03"
+          ],
+          "listing_summaries": [
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "371120260205E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "115/02/05",
+            "115/03/03 至 115/03/04",
+            "115/03/12 至 115/03/13",
+            "115/03/17 至 115/03/18"
+          ],
+          "listing_summaries": [
+            "詳 115 年02 月05 日公開資訊觀測站之重大訊息與公告-法說 會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 4
+        },
+        {
+          "filename": "371120260205M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "115/02/05",
+            "115/03/03 至 115/03/04",
+            "115/03/12 至 115/03/13",
+            "115/03/17 至 115/03/18"
+          ],
+          "listing_summaries": [
+            "詳 115 年02 月05 日公開資訊觀測站之重大訊息與公告-法說 會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 4
+        },
+        {
+          "filename": "371120260429E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "115/04/29",
+            "115/05/26 至 115/05/27",
+            "115/05/29",
+            "115/06/02",
+            "115/06/03",
+            "115/06/09",
+            "115/06/22 至 115/06/23"
+          ],
+          "listing_summaries": [
+            "詳115年04月29日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 7
+        },
+        {
+          "filename": "371120260429M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "115/04/29",
+            "115/05/26 至 115/05/27",
+            "115/05/29",
+            "115/06/02",
+            "115/06/03",
+            "115/06/09",
+            "115/06/22 至 115/06/23"
+          ],
+          "listing_summaries": [
+            "詳115年04月29日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 7
+        },
+        {
+          "filename": "371120260730E001.pdf",
+          "language": "en",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "115/07/30",
+            "115/09/15",
+            "115/09/22 至 115/09/23"
+          ],
+          "listing_summaries": [
+            "詳115年07月30日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "371120260730M001.pdf",
+          "language": "zh",
+          "company_name": "日月光投控",
+          "conference_dates": [
+            "115/07/30",
+            "115/09/15",
+            "115/09/22 至 115/09/23"
+          ],
+          "listing_summaries": [
+            "詳115年07月30日公開資訊觀測站之重大訊息與公告-法說會專區。",
+            "無。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        }
+      ]
+    },
+    {
+      "ticker": "2379",
+      "company": "瑞昱",
+      "industry": "semiconductor_fabless",
+      "source": "MOPS t100sb02_1 法人說明會 (official)",
+      "years": {
+        "2024": {
+          "status": "ok",
+          "documents": 18,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=113&co_id=2379",
+          "error": null
+        },
+        "2025": {
+          "status": "ok",
+          "documents": 12,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2379",
+          "error": null
+        },
+        "2026": {
+          "status": "ok",
+          "documents": 12,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=115&co_id=2379",
+          "error": null
+        }
+      },
+      "discovered_documents": 42,
+      "languages": {
+        "en": 21,
+        "zh": 21
+      },
+      "listing_claimed_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "documents_without_listing_period": 20,
+      "files_reused_across_listing_rows": 18,
+      "anomalies": [],
+      "documents": [
+        {
+          "filename": "237920231120E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/01/09 至 113/01/15"
+          ],
+          "listing_summaries": [
+            "公告本公司113年1月9日參加UBS舉辦之Greater China Conference 2024及113年1月15日參加Daiwa舉辦之Daiwa-Affin Hwang Taiwan Corporate day，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920231120M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/01/09 至 113/01/15"
+          ],
+          "listing_summaries": [
+            "公告本公司113年1月9日參加UBS舉辦之Greater China Conference 2024及113年1月15日參加Daiwa舉辦之Daiwa-Affin Hwang Taiwan Corporate day，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920240131E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/02/01",
+            "113/02/19",
+            "113/03/05 至 113/03/19"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於113年2月1日(四)舉行2023年第4季線上法人說明會，下午3:00pm - 3:45pm為中文時段、3:45pm - 4:30pm為英文時段。請連結至以下直播網址：http://www.zucast.com/webcast/bx4hQ1O5建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司113年2月19日參加J.P. Morgan舉辦之Taiwan CEO-CFO Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司113年3月5日參加Citi Securities舉辦之Taiwan Corporate Day及113年3月19日參加BofA Securities舉辦之2024 APAC TMT Conference，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "237920240131M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/02/01",
+            "113/02/19",
+            "113/03/05 至 113/03/19"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於113年2月1日(四)舉行2023年第4季線上法人說明會，下午3:00pm - 3:45pm為中文時段、3:45pm - 4:30pm為英文時段。請連結至以下直播網址：http://www.zucast.com/webcast/bx4hQ1O5建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司113年2月19日參加J.P. Morgan舉辦之Taiwan CEO-CFO Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司113年3月5日參加Citi Securities舉辦之Taiwan Corporate Day及113年3月19日參加BofA Securities舉辦之2024 APAC TMT Conference，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "237920240418E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/04/19"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於113年4月19日(五)舉行2024年第1季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 請連結至以下直播網址：http://www.zucast.com/webcast/CG8G80iK建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920240418M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/04/19"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於113年4月19日(五)舉行2024年第1季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 請連結至以下直播網址：http://www.zucast.com/webcast/CG8G80iK建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920240517E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/05/20 至 113/05/28"
+          ],
+          "listing_summaries": [
+            "公告本公司113年5月20日~113年5月23參加Daiwa Investment Conference，以及113年5月28日參加UBS Asian Investment Conference，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920240517M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/05/20 至 113/05/28"
+          ],
+          "listing_summaries": [
+            "公告本公司113年5月20日~113年5月23參加Daiwa Investment Conference，以及113年5月28日參加UBS Asian Investment Conference，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920240729E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/07/30"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於113年7月30日(二)舉行2024年第2季線上法人說明會。 時間：3:00 - 4:00 pm 語言：英文 請連結至以下直播網址：http://www.zucast.com/webcast/MZugQk6M 建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920240729M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/07/30"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於113年7月30日(二)舉行2024年第2季線上法人說明會。 時間：3:00 - 4:00 pm 語言：英文 請連結至以下直播網址：http://www.zucast.com/webcast/MZugQk6M 建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920240830E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/09/03 至 113/09/04",
+            "113/09/25"
+          ],
+          "listing_summaries": [
+            "公告本公司113年09月03日~113年09月04日參加Goldman Sachs Taiwan Corporate Day，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司113年09月25日參加UBS Taiwan Summit，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 2
+        },
+        {
+          "filename": "237920240830E005.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/09/09 至 113/09/24"
+          ],
+          "listing_summaries": [
+            "公告本公司113年09月09日~113年09月10日參加 CITIC CLSA Investors' Forum，以及113年09月 24日參加 Daiwa-Affin Hwang Taiwan Corporate day，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920240830M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/09/03 至 113/09/04",
+            "113/09/25"
+          ],
+          "listing_summaries": [
+            "公告本公司113年09月03日~113年09月04日參加Goldman Sachs Taiwan Corporate Day，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司113年09月25日參加UBS Taiwan Summit，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 2
+        },
+        {
+          "filename": "237920240830M005.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/09/09 至 113/09/24"
+          ],
+          "listing_summaries": [
+            "公告本公司113年09月09日~113年09月10日參加 CITIC CLSA Investors' Forum，以及113年09月 24日參加 Daiwa-Affin Hwang Taiwan Corporate day，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920241029E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/10/30",
+            "113/11/12 至 113/11/19",
+            "113/11/12"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於113年10月30日(三)舉行2024年第3季線上法人說 明會。 時間：3:00-4:00 pm 語言: 英文 請連結至以下直播網址： http://www.zucast.com/webcast/VFVIv8a8 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司113年11月12日~113年11月13日參加HSBC 13th Annual Asia Investor Forum，以及113年11月18日~113年11月19日參加J.P. Morgan Global TMT Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司113年11月12日參加CLST Taiwan Market Mover 2025 Access Day，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "237920241029M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/10/30",
+            "113/11/12 至 113/11/19",
+            "113/11/12"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於113年10月30日(三)舉行2024年第3季線上法人說 明會。 時間：3:00-4:00 pm 語言: 英文 請連結至以下直播網址： http://www.zucast.com/webcast/VFVIv8a8 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司113年11月12日~113年11月13日參加HSBC 13th Annual Asia Investor Forum，以及113年11月18日~113年11月19日參加J.P. Morgan Global TMT Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司113年11月12日參加CLST Taiwan Market Mover 2025 Access Day，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "237920241120E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/11/26"
+          ],
+          "listing_summaries": [
+            "公告本公司113年11月26日參加Citi Taiwan Corporate Day，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920241120M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "113/11/26"
+          ],
+          "listing_summaries": [
+            "公告本公司113年11月26日參加Citi Taiwan Corporate Day，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920250205E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/02/05",
+            "114/02/17 至 114/02/25"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於114年2月5日(三)舉行2024年第4季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 請連結至以下直播網址：http://www.zucast.com/webcast/qBnQlbMx 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司114年02月17日參加J.P. Morgan Taiwan CEO-CFO Conference，以及114年02月25日參加 Citi 2025 Taiwan Corporate Day，會中就公司營運及產業 概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "237920250205M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/02/05",
+            "114/02/17 至 114/02/25"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於114年2月5日(三)舉行2024年第4季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 請連結至以下直播網址：http://www.zucast.com/webcast/qBnQlbMx 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司114年02月17日參加J.P. Morgan Taiwan CEO-CFO Conference，以及114年02月25日參加 Citi 2025 Taiwan Corporate Day，會中就公司營運及產業 概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "237920250314E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/03/18"
+          ],
+          "listing_summaries": [
+            "公告本公司114年03月18日參加Jefferies Asia Forum，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920250314E002.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/03/19 至 114/03/20"
+          ],
+          "listing_summaries": [
+            "公告本公司114年03月19日~03月20日參加BofA 2025 Asia Tech Conference，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920250314M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/03/18"
+          ],
+          "listing_summaries": [
+            "公告本公司114年03月18日參加Jefferies Asia Forum，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920250314M002.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/03/19 至 114/03/20"
+          ],
+          "listing_summaries": [
+            "公告本公司114年03月19日~03月20日參加BofA 2025 Asia Tech Conference，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920250430E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/04/30",
+            "114/05/19 至 114/05/20",
+            "114/05/14 至 114/05/27",
+            "114/06/02 至 114/06/06"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2025年第1季財務報告及2025年第2季業績展望。 (2)時間：3:00-4:00 pm (3)語言: 英文 (4)直播網址：http://www.zucast.com/webcast/SfH0o7Zf 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司114年05月19日參加Goldman Sachs TechNet Taiwan Corporate Day和Nomura APAC Tech Forum，以及114年05月20日參加HSBC Taiwan Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司114年05月14日~114年05月15日參加Macquarie Asia Conference以及114年05月27日參加UBS Asian Investment Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司114年06月02日~114年06月04日參加Daiwa Investment Conference New York以及114年06月06日參加Daiwa Investment Conference San Francisco，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "237920250430M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/04/30",
+            "114/05/19 至 114/05/20",
+            "114/05/14 至 114/05/27",
+            "114/06/02 至 114/06/06"
+          ],
+          "listing_summaries": [
+            "(1)公布本公司2025年第1季財務報告及2025年第2季業績展望。 (2)時間：3:00-4:00 pm (3)語言: 英文 (4)直播網址：http://www.zucast.com/webcast/SfH0o7Zf 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司114年05月19日參加Goldman Sachs TechNet Taiwan Corporate Day和Nomura APAC Tech Forum，以及114年05月20日參加HSBC Taiwan Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司114年05月14日~114年05月15日參加Macquarie Asia Conference以及114年05月27日參加UBS Asian Investment Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司114年06月02日~114年06月04日參加Daiwa Investment Conference New York以及114年06月06日參加Daiwa Investment Conference San Francisco，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "237920250731E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/07/31",
+            "114/08/26 至 114/08/27",
+            "114/09/16",
+            "114/09/09 至 114/09/10"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於114年7月31日(四)舉行2025年第2季線上法人說明會。 時間：3:00~4:00 pm 語言:英文 直播網址： http://www.zucast.com/webcast/i4l0TUMe 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help尋求技術支援。",
+            "公告本公司114年08月26日參加 Daiwa-Affin Hwang Taiwan Corporate day以及114年08月27日參加Daiwa Asia Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司114年09月16日參加UBS Taiwan Summit，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司114年09月09日參加 BofA Asia Pacific Conference以及114年09月10日參加 CITIC CLSA 32nd Investors' Forum，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "237920250731M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/07/31",
+            "114/08/26 至 114/08/27",
+            "114/09/16",
+            "114/09/09 至 114/09/10"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於114年7月31日(四)舉行2025年第2季線上法人說明會。 時間：3:00~4:00 pm 語言:英文 直播網址： http://www.zucast.com/webcast/i4l0TUMe 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help尋求技術支援。",
+            "公告本公司114年08月26日參加 Daiwa-Affin Hwang Taiwan Corporate day以及114年08月27日參加Daiwa Asia Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司114年09月16日參加UBS Taiwan Summit，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司114年09月09日參加 BofA Asia Pacific Conference以及114年09月10日參加 CITIC CLSA 32nd Investors' Forum，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "237920251028E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/10/29",
+            "114/11/17 至 114/11/25",
+            "114/11/17 至 114/11/20"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於114年10月29日(三)舉行2025年第3季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 直播網址：http://www.zucast.com/webcast/11wAf7FQ建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司114年11月17日參加Macquarie Taiwan Conference，以及114年11月25日參加Citi Taiwan Corporate Day，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司114年11月17日~114年11月18日參加J.P. Morgan Global TMT Conference以及114年11月19日~114年11月20日參加Morgan Stanley Annual Asia Pacific Summit，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "237920251028M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "114/10/29",
+            "114/11/17 至 114/11/25",
+            "114/11/17 至 114/11/20"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於114年10月29日(三)舉行2025年第3季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 直播網址：http://www.zucast.com/webcast/11wAf7FQ建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司114年11月17日參加Macquarie Taiwan Conference，以及114年11月25日參加Citi Taiwan Corporate Day，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司114年11月17日~114年11月18日參加J.P. Morgan Global TMT Conference以及114年11月19日~114年11月20日參加Morgan Stanley Annual Asia Pacific Summit，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "237920250430E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/06/01"
+          ],
+          "listing_summaries": [
+            "公告本公司115年06月01日參加GS Taiwan Computex & Corporate Day，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920250430M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/06/01"
+          ],
+          "listing_summaries": [
+            "公告本公司115年06月01日參加GS Taiwan Computex & Corporate Day，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920260128E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/01/28"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於115年01月28日(三)舉行2025年第4季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 直播網址：https://www.zucast.com/webcast/WWW1zDls建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920260128M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/01/28"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於115年01月28日(三)舉行2025年第4季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 直播網址：https://www.zucast.com/webcast/WWW1zDls建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920260304E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/03/05 至 115/03/06"
+          ],
+          "listing_summaries": [
+            "公告本公司115年03月05日~115年03月06日參加Daiwa Investment Conference Tokyo，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920260304E002.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/03/10 至 115/03/18"
+          ],
+          "listing_summaries": [
+            "公告本公司115 年03 月10 日參加Citi Taiwan Corporate Day，115 年 03 月12 日參加J.P. Morgan Taiwan CEO-CFO Conference，以及115 年03 月17 日~115 年03 月18 日參加BofA Asia Tech Conference， 會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920260304M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/03/05 至 115/03/06"
+          ],
+          "listing_summaries": [
+            "公告本公司115年03月05日~115年03月06日參加Daiwa Investment Conference Tokyo，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920260304M002.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/03/10 至 115/03/18"
+          ],
+          "listing_summaries": [
+            "公告本公司115 年03 月10 日參加Citi Taiwan Corporate Day，115 年 03 月12 日參加J.P. Morgan Taiwan CEO-CFO Conference，以及115 年03 月17 日~115 年03 月18 日參加BofA Asia Tech Conference， 會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "237920260430E001.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/04/30",
+            "115/05/29",
+            "115/05/26",
+            "115/06/01 至 115/06/05"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於115年04月30日(四)舉行2026年第1季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 直播網址：https://www.zucast.com/webcast/GxaTpTL5建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司115年05月29日參加Morgan Stanley Asia AI Summit，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司115年05月26日參加UBS Asian Investment Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司115年06月01日參加Daiwa Investment Conference US，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "237920260430M001.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/04/30",
+            "115/05/29",
+            "115/05/26",
+            "115/06/01 至 115/06/05"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於115年04月30日(四)舉行2026年第1季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 直播網址：https://www.zucast.com/webcast/GxaTpTL5建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司115年05月29日參加Morgan Stanley Asia AI Summit，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司115年05月26日參加UBS Asian Investment Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司115年06月01日參加Daiwa Investment Conference US，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "237920260730E002.pdf",
+          "language": "en",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/07/30",
+            "115/09/09 至 115/09/22",
+            "115/09/15"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於115年07月30日(四)舉行2026年第2季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 直播網址：https://www.zucast.com/webcast/bv68uLnF建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司115 年09 月09 日參加Daiwa-Affin Hwang Greater China Conference，115 年09 月10 日參加Daiwa Taiwan Corporate Day，以及115年09 月22 日參加BofA Asia Pacific Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司115 年09 月15 日參加UBS Taiwan Summit，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "237920260730M002.pdf",
+          "language": "zh",
+          "company_name": "瑞昱",
+          "conference_dates": [
+            "115/07/30",
+            "115/09/09 至 115/09/22",
+            "115/09/15"
+          ],
+          "listing_summaries": [
+            "瑞昱半導體將於115年07月30日(四)舉行2026年第2季線上法人說明會。 時間：3:00-4:00 pm 語言: 英文 直播網址：https://www.zucast.com/webcast/bv68uLnF建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help 尋求技術支援。",
+            "公告本公司115 年09 月09 日參加Daiwa-Affin Hwang Greater China Conference，115 年09 月10 日參加Daiwa Taiwan Corporate Day，以及115年09 月22 日參加BofA Asia Pacific Conference，會中就公司營運及產業概況向投資機構做說明。",
+            "公告本公司115 年09 月15 日參加UBS Taiwan Summit，會中就公司營運及產業概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 3
+        }
+      ]
+    },
+    {
+      "ticker": "3034",
+      "company": "聯詠",
+      "industry": "semiconductor_fabless",
+      "source": "MOPS t100sb02_1 法人說明會 (official)",
+      "years": {
+        "2024": {
+          "status": "ok",
+          "documents": 8,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=113&co_id=3034",
+          "error": null
+        },
+        "2025": {
+          "status": "ok",
+          "documents": 8,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=3034",
+          "error": null
+        },
+        "2026": {
+          "status": "ok",
+          "documents": 6,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=115&co_id=3034",
+          "error": null
+        }
+      },
+      "discovered_documents": 22,
+      "languages": {
+        "en": 11,
+        "zh": 11
+      },
+      "listing_claimed_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "documents_without_listing_period": 4,
+      "files_reused_across_listing_rows": 20,
+      "anomalies": [
+        {
+          "filename": "303420250507E001.pdf",
+          "issue": "multiple_reported_periods_in_listing",
+          "periods": [
+            "2025Q1",
+            "2025Q2"
+          ]
+        },
+        {
+          "filename": "303420250507M001.pdf",
+          "issue": "multiple_reported_periods_in_listing",
+          "periods": [
+            "2025Q1",
+            "2025Q2"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "filename": "303420240206E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "113/02/06",
+            "113/02/20",
+            "113/03/04",
+            "113/03/21"
+          ],
+          "listing_summaries": [
+            "本公司一一二年第四季自結數合併財務報告及一一三年第一季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 http://www.zucast.com/webcast/tSv1Citq 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由JPMorgan所舉辦\"TAIWAN CEO-CFO Conference 2024\"，就112年第4季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi Taiwan Corporate Day\"，就112年第4季營運績效等相關資訊作說明。",
+            "受邀參加由美銀證券所舉辦\"2024 APAC TMT CONFERENCE\"，就112年第4季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "303420240206M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "113/02/06",
+            "113/02/20",
+            "113/03/04",
+            "113/03/21"
+          ],
+          "listing_summaries": [
+            "本公司一一二年第四季自結數合併財務報告及一一三年第一季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 http://www.zucast.com/webcast/tSv1Citq 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由JPMorgan所舉辦\"TAIWAN CEO-CFO Conference 2024\"，就112年第4季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi Taiwan Corporate Day\"，就112年第4季營運績效等相關資訊作說明。",
+            "受邀參加由美銀證券所舉辦\"2024 APAC TMT CONFERENCE\"，就112年第4季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "303420240507E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "113/05/07",
+            "113/06/07"
+          ],
+          "listing_summaries": [
+            "本公司一一三年第一季合併財務報告及第二季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 http://www.zucast.com/webcast/ycH2cfCX 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由花旗證券所舉辦\"Citi's 2024 Taiwan Tech Conference\"，就113年第1季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "303420240507M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "113/05/07",
+            "113/06/07"
+          ],
+          "listing_summaries": [
+            "本公司一一三年第一季合併財務報告及第二季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 http://www.zucast.com/webcast/ycH2cfCX 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由花旗證券所舉辦\"Citi's 2024 Taiwan Tech Conference\"，就113年第1季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "303420240806E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "113/08/06",
+            "113/09/10",
+            "113/09/23"
+          ],
+          "listing_summaries": [
+            "本公司一一三年第二季合併財務報告及第三季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 https://www.zucast.com/event/XtfVWqnW/subscribe/create 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由里昂證券所舉辦\"31st CITIC CLSA Investors' Forum\"，就113年第2季營運績效等相關資訊作說明。",
+            "受邀參加由瑞銀證券所舉辦\"UBS Taiwan Summit\"，就113年第2季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "303420240806M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "113/08/06",
+            "113/09/10",
+            "113/09/23"
+          ],
+          "listing_summaries": [
+            "本公司一一三年第二季合併財務報告及第三季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 https://www.zucast.com/event/XtfVWqnW/subscribe/create 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由里昂證券所舉辦\"31st CITIC CLSA Investors' Forum\"，就113年第2季營運績效等相關資訊作說明。",
+            "受邀參加由瑞銀證券所舉辦\"UBS Taiwan Summit\"，就113年第2季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "303420241106E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "113/11/06",
+            "113/11/19",
+            "113/11/25"
+          ],
+          "listing_summaries": [
+            "本公司一一三年第三季合併財務報告及第四季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 https://www.zucast.com/event/88o7aor8/subscribe/create 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由JPMorgan所舉辦\"J.P. Morgan 12th Global TMT Conference in Asia\"，就113年第3季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi's 2024 Taiwan Corporate Day\"，就113年第3季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "303420241106M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "113/11/06",
+            "113/11/19",
+            "113/11/25"
+          ],
+          "listing_summaries": [
+            "本公司一一三年第三季合併財務報告及第四季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 https://www.zucast.com/event/88o7aor8/subscribe/create 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由JPMorgan所舉辦\"J.P. Morgan 12th Global TMT Conference in Asia\"，就113年第3季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi's 2024 Taiwan Corporate Day\"，就113年第3季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "303420250212E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "114/02/12",
+            "114/02/17",
+            "114/02/25",
+            "114/03/18"
+          ],
+          "listing_summaries": [
+            "本公司一一三年第四季自結數合併財務報告及一一四年第一季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 http://www.zucast.com/webcast/v71hQA14 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由JPMorgan所舉辦\"TAIWAN CEO-CFO Conference\"，就113年第4季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi's 2025 Taiwan Corporate Day\"，就113年第4季營運績效等相關資訊作說明。",
+            "受邀參加由美銀證券所舉辦\"2025 Asia Tech Conference\"，就113年第4季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "303420250212M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "114/02/12",
+            "114/02/17",
+            "114/02/25",
+            "114/03/18"
+          ],
+          "listing_summaries": [
+            "本公司一一三年第四季自結數合併財務報告及一一四年第一季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 http://www.zucast.com/webcast/v71hQA14 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由JPMorgan所舉辦\"TAIWAN CEO-CFO Conference\"，就113年第4季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi's 2025 Taiwan Corporate Day\"，就113年第4季營運績效等相關資訊作說明。",
+            "受邀參加由美銀證券所舉辦\"2025 Asia Tech Conference\"，就113年第4季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "303420250507E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "114/05/07",
+            "114/05/20",
+            "114/05/23",
+            "114/06/12"
+          ],
+          "listing_summaries": [
+            "本公司一一四年第一季合併財務報告及第二季業績展望。法說會將於15:00進行網路直播，請連結至以下網址http://www.zucast.com/webcast/SF8FLjaT建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help尋求技術支援。",
+            "受邀參加由高盛證券所舉辦\"Goldman Sachs TechNet Taiwan\"，就114年第1季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi Taiwan Tech Conference\"，就114年第1季營運績效等相關資訊作說明。",
+            "受邀參加由富邦證所舉辦\"富邦證2Q25產業論壇\"，就114年第1季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [
+            "2025Q1",
+            "2025Q2"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "303420250507M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "114/05/07",
+            "114/05/20",
+            "114/05/23",
+            "114/06/12"
+          ],
+          "listing_summaries": [
+            "本公司一一四年第一季合併財務報告及第二季業績展望。法說會將於15:00進行網路直播，請連結至以下網址http://www.zucast.com/webcast/SF8FLjaT建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help尋求技術支援。",
+            "受邀參加由高盛證券所舉辦\"Goldman Sachs TechNet Taiwan\"，就114年第1季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi Taiwan Tech Conference\"，就114年第1季營運績效等相關資訊作說明。",
+            "受邀參加由富邦證所舉辦\"富邦證2Q25產業論壇\"，就114年第1季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [
+            "2025Q1",
+            "2025Q2"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "303420250806E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "114/08/06"
+          ],
+          "listing_summaries": [
+            "本公司一一四年第二季合併財務報告及第三季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 http://www.zucast.com/webcast/qq6hAJeU建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help尋求技術支援。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "303420250806M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "114/08/06"
+          ],
+          "listing_summaries": [
+            "本公司一一四年第二季合併財務報告及第三季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 http://www.zucast.com/webcast/qq6hAJeU建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help尋求技術支援。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "303420251106E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "114/11/06",
+            "114/11/18",
+            "114/11/24"
+          ],
+          "listing_summaries": [
+            "本公司一一四年第三季合併財務報告及第四季業績展望。法說會將於15:00進行網路直播，請連結至以下網址http://www.zucast.com/webcast/U17ViZmV建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help尋求技術支援。",
+            "受邀參加由JPMorgan所舉辦\"J.P. Morgan Global Technology, Media and Telecom Conference in Asia\"，就114年第3季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi 2025 Taiwan Corporate Day\"，就114年第3季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "303420251106M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "114/11/06",
+            "114/11/18",
+            "114/11/24"
+          ],
+          "listing_summaries": [
+            "本公司一一四年第三季合併財務報告及第四季業績展望。法說會將於15:00進行網路直播，請連結至以下網址http://www.zucast.com/webcast/U17ViZmV建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help尋求技術支援。",
+            "受邀參加由JPMorgan所舉辦\"J.P. Morgan Global Technology, Media and Telecom Conference in Asia\"，就114年第3季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi 2025 Taiwan Corporate Day\"，就114年第3季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "303420260206E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "115/02/06",
+            "115/03/09",
+            "115/03/12",
+            "115/03/19"
+          ],
+          "listing_summaries": [
+            "本公司一一四年第四季自結數合併財務報告及一一五年第一季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 https://www.zucast.com/webcast/GBKEy9ht 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由花旗證券所舉辦\"Citi's 2026 Taiwan Corporate Day\"，就114年第4季營運績效等相關資訊作說明。",
+            "受邀參加由JP Morgan所舉辦\"Taiwan CEO-CFO Conference\"，就114年第4季營運績效等相關資訊作說明。",
+            "受邀參加由美銀證券所舉辦\"2026 Asia Tech Conference\"，就114年第4季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "303420260206M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "115/02/06",
+            "115/03/09",
+            "115/03/12",
+            "115/03/19"
+          ],
+          "listing_summaries": [
+            "本公司一一四年第四季自結數合併財務報告及一一五年第一季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 https://www.zucast.com/webcast/GBKEy9ht 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help 尋求技術支援。",
+            "受邀參加由花旗證券所舉辦\"Citi's 2026 Taiwan Corporate Day\"，就114年第4季營運績效等相關資訊作說明。",
+            "受邀參加由JP Morgan所舉辦\"Taiwan CEO-CFO Conference\"，就114年第4季營運績效等相關資訊作說明。",
+            "受邀參加由美銀證券所舉辦\"2026 Asia Tech Conference\"，就114年第4季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 4
+        },
+        {
+          "filename": "303420260507E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "115/05/07",
+            "115/06/01",
+            "115/06/05"
+          ],
+          "listing_summaries": [
+            "自辦 本公司一一五年第一季合併財務報告及第二季業績展望。法說會將於15:00進行網路直播，請連結至以下網址https://www.zucast.com/webcast/P6tt3g5a建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help尋求技術支援。",
+            "受邀參加由高盛證券所舉辦\"GS Taiwan Computex & Corporate Day\"，就115年第1季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi's 2026 Taiwan Tech Conference\"，就115年第1季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "303420260507M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "115/05/07",
+            "115/06/01",
+            "115/06/05"
+          ],
+          "listing_summaries": [
+            "自辦 本公司一一五年第一季合併財務報告及第二季業績展望。法說會將於15:00進行網路直播，請連結至以下網址https://www.zucast.com/webcast/P6tt3g5a建議參與者於法說會前安裝或升級所需播放軟體，或至http://www.zucast.com/help尋求技術支援。",
+            "受邀參加由高盛證券所舉辦\"GS Taiwan Computex & Corporate Day\"，就115年第1季營運績效等相關資訊作說明。",
+            "受邀參加由花旗證券所舉辦\"Citi's 2026 Taiwan Tech Conference\"，就115年第1季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 3
+        },
+        {
+          "filename": "303420260806E001.pdf",
+          "language": "en",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "115/08/06",
+            "115/09/14"
+          ],
+          "listing_summaries": [
+            "本公司一一五年第二季合併財務報告及第三季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 https://www.zucast.com/webcast/q57RQ0uC 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help尋求技術支援。",
+            "受邀參加由UBS所舉辦\"UBS Taiwan Summit 2026\"，就115年第2季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 2
+        },
+        {
+          "filename": "303420260806M001.pdf",
+          "language": "zh",
+          "company_name": "聯詠",
+          "conference_dates": [
+            "115/08/06",
+            "115/09/14"
+          ],
+          "listing_summaries": [
+            "本公司一一五年第二季合併財務報告及第三季業績展望。法說會將於15:00進行網路直播，請連結至以下網址 https://www.zucast.com/webcast/q57RQ0uC 建議參與者於法說會前安裝或升級所需播放軟體，或至 http://www.zucast.com/help尋求技術支援。",
+            "受邀參加由UBS所舉辦\"UBS Taiwan Summit 2026\"，就115年第2季營運績效等相關資訊作說明。"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 2
+        }
+      ]
+    },
+    {
+      "ticker": "2408",
+      "company": "南亞科",
+      "industry": "semiconductor_memory",
+      "source": "MOPS t100sb02_1 法人說明會 (official)",
+      "years": {
+        "2024": {
+          "status": "ok",
+          "documents": 18,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=113&co_id=2408",
+          "error": null
+        },
+        "2025": {
+          "status": "ok",
+          "documents": 20,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2408",
+          "error": null
+        },
+        "2026": {
+          "status": "ok",
+          "documents": 12,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=115&co_id=2408",
+          "error": null
+        }
+      },
+      "discovered_documents": 50,
+      "languages": {
+        "en": 25,
+        "zh": 25
+      },
+      "listing_claimed_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "documents_without_listing_period": 28,
+      "files_reused_across_listing_rows": 20,
+      "anomalies": [],
+      "documents": [
+        {
+          "filename": "240820240110E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/01/10"
+          ],
+          "listing_summaries": [
+            "2023年第4季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820240110M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/01/10"
+          ],
+          "listing_summaries": [
+            "2023年第4季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820240219E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/02/20"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820240219M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/02/20"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820240301E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/03/04",
+            "113/03/05",
+            "113/03/20"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "240820240301M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/03/04",
+            "113/03/05",
+            "113/03/20"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "240820240410E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/04/10"
+          ],
+          "listing_summaries": [
+            "2024年第1季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820240410M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/04/10"
+          ],
+          "listing_summaries": [
+            "2024年第1季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820240531E002.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/06/03",
+            "113/06/06",
+            "113/06/12"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "240820240531M002.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/06/03",
+            "113/06/06",
+            "113/06/12"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "240820240710E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/07/10"
+          ],
+          "listing_summaries": [
+            "2024年第2季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820240710M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/07/10"
+          ],
+          "listing_summaries": [
+            "2024年第2季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820240827E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/08/28",
+            "113/09/24"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 2
+        },
+        {
+          "filename": "240820240827M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/08/28",
+            "113/09/24"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 2
+        },
+        {
+          "filename": "240820241009E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/10/09"
+          ],
+          "listing_summaries": [
+            "2024年第3季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820241009M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/10/09"
+          ],
+          "listing_summaries": [
+            "2024年第3季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820241205E002.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/12/06"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820241205M002.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "113/12/06"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820250113E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/01/13"
+          ],
+          "listing_summaries": [
+            "2024年第4季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820250113M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/01/13"
+          ],
+          "listing_summaries": [
+            "2024年第4季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820250217E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/02/18",
+            "114/02/25"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 2
+        },
+        {
+          "filename": "240820250217M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/02/18",
+            "114/02/25"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 2
+        },
+        {
+          "filename": "240820250318E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/03/19"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820250318M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/03/19"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820250410E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/04/10"
+          ],
+          "listing_summaries": [
+            "2025年第1季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820250410M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/04/10"
+          ],
+          "listing_summaries": [
+            "2025年第1季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820250516E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/05/19",
+            "114/05/20",
+            "114/05/21",
+            "114/05/23",
+            "114/06/04"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "240820250516M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/05/19",
+            "114/05/20",
+            "114/05/21",
+            "114/05/23",
+            "114/06/04"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "240820250710E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/07/10"
+          ],
+          "listing_summaries": [
+            "2025年第2季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820250710M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/07/10"
+          ],
+          "listing_summaries": [
+            "2025年第2季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820250825E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/08/26",
+            "114/09/11",
+            "114/09/12"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "240820250825M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/08/26",
+            "114/09/11",
+            "114/09/12"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "240820250916E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/09/17"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820250916M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/09/17"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820251013E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/10/13"
+          ],
+          "listing_summaries": [
+            "2025年第3季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820251013M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/10/13"
+          ],
+          "listing_summaries": [
+            "2025年第3季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820251114E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/11/17 至 114/11/18",
+            "114/11/19",
+            "114/11/24",
+            "114/11/25",
+            "114/12/04"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "240820251114M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "114/11/17 至 114/11/18",
+            "114/11/19",
+            "114/11/24",
+            "114/11/25",
+            "114/12/04"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 5
+        },
+        {
+          "filename": "240820260119E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/01/19"
+          ],
+          "listing_summaries": [
+            "2025年第4季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820260119M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/01/19"
+          ],
+          "listing_summaries": [
+            "2025年第4季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820260306E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/03/09",
+            "115/03/10",
+            "115/03/12",
+            "115/03/18"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 4
+        },
+        {
+          "filename": "240820260306M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/03/09",
+            "115/03/10",
+            "115/03/12",
+            "115/03/18"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 4
+        },
+        {
+          "filename": "240820260413E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/04/13"
+          ],
+          "listing_summaries": [
+            "2026年第1季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820260413M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/04/13"
+          ],
+          "listing_summaries": [
+            "2026年第1季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820260514E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/05/15",
+            "115/05/18 至 115/05/19",
+            "115/05/29",
+            "115/06/01",
+            "115/06/02",
+            "115/06/16",
+            "115/06/23"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 7
+        },
+        {
+          "filename": "240820260514M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/05/15",
+            "115/05/18 至 115/05/19",
+            "115/05/29",
+            "115/06/01",
+            "115/06/02",
+            "115/06/16",
+            "115/06/23"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 7
+        },
+        {
+          "filename": "240820260710E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/07/10"
+          ],
+          "listing_summaries": [
+            "2026年第2季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820260710M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/07/10"
+          ],
+          "listing_summaries": [
+            "2026年第2季營運狀況說明"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "240820260819E001.pdf",
+          "language": "en",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/08/20",
+            "115/09/15",
+            "115/09/21 至 115/09/22"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "240820260819M001.pdf",
+          "language": "zh",
+          "company_name": "南亞科",
+          "conference_dates": [
+            "115/08/20",
+            "115/09/15",
+            "115/09/21 至 115/09/22"
+          ],
+          "listing_summaries": [
+            "本公司財務業務相關資訊說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        }
+      ]
+    },
+    {
+      "ticker": "2344",
+      "company": "華邦電",
+      "industry": "semiconductor_memory",
+      "source": "MOPS t100sb02_1 法人說明會 (official)",
+      "years": {
+        "2024": {
+          "status": "ok",
+          "documents": 4,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=113&co_id=2344",
+          "error": null
+        },
+        "2025": {
+          "status": "ok",
+          "documents": 8,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2344",
+          "error": null
+        },
+        "2026": {
+          "status": "ok",
+          "documents": 6,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=115&co_id=2344",
+          "error": null
+        }
+      },
+      "discovered_documents": 18,
+      "languages": {
+        "en": 9,
+        "zh": 9
+      },
+      "listing_claimed_periods": [
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "documents_without_listing_period": 6,
+      "files_reused_across_listing_rows": 0,
+      "anomalies": [],
+      "documents": [
+        {
+          "filename": "234420240206E001.pdf",
+          "language": "en",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "113/02/06"
+          ],
+          "listing_summaries": [
+            "本公司舉行112年下半年度法人說明會，將於會中就公司112年下半年度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420240206M001.pdf",
+          "language": "zh",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "113/02/06"
+          ],
+          "listing_summaries": [
+            "本公司舉行112年下半年度法人說明會，將於會中就公司112年下半年度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420240802E001.pdf",
+          "language": "en",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "113/08/02"
+          ],
+          "listing_summaries": [
+            "本公司舉行113年上半年度法人說明會，將於會中就公司113年上半年度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420240802M001.pdf",
+          "language": "zh",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "113/08/02"
+          ],
+          "listing_summaries": [
+            "本公司舉行113年上半年度法人說明會，將於會中就公司113年上半年度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420250219E001.pdf",
+          "language": "en",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "114/02/19"
+          ],
+          "listing_summaries": [
+            "本公司舉行113年下半年度法人說明會，將於會中就公司113年下半年度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420250219M001.pdf",
+          "language": "zh",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "114/02/19"
+          ],
+          "listing_summaries": [
+            "本公司舉行113年下半年度法人說明會，將於會中就公司113年下半年度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420250507E001.pdf",
+          "language": "en",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "114/05/07"
+          ],
+          "listing_summaries": [
+            "本公司舉行114年第一季度法人說明會，將於會中就公司114年第一季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420250507M001.pdf",
+          "language": "zh",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "114/05/07"
+          ],
+          "listing_summaries": [
+            "本公司舉行114年第一季度法人說明會，將於會中就公司114年第一季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420250806E001.pdf",
+          "language": "en",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "114/08/06"
+          ],
+          "listing_summaries": [
+            "本公司舉行114年第二季度法人說明會，將於會中就公司114年第二季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420250806M001.pdf",
+          "language": "zh",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "114/08/06"
+          ],
+          "listing_summaries": [
+            "本公司舉行114年第二季度法人說明會，將於會中就公司114年第二季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420251105E001.pdf",
+          "language": "en",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "114/11/05"
+          ],
+          "listing_summaries": [
+            "本公司舉行114年第三季度法人說明會，將於會中就公司114年第三季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420251105M001.pdf",
+          "language": "zh",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "114/11/05"
+          ],
+          "listing_summaries": [
+            "本公司舉行114年第三季度法人說明會，將於會中就公司114年第三季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420260210E001.pdf",
+          "language": "en",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "115/02/10"
+          ],
+          "listing_summaries": [
+            "本公司舉行114年第四季度法人說明會，將於會中就公司114年第四季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420260210M001.pdf",
+          "language": "zh",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "115/02/10"
+          ],
+          "listing_summaries": [
+            "本公司舉行114年第四季度法人說明會，將於會中就公司114年第四季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420260505E001.pdf",
+          "language": "en",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "115/05/05"
+          ],
+          "listing_summaries": [
+            "本公司舉行115年第一季度法人說明會，將於會中就公司115年第一季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420260505M001.pdf",
+          "language": "zh",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "115/05/05"
+          ],
+          "listing_summaries": [
+            "本公司舉行115年第一季度法人說明會，將於會中就公司115年第一季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420260806E001.pdf",
+          "language": "en",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "115/08/06"
+          ],
+          "listing_summaries": [
+            "本公司舉行115年第二季度法人說明會，將於會中就公司115年第二季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234420260806M001.pdf",
+          "language": "zh",
+          "company_name": "華邦電",
+          "conference_dates": [
+            "115/08/06"
+          ],
+          "listing_summaries": [
+            "本公司舉行115年第二季度法人說明會，將於會中就公司115年第二季度財務數字與營運概況做說明"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 1
+        }
+      ]
+    },
+    {
+      "ticker": "6770",
+      "company": "力積電",
+      "industry": "semiconductor_foundry",
+      "source": "MOPS t100sb02_1 法人說明會 (official)",
+      "years": {
+        "2024": {
+          "status": "ok",
+          "documents": 18,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=113&co_id=6770",
+          "error": null
+        },
+        "2025": {
+          "status": "ok",
+          "documents": 20,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=6770",
+          "error": null
+        },
+        "2026": {
+          "status": "ok",
+          "documents": 14,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=115&co_id=6770",
+          "error": null
+        }
+      },
+      "discovered_documents": 52,
+      "languages": {
+        "en": 26,
+        "zh": 26
+      },
+      "listing_claimed_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "documents_without_listing_period": 30,
+      "files_reused_across_listing_rows": 4,
+      "anomalies": [],
+      "documents": [
+        {
+          "filename": "677020240118E002.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/01/18"
+          ],
+          "listing_summaries": [
+            "(1)本公司2023年第四季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_23Q4.html"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240118M002.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/01/18"
+          ],
+          "listing_summaries": [
+            "(1)本公司2023年第四季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_23Q4.html"
+          ],
+          "period_claimed_by_listing": "2023Q4",
+          "period_claims_all": [
+            "2023Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240216E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/02/19 至 113/02/20"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加J.P. Morgan舉辦之「Taiwan CEO-CFO Conference 2024」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240216M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/02/19 至 113/02/20"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加J.P. Morgan舉辦之「Taiwan CEO-CFO Conference 2024」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240304E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/03/05",
+            "113/03/19 至 113/03/21"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi’s 2024 Taiwan Corporate Day」，就公司營運概況向投資機構做說明。",
+            "本公司受邀參加BofA Securities舉辦之「2024 APAC TMT Conference」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 2
+        },
+        {
+          "filename": "677020240304M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/03/05",
+            "113/03/19 至 113/03/21"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi’s 2024 Taiwan Corporate Day」，就公司營運概況向投資機構做說明。",
+            "本公司受邀參加BofA Securities舉辦之「2024 APAC TMT Conference」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 2
+        },
+        {
+          "filename": "677020240415E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/04/15"
+          ],
+          "listing_summaries": [
+            "(1)本公司2024年第一季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_24Q1.html"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240415M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/04/15"
+          ],
+          "listing_summaries": [
+            "(1)本公司2024年第一季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_24Q1.html"
+          ],
+          "period_claimed_by_listing": "2024Q1",
+          "period_claims_all": [
+            "2024Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240531E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/06/03 至 113/06/04"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加Nomura舉辦之「Nomura Investment Forum Asia (NIFA) 2024, Singapore」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240531M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/06/03 至 113/06/04"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加Nomura舉辦之「Nomura Investment Forum Asia (NIFA) 2024, Singapore」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240716E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/07/16"
+          ],
+          "listing_summaries": [
+            "(1)本公司2024年第二季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_24Q2.html"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240716M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/07/16"
+          ],
+          "listing_summaries": [
+            "(1)本公司2024年第二季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_24Q2.html"
+          ],
+          "period_claimed_by_listing": "2024Q2",
+          "period_claims_all": [
+            "2024Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240920E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/09/23"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加UBS舉辦之「UBS Taiwan Summit 2024」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020240920M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/09/23"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加UBS舉辦之「UBS Taiwan Summit 2024」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020241022E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/10/22"
+          ],
+          "listing_summaries": [
+            "本公司2024年第三季財務暨營運報告。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020241022M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/10/22"
+          ],
+          "listing_summaries": [
+            "本公司2024年第三季財務暨營運報告。"
+          ],
+          "period_claimed_by_listing": "2024Q3",
+          "period_claims_all": [
+            "2024Q3"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020241122E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/11/25"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi’s 2024 Taiwan Corporate Day」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020241122M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "113/11/25"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi’s 2024 Taiwan Corporate Day」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250213E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/02/13"
+          ],
+          "listing_summaries": [
+            "(1)本公司2024年第四季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_24Q4.html"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250213M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/02/13"
+          ],
+          "listing_summaries": [
+            "(1)本公司2024年第四季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_24Q4.html"
+          ],
+          "period_claimed_by_listing": "2024Q4",
+          "period_claims_all": [
+            "2024Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250214E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/02/17 至 114/02/18"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加J.P. Morgan舉辦之「Taiwan CEO-CFO Conference」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250214M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/02/17 至 114/02/18"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加J.P. Morgan舉辦之「Taiwan CEO-CFO Conference」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250224E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/02/25"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi’s 2025 Taiwan Corporate Day」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250224M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/02/25"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi’s 2025 Taiwan Corporate Day」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250319E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/03/20 至 114/03/21"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加BofA Securities舉辦之「2025 Asia Tech Conference」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250319M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/03/20 至 114/03/21"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加BofA Securities舉辦之「2025 Asia Tech Conference」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250422E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/04/22"
+          ],
+          "listing_summaries": [
+            "(1)本公司2025年第一季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_25Q1.html"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250422M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/04/22"
+          ],
+          "listing_summaries": [
+            "(1)本公司2025年第一季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_25Q1.html"
+          ],
+          "period_claimed_by_listing": "2025Q1",
+          "period_claims_all": [
+            "2025Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250522E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/05/23"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi’s 2025 Taiwan Tech Conference」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250522M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/05/23"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi’s 2025 Taiwan Tech Conference」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250722E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/07/22"
+          ],
+          "listing_summaries": [
+            "(1)本公司2025年第二季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_25Q2.html"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250722M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/07/22"
+          ],
+          "listing_summaries": [
+            "(1)本公司2025年第二季財務暨營運報告。 (2)參加方式：https://wms.gridow.com/ir/psmc/psmc_25Q2.html"
+          ],
+          "period_claimed_by_listing": "2025Q2",
+          "period_claims_all": [
+            "2025Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250905E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/09/08"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加國票綜合證券舉辦之線上法人說明會，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020250905M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/09/08"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加國票綜合證券舉辦之線上法人說明會，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020251021E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/10/21"
+          ],
+          "listing_summaries": [
+            "(1)本公司2025年第三季財務暨營運報告。 (2)參加方式：https://www.itvcloud.org/Investor/Live/Index/psmc"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020251021M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/10/21"
+          ],
+          "listing_summaries": [
+            "(1)本公司2025年第三季財務暨營運報告。 (2)參加方式：https://www.itvcloud.org/Investor/Live/Index/psmc"
+          ],
+          "period_claimed_by_listing": "2025Q3",
+          "period_claims_all": [
+            "2025Q3"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020251124E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/11/25"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi's 2025 Taiwan Corporate Day」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020251124M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "114/11/25"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi's 2025 Taiwan Corporate Day」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260205E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/02/05"
+          ],
+          "listing_summaries": [
+            "(1)本公司2025年第四季財務暨營運報告。 (2)參加方式：https://www.itvcloud.org/Investor/Live/Index/psmc"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260205M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/02/05"
+          ],
+          "listing_summaries": [
+            "(1)本公司2025年第四季財務暨營運報告。 (2)參加方式：https://www.itvcloud.org/Investor/Live/Index/psmc"
+          ],
+          "period_claimed_by_listing": "2025Q4",
+          "period_claims_all": [
+            "2025Q4"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260306E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/03/09 至 115/03/10",
+            "115/03/12 至 115/03/13",
+            "115/03/17 至 115/03/19"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi’s 2026 Taiwan Corporate Day」，就公司營運概況向投資機構做說明。",
+            "本公司受邀參加J.P. Morgan舉辦之「Taiwan CEO-CFO Conference」，就公司營運概況向投資機構做說明。",
+            "本公司受邀參加BofA Securities舉辦之「2026 Asia Tech Conference」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "677020260306M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/03/09 至 115/03/10",
+            "115/03/12 至 115/03/13",
+            "115/03/17 至 115/03/19"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加花旗證券舉辦之「Citi’s 2026 Taiwan Corporate Day」，就公司營運概況向投資機構做說明。",
+            "本公司受邀參加J.P. Morgan舉辦之「Taiwan CEO-CFO Conference」，就公司營運概況向投資機構做說明。",
+            "本公司受邀參加BofA Securities舉辦之「2026 Asia Tech Conference」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 3
+        },
+        {
+          "filename": "677020260324E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/04/07"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加臺灣證券交易所舉辦之115年「AI產業」主題式業績發表會及產業講座，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260324M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/04/07"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加臺灣證券交易所舉辦之115年「AI產業」主題式業績發表會及產業講座，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260421E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/04/21"
+          ],
+          "listing_summaries": [
+            "(1)本公司2026年第一季財務暨營運報告。 (2)參加方式：https://www.itvcloud.org/Investor/Live/Index/psmc"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260421M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/04/21"
+          ],
+          "listing_summaries": [
+            "(1)本公司2026年第一季財務暨營運報告。 (2)參加方式：https://www.itvcloud.org/Investor/Live/Index/psmc"
+          ],
+          "period_claimed_by_listing": "2026Q1",
+          "period_claims_all": [
+            "2026Q1"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260626E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/06/29"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加康和證券舉辦之法人說明會，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260626M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/06/29"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加康和證券舉辦之法人說明會，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260714E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/07/14"
+          ],
+          "listing_summaries": [
+            "(1)本公司2026年第二季財務暨營運報告。 (2)參加方式：https://www.itvcloud.org/Investor/Live/Index/psmc"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260714M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/07/14"
+          ],
+          "listing_summaries": [
+            "(1)本公司2026年第二季財務暨營運報告。 (2)參加方式：https://www.itvcloud.org/Investor/Live/Index/psmc"
+          ],
+          "period_claimed_by_listing": "2026Q2",
+          "period_claims_all": [
+            "2026Q2"
+          ],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260911E001.pdf",
+          "language": "en",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/09/14 至 115/09/15"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加UBS舉辦之「UBS Taiwan Summit 2026」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "677020260911M001.pdf",
+          "language": "zh",
+          "company_name": "力積電",
+          "conference_dates": [
+            "115/09/14 至 115/09/15"
+          ],
+          "listing_summaries": [
+            "本公司受邀參加UBS舉辦之「UBS Taiwan Summit 2026」，就公司營運概況向投資機構做說明。"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        }
+      ]
+    },
+    {
+      "ticker": "2340",
+      "company": "台亞",
+      "industry": "semiconductor_discrete_power",
+      "source": "MOPS t100sb02_1 法人說明會 (official)",
+      "years": {
+        "2024": {
+          "status": "ok",
+          "documents": 2,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=113&co_id=2340",
+          "error": null
+        },
+        "2025": {
+          "status": "ok",
+          "documents": 2,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2340",
+          "error": null
+        },
+        "2026": {
+          "status": "no_listing",
+          "documents": 0,
+          "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=115&co_id=2340",
+          "error": "No downloadable PDFs appear in the verified listing"
+        }
+      },
+      "discovered_documents": 4,
+      "languages": {
+        "en": 2,
+        "zh": 2
+      },
+      "listing_claimed_periods": [],
+      "documents_without_listing_period": 4,
+      "files_reused_across_listing_rows": 0,
+      "anomalies": [],
+      "documents": [
+        {
+          "filename": "234020240826E001.pdf",
+          "language": "en",
+          "company_name": "台亞",
+          "conference_dates": [
+            "113/08/27"
+          ],
+          "listing_summaries": [
+            "本公司舉辦財務業務概況座談會"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234020240826M001.pdf",
+          "language": "zh",
+          "company_name": "台亞",
+          "conference_dates": [
+            "113/08/27"
+          ],
+          "listing_summaries": [
+            "本公司舉辦財務業務概況座談會"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234020250410E001.pdf",
+          "language": "en",
+          "company_name": "台亞",
+          "conference_dates": [
+            "114/04/10"
+          ],
+          "listing_summaries": [
+            "本公司舉辦財務業務概況座談會"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        },
+        {
+          "filename": "234020250410M001.pdf",
+          "language": "zh",
+          "company_name": "台亞",
+          "conference_dates": [
+            "114/04/10"
+          ],
+          "listing_summaries": [
+            "本公司舉辦財務業務概況座談會"
+          ],
+          "period_claimed_by_listing": null,
+          "period_claims_all": [],
+          "listing_rows": 1
+        }
+      ]
+    }
+  ]
+}

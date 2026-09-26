@@ -1,0 +1,935 @@
+{
+  "generated_by": "scripts/build_conference_coverage.py",
+  "companies": [
+    {
+      "ticker": "2330",
+      "company": "台積電",
+      "industry": "semiconductor_foundry",
+      "official_source": "MOPS t100sb02_1 法人說明會簡報 (mopsov.twse.com.tw)",
+      "source_pages": [
+        "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2330"
+      ],
+      "discovered_documents": 22,
+      "discovered_listing_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "processed_documents": 8,
+      "verified_periods": [
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "document_types": {
+        "earnings_presentation": 8
+      },
+      "languages": {
+        "en": 4,
+        "zh-Hant": 4
+      },
+      "jsd_ready_records": 8,
+      "adjacent_comparable_pairs": 6,
+      "transcript_calibration_compatible_pairs": 0,
+      "pairs": [
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        }
+      ],
+      "quarantined_documents": [],
+      "not_ready_documents": [],
+      "text_length_range": [
+        4194,
+        6754
+      ],
+      "discovery_anomalies": [],
+      "gcs": {
+        "objects": 42,
+        "bytes": 8319589,
+        "uploaded": 0,
+        "skipped_same_sha256": 42,
+        "conflicts": 0,
+        "verified": 42
+      }
+    },
+    {
+      "ticker": "2454",
+      "company": "聯發科",
+      "industry": "semiconductor_fabless",
+      "official_source": "MOPS t100sb02_1 法人說明會簡報 (mopsov.twse.com.tw)",
+      "source_pages": [
+        "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2454"
+      ],
+      "discovered_documents": 28,
+      "discovered_listing_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "processed_documents": 8,
+      "verified_periods": [
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "document_types": {
+        "earnings_presentation": 8
+      },
+      "languages": {
+        "en": 4,
+        "zh-Hant": 4
+      },
+      "jsd_ready_records": 8,
+      "adjacent_comparable_pairs": 6,
+      "transcript_calibration_compatible_pairs": 0,
+      "pairs": [
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        }
+      ],
+      "quarantined_documents": [],
+      "not_ready_documents": [],
+      "text_length_range": [
+        5986,
+        12277
+      ],
+      "discovery_anomalies": [],
+      "gcs": {
+        "objects": 42,
+        "bytes": 10404244,
+        "uploaded": 42,
+        "skipped_same_sha256": 0,
+        "conflicts": 0,
+        "verified": 42
+      }
+    },
+    {
+      "ticker": "2303",
+      "company": "聯電",
+      "industry": "semiconductor_foundry",
+      "official_source": "MOPS t100sb02_1 法人說明會簡報 (mopsov.twse.com.tw)",
+      "source_pages": [
+        "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2303"
+      ],
+      "discovered_documents": 26,
+      "discovered_listing_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "processed_documents": 8,
+      "verified_periods": [
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "document_types": {
+        "earnings_presentation": 8
+      },
+      "languages": {
+        "en": 4,
+        "zh-Hant": 4
+      },
+      "jsd_ready_records": 8,
+      "adjacent_comparable_pairs": 6,
+      "transcript_calibration_compatible_pairs": 0,
+      "pairs": [
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        }
+      ],
+      "quarantined_documents": [],
+      "not_ready_documents": [],
+      "text_length_range": [
+        6793,
+        8834
+      ],
+      "discovery_anomalies": [],
+      "gcs": {
+        "objects": 42,
+        "bytes": 6483666,
+        "uploaded": 42,
+        "skipped_same_sha256": 0,
+        "conflicts": 0,
+        "verified": 42
+      }
+    },
+    {
+      "ticker": "3711",
+      "company": "日月光投控",
+      "industry": "semiconductor_osat",
+      "official_source": "MOPS t100sb02_1 法人說明會簡報 (mopsov.twse.com.tw)",
+      "source_pages": [
+        "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=3711"
+      ],
+      "discovered_documents": 28,
+      "discovered_listing_periods": [],
+      "processed_documents": 8,
+      "verified_periods": [
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "document_types": {
+        "earnings_presentation": 6,
+        "other_official_conference_document": 2
+      },
+      "languages": {
+        "en": 5,
+        "zh-Hant": 3
+      },
+      "jsd_ready_records": 6,
+      "adjacent_comparable_pairs": 4,
+      "transcript_calibration_compatible_pairs": 0,
+      "pairs": [
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        }
+      ],
+      "quarantined_documents": [],
+      "not_ready_documents": [
+        {
+          "filename": "371120251202E001.pdf",
+          "issues": [
+            "period_unconfirmed"
+          ],
+          "period_detected_in_document": null,
+          "document_type": "other_official_conference_document"
+        },
+        {
+          "filename": "371120251202M001.pdf",
+          "issues": [
+            "period_unconfirmed"
+          ],
+          "period_detected_in_document": null,
+          "document_type": "other_official_conference_document"
+        }
+      ],
+      "text_length_range": [
+        8327,
+        12967
+      ],
+      "discovery_anomalies": [],
+      "gcs": {
+        "objects": 42,
+        "bytes": 19138173,
+        "uploaded": 42,
+        "skipped_same_sha256": 0,
+        "conflicts": 0,
+        "verified": 42
+      }
+    },
+    {
+      "ticker": "2379",
+      "company": "瑞昱",
+      "industry": "semiconductor_fabless",
+      "official_source": "MOPS t100sb02_1 法人說明會簡報 (mopsov.twse.com.tw)",
+      "source_pages": [
+        "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2379"
+      ],
+      "discovered_documents": 42,
+      "discovered_listing_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "processed_documents": 8,
+      "verified_periods": [
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "document_types": {
+        "earnings_presentation": 8
+      },
+      "languages": {
+        "en": 4,
+        "zh-Hant": 4
+      },
+      "jsd_ready_records": 4,
+      "adjacent_comparable_pairs": 3,
+      "transcript_calibration_compatible_pairs": 0,
+      "pairs": [
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        }
+      ],
+      "quarantined_documents": [],
+      "not_ready_documents": [
+        {
+          "filename": "237920250205M001.pdf",
+          "issues": [
+            "duplicate_document"
+          ],
+          "period_detected_in_document": "2024Q4",
+          "document_type": "earnings_presentation"
+        },
+        {
+          "filename": "237920250430M001.pdf",
+          "issues": [
+            "duplicate_document"
+          ],
+          "period_detected_in_document": "2025Q1",
+          "document_type": "earnings_presentation"
+        },
+        {
+          "filename": "237920250731M001.pdf",
+          "issues": [
+            "duplicate_document"
+          ],
+          "period_detected_in_document": "2025Q2",
+          "document_type": "earnings_presentation"
+        },
+        {
+          "filename": "237920251028M001.pdf",
+          "issues": [
+            "duplicate_document"
+          ],
+          "period_detected_in_document": "2025Q3",
+          "document_type": "earnings_presentation"
+        }
+      ],
+      "text_length_range": [
+        3156,
+        6494
+      ],
+      "discovery_anomalies": [],
+      "gcs": {
+        "objects": 42,
+        "bytes": 14527075,
+        "uploaded": 42,
+        "skipped_same_sha256": 0,
+        "conflicts": 0,
+        "verified": 42
+      }
+    },
+    {
+      "ticker": "3034",
+      "company": "聯詠",
+      "industry": "semiconductor_fabless",
+      "official_source": "MOPS t100sb02_1 法人說明會簡報 (mopsov.twse.com.tw)",
+      "source_pages": [
+        "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=3034"
+      ],
+      "discovered_documents": 22,
+      "discovered_listing_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "processed_documents": 8,
+      "verified_periods": [
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "document_types": {
+        "financial_results_release": 8
+      },
+      "languages": {
+        "en": 4,
+        "zh-Hant": 4
+      },
+      "jsd_ready_records": 3,
+      "adjacent_comparable_pairs": 2,
+      "transcript_calibration_compatible_pairs": 0,
+      "pairs": [
+        {
+          "document_type": "financial_results_release",
+          "language": "zh-Hant",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "financial_results_release",
+          "language": "zh-Hant",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        }
+      ],
+      "quarantined_documents": [
+        {
+          "filename": "303420250212M001.pdf",
+          "reasons": [
+            "source_period_disagrees_with_document"
+          ]
+        }
+      ],
+      "not_ready_documents": [
+        {
+          "filename": "303420250212E001.pdf",
+          "issues": [
+            "period_unconfirmed"
+          ],
+          "period_detected_in_document": null,
+          "document_type": "financial_results_release"
+        },
+        {
+          "filename": "303420250507E001.pdf",
+          "issues": [
+            "period_unconfirmed"
+          ],
+          "period_detected_in_document": null,
+          "document_type": "financial_results_release"
+        },
+        {
+          "filename": "303420250806E001.pdf",
+          "issues": [
+            "period_unconfirmed"
+          ],
+          "period_detected_in_document": null,
+          "document_type": "financial_results_release"
+        },
+        {
+          "filename": "303420251106E001.pdf",
+          "issues": [
+            "period_unconfirmed"
+          ],
+          "period_detected_in_document": null,
+          "document_type": "financial_results_release"
+        }
+      ],
+      "text_length_range": [
+        3642,
+        4479
+      ],
+      "discovery_anomalies": [
+        {
+          "filename": "303420250507E001.pdf",
+          "issue": "multiple_reported_periods_in_listing",
+          "periods": [
+            "2025Q1",
+            "2025Q2"
+          ]
+        },
+        {
+          "filename": "303420250507M001.pdf",
+          "issue": "multiple_reported_periods_in_listing",
+          "periods": [
+            "2025Q1",
+            "2025Q2"
+          ]
+        }
+      ],
+      "gcs": {
+        "objects": 42,
+        "bytes": 10531669,
+        "uploaded": 42,
+        "skipped_same_sha256": 0,
+        "conflicts": 0,
+        "verified": 42
+      }
+    },
+    {
+      "ticker": "2408",
+      "company": "南亞科",
+      "industry": "semiconductor_memory",
+      "official_source": "MOPS t100sb02_1 法人說明會簡報 (mopsov.twse.com.tw)",
+      "source_pages": [
+        "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2408"
+      ],
+      "discovered_documents": 50,
+      "discovered_listing_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "processed_documents": 8,
+      "verified_periods": [
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "document_types": {
+        "earnings_presentation": 8
+      },
+      "languages": {
+        "en": 4,
+        "zh-Hant": 4
+      },
+      "jsd_ready_records": 8,
+      "adjacent_comparable_pairs": 6,
+      "transcript_calibration_compatible_pairs": 0,
+      "pairs": [
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        }
+      ],
+      "quarantined_documents": [],
+      "not_ready_documents": [],
+      "text_length_range": [
+        4760,
+        9712
+      ],
+      "discovery_anomalies": [],
+      "gcs": {
+        "objects": 42,
+        "bytes": 10982959,
+        "uploaded": 42,
+        "skipped_same_sha256": 0,
+        "conflicts": 0,
+        "verified": 42
+      }
+    },
+    {
+      "ticker": "2344",
+      "company": "華邦電",
+      "industry": "semiconductor_memory",
+      "official_source": "MOPS t100sb02_1 法人說明會簡報 (mopsov.twse.com.tw)",
+      "source_pages": [
+        "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2344"
+      ],
+      "discovered_documents": 18,
+      "discovered_listing_periods": [
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "processed_documents": 8,
+      "verified_periods": [
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "document_types": {
+        "investor_presentation": 1,
+        "other_official_conference_document": 1,
+        "earnings_presentation": 6
+      },
+      "languages": {
+        "en": 4,
+        "zh-Hant": 4
+      },
+      "jsd_ready_records": 6,
+      "adjacent_comparable_pairs": 4,
+      "transcript_calibration_compatible_pairs": 0,
+      "pairs": [
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        }
+      ],
+      "quarantined_documents": [],
+      "not_ready_documents": [
+        {
+          "filename": "234420250219E001.pdf",
+          "issues": [
+            "period_unconfirmed"
+          ],
+          "period_detected_in_document": null,
+          "document_type": "investor_presentation"
+        },
+        {
+          "filename": "234420250219M001.pdf",
+          "issues": [
+            "period_unconfirmed"
+          ],
+          "period_detected_in_document": null,
+          "document_type": "other_official_conference_document"
+        }
+      ],
+      "text_length_range": [
+        10500,
+        20103
+      ],
+      "discovery_anomalies": [],
+      "gcs": {
+        "objects": 42,
+        "bytes": 38891735,
+        "uploaded": 42,
+        "skipped_same_sha256": 0,
+        "conflicts": 0,
+        "verified": 42
+      }
+    },
+    {
+      "ticker": "6770",
+      "company": "力積電",
+      "industry": "semiconductor_foundry",
+      "official_source": "MOPS t100sb02_1 法人說明會簡報 (mopsov.twse.com.tw)",
+      "source_pages": [
+        "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=6770"
+      ],
+      "discovered_documents": 52,
+      "discovered_listing_periods": [
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3",
+        "2025Q4",
+        "2026Q1",
+        "2026Q2"
+      ],
+      "processed_documents": 8,
+      "verified_periods": [
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "document_types": {
+        "earnings_presentation": 8
+      },
+      "languages": {
+        "en": 4,
+        "zh-Hant": 4
+      },
+      "jsd_ready_records": 8,
+      "adjacent_comparable_pairs": 6,
+      "transcript_calibration_compatible_pairs": 0,
+      "pairs": [
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2024Q4",
+          "period_2": "2025Q1"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q1",
+          "period_2": "2025Q2"
+        },
+        {
+          "document_type": "earnings_presentation",
+          "language": "zh-Hant",
+          "period_1": "2025Q2",
+          "period_2": "2025Q3"
+        }
+      ],
+      "quarantined_documents": [],
+      "not_ready_documents": [],
+      "text_length_range": [
+        1617,
+        2982
+      ],
+      "discovery_anomalies": [],
+      "gcs": {
+        "objects": 42,
+        "bytes": 18209312,
+        "uploaded": 42,
+        "skipped_same_sha256": 0,
+        "conflicts": 0,
+        "verified": 42
+      }
+    },
+    {
+      "ticker": "2340",
+      "company": "台亞",
+      "industry": "semiconductor_discrete_power",
+      "official_source": "MOPS t100sb02_1 法人說明會簡報 (mopsov.twse.com.tw)",
+      "source_pages": [
+        "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2340"
+      ],
+      "discovered_documents": 4,
+      "discovered_listing_periods": [],
+      "processed_documents": 2,
+      "verified_periods": [],
+      "document_types": {
+        "investor_presentation": 1,
+        "other_official_conference_document": 1
+      },
+      "languages": {
+        "en": 1,
+        "zh-Hant": 1
+      },
+      "jsd_ready_records": 0,
+      "adjacent_comparable_pairs": 0,
+      "transcript_calibration_compatible_pairs": 0,
+      "pairs": [],
+      "quarantined_documents": [],
+      "not_ready_documents": [
+        {
+          "filename": "234020250410E001.pdf",
+          "issues": [
+            "period_unconfirmed"
+          ],
+          "period_detected_in_document": null,
+          "document_type": "investor_presentation"
+        },
+        {
+          "filename": "234020250410M001.pdf",
+          "issues": [
+            "period_unconfirmed"
+          ],
+          "period_detected_in_document": null,
+          "document_type": "other_official_conference_document"
+        }
+      ],
+      "text_length_range": null,
+      "discovery_anomalies": [],
+      "gcs": {
+        "objects": 12,
+        "bytes": 3486900,
+        "uploaded": 12,
+        "skipped_same_sha256": 0,
+        "conflicts": 0,
+        "verified": 12
+      }
+    }
+  ]
+}
