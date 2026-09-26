@@ -121,6 +121,14 @@ class FinTrustClient:
     def companies(self) -> Any:
         return self.request("GET", "/api/v1/financial/companies")
 
+    def verify_claim(self, company_code: str, claim: str) -> Any:
+        """Verify a claim against stored official evidence (no ingestion token needed)."""
+        return self.request(
+            "POST",
+            "/api/v1/financial/claims/verify",
+            json_body={"company_code": company_code, "claim": claim},
+        )
+
     def latest_analysis(self, ticker: str) -> Any:
         return self.request("GET", f"/api/v1/financial/companies/{ticker}/analysis/latest")
 

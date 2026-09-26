@@ -125,6 +125,23 @@ def create_financial_blueprint(client: FinTrustClient | None = None, admin_requi
         except FinTrustClientError as exc:
             return handle_error(exc)
 
+    @blueprint.post("/api/financial/claims/verify")
+    def verify_claim():
+        payload = request.get_json(silent=True) or {}
+        company_code = str(payload.get("company_code") or "").strip()
+        claim = str(payload.get("claim") or "").strip()
+        if not company_code or len(claim) < 2:
+            return to_response(
+                {"success": False, "error": "請提供公司代號與想查證的說法。", "status_code": 400},
+                400,
+            )
+        if len(claim) > 5000:
+            return to_response({"success": False, "error": "說法內容過長（上限 5000 字）。", "status_code": 400}, 400)
+        try:
+            return to_response({"success": True, "data": get_client().verify_claim(company_code, claim)})
+        except FinTrustClientError as exc:
+            return handle_error(exc)
+
     @blueprint.post("/api/financial/official-documents/extract")
     def extract_official_document():
         try:
