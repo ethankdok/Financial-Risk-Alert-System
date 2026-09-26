@@ -25,6 +25,15 @@ jobs:
       - name: Compare raw metrics using same paired method; no inherited thresholds
         shell: bash
         run: |
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+          p=Path('data/mediatek_corpus/mediatek_source_index.csv')
+          with p.open(encoding='utf-8-sig') as f:
+              rows=list(csv.DictReader(f))
+          print("QUARANTINED_PERIODS",[(r['period'],r['note']) for r in rows if r['status'] != 'ok'])
+          print("UNIQUE_APPROVED_DOCS",sum(r['status']=='ok' for r in rows))
+          PY
           python scripts/calibrate_tsmc_shift.py --csv data/mediatek_corpus/mediatek_quarterly_text.csv --ticker 2454 --period1 2025Q3 --period2 2025Q4 --output data/mediatek_corpus/uncalibrated_raw_metrics.json || echo "Insufficient adjacent official MediaTek PDFs"
           python - <<'PY'
           from pathlib import Path
