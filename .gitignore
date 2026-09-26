@@ -30,3 +30,6 @@ fintrust_backend/data/
 # Local backup files
 static/script_backup.js
 static/script_before_summary.js
+
+# Licensed third-party research corpus: retain source URLs in repo, not raw text
+/data/tsmc_corpus/
