@@ -92,6 +92,14 @@ def collect(start=2022,end=2025,out=Path("data/mediatek_corpus"),delay=.8):
                 if chosen is None:
                     raise ValueError("; ".join(failure_notes)[:250])
                 url,source_page,text,sha=chosen
+                if p in ("2023Q3","2024Q3"):
+                    markers=re.findall(r"\b[1-4]Q2\d\b",text[:1800],flags=re.I)
+                    print("Q3_PDF_COVER_AUDIT",p,
+                          "first_period_markers",markers[:4],
+                          "extracted_text_sha256",hashlib.sha256(text.encode()).hexdigest())
+                    expected=f"3Q{p[2:4]}"
+                    if expected.lower() not in [m.lower() for m in markers[:3]]:
+                        raise ValueError(f"Cover text does not confirm {expected}; quarantine")
                 meta.update(status="ok",source_pdf=url,source_page=source_page,
                             sha256=sha,text_length=len(text))
                 seen_sha[sha]=p
