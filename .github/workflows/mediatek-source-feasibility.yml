@@ -1,0 +1,27 @@
+name: Second-company official transcript feasibility
+on:
+  push:
+    branches: [feature/tsmc-quarterly-corpus]
+    paths:
+      - '.github/workflows/mediatek-source-feasibility.yml'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mediatek-source-feasibility.yml'
+
+jobs:
+  official-transcript-discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests beautifulsoup4
+      - run: python scripts/discover_mediatek_transcripts.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mediatek-official-source-candidates
+          path: data/mediatek_corpus/official_link_candidates.csv
+          retention-days: 7
