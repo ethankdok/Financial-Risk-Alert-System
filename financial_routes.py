@@ -142,6 +142,26 @@ def create_financial_blueprint(client: FinTrustClient | None = None, admin_requi
         except FinTrustClientError as exc:
             return handle_error(exc)
 
+    @blueprint.post("/api/financial/data-shift/analyze")
+    def analyze_official_data_shift():
+        import re
+
+        payload = request.get_json(silent=True) or {}
+        company_code = str(payload.get("company_code") or "").strip()
+        period_1 = str(payload.get("period_1") or "").strip() or None
+        period_2 = str(payload.get("period_2") or "").strip() or None
+        if not re.fullmatch(r"\d{4,6}", company_code):
+            return to_response({"success": False, "error": "請提供台股公司代號（例如 2330）。", "status_code": 400}, 400)
+        if bool(period_1) != bool(period_2) or any(
+                value and not re.fullmatch(r"20\d{2}Q[1-4]", value) for value in (period_1, period_2)):
+            return to_response({"success": False, "error": "期間需同時提供且格式如 2025Q3，或都留空以使用最新相鄰季度。",
+                                "status_code": 400}, 400)
+        try:
+            return to_response({"success": True,
+                                "data": get_client().analyze_official_data_shift(company_code, period_1, period_2)})
+        except FinTrustClientError as exc:
+            return handle_error(exc)
+
     @blueprint.post("/api/financial/official-documents/extract")
     def extract_official_document():
         try:

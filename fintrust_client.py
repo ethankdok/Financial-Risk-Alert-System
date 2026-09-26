@@ -121,6 +121,14 @@ class FinTrustClient:
     def companies(self) -> Any:
         return self.request("GET", "/api/v1/financial/companies")
 
+    def analyze_official_data_shift(self, company_code: str, period_1: str | None = None,
+                                    period_2: str | None = None) -> Any:
+        """Official conference-document JSD / cosine analysis (no ingestion token needed)."""
+        body: dict[str, Any] = {"company_code": company_code}
+        if period_1 and period_2:
+            body.update(period_1=period_1, period_2=period_2)
+        return self.request("POST", "/api/v1/financial/data-shift/analyze", json_body=body)
+
     def verify_claim(self, company_code: str, claim: str) -> Any:
         """Verify a claim against stored official evidence (no ingestion token needed)."""
         return self.request(

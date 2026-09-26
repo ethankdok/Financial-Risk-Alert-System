@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.ai_analysis_models import AIFinancialAnalysisReport, AnalysisRuleCatalogResponse
 from app.dependencies import (
@@ -81,6 +82,8 @@ from app.services.claim_evidence_adapter import ClaimEvidenceAdapter
 from app.services.claim_llm import ClaimLLM
 from app.services.claim_verification_service import ClaimVerificationService
 from app.services.mops_conference_pdf_repository import build_conference_pdf_archive_repository
+from app.services.jsd_bridge_service import JsdBridgeService
+from app.services.jsd_calibration import build_jsd_calibration_repository
 
 
 router = APIRouter(prefix="/api/v1/financial", tags=["financial-evidence"])
@@ -626,3 +629,39 @@ def verify_financial_claim(
     supported | conflicting | insufficient_evidence; evidence is always a list.
     """
     return service.verify(request)
+
+class OfficialShiftRequest(BaseModel):
+    """company_code (or ticker); both periods (adjacent quarters) or neither for the latest comparable pair."""
+
+    company_code: str | None = Field(default=None, pattern=r"^\d{4,6}$")
+    ticker: str | None = Field(default=None, pattern=r"^\d{4,6}$")
+    period_1: str | None = Field(default=None, pattern=r"^20\d{2}Q[1-4]$")
+    period_2: str | None = Field(default=None, pattern=r"^20\d{2}Q[1-4]$")
+
+
+def get_jsd_bridge_service() -> JsdBridgeService:
+    try:
+        conference_repository = build_conference_pdf_archive_repository()
+    except ValueError:
+        conference_repository = None
+    return JsdBridgeService(conference_repository, build_jsd_calibration_repository())
+
+
+@router.post("/data-shift/analyze")
+def analyze_official_data_shift(
+    request: OfficialShiftRequest,
+    service: JsdBridgeService = Depends(get_jsd_bridge_service),
+) -> dict:
+    """Cross-period textual shift of official conference documents (JSD Method A).
+
+    Raw JSD / cosine always; a drift level only with an exact-scope calibration profile.
+    """
+    ticker = request.company_code or request.ticker
+    if not ticker:
+        raise HTTPException(status_code=422, detail="company_code is required")
+    if service.conference_repository is None:
+        raise HTTPException(status_code=503, detail="Official conference archive is not configured")
+    try:
+        return service.analyze(ticker, request.period_1, request.period_2)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
