@@ -161,7 +161,13 @@ class IdentityTests(unittest.TestCase):
             "decreased from NT$12.63 billion in Q4’15. Novatek’s 2016 Q4 net income was NT$1.26 billion. "
             "Management expects overall performance for the first quarter 2017: Revenue is expected to rise.")
         self.assertEqual(assess_document_identity(annual, language="en")["period"], "2016Q4")
-        # Two genuinely reported quarters on one cover still fail closed.
+        spaced = deck("NOVATEK FOR IMMEDIATE RELEASE Novatek’s 2021 Q4 net income increased by 200.02% from "
+                      "NT $3.64 billion in Q4’20, and operating expenses rose from N T$4.4 billion in Q3’21.")
+        self.assertEqual(assess_document_identity(spaced, language="en")["period"], "2021Q4")
+        # Two genuinely reported quarters on one cover still fail closed (e.g. a release that prints
+        # "gross margin of 41.48% in 4Q22" for its own quarter).
+        typo = deck("NOVATEK FOR IMMEDIATE RELEASE Novatek’s 2023 Q4 net income rose. Gross margin of 41.48% in 4Q22.")
+        self.assertEqual(assess_document_identity(typo, language="en")["period_validation_status"], "unconfirmed")
         ambiguous = assess_document_identity(deck("NOVATEK FOR IMMEDIATE RELEASE 2021 Q2 and 2021 Q3 results"),
                                              language="en")
         self.assertEqual((ambiguous["period"], ambiguous["period_validation_status"]), (None, "unconfirmed"))

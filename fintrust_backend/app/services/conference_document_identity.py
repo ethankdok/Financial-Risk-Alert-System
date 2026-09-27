@@ -48,7 +48,7 @@ _OUTLOOK_BEFORE = re.compile(
     r"|expect(?:s|ed|ing)?\b[^.;:]{0,60}?\bfor\s+(?:the\s+)?)\s*$", re.I)
 # A prior-period comparative ("... from NT$12.63 billion in Q4’15") is never the reported period.
 _COMPARATIVE_BEFORE = re.compile(
-    r"(?:from|than|versus|vs\.?|compared\s+(?:with|to))\s+(?:NT\$|US\$|\$)?\s?[\d.,]+\s*"
+    r"(?:from|than|versus|vs\.?|compared\s+(?:with|to))\s+(?:N\s?T\s?\$|U\s?S\s?\$|\$)?\s?[\d.,]+\s*"
     r"(?:billion|million|thousand|bn|mn|m|%)?\s+(?:in|for)\s+(?:the\s+)?$", re.I)
 _URL_PERIOD = re.compile(r"(?<!\d)(20\d{2})[/_\-]?(?:Q|q)([1-4])(?!\d)|(?<![0-9A-Za-z])([1-4])Q(\d{2})(?![0-9])")
 
