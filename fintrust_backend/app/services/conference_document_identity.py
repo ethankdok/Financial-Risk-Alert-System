@@ -16,7 +16,7 @@ import re
 from collections import defaultdict
 from typing import Any, Iterable
 
-IDENTITY_VERSION = "conference-identity-v4"
+IDENTITY_VERSION = "conference-identity-v5"
 DOCUMENT_TYPES = (
     "full_earnings_transcript",
     "earnings_presentation",
@@ -35,14 +35,21 @@ _PERIOD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"(first|second|third|fourth|1st|2nd|3rd|4th)\s+quarter(?:\s+of)?\s*,?\s*" + _Y, re.I), "word_year"),
     (re.compile(_Y + r"\s*年\s*第\s*([一二三四1-4])\s*季"), "cjk"),
     (re.compile(r"(?<!\d)(1\d{2}|一[〇○零一二三四五六七八九]{2})\s*年\s*(?:度\s*)?第\s*([一二三四1-4])\s*季"), "roc"),
-    (re.compile(r"(?<![0-9A-Za-z])([1-4])\s?Q\s?'?(\d{2}|20\d{2})(?![0-9])", re.I), "nq"),
-    (re.compile(r"(?<![0-9A-Za-z])Q([1-4])\s*'?\s*(20\d{2}|\d{2})(?![0-9])", re.I), "qn"),
+    # Apostrophe may be typographic: 4Q’ 2016, Q3’ 2019, Q4’15.
+    (re.compile(r"(?<![0-9A-Za-z])([1-4])\s?Q\s?['’‘]?\s?(\d{2}|20\d{2})(?![0-9])", re.I), "nq"),
+    (re.compile(r"(?<![0-9A-Za-z])Q([1-4])\s*['’‘]?\s*(20\d{2}|\d{2})(?![0-9])", re.I), "qn"),
     (re.compile(_Y + r"\s*Q([1-4])(?![0-9])", re.I), "yq"),
 ]
 # Outlook wording may follow after a short qualifier: 「營運展望」, "Company Guidance".
 _OUTLOOK_AFTER = re.compile(
     r"^\s*(?:[一-鿿]{0,4}(?:展望|財測|指引)|(?:[A-Za-z]+\s+){0,2}(?:outlook|guidance|forecast))", re.I)
-_OUTLOOK_BEFORE = re.compile(r"(?:outlook|guidance|forecast|展望|財測)\s*(?:for|of|：|:)?\s*$", re.I)
+_OUTLOOK_BEFORE = re.compile(
+    r"(?:(?:outlook|guidance|forecast|展望|財測)\s*(?:for|of|：|:)?"
+    r"|expect(?:s|ed|ing)?\b[^.;:]{0,60}?\bfor\s+(?:the\s+)?)\s*$", re.I)
+# A prior-period comparative ("... from NT$12.63 billion in Q4’15") is never the reported period.
+_COMPARATIVE_BEFORE = re.compile(
+    r"(?:from|than|versus|vs\.?|compared\s+(?:with|to))\s+(?:NT\$|US\$|\$)?\s?[\d.,]+\s*"
+    r"(?:billion|million|thousand|bn|mn|m|%)?\s+(?:in|for)\s+(?:the\s+)?$", re.I)
 _URL_PERIOD = re.compile(r"(?<!\d)(20\d{2})[/_\-]?(?:Q|q)([1-4])(?!\d)|(?<![0-9A-Za-z])([1-4])Q(\d{2})(?![0-9])")
 
 _TRANSCRIPT = re.compile(r"transcript|逐字稿|call\s+transcript", re.I)
@@ -115,10 +122,15 @@ def find_periods(text: str) -> list[dict[str, Any]]:
                 continue
             taken.append(span)
             after = collapsed[span[1]:span[1] + 24]
-            before = collapsed[max(0, span[0] - 16):span[0]]
-            outlook = bool(_OUTLOOK_AFTER.search(after) or _OUTLOOK_BEFORE.search(before))
+            before = collapsed[max(0, span[0] - 80):span[0]]
+            if _OUTLOOK_AFTER.search(after) or _OUTLOOK_BEFORE.search(before):
+                role = "outlook"
+            elif _COMPARATIVE_BEFORE.search(before):
+                role = "comparative"
+            else:
+                role = "reported"
             found.append({"period": _match_period(kind, match), "text": match.group(0),
-                          "role": "outlook" if outlook else "reported", "position": span[0]})
+                          "role": role, "position": span[0]})
     return sorted(found, key=lambda item: item["position"])
 
 

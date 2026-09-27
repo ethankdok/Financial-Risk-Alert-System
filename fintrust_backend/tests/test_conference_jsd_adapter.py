@@ -138,6 +138,34 @@ class IdentityTests(unittest.TestCase):
             deck("2025年第一季法人說明會資訊 (1) 說明2025年第一季損益表 (2) 2025年第二季營運展望"), language="zh")
         self.assertEqual(qualified["period"], "2025Q1")
 
+    def test_typographic_apostrophe_quarters_on_historical_covers(self) -> None:
+        for cover, period in (("Nanya Technology 4Q’ 2016 Investor Conference Presentation to Investors and Analysts",
+                               "2016Q4"),
+                              ("Nanya Technology Q3’ 2019 Investor Conference Presentation to Investors", "2019Q3")):
+            identity = assess_document_identity(deck(cover), language="en")
+            self.assertEqual((identity["period"], identity["document_type"]), (period, "earnings_presentation"), cover)
+
+    def test_guidance_and_prior_period_comparatives_are_not_reported_periods(self) -> None:
+        release = deck(
+            "NOVATEK FOR IMMEDIATE RELEASE November 4th, 2021 Novatek Announces 2021 Third Quarter Consolidated "
+            "Financial Result & The Fourth Quarter Outlook: The third quarter revenue was up by 2.3% from "
+            "NT$33.60 billion in Q2’21, and increased from NT$19.21 billion in Q3’20. Novatek’s 2021 Q3 net income "
+            "was NT$12.27 billion. Management expects overall performance for the fourth quarter 2021 to be as "
+            "followings: Revenue is expected to be between NT$ 34.5 billion and NT$ 35.8 billion.")
+        identity = assess_document_identity(release, language="en", summaries=["本公司一一○年第三季合併財務報告及第四季業績展望。"])
+        self.assertEqual((identity["period"], identity["period_validation_status"], identity["document_type"]),
+                         ("2021Q3", "verified", "financial_results_release"))
+        annual = deck(
+            "NOVATEK FOR IMMEDIATE RELEASE Novatek Announces 2016 Un-Audited Consolidated Financial Result & 2017 "
+            "First Quarter Outlook: The fourth quarter revenue was down from NT$12.02 billion in Q3’16, and "
+            "decreased from NT$12.63 billion in Q4’15. Novatek’s 2016 Q4 net income was NT$1.26 billion. "
+            "Management expects overall performance for the first quarter 2017: Revenue is expected to rise.")
+        self.assertEqual(assess_document_identity(annual, language="en")["period"], "2016Q4")
+        # Two genuinely reported quarters on one cover still fail closed.
+        ambiguous = assess_document_identity(deck("NOVATEK FOR IMMEDIATE RELEASE 2021 Q2 and 2021 Q3 results"),
+                                             language="en")
+        self.assertEqual((ambiguous["period"], ambiguous["period_validation_status"]), (None, "unconfirmed"))
+
     # I
     def test_language_metadata(self) -> None:
         self.assertEqual(assess_document_identity(deck("2025 Third Quarter Earnings Conference"), language="en")["language"], "en")
