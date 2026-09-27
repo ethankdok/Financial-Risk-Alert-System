@@ -215,6 +215,29 @@ class ConferencePdfPipelineTests(unittest.TestCase):
         result = discover_mops_conference_documents(ticker="2330", year=2025, transport=FixtureTransport(None, html=page))
         self.assertEqual(result["status"], "no_listing")
 
+    def test_text_only_extraction_keeps_page_text_identical(self) -> None:
+        import pymupdf
+
+        from app.services.mops_conference_pdf_pipeline import extract_pages
+
+        document = pymupdf.open()
+        for number in range(2):
+            page = document.new_page(width=960, height=540)
+            page.insert_text((60, 80), f"Quarterly results page {number + 1}: revenue 100, gross margin 55%")
+            for offset in range(6):
+                page.draw_rect(pymupdf.Rect(100 + offset * 40, 300 - offset * 20, 130 + offset * 40, 400))
+        raw = document.tobytes()
+
+        with unittest.mock.patch("app.services.mops_conference_pdf_pipeline.extract_semantic_evidence",
+                                 wraps=__import__("app.services.mops_conference_pdf_pipeline", fromlist=["x"])
+                                 .extract_semantic_evidence) as semantic:
+            full, _ = extract_pages(raw, filename="233020250116E001.pdf")
+            text_only, _ = extract_pages(raw, filename="233020250116E001.pdf", semantic_analysis=False)
+
+        self.assertEqual(semantic.call_count, 1)
+        self.assertEqual([page["text"] for page in text_only], [page["text"] for page in full])
+        self.assertTrue(all(not page.get("semantic_evidence") for page in text_only))
+
     def test_broken_links_are_rejected(self) -> None:
         for html in (listing(bad_link=True),):
             with self.subTest(html=html[-120:]):

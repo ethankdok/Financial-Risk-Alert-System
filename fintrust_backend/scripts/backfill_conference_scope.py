@@ -4,7 +4,8 @@ Staged by design: ``--periods`` downloads only the listed potential periods (for
 PDF identity sampling). A full scope run (``--all-periods``) additionally needs a
 ``--validated-sample`` report whose status is ``passed`` for the same scope.
 Only filenames selected by the metadata discovery report are downloaded, and
-Gemini, OCR and production publish/write-through stay disabled.
+Gemini, OCR, visual semantic analysis and production publish/write-through stay
+disabled; page text extraction is the same as production.
 
 Run from fintrust_backend:
   python -m scripts.backfill_conference_scope --discovery ../docs/data/conference-pdf-discovery-2017-2025.json \\
@@ -142,6 +143,7 @@ def main() -> int:
             output_dir=args.output,
             transport=transport,
             select_documents=select,
+            semantic_analysis=False,  # JSD needs page text only; visual analysis is slow on some old decks
         )
         downloaded = [doc for doc in result.get("documents", []) if "sha256" in doc]
         summary["years"][str(year)] = {

@@ -262,6 +262,7 @@ class BackfillSelectorTests(unittest.TestCase):
                 # Passing False/True here once broke extract_pages ('bool' object has no attribute 'process_page').
                 self.assertNotIn("interpreter", kwargs)
                 self.assertNotIn("region_ocr", kwargs)
+                self.assertIs(kwargs["semantic_analysis"], False)
                 calls.append(kwargs)
                 return {"status": "complete", "expected_pdfs": 1, "documents": [], "errors": []}
 

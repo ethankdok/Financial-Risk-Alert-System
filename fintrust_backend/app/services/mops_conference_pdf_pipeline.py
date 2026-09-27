@@ -489,7 +489,10 @@ def pdf_encryption(raw: bytes) -> str:
 
 
 def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = False,
-                  interpreter=None, region_ocr=None) -> tuple[list[dict], list[str]]:
+                  interpreter=None, region_ocr=None, semantic_analysis: bool = True
+                  ) -> tuple[list[dict], list[str]]:
+    """Page-order pypdf text plus evidence. semantic_analysis=False skips only the
+    visual region analysis; the page text is identical either way."""
     from pypdf import PdfReader
 
     try:
@@ -516,9 +519,10 @@ def extract_pages(raw: bytes, *, filename: str = "document.pdf", ocr: bool = Fal
                 texts[i] = _ocr_page(page, "chi_tra+eng").strip()
             # Charts, tables made from paths, and figures need visual checking.
             visuals[i] = {"has_drawings": bool(page.get_drawings()), "has_images": bool(page.get_images())}
-        semantic_pages = extract_semantic_evidence(
-            raw, filename=filename, interpreter=interpreter, region_ocr=region_ocr,
-        )
+        if semantic_analysis:
+            semantic_pages = extract_semantic_evidence(
+                raw, filename=filename, interpreter=interpreter, region_ocr=region_ocr,
+            )
     except ImportError:
         visuals = [None] * len(texts)
     pages = []
@@ -607,9 +611,11 @@ def render_review_pages(raw: bytes, pages: list[dict], directory: Path) -> None:
 def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
                           market: str = "sii", ocr: bool = False,
                           transport: MopsTransport | None = None, interpreter=None,
-                          region_ocr=None, select_documents=None) -> dict:
+                          region_ocr=None, select_documents=None, semantic_analysis: bool = True) -> dict:
     """select_documents: optional callable(list[ListedAttachment]) -> subset to acquire.
-    Unselected listed files are recorded in result["selection"], never silently dropped."""
+    Unselected listed files are recorded in result["selection"], never silently dropped.
+    semantic_analysis=False (text-only backfill, e.g. JSD calibration history) skips
+    visual region analysis; page text, identity and hashes are unchanged."""
     if not re.fullmatch(r"\d{4,6}", ticker) or not 1990 <= year <= datetime.now(timezone.utc).year:
         raise ValueError("Specify a valid company code and Gregorian announcement year")
     if market not in {"sii", "otc", "rotc", "pub"}:
@@ -665,7 +671,8 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
                     raise AcquisitionError("MOPS attachment is missing or is not a PDF")
                 digest = hashlib.sha256(raw).hexdigest()
                 pages, problems = extract_pages(raw, filename=attachment.filename, ocr=ocr,
-                                                interpreter=interpreter, region_ocr=region_ocr)
+                                                interpreter=interpreter, region_ocr=region_ocr,
+                                                semantic_analysis=semantic_analysis)
                 base = directory / attachment.filename.removesuffix(".pdf")
                 _atomic_bytes(base.with_suffix(".pdf"), raw)
                 _atomic_bytes(base.with_suffix(".txt"), "\n\n".join(
@@ -700,6 +707,7 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
                                 item["evidence_type"] for item in semantic_results
                             }),
                             "semantic_multimodal": semantic_gating_metrics(semantic_results),
+                            "semantic_analysis": "completed" if semantic_analysis else "skipped_text_only_backfill",
                             "needs_manual_review_pages": [
                                 p["page"] for p in pages if p["visual_review_required"] or p["text_length"] < 30
                             ],
