@@ -1,0 +1,305 @@
+{
+  "ticker": "3034",
+  "company": "聯詠",
+  "industry": "semiconductor_fabless",
+  "period_1": "2025Q2",
+  "period_2": "2025Q3",
+  "method": {
+    "version": "earnings-en-full-pairwise-tfidf-v1",
+    "jsd_log_base": 2,
+    "tokenizer": "Original STRUX English tokenizer",
+    "tfidf": "TF-IDF fit independently on each paired English transcripts",
+    "comparison": "Same-company adjacent-quarter full earnings transcripts",
+    "min_history_pairs": 30,
+    "calibration": "Earlier pairs only, target quarters excluded"
+  },
+  "target": {
+    "period_1": "2025Q2",
+    "period_2": "2025Q3",
+    "source_doc_hashes": [
+      "72cbe081df6953e220fb7d31f0f2610024e742652d5f8fe143a4dd72d4123c61",
+      "e784cbd242eef8e4700cc152d96b493abaffa47a5acac74fec8a6d4712be19d6"
+    ],
+    "data_quality": {
+      "length_a": 6915,
+      "length_b": 7023,
+      "length_ratio": 0.9846,
+      "min_chars": 5000,
+      "min_length_ratio": 0.5
+    },
+    "passed": true,
+    "metrics": {
+      "jsd": 0.102935,
+      "cosine_similarity": 0.920001
+    }
+  },
+  "calibration": {
+    "history_pair_count": 29,
+    "history_pairs": [
+      {
+        "period_1": "2016Q4",
+        "period_2": "2017Q1",
+        "metrics": {
+          "jsd": 0.099119,
+          "cosine_similarity": 0.932838
+        }
+      },
+      {
+        "period_1": "2017Q1",
+        "period_2": "2017Q2",
+        "metrics": {
+          "jsd": 0.113632,
+          "cosine_similarity": 0.909461
+        }
+      },
+      {
+        "period_1": "2017Q2",
+        "period_2": "2017Q3",
+        "metrics": {
+          "jsd": 0.09182,
+          "cosine_similarity": 0.930494
+        }
+      },
+      {
+        "period_1": "2018Q1",
+        "period_2": "2018Q2",
+        "metrics": {
+          "jsd": 0.125649,
+          "cosine_similarity": 0.879861
+        }
+      },
+      {
+        "period_1": "2018Q2",
+        "period_2": "2018Q3",
+        "metrics": {
+          "jsd": 0.077594,
+          "cosine_similarity": 0.938787
+        }
+      },
+      {
+        "period_1": "2018Q3",
+        "period_2": "2018Q4",
+        "metrics": {
+          "jsd": 0.093993,
+          "cosine_similarity": 0.931945
+        }
+      },
+      {
+        "period_1": "2018Q4",
+        "period_2": "2019Q1",
+        "metrics": {
+          "jsd": 0.127967,
+          "cosine_similarity": 0.90174
+        }
+      },
+      {
+        "period_1": "2019Q1",
+        "period_2": "2019Q2",
+        "metrics": {
+          "jsd": 0.115598,
+          "cosine_similarity": 0.908481
+        }
+      },
+      {
+        "period_1": "2019Q2",
+        "period_2": "2019Q3",
+        "metrics": {
+          "jsd": 0.093728,
+          "cosine_similarity": 0.915981
+        }
+      },
+      {
+        "period_1": "2019Q3",
+        "period_2": "2019Q4",
+        "metrics": {
+          "jsd": 0.083786,
+          "cosine_similarity": 0.947321
+        }
+      },
+      {
+        "period_1": "2019Q4",
+        "period_2": "2020Q1",
+        "metrics": {
+          "jsd": 0.119893,
+          "cosine_similarity": 0.912635
+        }
+      },
+      {
+        "period_1": "2020Q1",
+        "period_2": "2020Q2",
+        "metrics": {
+          "jsd": 0.107363,
+          "cosine_similarity": 0.912643
+        }
+      },
+      {
+        "period_1": "2020Q2",
+        "period_2": "2020Q3",
+        "metrics": {
+          "jsd": 0.081208,
+          "cosine_similarity": 0.93651
+        }
+      },
+      {
+        "period_1": "2020Q3",
+        "period_2": "2020Q4",
+        "metrics": {
+          "jsd": 0.08303,
+          "cosine_similarity": 0.948979
+        }
+      },
+      {
+        "period_1": "2020Q4",
+        "period_2": "2021Q1",
+        "metrics": {
+          "jsd": 0.106614,
+          "cosine_similarity": 0.932209
+        }
+      },
+      {
+        "period_1": "2021Q1",
+        "period_2": "2021Q2",
+        "metrics": {
+          "jsd": 0.105167,
+          "cosine_similarity": 0.918225
+        }
+      },
+      {
+        "period_1": "2021Q2",
+        "period_2": "2021Q3",
+        "metrics": {
+          "jsd": 0.103415,
+          "cosine_similarity": 0.926057
+        }
+      },
+      {
+        "period_1": "2021Q3",
+        "period_2": "2021Q4",
+        "metrics": {
+          "jsd": 0.123327,
+          "cosine_similarity": 0.926306
+        }
+      },
+      {
+        "period_1": "2021Q4",
+        "period_2": "2022Q1",
+        "metrics": {
+          "jsd": 0.144893,
+          "cosine_similarity": 0.906672
+        }
+      },
+      {
+        "period_1": "2022Q1",
+        "period_2": "2022Q2",
+        "metrics": {
+          "jsd": 0.113083,
+          "cosine_similarity": 0.90775
+        }
+      },
+      {
+        "period_1": "2022Q2",
+        "period_2": "2022Q3",
+        "metrics": {
+          "jsd": 0.103303,
+          "cosine_similarity": 0.925704
+        }
+      },
+      {
+        "period_1": "2022Q3",
+        "period_2": "2022Q4",
+        "metrics": {
+          "jsd": 0.109026,
+          "cosine_similarity": 0.931281
+        }
+      },
+      {
+        "period_1": "2022Q4",
+        "period_2": "2023Q1",
+        "metrics": {
+          "jsd": 0.137092,
+          "cosine_similarity": 0.906828
+        }
+      },
+      {
+        "period_1": "2023Q1",
+        "period_2": "2023Q2",
+        "metrics": {
+          "jsd": 0.11183,
+          "cosine_similarity": 0.913725
+        }
+      },
+      {
+        "period_1": "2023Q2",
+        "period_2": "2023Q3",
+        "metrics": {
+          "jsd": 0.096397,
+          "cosine_similarity": 0.929124
+        }
+      },
+      {
+        "period_1": "2024Q1",
+        "period_2": "2024Q2",
+        "metrics": {
+          "jsd": 0.14312,
+          "cosine_similarity": 0.896139
+        }
+      },
+      {
+        "period_1": "2024Q2",
+        "period_2": "2024Q3",
+        "metrics": {
+          "jsd": 0.108585,
+          "cosine_similarity": 0.921581
+        }
+      },
+      {
+        "period_1": "2024Q3",
+        "period_2": "2024Q4",
+        "metrics": {
+          "jsd": 0.138311,
+          "cosine_similarity": 0.922385
+        }
+      },
+      {
+        "period_1": "2024Q4",
+        "period_2": "2025Q1",
+        "metrics": {
+          "jsd": 0.134452,
+          "cosine_similarity": 0.875716
+        }
+      }
+    ],
+    "thresholds": null
+  },
+  "combined_rule": null,
+  "drift_result": "歷史資料不足：不可判定漂移等級",
+  "source_documents": [
+    {
+      "ticker": "3034",
+      "industry": "semiconductor_fabless",
+      "period": "2025Q2",
+      "document_type": "financial_results_release",
+      "language": "en",
+      "source_page": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=3034",
+      "source_pdf": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=303420250806E001.pdf&functionName=t100sb02_1",
+      "sha256": "72cbe081df6953e220fb7d31f0f2610024e742652d5f8fe143a4dd72d4123c61"
+    },
+    {
+      "ticker": "3034",
+      "industry": "semiconductor_fabless",
+      "period": "2025Q3",
+      "document_type": "financial_results_release",
+      "language": "en",
+      "source_page": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=3034",
+      "source_pdf": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=303420251106E001.pdf&functionName=t100sb02_1",
+      "sha256": "e784cbd242eef8e4700cc152d96b493abaffa47a5acac74fec8a6d4712be19d6"
+    }
+  ],
+  "warnings": [
+    "This is textual change, NOT a fraud/legality verdict.",
+    "TSMC is an ordinary public-company corpus demo, not the company named in a scam case.",
+    "Pilot thresholds are corpus and method-specific; validate on held-out companies/periods.",
+    "Manually review PDF extraction quality, language and Q&A boundaries before treating as research evidence."
+  ],
+  "created_at": "2026-09-27T13:45:21.779653+00:00"
+}

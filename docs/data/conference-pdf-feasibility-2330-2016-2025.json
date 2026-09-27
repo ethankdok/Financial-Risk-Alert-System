@@ -1,0 +1,218 @@
+{
+  "schema_version": "fintrust.conference_pdf_feasibility.v2",
+  "source": "metadata-only MOPS t100sb02_1 discovery; no PDFs or text used",
+  "discovery_source_policy": "official MOPS listing only; no PDF downloaded during discovery",
+  "target_pair": {
+    "period_1": "2025Q2",
+    "period_2": "2025Q3"
+  },
+  "history_rule": "potential adjacent pairs where period_2 < 2025Q2",
+  "metadata_classes": {
+    "quarterly_results_candidate": "file has a company-issued periodic results row; later event rows are usage context",
+    "invited_event_only": "every listing row announces attendance at an event (forum, broker conference, investor day)",
+    "needs_pdf_identity_inspection": "listing text cannot establish identity or period; PDF inspection required"
+  },
+  "classification_thresholds": {
+    "FEASIBLE": ">=30 potential historical adjacent pairs",
+    "BORDERLINE": "24-29",
+    "INSUFFICIENT": "<24"
+  },
+  "important_limitations": [
+    "All pairs are potential metadata-derived pairs, not confirmed calibration pairs.",
+    "Metadata never decides earnings_presentation vs financial_results_release; PDF identity does.",
+    "PDF processing must still validate document_type, fiscal period, SHA duplication, jsd_ready and teammate data quality.",
+    "Only FEASIBLE English quarterly_results_candidate scopes may proceed, and only to staged PDF identity validation."
+  ],
+  "scopes": [
+    {
+      "ticker": "2330",
+      "company": "台積電",
+      "industry": "semiconductor_foundry",
+      "metadata_class": "quarterly_results_candidate",
+      "document_type": "pending_pdf_identity",
+      "language": "en",
+      "classification": "FEASIBLE",
+      "staged_identity_validation_eligible": true,
+      "staged_identity_validation_blockers": [],
+      "potential_historical_adjacent_pairs_before_target": 31,
+      "potential_adjacent_pairs_all_discovered_periods": 33,
+      "target_pair": {
+        "period_1": "2025Q2",
+        "period_2": "2025Q3",
+        "potentially_present": true
+      },
+      "years_represented": [
+        "2016",
+        "2017",
+        "2018",
+        "2019",
+        "2020",
+        "2021",
+        "2022",
+        "2023",
+        "2024",
+        "2025"
+      ],
+      "periods_represented": [
+        "2015Q4",
+        "2016Q1",
+        "2016Q2",
+        "2016Q3",
+        "2016Q4",
+        "2017Q1",
+        "2017Q2",
+        "2017Q3",
+        "2017Q4",
+        "2018Q1",
+        "2018Q2",
+        "2018Q3",
+        "2018Q4",
+        "2019Q1",
+        "2019Q2",
+        "2020Q1",
+        "2020Q4",
+        "2021Q1",
+        "2021Q2",
+        "2021Q3",
+        "2021Q4",
+        "2022Q1",
+        "2022Q2",
+        "2022Q3",
+        "2022Q4",
+        "2023Q1",
+        "2023Q2",
+        "2023Q3",
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "missing_quarters_between_first_and_last": [
+        "2019Q3",
+        "2019Q4",
+        "2020Q2",
+        "2020Q3"
+      ],
+      "duplicate_candidate_periods": [],
+      "period_conflicts": [],
+      "candidate_documents": 36,
+      "documents_without_potential_period": 0,
+      "periods_from_other_listing_rows": 0,
+      "non_pdf_source_gap_periods": [
+        "2019Q3",
+        "2019Q4",
+        "2020Q2",
+        "2020Q3"
+      ],
+      "classification_methods": [
+        "listing_row:periodic_results"
+      ],
+      "failed_listing_years": {},
+      "no_listing_years": [],
+      "warnings": [
+        "metadata_only: document_type, document period, SHA duplicates, jsd_ready and text quality are unverified",
+        "some_quarters_exist_only_as_non_pdf_official_files"
+      ]
+    },
+    {
+      "ticker": "2330",
+      "company": "台積電",
+      "industry": "semiconductor_foundry",
+      "metadata_class": "quarterly_results_candidate",
+      "document_type": "pending_pdf_identity",
+      "language": "zh-Hant",
+      "classification": "FEASIBLE",
+      "staged_identity_validation_eligible": false,
+      "staged_identity_validation_blockers": [
+        "non_english_scope_not_active_for_current_method"
+      ],
+      "potential_historical_adjacent_pairs_before_target": 31,
+      "potential_adjacent_pairs_all_discovered_periods": 33,
+      "target_pair": {
+        "period_1": "2025Q2",
+        "period_2": "2025Q3",
+        "potentially_present": true
+      },
+      "years_represented": [
+        "2016",
+        "2017",
+        "2018",
+        "2019",
+        "2020",
+        "2021",
+        "2022",
+        "2023",
+        "2024",
+        "2025"
+      ],
+      "periods_represented": [
+        "2015Q4",
+        "2016Q1",
+        "2016Q2",
+        "2016Q3",
+        "2016Q4",
+        "2017Q1",
+        "2017Q2",
+        "2017Q3",
+        "2017Q4",
+        "2018Q1",
+        "2018Q2",
+        "2018Q3",
+        "2018Q4",
+        "2019Q1",
+        "2019Q2",
+        "2020Q1",
+        "2020Q4",
+        "2021Q1",
+        "2021Q2",
+        "2021Q3",
+        "2021Q4",
+        "2022Q1",
+        "2022Q2",
+        "2022Q3",
+        "2022Q4",
+        "2023Q1",
+        "2023Q2",
+        "2023Q3",
+        "2023Q4",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3",
+        "2024Q4",
+        "2025Q1",
+        "2025Q2",
+        "2025Q3"
+      ],
+      "missing_quarters_between_first_and_last": [
+        "2019Q3",
+        "2019Q4",
+        "2020Q2",
+        "2020Q3"
+      ],
+      "duplicate_candidate_periods": [],
+      "period_conflicts": [],
+      "candidate_documents": 36,
+      "documents_without_potential_period": 0,
+      "periods_from_other_listing_rows": 0,
+      "non_pdf_source_gap_periods": [
+        "2019Q3",
+        "2019Q4",
+        "2020Q2",
+        "2020Q3"
+      ],
+      "classification_methods": [
+        "listing_row:periodic_results"
+      ],
+      "failed_listing_years": {},
+      "no_listing_years": [],
+      "warnings": [
+        "metadata_only: document_type, document period, SHA duplicates, jsd_ready and text quality are unverified",
+        "some_quarters_exist_only_as_non_pdf_official_files"
+      ]
+    }
+  ]
+}

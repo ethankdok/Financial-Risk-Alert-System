@@ -1,0 +1,422 @@
+{
+  "ticker": "2408",
+  "document_type": "earnings_presentation",
+  "language": "en",
+  "target": {
+    "period_1": "2025Q2",
+    "period_2": "2025Q3"
+  },
+  "scope_documents": 36,
+  "scope_periods": [
+    "2016Q4",
+    "2017Q1",
+    "2017Q2",
+    "2017Q3",
+    "2017Q4",
+    "2018Q1",
+    "2018Q2",
+    "2018Q3",
+    "2018Q4",
+    "2019Q1",
+    "2019Q2",
+    "2019Q3",
+    "2019Q4",
+    "2020Q1",
+    "2020Q2",
+    "2020Q3",
+    "2020Q4",
+    "2021Q1",
+    "2021Q2",
+    "2021Q3",
+    "2021Q4",
+    "2022Q1",
+    "2022Q2",
+    "2022Q3",
+    "2022Q4",
+    "2023Q1",
+    "2023Q2",
+    "2023Q3",
+    "2023Q4",
+    "2024Q1",
+    "2024Q2",
+    "2024Q3",
+    "2024Q4",
+    "2025Q1",
+    "2025Q2",
+    "2025Q3"
+  ],
+  "status": "accepted",
+  "history_pair_count": 33,
+  "history_latest_period": "2025Q1",
+  "no_leakage_proof": {
+    "history_latest_period": "2025Q1",
+    "target_period_1": "2025Q2",
+    "all_history_before_target": true
+  },
+  "rejected_history_pairs": [],
+  "target_metrics": {
+    "jsd": 0.214895,
+    "cosine_similarity": 0.782977
+  },
+  "thresholds": {
+    "jsd_p90": 0.253229,
+    "jsd_p95": 0.278425,
+    "cosine_p10": 0.753274,
+    "cosine_p05": 0.710629
+  },
+  "drift_result": "未達雙指標歷史漂移門檻",
+  "calculator_module_sha256": "aa94cf9ed19bcd30ad0666ecddf3c7c5ea10a17868f66bf389278a649f86318b",
+  "stability": {
+    "history_pairs": 33,
+    "jsd": {
+      "min": 0.199171,
+      "mean": 0.232265,
+      "max": 0.334612,
+      "sorted": [
+        0.199171,
+        0.203974,
+        0.20452,
+        0.206037,
+        0.206204,
+        0.207627,
+        0.210819,
+        0.211932,
+        0.212659,
+        0.214877,
+        0.217074,
+        0.218453,
+        0.220516,
+        0.220742,
+        0.223676,
+        0.224085,
+        0.227533,
+        0.229302,
+        0.232289,
+        0.232434,
+        0.233862,
+        0.235653,
+        0.23748,
+        0.242168,
+        0.243383,
+        0.244933,
+        0.247256,
+        0.247765,
+        0.253005,
+        0.253285,
+        0.257311,
+        0.310097,
+        0.334612
+      ]
+    },
+    "cosine": {
+      "min": 0.609318,
+      "mean": 0.775762,
+      "max": 0.855969,
+      "sorted": [
+        0.609318,
+        0.677864,
+        0.732473,
+        0.753149,
+        0.753775,
+        0.759578,
+        0.759686,
+        0.759815,
+        0.766222,
+        0.767379,
+        0.768103,
+        0.770125,
+        0.773052,
+        0.773341,
+        0.778311,
+        0.77837,
+        0.780152,
+        0.786525,
+        0.786745,
+        0.786998,
+        0.787464,
+        0.789573,
+        0.789823,
+        0.793233,
+        0.793831,
+        0.795383,
+        0.795522,
+        0.796873,
+        0.798501,
+        0.802549,
+        0.837426,
+        0.843005,
+        0.855969
+      ]
+    },
+    "thresholds": {
+      "jsd_p90": 0.253229,
+      "jsd_p95": 0.278425,
+      "cosine_p10": 0.753274,
+      "cosine_p05": 0.710629
+    },
+    "top_jsd_pairs": [
+      {
+        "period_1": "2019Q4",
+        "period_2": "2020Q1",
+        "metrics": {
+          "jsd": 0.334612,
+          "cosine_similarity": 0.677864
+        },
+        "length_1": 13034,
+        "length_2": 10058,
+        "length_ratio": 0.7717
+      },
+      {
+        "period_1": "2019Q3",
+        "period_2": "2019Q4",
+        "metrics": {
+          "jsd": 0.310097,
+          "cosine_similarity": 0.609318
+        },
+        "length_1": 8625,
+        "length_2": 13034,
+        "length_ratio": 0.6617
+      },
+      {
+        "period_1": "2022Q4",
+        "period_2": "2023Q1",
+        "metrics": {
+          "jsd": 0.257311,
+          "cosine_similarity": 0.759686
+        },
+        "length_1": 11800,
+        "length_2": 8134,
+        "length_ratio": 0.6893
+      }
+    ],
+    "lowest_cosine_pairs": [
+      {
+        "period_1": "2019Q3",
+        "period_2": "2019Q4",
+        "metrics": {
+          "jsd": 0.310097,
+          "cosine_similarity": 0.609318
+        },
+        "length_1": 8625,
+        "length_2": 13034,
+        "length_ratio": 0.6617
+      },
+      {
+        "period_1": "2019Q4",
+        "period_2": "2020Q1",
+        "metrics": {
+          "jsd": 0.334612,
+          "cosine_similarity": 0.677864
+        },
+        "length_1": 13034,
+        "length_2": 10058,
+        "length_ratio": 0.7717
+      },
+      {
+        "period_1": "2016Q4",
+        "period_2": "2017Q1",
+        "metrics": {
+          "jsd": 0.235653,
+          "cosine_similarity": 0.732473
+        },
+        "length_1": 13758,
+        "length_2": 11278,
+        "length_ratio": 0.8197
+      }
+    ],
+    "pairs_over_jsd_p90": [
+      {
+        "period_1": "2019Q3",
+        "period_2": "2019Q4",
+        "metrics": {
+          "jsd": 0.310097,
+          "cosine_similarity": 0.609318
+        },
+        "length_1": 8625,
+        "length_2": 13034,
+        "length_ratio": 0.6617
+      },
+      {
+        "period_1": "2019Q4",
+        "period_2": "2020Q1",
+        "metrics": {
+          "jsd": 0.334612,
+          "cosine_similarity": 0.677864
+        },
+        "length_1": 13034,
+        "length_2": 10058,
+        "length_ratio": 0.7717
+      },
+      {
+        "period_1": "2020Q2",
+        "period_2": "2020Q3",
+        "metrics": {
+          "jsd": 0.253285,
+          "cosine_similarity": 0.837426
+        },
+        "length_1": 9574,
+        "length_2": 8692,
+        "length_ratio": 0.9079
+      },
+      {
+        "period_1": "2022Q4",
+        "period_2": "2023Q1",
+        "metrics": {
+          "jsd": 0.257311,
+          "cosine_similarity": 0.759686
+        },
+        "length_1": 11800,
+        "length_2": 8134,
+        "length_ratio": 0.6893
+      }
+    ],
+    "pairs_under_cosine_p10": [
+      {
+        "period_1": "2016Q4",
+        "period_2": "2017Q1",
+        "metrics": {
+          "jsd": 0.235653,
+          "cosine_similarity": 0.732473
+        },
+        "length_1": 13758,
+        "length_2": 11278,
+        "length_ratio": 0.8197
+      },
+      {
+        "period_1": "2017Q2",
+        "period_2": "2017Q3",
+        "metrics": {
+          "jsd": 0.229302,
+          "cosine_similarity": 0.753149
+        },
+        "length_1": 10691,
+        "length_2": 11579,
+        "length_ratio": 0.9233
+      },
+      {
+        "period_1": "2019Q3",
+        "period_2": "2019Q4",
+        "metrics": {
+          "jsd": 0.310097,
+          "cosine_similarity": 0.609318
+        },
+        "length_1": 8625,
+        "length_2": 13034,
+        "length_ratio": 0.6617
+      },
+      {
+        "period_1": "2019Q4",
+        "period_2": "2020Q1",
+        "metrics": {
+          "jsd": 0.334612,
+          "cosine_similarity": 0.677864
+        },
+        "length_1": 13034,
+        "length_2": 10058,
+        "length_ratio": 0.7717
+      }
+    ],
+    "by_year": {
+      "2017": {
+        "pairs": 4,
+        "mean_jsd": 0.223212,
+        "mean_cosine": 0.755952,
+        "mean_length": 11836
+      },
+      "2018": {
+        "pairs": 4,
+        "mean_jsd": 0.244435,
+        "mean_cosine": 0.773883,
+        "mean_length": 10724
+      },
+      "2019": {
+        "pairs": 4,
+        "mean_jsd": 0.237556,
+        "mean_cosine": 0.749268,
+        "mean_length": 9692
+      },
+      "2020": {
+        "pairs": 4,
+        "mean_jsd": 0.260018,
+        "mean_cosine": 0.803566,
+        "mean_length": 9993
+      },
+      "2021": {
+        "pairs": 4,
+        "mean_jsd": 0.217587,
+        "mean_cosine": 0.778016,
+        "mean_length": 9127
+      },
+      "2022": {
+        "pairs": 4,
+        "mean_jsd": 0.22165,
+        "mean_cosine": 0.783305,
+        "mean_length": 9362
+      },
+      "2023": {
+        "pairs": 4,
+        "mean_jsd": 0.231476,
+        "mean_cosine": 0.779153,
+        "mean_length": 8730
+      },
+      "2024": {
+        "pairs": 4,
+        "mean_jsd": 0.218307,
+        "mean_cosine": 0.784864,
+        "mean_length": 8111
+      },
+      "2025": {
+        "pairs": 1,
+        "mean_jsd": 0.247765,
+        "mean_cosine": 0.768103,
+        "mean_length": 8794
+      }
+    },
+    "target_percentile_rank": {
+      "jsd": 0.303,
+      "cosine": 0.5152
+    },
+    "document_lengths": {
+      "min": 7362,
+      "max": 13831,
+      "by_period": {
+        "2016Q4": 13758,
+        "2017Q1": 11278,
+        "2017Q2": 10691,
+        "2017Q3": 11579,
+        "2017Q4": 13831,
+        "2018Q1": 9352,
+        "2018Q2": 10244,
+        "2018Q3": 10205,
+        "2018Q4": 12358,
+        "2019Q1": 8307,
+        "2019Q2": 9139,
+        "2019Q3": 8625,
+        "2019Q4": 13034,
+        "2020Q1": 10058,
+        "2020Q2": 9574,
+        "2020Q3": 8692,
+        "2020Q4": 10263,
+        "2021Q1": 8230,
+        "2021Q2": 9146,
+        "2021Q3": 8681,
+        "2021Q4": 10636,
+        "2022Q1": 8079,
+        "2022Q2": 9036,
+        "2022Q3": 9117,
+        "2022Q4": 11800,
+        "2023Q1": 8134,
+        "2023Q2": 8149,
+        "2023Q3": 7781,
+        "2023Q4": 9914,
+        "2024Q1": 7479,
+        "2024Q2": 7675,
+        "2024Q3": 7477,
+        "2024Q4": 9712,
+        "2025Q1": 7875,
+        "2025Q2": 7362,
+        "2025Q3": 7648
+      }
+    }
+  }
+}

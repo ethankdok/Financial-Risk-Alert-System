@@ -1,0 +1,635 @@
+{
+  "ticker": "2408",
+  "company": "南亞科",
+  "industry": "semiconductor_memory",
+  "period_1": "2025Q2",
+  "period_2": "2025Q3",
+  "method": {
+    "version": "earnings-en-full-pairwise-tfidf-v1",
+    "jsd_log_base": 2,
+    "tokenizer": "Original STRUX English tokenizer (data_shift.tokenize)",
+    "tfidf": "TF-IDF fit independently on each pair (data_shift.calculate_cosine_similarity)",
+    "comparison": "Same-company adjacent-quarter official MOPS earnings_presentation (en), exact scope",
+    "min_history_pairs": 30,
+    "calibration": "Earlier pairs only, target quarters excluded"
+  },
+  "target": {
+    "period_1": "2025Q2",
+    "period_2": "2025Q3",
+    "source_doc_hashes": [
+      "d3cb7dfa59e9bf55e505d420ebd64bbd829a9bf27b5549976ff9e944c9e3f2c4",
+      "e79bbef5b4bb72eb27a7e5a444dfe89292f4c74bbbb73cf522b6bed80911a7d8"
+    ],
+    "data_quality": {
+      "length_a": 7362,
+      "length_b": 7648,
+      "length_ratio": 0.9626,
+      "min_chars": 5000,
+      "min_length_ratio": 0.5
+    },
+    "passed": true,
+    "metrics": {
+      "jsd": 0.214895,
+      "cosine_similarity": 0.782977
+    }
+  },
+  "calibration": {
+    "history_pair_count": 33,
+    "history_pairs": [
+      {
+        "period_1": "2016Q4",
+        "period_2": "2017Q1",
+        "metrics": {
+          "jsd": 0.235653,
+          "cosine_similarity": 0.732473
+        }
+      },
+      {
+        "period_1": "2017Q1",
+        "period_2": "2017Q2",
+        "metrics": {
+          "jsd": 0.210819,
+          "cosine_similarity": 0.759815
+        }
+      },
+      {
+        "period_1": "2017Q2",
+        "period_2": "2017Q3",
+        "metrics": {
+          "jsd": 0.229302,
+          "cosine_similarity": 0.753149
+        }
+      },
+      {
+        "period_1": "2017Q3",
+        "period_2": "2017Q4",
+        "metrics": {
+          "jsd": 0.217074,
+          "cosine_similarity": 0.77837
+        }
+      },
+      {
+        "period_1": "2017Q4",
+        "period_2": "2018Q1",
+        "metrics": {
+          "jsd": 0.244933,
+          "cosine_similarity": 0.759578
+        }
+      },
+      {
+        "period_1": "2018Q1",
+        "period_2": "2018Q2",
+        "metrics": {
+          "jsd": 0.247256,
+          "cosine_similarity": 0.767379
+        }
+      },
+      {
+        "period_1": "2018Q2",
+        "period_2": "2018Q3",
+        "metrics": {
+          "jsd": 0.243383,
+          "cosine_similarity": 0.773052
+        }
+      },
+      {
+        "period_1": "2018Q3",
+        "period_2": "2018Q4",
+        "metrics": {
+          "jsd": 0.242168,
+          "cosine_similarity": 0.795522
+        }
+      },
+      {
+        "period_1": "2018Q4",
+        "period_2": "2019Q1",
+        "metrics": {
+          "jsd": 0.211932,
+          "cosine_similarity": 0.789823
+        }
+      },
+      {
+        "period_1": "2019Q1",
+        "period_2": "2019Q2",
+        "metrics": {
+          "jsd": 0.223676,
+          "cosine_similarity": 0.795383
+        }
+      },
+      {
+        "period_1": "2019Q2",
+        "period_2": "2019Q3",
+        "metrics": {
+          "jsd": 0.20452,
+          "cosine_similarity": 0.802549
+        }
+      },
+      {
+        "period_1": "2019Q3",
+        "period_2": "2019Q4",
+        "metrics": {
+          "jsd": 0.310097,
+          "cosine_similarity": 0.609318
+        }
+      },
+      {
+        "period_1": "2019Q4",
+        "period_2": "2020Q1",
+        "metrics": {
+          "jsd": 0.334612,
+          "cosine_similarity": 0.677864
+        }
+      },
+      {
+        "period_1": "2020Q1",
+        "period_2": "2020Q2",
+        "metrics": {
+          "jsd": 0.253005,
+          "cosine_similarity": 0.855969
+        }
+      },
+      {
+        "period_1": "2020Q2",
+        "period_2": "2020Q3",
+        "metrics": {
+          "jsd": 0.253285,
+          "cosine_similarity": 0.837426
+        }
+      },
+      {
+        "period_1": "2020Q3",
+        "period_2": "2020Q4",
+        "metrics": {
+          "jsd": 0.199171,
+          "cosine_similarity": 0.843005
+        }
+      },
+      {
+        "period_1": "2020Q4",
+        "period_2": "2021Q1",
+        "metrics": {
+          "jsd": 0.232434,
+          "cosine_similarity": 0.753775
+        }
+      },
+      {
+        "period_1": "2021Q1",
+        "period_2": "2021Q2",
+        "metrics": {
+          "jsd": 0.224085,
+          "cosine_similarity": 0.778311
+        }
+      },
+      {
+        "period_1": "2021Q2",
+        "period_2": "2021Q3",
+        "metrics": {
+          "jsd": 0.207627,
+          "cosine_similarity": 0.786745
+        }
+      },
+      {
+        "period_1": "2021Q3",
+        "period_2": "2021Q4",
+        "metrics": {
+          "jsd": 0.206204,
+          "cosine_similarity": 0.793233
+        }
+      },
+      {
+        "period_1": "2021Q4",
+        "period_2": "2022Q1",
+        "metrics": {
+          "jsd": 0.220742,
+          "cosine_similarity": 0.786998
+        }
+      },
+      {
+        "period_1": "2022Q1",
+        "period_2": "2022Q2",
+        "metrics": {
+          "jsd": 0.206037,
+          "cosine_similarity": 0.786525
+        }
+      },
+      {
+        "period_1": "2022Q2",
+        "period_2": "2022Q3",
+        "metrics": {
+          "jsd": 0.232289,
+          "cosine_similarity": 0.770125
+        }
+      },
+      {
+        "period_1": "2022Q3",
+        "period_2": "2022Q4",
+        "metrics": {
+          "jsd": 0.227533,
+          "cosine_similarity": 0.789573
+        }
+      },
+      {
+        "period_1": "2022Q4",
+        "period_2": "2023Q1",
+        "metrics": {
+          "jsd": 0.257311,
+          "cosine_similarity": 0.759686
+        }
+      },
+      {
+        "period_1": "2023Q1",
+        "period_2": "2023Q2",
+        "metrics": {
+          "jsd": 0.23748,
+          "cosine_similarity": 0.766222
+        }
+      },
+      {
+        "period_1": "2023Q2",
+        "period_2": "2023Q3",
+        "metrics": {
+          "jsd": 0.212659,
+          "cosine_similarity": 0.796873
+        }
+      },
+      {
+        "period_1": "2023Q3",
+        "period_2": "2023Q4",
+        "metrics": {
+          "jsd": 0.218453,
+          "cosine_similarity": 0.793831
+        }
+      },
+      {
+        "period_1": "2023Q4",
+        "period_2": "2024Q1",
+        "metrics": {
+          "jsd": 0.220516,
+          "cosine_similarity": 0.798501
+        }
+      },
+      {
+        "period_1": "2024Q1",
+        "period_2": "2024Q2",
+        "metrics": {
+          "jsd": 0.214877,
+          "cosine_similarity": 0.780152
+        }
+      },
+      {
+        "period_1": "2024Q2",
+        "period_2": "2024Q3",
+        "metrics": {
+          "jsd": 0.203974,
+          "cosine_similarity": 0.787464
+        }
+      },
+      {
+        "period_1": "2024Q3",
+        "period_2": "2024Q4",
+        "metrics": {
+          "jsd": 0.233862,
+          "cosine_similarity": 0.773341
+        }
+      },
+      {
+        "period_1": "2024Q4",
+        "period_2": "2025Q1",
+        "metrics": {
+          "jsd": 0.247765,
+          "cosine_similarity": 0.768103
+        }
+      }
+    ],
+    "thresholds": {
+      "jsd_p90": 0.253229,
+      "jsd_p95": 0.278425,
+      "cosine_p10": 0.753274,
+      "cosine_p05": 0.710629
+    }
+  },
+  "combined_rule": {
+    "jsd_high": false,
+    "cosine_low": false,
+    "rule": "JSD >= historical P90 AND Cosine <= historical P10"
+  },
+  "drift_result": "未達雙指標歷史漂移門檻",
+  "source_documents": [
+    {
+      "ticker": "2408",
+      "industry": "semiconductor_memory",
+      "period": "2025Q2",
+      "document_type": "earnings_presentation",
+      "language": "en",
+      "source_page": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2408",
+      "source_pdf": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=240820250710E001.pdf&functionName=t100sb02_1",
+      "sha256": "d3cb7dfa59e9bf55e505d420ebd64bbd829a9bf27b5549976ff9e944c9e3f2c4"
+    },
+    {
+      "ticker": "2408",
+      "industry": "semiconductor_memory",
+      "period": "2025Q3",
+      "document_type": "earnings_presentation",
+      "language": "en",
+      "source_page": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2408",
+      "source_pdf": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=240820251013E001.pdf&functionName=t100sb02_1",
+      "sha256": "e79bbef5b4bb72eb27a7e5a444dfe89292f4c74bbbb73cf522b6bed80911a7d8"
+    }
+  ],
+  "warnings": [
+    "Textual change only; not a fraud, legality or financial-risk verdict.",
+    "Thresholds are specific to this company, document type, language, extraction and method version.",
+    "Calibrated on earnings_presentation records with the unmodified teammate analyze(); the teammate's own validation used full earnings-call transcripts."
+  ],
+  "created_at": "2026-09-27T13:51:32.550892+00:00",
+  "history_source_documents": [
+    {
+      "period_1": "2016Q4",
+      "period_2": "2017Q1",
+      "sha256": [
+        "0b8bf746f739805804a6fcc990964678b078e7c1f791aa2d5b548aecd3f8746f",
+        "1263f10bdcced13918c258ee6e18832a3df8cf23830ccb03d98d0707c72c22ab"
+      ]
+    },
+    {
+      "period_1": "2017Q1",
+      "period_2": "2017Q2",
+      "sha256": [
+        "1263f10bdcced13918c258ee6e18832a3df8cf23830ccb03d98d0707c72c22ab",
+        "f4523f9d942fcd18b98e09dd4900bb081a4c93eb79fdfa7fc7c29e46d1cca6f0"
+      ]
+    },
+    {
+      "period_1": "2017Q2",
+      "period_2": "2017Q3",
+      "sha256": [
+        "f4523f9d942fcd18b98e09dd4900bb081a4c93eb79fdfa7fc7c29e46d1cca6f0",
+        "08ca52018f0da38c3594c2be01de9eabb44de9a2b4b8db1f62c18e1504bbfbb6"
+      ]
+    },
+    {
+      "period_1": "2017Q3",
+      "period_2": "2017Q4",
+      "sha256": [
+        "08ca52018f0da38c3594c2be01de9eabb44de9a2b4b8db1f62c18e1504bbfbb6",
+        "3aeb0deaf2458b6af49350bea6277ba31a93000eb53cd634b5064125de135405"
+      ]
+    },
+    {
+      "period_1": "2017Q4",
+      "period_2": "2018Q1",
+      "sha256": [
+        "3aeb0deaf2458b6af49350bea6277ba31a93000eb53cd634b5064125de135405",
+        "323d963a9e378da9c4e96b23336405da52b54c98771da1eaaeb1e2ec29b96184"
+      ]
+    },
+    {
+      "period_1": "2018Q1",
+      "period_2": "2018Q2",
+      "sha256": [
+        "323d963a9e378da9c4e96b23336405da52b54c98771da1eaaeb1e2ec29b96184",
+        "66ed1f0e4d4b81e5a485e549d75289771a3284d3e0ff3304b670ce12d9720441"
+      ]
+    },
+    {
+      "period_1": "2018Q2",
+      "period_2": "2018Q3",
+      "sha256": [
+        "66ed1f0e4d4b81e5a485e549d75289771a3284d3e0ff3304b670ce12d9720441",
+        "669a401c49bddf089ef8e381b1190fb33869cf4de952c6e8c69cbf7037681d32"
+      ]
+    },
+    {
+      "period_1": "2018Q3",
+      "period_2": "2018Q4",
+      "sha256": [
+        "669a401c49bddf089ef8e381b1190fb33869cf4de952c6e8c69cbf7037681d32",
+        "41879db261b3650656dc0d7bd01be70de5d4e75aaa5f6ba73e6121aaa35273da"
+      ]
+    },
+    {
+      "period_1": "2018Q4",
+      "period_2": "2019Q1",
+      "sha256": [
+        "41879db261b3650656dc0d7bd01be70de5d4e75aaa5f6ba73e6121aaa35273da",
+        "e31fb38c1b387cc0aa1e90d5bd55f90280802ce6bdac03ced6a2fcc36a2b58b3"
+      ]
+    },
+    {
+      "period_1": "2019Q1",
+      "period_2": "2019Q2",
+      "sha256": [
+        "e31fb38c1b387cc0aa1e90d5bd55f90280802ce6bdac03ced6a2fcc36a2b58b3",
+        "db1f78911f85229fb4f42a2177ae894df513de30421fca90783c9501b8139a67"
+      ]
+    },
+    {
+      "period_1": "2019Q2",
+      "period_2": "2019Q3",
+      "sha256": [
+        "db1f78911f85229fb4f42a2177ae894df513de30421fca90783c9501b8139a67",
+        "fd6a61b3e2ada6917bb1837c2202af7825b39ed4dfd11fda8aa4f40eaf2acaf3"
+      ]
+    },
+    {
+      "period_1": "2019Q3",
+      "period_2": "2019Q4",
+      "sha256": [
+        "fd6a61b3e2ada6917bb1837c2202af7825b39ed4dfd11fda8aa4f40eaf2acaf3",
+        "8ff16533b9793e8e94882339656ac59446fb3c7a38580047a3f132a3070ac735"
+      ]
+    },
+    {
+      "period_1": "2019Q4",
+      "period_2": "2020Q1",
+      "sha256": [
+        "8ff16533b9793e8e94882339656ac59446fb3c7a38580047a3f132a3070ac735",
+        "4ee97478b185ae17237d2eac3d2c3c09babfd5831f24eab3e2f41ee27fb35f0c"
+      ]
+    },
+    {
+      "period_1": "2020Q1",
+      "period_2": "2020Q2",
+      "sha256": [
+        "4ee97478b185ae17237d2eac3d2c3c09babfd5831f24eab3e2f41ee27fb35f0c",
+        "7645acc2ef205bafe697037c9bc2c61a37f91da9fda94ceaaccd071bb2ac250e"
+      ]
+    },
+    {
+      "period_1": "2020Q2",
+      "period_2": "2020Q3",
+      "sha256": [
+        "7645acc2ef205bafe697037c9bc2c61a37f91da9fda94ceaaccd071bb2ac250e",
+        "fbe9e4f97315e112ab8255e2ba34d128f80a3f1a122949255212817bd063cf92"
+      ]
+    },
+    {
+      "period_1": "2020Q3",
+      "period_2": "2020Q4",
+      "sha256": [
+        "fbe9e4f97315e112ab8255e2ba34d128f80a3f1a122949255212817bd063cf92",
+        "2c6d2c6a08e19a475364b478ea2fd4151b622cb886ae27352a2714786fe8b64c"
+      ]
+    },
+    {
+      "period_1": "2020Q4",
+      "period_2": "2021Q1",
+      "sha256": [
+        "2c6d2c6a08e19a475364b478ea2fd4151b622cb886ae27352a2714786fe8b64c",
+        "8473b70b36a11199efd12894341a1fb527b6488a4d158d4acf9159f4e40c6c71"
+      ]
+    },
+    {
+      "period_1": "2021Q1",
+      "period_2": "2021Q2",
+      "sha256": [
+        "8473b70b36a11199efd12894341a1fb527b6488a4d158d4acf9159f4e40c6c71",
+        "aa00a83917de9f23f3e5097559d11ff7c718b6703702b637d3eec7f435017232"
+      ]
+    },
+    {
+      "period_1": "2021Q2",
+      "period_2": "2021Q3",
+      "sha256": [
+        "aa00a83917de9f23f3e5097559d11ff7c718b6703702b637d3eec7f435017232",
+        "c917d64412d0ef9e3e51c2e42b745b51fd97b4a24eedc54580d955468697595c"
+      ]
+    },
+    {
+      "period_1": "2021Q3",
+      "period_2": "2021Q4",
+      "sha256": [
+        "c917d64412d0ef9e3e51c2e42b745b51fd97b4a24eedc54580d955468697595c",
+        "0f2892782faea75a9b71535a029511f542304c9a3b5002bb04deb8ddfb5336df"
+      ]
+    },
+    {
+      "period_1": "2021Q4",
+      "period_2": "2022Q1",
+      "sha256": [
+        "0f2892782faea75a9b71535a029511f542304c9a3b5002bb04deb8ddfb5336df",
+        "e0e98cf7879f88d5cd41f3cd51380d5e4a904a403b6a48a3777192a43f2f70de"
+      ]
+    },
+    {
+      "period_1": "2022Q1",
+      "period_2": "2022Q2",
+      "sha256": [
+        "e0e98cf7879f88d5cd41f3cd51380d5e4a904a403b6a48a3777192a43f2f70de",
+        "3972dbaa4131169dc15f2a2f9419ca0bf576dbc417b047ffcac884daa37c0e29"
+      ]
+    },
+    {
+      "period_1": "2022Q2",
+      "period_2": "2022Q3",
+      "sha256": [
+        "3972dbaa4131169dc15f2a2f9419ca0bf576dbc417b047ffcac884daa37c0e29",
+        "05f10e56c8aeb92f122dac90042080d903187ffefcdee41bf76b981a0789ae47"
+      ]
+    },
+    {
+      "period_1": "2022Q3",
+      "period_2": "2022Q4",
+      "sha256": [
+        "05f10e56c8aeb92f122dac90042080d903187ffefcdee41bf76b981a0789ae47",
+        "aea7038215506413bdb0b561b073ccdd117a24a0565f1a6250fbd609655c306a"
+      ]
+    },
+    {
+      "period_1": "2022Q4",
+      "period_2": "2023Q1",
+      "sha256": [
+        "aea7038215506413bdb0b561b073ccdd117a24a0565f1a6250fbd609655c306a",
+        "00b7d052c7de674a37254aaa733ea2512213f2f8697979fab8feea6de503f791"
+      ]
+    },
+    {
+      "period_1": "2023Q1",
+      "period_2": "2023Q2",
+      "sha256": [
+        "00b7d052c7de674a37254aaa733ea2512213f2f8697979fab8feea6de503f791",
+        "e64e5dd0e86aa32f9a70d687de66734ee2a3b71e8cc4631968014c88698ab8e0"
+      ]
+    },
+    {
+      "period_1": "2023Q2",
+      "period_2": "2023Q3",
+      "sha256": [
+        "e64e5dd0e86aa32f9a70d687de66734ee2a3b71e8cc4631968014c88698ab8e0",
+        "91bc4445fa2eaa4b2cc5197a820abe7b7815c8481dacca4687046de9f1221659"
+      ]
+    },
+    {
+      "period_1": "2023Q3",
+      "period_2": "2023Q4",
+      "sha256": [
+        "91bc4445fa2eaa4b2cc5197a820abe7b7815c8481dacca4687046de9f1221659",
+        "78b37aa6f8b30157e0259147a40e283d21581c89849ca056523ef7ba12b64471"
+      ]
+    },
+    {
+      "period_1": "2023Q4",
+      "period_2": "2024Q1",
+      "sha256": [
+        "78b37aa6f8b30157e0259147a40e283d21581c89849ca056523ef7ba12b64471",
+        "130048cb93a1e68339c826b2268d07909db5e5086f99d05a57bcb6889900f9a2"
+      ]
+    },
+    {
+      "period_1": "2024Q1",
+      "period_2": "2024Q2",
+      "sha256": [
+        "130048cb93a1e68339c826b2268d07909db5e5086f99d05a57bcb6889900f9a2",
+        "47720383576ef95ef4d691d9a753c0cec813dbe2a34ebecd147b010956d8b892"
+      ]
+    },
+    {
+      "period_1": "2024Q2",
+      "period_2": "2024Q3",
+      "sha256": [
+        "47720383576ef95ef4d691d9a753c0cec813dbe2a34ebecd147b010956d8b892",
+        "ce17bca02344e4c9dc2121b9847f79534254536310d0486e7ffee3da67b70dad"
+      ]
+    },
+    {
+      "period_1": "2024Q3",
+      "period_2": "2024Q4",
+      "sha256": [
+        "ce17bca02344e4c9dc2121b9847f79534254536310d0486e7ffee3da67b70dad",
+        "aead728dd9128afb63d326bd48a4f2c2b5c10a61070462cd0062c9e6bd3914ff"
+      ]
+    },
+    {
+      "period_1": "2024Q4",
+      "period_2": "2025Q1",
+      "sha256": [
+        "aead728dd9128afb63d326bd48a4f2c2b5c10a61070462cd0062c9e6bd3914ff",
+        "164c20caf3a10b4b3cfd98b7e92e479a896aff741cce79bfd93d6faf59f8a417"
+      ]
+    }
+  ],
+  "corpus_provenance": {
+    "source_family": "mops_t100sb02_1_conference_pdf",
+    "extraction_method": "mops_conference_pipeline:pypdf_extract_text_per_page",
+    "preprocessing_version": "fintrust-conference-document-text-v1",
+    "note": "FinTrust official MOPS corpus; not produced by the teammate research branch."
+  },
+  "method_reference": {
+    "source_research_commit": "5b914937dc3cb2294851e0386c67270d20547e7e",
+    "functions_used_unmodified": [
+      "calibrate_tsmc_shift.analyze",
+      "calibrate_tsmc_shift.pair",
+      "data_shift.calculate_jsd",
+      "data_shift.calculate_cosine_similarity"
+    ],
+    "teammate_method_strings": {
+      "version": "earnings-en-full-pairwise-tfidf-v1",
+      "jsd_log_base": 2,
+      "tokenizer": "Original STRUX English tokenizer",
+      "tfidf": "TF-IDF fit independently on each paired English transcripts",
+      "comparison": "Same-company adjacent-quarter full earnings transcripts",
+      "min_history_pairs": 30,
+      "calibration": "Earlier pairs only, target quarters excluded"
+    }
+  }
+}

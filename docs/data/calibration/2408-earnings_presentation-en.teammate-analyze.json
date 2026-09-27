@@ -1,0 +1,346 @@
+{
+  "ticker": "2408",
+  "company": "南亞科",
+  "industry": "semiconductor_memory",
+  "period_1": "2025Q2",
+  "period_2": "2025Q3",
+  "method": {
+    "version": "earnings-en-full-pairwise-tfidf-v1",
+    "jsd_log_base": 2,
+    "tokenizer": "Original STRUX English tokenizer",
+    "tfidf": "TF-IDF fit independently on each paired English transcripts",
+    "comparison": "Same-company adjacent-quarter full earnings transcripts",
+    "min_history_pairs": 30,
+    "calibration": "Earlier pairs only, target quarters excluded"
+  },
+  "target": {
+    "period_1": "2025Q2",
+    "period_2": "2025Q3",
+    "source_doc_hashes": [
+      "d3cb7dfa59e9bf55e505d420ebd64bbd829a9bf27b5549976ff9e944c9e3f2c4",
+      "e79bbef5b4bb72eb27a7e5a444dfe89292f4c74bbbb73cf522b6bed80911a7d8"
+    ],
+    "data_quality": {
+      "length_a": 7362,
+      "length_b": 7648,
+      "length_ratio": 0.9626,
+      "min_chars": 5000,
+      "min_length_ratio": 0.5
+    },
+    "passed": true,
+    "metrics": {
+      "jsd": 0.214895,
+      "cosine_similarity": 0.782977
+    }
+  },
+  "calibration": {
+    "history_pair_count": 33,
+    "history_pairs": [
+      {
+        "period_1": "2016Q4",
+        "period_2": "2017Q1",
+        "metrics": {
+          "jsd": 0.235653,
+          "cosine_similarity": 0.732473
+        }
+      },
+      {
+        "period_1": "2017Q1",
+        "period_2": "2017Q2",
+        "metrics": {
+          "jsd": 0.210819,
+          "cosine_similarity": 0.759815
+        }
+      },
+      {
+        "period_1": "2017Q2",
+        "period_2": "2017Q3",
+        "metrics": {
+          "jsd": 0.229302,
+          "cosine_similarity": 0.753149
+        }
+      },
+      {
+        "period_1": "2017Q3",
+        "period_2": "2017Q4",
+        "metrics": {
+          "jsd": 0.217074,
+          "cosine_similarity": 0.77837
+        }
+      },
+      {
+        "period_1": "2017Q4",
+        "period_2": "2018Q1",
+        "metrics": {
+          "jsd": 0.244933,
+          "cosine_similarity": 0.759578
+        }
+      },
+      {
+        "period_1": "2018Q1",
+        "period_2": "2018Q2",
+        "metrics": {
+          "jsd": 0.247256,
+          "cosine_similarity": 0.767379
+        }
+      },
+      {
+        "period_1": "2018Q2",
+        "period_2": "2018Q3",
+        "metrics": {
+          "jsd": 0.243383,
+          "cosine_similarity": 0.773052
+        }
+      },
+      {
+        "period_1": "2018Q3",
+        "period_2": "2018Q4",
+        "metrics": {
+          "jsd": 0.242168,
+          "cosine_similarity": 0.795522
+        }
+      },
+      {
+        "period_1": "2018Q4",
+        "period_2": "2019Q1",
+        "metrics": {
+          "jsd": 0.211932,
+          "cosine_similarity": 0.789823
+        }
+      },
+      {
+        "period_1": "2019Q1",
+        "period_2": "2019Q2",
+        "metrics": {
+          "jsd": 0.223676,
+          "cosine_similarity": 0.795383
+        }
+      },
+      {
+        "period_1": "2019Q2",
+        "period_2": "2019Q3",
+        "metrics": {
+          "jsd": 0.20452,
+          "cosine_similarity": 0.802549
+        }
+      },
+      {
+        "period_1": "2019Q3",
+        "period_2": "2019Q4",
+        "metrics": {
+          "jsd": 0.310097,
+          "cosine_similarity": 0.609318
+        }
+      },
+      {
+        "period_1": "2019Q4",
+        "period_2": "2020Q1",
+        "metrics": {
+          "jsd": 0.334612,
+          "cosine_similarity": 0.677864
+        }
+      },
+      {
+        "period_1": "2020Q1",
+        "period_2": "2020Q2",
+        "metrics": {
+          "jsd": 0.253005,
+          "cosine_similarity": 0.855969
+        }
+      },
+      {
+        "period_1": "2020Q2",
+        "period_2": "2020Q3",
+        "metrics": {
+          "jsd": 0.253285,
+          "cosine_similarity": 0.837426
+        }
+      },
+      {
+        "period_1": "2020Q3",
+        "period_2": "2020Q4",
+        "metrics": {
+          "jsd": 0.199171,
+          "cosine_similarity": 0.843005
+        }
+      },
+      {
+        "period_1": "2020Q4",
+        "period_2": "2021Q1",
+        "metrics": {
+          "jsd": 0.232434,
+          "cosine_similarity": 0.753775
+        }
+      },
+      {
+        "period_1": "2021Q1",
+        "period_2": "2021Q2",
+        "metrics": {
+          "jsd": 0.224085,
+          "cosine_similarity": 0.778311
+        }
+      },
+      {
+        "period_1": "2021Q2",
+        "period_2": "2021Q3",
+        "metrics": {
+          "jsd": 0.207627,
+          "cosine_similarity": 0.786745
+        }
+      },
+      {
+        "period_1": "2021Q3",
+        "period_2": "2021Q4",
+        "metrics": {
+          "jsd": 0.206204,
+          "cosine_similarity": 0.793233
+        }
+      },
+      {
+        "period_1": "2021Q4",
+        "period_2": "2022Q1",
+        "metrics": {
+          "jsd": 0.220742,
+          "cosine_similarity": 0.786998
+        }
+      },
+      {
+        "period_1": "2022Q1",
+        "period_2": "2022Q2",
+        "metrics": {
+          "jsd": 0.206037,
+          "cosine_similarity": 0.786525
+        }
+      },
+      {
+        "period_1": "2022Q2",
+        "period_2": "2022Q3",
+        "metrics": {
+          "jsd": 0.232289,
+          "cosine_similarity": 0.770125
+        }
+      },
+      {
+        "period_1": "2022Q3",
+        "period_2": "2022Q4",
+        "metrics": {
+          "jsd": 0.227533,
+          "cosine_similarity": 0.789573
+        }
+      },
+      {
+        "period_1": "2022Q4",
+        "period_2": "2023Q1",
+        "metrics": {
+          "jsd": 0.257311,
+          "cosine_similarity": 0.759686
+        }
+      },
+      {
+        "period_1": "2023Q1",
+        "period_2": "2023Q2",
+        "metrics": {
+          "jsd": 0.23748,
+          "cosine_similarity": 0.766222
+        }
+      },
+      {
+        "period_1": "2023Q2",
+        "period_2": "2023Q3",
+        "metrics": {
+          "jsd": 0.212659,
+          "cosine_similarity": 0.796873
+        }
+      },
+      {
+        "period_1": "2023Q3",
+        "period_2": "2023Q4",
+        "metrics": {
+          "jsd": 0.218453,
+          "cosine_similarity": 0.793831
+        }
+      },
+      {
+        "period_1": "2023Q4",
+        "period_2": "2024Q1",
+        "metrics": {
+          "jsd": 0.220516,
+          "cosine_similarity": 0.798501
+        }
+      },
+      {
+        "period_1": "2024Q1",
+        "period_2": "2024Q2",
+        "metrics": {
+          "jsd": 0.214877,
+          "cosine_similarity": 0.780152
+        }
+      },
+      {
+        "period_1": "2024Q2",
+        "period_2": "2024Q3",
+        "metrics": {
+          "jsd": 0.203974,
+          "cosine_similarity": 0.787464
+        }
+      },
+      {
+        "period_1": "2024Q3",
+        "period_2": "2024Q4",
+        "metrics": {
+          "jsd": 0.233862,
+          "cosine_similarity": 0.773341
+        }
+      },
+      {
+        "period_1": "2024Q4",
+        "period_2": "2025Q1",
+        "metrics": {
+          "jsd": 0.247765,
+          "cosine_similarity": 0.768103
+        }
+      }
+    ],
+    "thresholds": {
+      "jsd_p90": 0.253229,
+      "jsd_p95": 0.278425,
+      "cosine_p10": 0.753274,
+      "cosine_p05": 0.710629
+    }
+  },
+  "combined_rule": {
+    "jsd_high": false,
+    "cosine_low": false,
+    "rule": "JSD >= historical P90 AND Cosine <= historical P10"
+  },
+  "drift_result": "未達雙指標歷史漂移門檻",
+  "source_documents": [
+    {
+      "ticker": "2408",
+      "industry": "semiconductor_memory",
+      "period": "2025Q2",
+      "document_type": "earnings_presentation",
+      "language": "en",
+      "source_page": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2408",
+      "source_pdf": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=240820250710E001.pdf&functionName=t100sb02_1",
+      "sha256": "d3cb7dfa59e9bf55e505d420ebd64bbd829a9bf27b5549976ff9e944c9e3f2c4"
+    },
+    {
+      "ticker": "2408",
+      "industry": "semiconductor_memory",
+      "period": "2025Q3",
+      "document_type": "earnings_presentation",
+      "language": "en",
+      "source_page": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2408",
+      "source_pdf": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=240820251013E001.pdf&functionName=t100sb02_1",
+      "sha256": "e79bbef5b4bb72eb27a7e5a444dfe89292f4c74bbbb73cf522b6bed80911a7d8"
+    }
+  ],
+  "warnings": [
+    "This is textual change, NOT a fraud/legality verdict.",
+    "TSMC is an ordinary public-company corpus demo, not the company named in a scam case.",
+    "Pilot thresholds are corpus and method-specific; validate on held-out companies/periods.",
+    "Manually review PDF extraction quality, language and Q&A boundaries before treating as research evidence."
+  ],
+  "created_at": "2026-09-27T13:51:32.550892+00:00"
+}
