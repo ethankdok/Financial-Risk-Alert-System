@@ -31,6 +31,24 @@ def listing(*, extra_page: bool = False, bad_link: bool = False, filename: str =
             f'{"<input onclick=\"page(2)\" value=\"2\">" if extra_page else ""}').encode()
 
 
+def mixed_listing(second: str) -> bytes:
+    """Row 1: the fixture PDF. Row 2: another official attachment named ``second``."""
+    def link(name: str) -> str:
+        return (f'document.fm_fileDownload.fileName.value=&quot;{name}&quot;;'
+                'document.fm_fileDownload.filePath.value=&quot;/home/html/nas/STR/&quot;;'
+                'document.fm_fileDownload.functionName.value=&quot;t100sb02_1&quot;;'
+                'document.fm_fileDownload.submit();')
+
+    rows = "".join(
+        '<tr data-type="body"><td>2330</td><td>台積電</td><td>114/01/16</td><td>x</td><td>x</td>'
+        f'<td>公布本公司財務報告</td><td><a onclick="{link(name)}">{name}</a></td><td></td></tr>'
+        for name in ("233020250116M001.pdf", second)
+    )
+    return ('<form action="/server-java/FileDownLoad"></form>'
+            '<table><thead><tr><th>公司代號</th><th>法人說明會簡報內容</th></tr></thead>'
+            f'<tbody>{rows}</tbody></table><input onclick="page(1)" value="1">').encode()
+
+
 def pdf(*, chart: bool = False) -> bytes:
     return b"%PDF-1.4\n% fintrust fixture\n%%EOF\n"
 
@@ -163,6 +181,39 @@ class ConferencePdfPipelineTests(unittest.TestCase):
             page = json.loads(Path(doc["pages_path"]).read_text())[0]
             self.assertTrue(any(item["verification_status"] == "needs_manual_chart_value_verification"
                                 for item in page["analysis_results"]))
+
+    def test_official_powerpoint_attachment_is_a_recorded_source_gap_never_downloaded(self) -> None:
+        html = mixed_listing("233020191017E001.pptx")
+        with self.assertRaisesRegex(AcquisitionError, "Unexpected attachment filename"):
+            parse_listing(html, ticker="2330", roc_year=114)  # strict default is unchanged
+
+        gaps: list[dict] = []
+        attachments, rows = parse_listing(html, ticker="2330", roc_year=114, non_pdf=gaps)
+        self.assertEqual(([item.filename for item in attachments], rows), (["233020250116M001.pdf"], 2))
+        self.assertEqual([(gap["filename"], gap["language"]) for gap in gaps], [("233020191017E001.pptx", "zh")])
+
+        transport = FixtureTransport(pdf(), html=html)
+        with tempfile.TemporaryDirectory() as root, unittest.mock.patch(
+            "app.services.mops_conference_pdf_pipeline.extract_pages", return_value=extracted_pages(),
+        ):
+            result = run_mops_pdf_pipeline(ticker="2330", year=2025, output_dir=Path(root), transport=transport)
+        self.assertEqual((result["expected_pdfs"], transport.download_calls), (1, 1))  # FixtureTransport asserts the PDF name
+        self.assertEqual([(gap["filename"], gap["format"], gap["status"]) for gap in result["non_pdf_attachments"]],
+                         [("233020191017E001.pptx", "pptx", "source_gap_non_pdf_format")])
+
+    def test_unknown_or_foreign_attachment_names_still_fail_closed(self) -> None:
+        for name in ("233020191017E001.exe", "245420191017E001.pptx", "slides-final.pptx"):
+            with self.subTest(name=name), self.assertRaisesRegex(AcquisitionError, "Unexpected attachment filename"):
+                parse_listing(mixed_listing(name), ticker="2330", roc_year=114, non_pdf=[])
+
+    def test_no_data_page_is_no_listing_not_a_parser_failure(self) -> None:
+        from app.services.mops_conference_pdf_pipeline import discover_mops_conference_documents
+
+        page = "<html><body><h4 align='center'><font color='red'>查無資料</font></h4></body></html>".encode("utf-8")
+        with self.assertRaisesRegex(AcquisitionError, "查無資料"):
+            parse_listing(page, ticker="2330", roc_year=114)
+        result = discover_mops_conference_documents(ticker="2330", year=2025, transport=FixtureTransport(None, html=page))
+        self.assertEqual(result["status"], "no_listing")
 
     def test_broken_links_are_rejected(self) -> None:
         for html in (listing(bad_link=True),):

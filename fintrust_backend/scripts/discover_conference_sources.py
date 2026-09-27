@@ -57,6 +57,10 @@ def summarize(ticker: str, results: list[dict]) -> dict:
         "files_reused_across_listing_rows": sum(1 for doc in documents if doc["listing_rows"] > 1),
         "anomalies": anomalies,
         "documents": documents,
+        "non_pdf_attachments": [
+            {**item, "announcement_year": result["year"]}
+            for result in results for item in result.get("non_pdf_attachments", [])
+        ],
     }
 
 

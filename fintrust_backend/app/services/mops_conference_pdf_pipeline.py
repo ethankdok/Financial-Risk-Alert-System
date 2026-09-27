@@ -40,6 +40,9 @@ DOWNLOAD_URL = "https://mopsov.twse.com.tw/server-java/FileDownLoad"
 REFERER = "https://mops.twse.com.tw/mops/#/web/t100sb02_1"
 ALLOWED_HOSTS = frozenset({"mops.twse.com.tw", "mopsov.twse.com.tw"})
 FILE_RE = re.compile(r"^[0-9]{4,6}[0-9]{8}[A-Z][0-9]{3}\.pdf$", re.I)
+# Official MOPS attachments in the same naming scheme but a non-PDF format (older years
+# include PowerPoint decks). They are recorded as a source gap and never downloaded.
+NON_PDF_FILE_RE = re.compile(r"^[0-9]{4,6}[0-9]{8}[A-Z][0-9]{3}\.(?:pptx?|docx?|xlsx?)$", re.I)
 ONCLICK_ASSIGN_RE = re.compile(
     r"\b(?:document\.)?(?:fm_fileDownload|downloadForm|form1)?\.?"
     r"(?P<field>fileName|filePath|functionName|step)\.value\s*=\s*['\"](?P<value>[^'\"]*)['\"]",
@@ -238,8 +241,17 @@ def _download_fields_from_onclick(onclick: str) -> dict[str, str]:
     return fields
 
 
-def parse_listing(raw: bytes, *, ticker: str, roc_year: int) -> tuple[list[ListedAttachment], int]:
+def parse_listing(raw: bytes, *, ticker: str, roc_year: int,
+                  non_pdf: list[dict] | None = None) -> tuple[list[ListedAttachment], int]:
+    """Verified PDF attachments of one listing page.
+
+    non_pdf: when a list is given, official same-company attachments in a known
+    non-PDF format are appended to it (as a source gap) instead of failing the page.
+    Without it, any non-PDF attachment fails closed as before.
+    """
     html = _decode_mops_html(raw)
+    if "公司代號" not in html and "查無資料" in html:
+        raise AcquisitionError("MOPS reports no data (查無資料) for this company and year")
     if "公司代號" not in html or "法人說明會簡報內容" not in html or "FileDownLoad" not in html:
         raise AcquisitionError("Unexpected MOPS response; the listing could not be verified")
     parser = _ListingParser()
@@ -258,6 +270,11 @@ def parse_listing(raw: bytes, *, ticker: str, roc_year: int) -> tuple[list[Liste
                 raise AcquisitionError("A PDF link could not be resolved from the official listing")
             for fields in attachments[cell_no]:
                 filename = fields["fileName"]
+                if (non_pdf is not None and NON_PDF_FILE_RE.fullmatch(filename)
+                        and filename.startswith(ticker)):
+                    non_pdf.append({"filename": filename, "language": language, "date": cells[2],
+                                    "summary": cells[5]})
+                    continue
                 if not FILE_RE.fullmatch(filename) or not filename.startswith(ticker):
                     raise AcquisitionError("Unexpected attachment filename in official listing")
                 if filename in languages and languages[filename] != language:
@@ -270,7 +287,7 @@ def parse_listing(raw: bytes, *, ticker: str, roc_year: int) -> tuple[list[Liste
                 entry["dates"].append(cells[2])
                 if cells[5]:
                     entry["summaries"].append(cells[5])
-    if not documents:
+    if not documents and not non_pdf:
         raise AcquisitionError("No downloadable PDFs appear in the verified listing")
     return ([ListedAttachment(
         name,
@@ -320,7 +337,8 @@ def merge_attachments(groups: list[list[ListedAttachment]]) -> list[ListedAttach
     return [by_name[name] for name in sorted(by_name)]
 
 
-def _collect_listing(source: "MopsTransport", ticker: str, year: int, market: str
+def _collect_listing(source: "MopsTransport", ticker: str, year: int, market: str,
+                     non_pdf: list[dict] | None = None
                      ) -> tuple[list[int], dict[int, bytes], list[ListedAttachment], int]:
     """Fetch and verify every MOPS listing page for one company and announcement year."""
     first_listing = source.listing(ticker, year - 1911, market, page=1)
@@ -338,10 +356,32 @@ def _collect_listing(source: "MopsTransport", ticker: str, year: int, market: st
         discovered = listing_pages(listing_html)
         if not set(listing_page_numbers).issuperset(discovered):
             raise AcquisitionError("PAGINATION_CHANGED: MOPS pagination changed during the run")
-        attachments_on_page, rows = parse_listing(listing_html, ticker=ticker, roc_year=year - 1911)
+        attachments_on_page, rows = parse_listing(listing_html, ticker=ticker, roc_year=year - 1911,
+                                                  non_pdf=non_pdf)
         rows_total += rows
         page_attachments.append(attachments_on_page)
     return listing_page_numbers, page_payloads, merge_attachments(page_attachments), rows_total
+
+
+def summarize_non_pdf_attachments(entries: list[dict]) -> list[dict]:
+    """One record per official non-PDF file: a source gap, never downloaded."""
+    from app.services.conference_document_identity import claimed_period_from_listing
+
+    by_name: dict[str, dict] = {}
+    for entry in entries:
+        item = by_name.setdefault(entry["filename"], {"filename": entry["filename"], "language": entry["language"],
+                                                      "conference_dates": [], "listing_summaries": []})
+        if entry["date"] not in item["conference_dates"]:
+            item["conference_dates"].append(entry["date"])
+        if entry["summary"] and entry["summary"] not in item["listing_summaries"]:
+            item["listing_summaries"].append(entry["summary"])
+    records = []
+    for name in sorted(by_name):
+        item = by_name[name]
+        claim, claims = claimed_period_from_listing(item["listing_summaries"])
+        records.append({**item, "format": name.rsplit(".", 1)[-1].lower(), "period_claimed_by_listing": claim,
+                        "period_claims_all": claims, "status": "source_gap_non_pdf_format"})
+    return records
 
 
 def discover_mops_conference_documents(*, ticker: str, year: int, market: str = "sii",
@@ -353,15 +393,18 @@ def discover_mops_conference_documents(*, ticker: str, year: int, market: str = 
     listing_url = f"{LIST_URL}?{urlencode({'step': '1', 'firstin': '1', 'off': '1', 'TYPEK': market, 'year': year - 1911, 'co_id': ticker})}"
     result: dict = {"ticker": ticker, "year": year, "market": market, "listing_url": listing_url,
                     "retrieved_at": datetime.now(timezone.utc).isoformat(), "status": "failed", "documents": []}
+    non_pdf: list[dict] = []
     try:
-        pages, _payloads, attachments, rows = _collect_listing(source, ticker, year, market)
+        pages, _payloads, attachments, rows = _collect_listing(source, ticker, year, market, non_pdf=non_pdf)
     except AcquisitionError as exc:
         text = str(exc)
-        empty = "no downloadable pdfs" in text.lower() or "no verifiable" in text.lower()
+        lowered = text.lower()
+        empty = "no downloadable pdfs" in lowered or "no verifiable" in lowered or "查無資料" in text
         result["status"] = "no_listing" if empty else "failed"
         result["error"] = text
         return result
-    result.update(status="ok", listing_pages=pages, rows=rows)
+    result.update(status="ok", listing_pages=pages, rows=rows,
+                  non_pdf_attachments=summarize_non_pdf_attachments(non_pdf))
     for attachment in attachments:
         claim, claims = claimed_period_from_listing(attachment.summaries)
         result["documents"].append({
@@ -590,7 +633,10 @@ def run_mops_pdf_pipeline(*, ticker: str, year: int, output_dir: Path,
     except (OSError, KeyError, ValueError, TypeError):
         pass
     try:
-        listing_page_numbers, page_payloads, attachments, rows = _collect_listing(source, ticker, year, market)
+        non_pdf: list[dict] = []
+        listing_page_numbers, page_payloads, attachments, rows = _collect_listing(source, ticker, year, market,
+                                                                                 non_pdf=non_pdf)
+        result["non_pdf_attachments"] = summarize_non_pdf_attachments(non_pdf)
         if select_documents is not None:
             chosen = list(select_documents(list(attachments)))
             chosen_names = {item.filename for item in chosen}
