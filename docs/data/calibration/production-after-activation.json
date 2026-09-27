@@ -1,0 +1,328 @@
+{
+  "label": "after-activation",
+  "captured_at": "2026-09-27T14:07:26.629261+00:00",
+  "endpoint": "https://fintrust-api-v53gsmuxdq-de.a.run.app/api/v1/financial/data-shift/analyze",
+  "request": {
+    "period_1": "2025Q2",
+    "period_2": "2025Q3"
+  },
+  "results": [
+    {
+      "ticker": "2454",
+      "analysis_status": "complete",
+      "period_1": "2025Q2",
+      "period_2": "2025Q3",
+      "document_type": "earnings_presentation",
+      "language": "en",
+      "metrics": {
+        "jsd": 0.078121,
+        "cosine_similarity": 0.944793
+      },
+      "data_quality": {
+        "passed": true,
+        "text_length_1": 9102,
+        "text_length_2": 9137,
+        "length_ratio": 0.9962,
+        "min_text_length": 5000,
+        "min_length_ratio": 0.5,
+        "reasons": []
+      },
+      "calibration": {
+        "status": "calibrated",
+        "calibration_id": "jsdcal-2454-a91b3fb2a272e16d825d",
+        "history_pair_count": 33,
+        "history_latest_period": "2025Q1",
+        "thresholds": {
+          "jsd_p90": 0.123233,
+          "jsd_p95": 0.157584,
+          "cosine_p10": 0.913993,
+          "cosine_p05": 0.896558
+        }
+      },
+      "nearest_profiles": null,
+      "combined_rule": {
+        "jsd_high": false,
+        "cosine_low": false,
+        "rule": "JSD >= historical P90 AND Cosine <= historical P10"
+      },
+      "drift_result": "未達雙指標歷史漂移門檻",
+      "method": {
+        "method_version": "earnings-en-full-pairwise-tfidf-v1",
+        "source_family": "mops_t100sb02_1_conference_pdf",
+        "extraction_method": "mops_conference_pipeline:pypdf_extract_text_per_page",
+        "preprocessing_version": "fintrust-conference-document-text-v1",
+        "calculator_module_sha256": "aa94cf9ed19bcd30ad0666ecddf3c7c5ea10a17868f66bf389278a649f86318b",
+        "source_research_commit": "5b914937dc3cb2294851e0386c67270d20547e7e"
+      },
+      "source_documents": [
+        {
+          "period": "2025Q2",
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "document": "245420250730E001.pdf",
+          "sha256": "2586eb8d4e811bb777a813bb4bb1e21c3f902fdb05386f7e456c43cded83f6a9",
+          "source_url": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=245420250730E001.pdf&functionName=t100sb02_1"
+        },
+        {
+          "period": "2025Q3",
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "document": "245420251031E001.pdf",
+          "sha256": "618746e355de2cfee8128d5992bf6053167cfcd55c013005a66fa4e6974e697f",
+          "source_url": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=245420251031E001.pdf&functionName=t100sb02_1"
+        }
+      ]
+    },
+    {
+      "ticker": "2303",
+      "analysis_status": "complete",
+      "period_1": "2025Q2",
+      "period_2": "2025Q3",
+      "document_type": "earnings_presentation",
+      "language": "en",
+      "metrics": {
+        "jsd": 0.030654,
+        "cosine_similarity": 0.969959
+      },
+      "data_quality": {
+        "passed": true,
+        "text_length_1": 8217,
+        "text_length_2": 8230,
+        "length_ratio": 0.9984,
+        "min_text_length": 5000,
+        "min_length_ratio": 0.5,
+        "reasons": []
+      },
+      "calibration": {
+        "status": "calibrated",
+        "calibration_id": "jsdcal-2303-d9257f696c2f8890f73a",
+        "history_pair_count": 33,
+        "history_latest_period": "2025Q1",
+        "thresholds": {
+          "jsd_p90": 0.05824,
+          "jsd_p95": 0.063898,
+          "cosine_p10": 0.933246,
+          "cosine_p05": 0.927862
+        }
+      },
+      "nearest_profiles": null,
+      "combined_rule": {
+        "jsd_high": false,
+        "cosine_low": false,
+        "rule": "JSD >= historical P90 AND Cosine <= historical P10"
+      },
+      "drift_result": "未達雙指標歷史漂移門檻",
+      "method": {
+        "method_version": "earnings-en-full-pairwise-tfidf-v1",
+        "source_family": "mops_t100sb02_1_conference_pdf",
+        "extraction_method": "mops_conference_pipeline:pypdf_extract_text_per_page",
+        "preprocessing_version": "fintrust-conference-document-text-v1",
+        "calculator_module_sha256": "aa94cf9ed19bcd30ad0666ecddf3c7c5ea10a17868f66bf389278a649f86318b",
+        "source_research_commit": "5b914937dc3cb2294851e0386c67270d20547e7e"
+      },
+      "source_documents": [
+        {
+          "period": "2025Q2",
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "document": "230320250730E001.pdf",
+          "sha256": "74e8f94ba38f78e71386cd250f239d21c2217386236f7a54abf1667aa1ea4510",
+          "source_url": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=230320250730E001.pdf&functionName=t100sb02_1"
+        },
+        {
+          "period": "2025Q3",
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "document": "230320251029E001.pdf",
+          "sha256": "d1630ac1c4d3b0eaa66b75c34629d756411e52b97adcc3fce5f779e705800d70",
+          "source_url": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=230320251029E001.pdf&functionName=t100sb02_1"
+        }
+      ]
+    },
+    {
+      "ticker": "2408",
+      "analysis_status": "complete",
+      "period_1": "2025Q2",
+      "period_2": "2025Q3",
+      "document_type": "earnings_presentation",
+      "language": "en",
+      "metrics": {
+        "jsd": 0.214895,
+        "cosine_similarity": 0.782977
+      },
+      "data_quality": {
+        "passed": true,
+        "text_length_1": 7362,
+        "text_length_2": 7648,
+        "length_ratio": 0.9626,
+        "min_text_length": 5000,
+        "min_length_ratio": 0.5,
+        "reasons": []
+      },
+      "calibration": {
+        "status": "calibrated",
+        "calibration_id": "jsdcal-2408-753145a4c1a508b7f356",
+        "history_pair_count": 33,
+        "history_latest_period": "2025Q1",
+        "thresholds": {
+          "jsd_p90": 0.253229,
+          "jsd_p95": 0.278425,
+          "cosine_p10": 0.753274,
+          "cosine_p05": 0.710629
+        }
+      },
+      "nearest_profiles": null,
+      "combined_rule": {
+        "jsd_high": false,
+        "cosine_low": false,
+        "rule": "JSD >= historical P90 AND Cosine <= historical P10"
+      },
+      "drift_result": "未達雙指標歷史漂移門檻",
+      "method": {
+        "method_version": "earnings-en-full-pairwise-tfidf-v1",
+        "source_family": "mops_t100sb02_1_conference_pdf",
+        "extraction_method": "mops_conference_pipeline:pypdf_extract_text_per_page",
+        "preprocessing_version": "fintrust-conference-document-text-v1",
+        "calculator_module_sha256": "aa94cf9ed19bcd30ad0666ecddf3c7c5ea10a17868f66bf389278a649f86318b",
+        "source_research_commit": "5b914937dc3cb2294851e0386c67270d20547e7e"
+      },
+      "source_documents": [
+        {
+          "period": "2025Q2",
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "document": "240820250710E001.pdf",
+          "sha256": "d3cb7dfa59e9bf55e505d420ebd64bbd829a9bf27b5549976ff9e944c9e3f2c4",
+          "source_url": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=240820250710E001.pdf&functionName=t100sb02_1"
+        },
+        {
+          "period": "2025Q3",
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "document": "240820251013E001.pdf",
+          "sha256": "e79bbef5b4bb72eb27a7e5a444dfe89292f4c74bbbb73cf522b6bed80911a7d8",
+          "source_url": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=240820251013E001.pdf&functionName=t100sb02_1"
+        }
+      ]
+    },
+    {
+      "ticker": "2330",
+      "analysis_status": "complete",
+      "period_1": "2025Q2",
+      "period_2": "2025Q3",
+      "document_type": "earnings_presentation",
+      "language": "en",
+      "metrics": {
+        "jsd": 0.232142,
+        "cosine_similarity": 0.676225
+      },
+      "data_quality": {
+        "passed": true,
+        "text_length_1": 5827,
+        "text_length_2": 5760,
+        "length_ratio": 0.9885,
+        "min_text_length": 5000,
+        "min_length_ratio": 0.5,
+        "reasons": []
+      },
+      "calibration": {
+        "status": "unavailable",
+        "reason": "no_matching_profile"
+      },
+      "nearest_profiles": [
+        {
+          "calibration_id": "jsdcal-2330-d0bcbeb14e2f72be10a1",
+          "differs_in": [
+            "document_type",
+            "language",
+            "extraction_method",
+            "preprocessing_version",
+            "history_overlaps_target"
+          ]
+        }
+      ],
+      "combined_rule": null,
+      "drift_result": "尚無相符歷史校準，不判定漂移等級",
+      "method": {
+        "method_version": "earnings-en-full-pairwise-tfidf-v1",
+        "source_family": "mops_t100sb02_1_conference_pdf",
+        "extraction_method": "mops_conference_pipeline:pypdf_extract_text_per_page",
+        "preprocessing_version": "fintrust-conference-document-text-v1",
+        "calculator_module_sha256": "aa94cf9ed19bcd30ad0666ecddf3c7c5ea10a17868f66bf389278a649f86318b",
+        "source_research_commit": "5b914937dc3cb2294851e0386c67270d20547e7e"
+      },
+      "source_documents": [
+        {
+          "period": "2025Q2",
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "document": "233020250721E001.pdf",
+          "sha256": "1b89a5723120a706e975befb38df59ee1fe0d2da814b18f81b48257fd646d646",
+          "source_url": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=233020250721E001.pdf&functionName=t100sb02_1"
+        },
+        {
+          "period": "2025Q3",
+          "document_type": "earnings_presentation",
+          "language": "en",
+          "document": "233020251016E001.pdf",
+          "sha256": "873fc1732da2b45a4a0a28e0347f56b955bf841b91fa5a38fcc8185d552c6543",
+          "source_url": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=233020251016E001.pdf&functionName=t100sb02_1"
+        }
+      ]
+    },
+    {
+      "ticker": "3034",
+      "analysis_status": "quality_insufficient",
+      "period_1": "2025Q2",
+      "period_2": "2025Q3",
+      "document_type": "financial_results_release",
+      "language": "zh-Hant",
+      "metrics": null,
+      "data_quality": {
+        "passed": false,
+        "text_length_1": 4475,
+        "text_length_2": 4479,
+        "length_ratio": 0.9991,
+        "min_text_length": 5000,
+        "min_length_ratio": 0.5,
+        "reasons": [
+          "第一期文字長度過短",
+          "第二期文字長度過短"
+        ]
+      },
+      "calibration": {
+        "status": "not_evaluated",
+        "reason": "data_quality_failed"
+      },
+      "nearest_profiles": null,
+      "combined_rule": null,
+      "drift_result": "尚無相符歷史校準，不判定漂移等級",
+      "method": {
+        "method_version": "earnings-en-full-pairwise-tfidf-v1",
+        "source_family": "mops_t100sb02_1_conference_pdf",
+        "extraction_method": "mops_conference_pipeline:pypdf_extract_text_per_page",
+        "preprocessing_version": "fintrust-conference-document-text-v1",
+        "calculator_module_sha256": "aa94cf9ed19bcd30ad0666ecddf3c7c5ea10a17868f66bf389278a649f86318b",
+        "source_research_commit": "5b914937dc3cb2294851e0386c67270d20547e7e"
+      },
+      "source_documents": [
+        {
+          "period": "2025Q2",
+          "document_type": "financial_results_release",
+          "language": "zh-Hant",
+          "document": "303420250806M001.pdf",
+          "sha256": "8adfbbeb8bd778cc4d55d0e2b03ff8525b00ea88f6fdb5ed1659683455edd8a6",
+          "source_url": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=303420250806M001.pdf&functionName=t100sb02_1"
+        },
+        {
+          "period": "2025Q3",
+          "document_type": "financial_results_release",
+          "language": "zh-Hant",
+          "document": "303420251106M001.pdf",
+          "sha256": "d45c77f68ff73889a59828d6cc477feec5eca074b6cf12d99a7f9773bda54fe2",
+          "source_url": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=303420251106M001.pdf&functionName=t100sb02_1"
+        }
+      ]
+    }
+  ]
+}
