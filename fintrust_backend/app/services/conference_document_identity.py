@@ -16,7 +16,7 @@ import re
 from collections import defaultdict
 from typing import Any, Iterable
 
-IDENTITY_VERSION = "conference-identity-v5"
+IDENTITY_VERSION = "conference-identity-v6"
 DOCUMENT_TYPES = (
     "full_earnings_transcript",
     "earnings_presentation",
