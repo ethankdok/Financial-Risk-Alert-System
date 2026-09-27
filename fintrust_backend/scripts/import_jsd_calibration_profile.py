@@ -94,17 +94,24 @@ def build_profile(report: dict, *, source_family: str, extraction_method: str, p
         calibrated_for_target={"period_1": str(_required(report, "period_1")), "period_2": str(_required(report, "period_2"))},
     )
     rule = (report.get("combined_rule") or {}).get("rule") or DEFAULT_RULE
+    hashes = [str(doc["sha256"]) for doc in documents]
+    # Reports built from a FinTrust corpus also list every history pair's documents.
+    for pair in report.get("history_source_documents") or []:
+        hashes.extend(str(value) for value in pair["sha256"])
+    hashes = list(dict.fromkeys(hashes))
+    hash_note = ("Source document hashes cover the target pair and every history pair."
+                 if report.get("history_source_documents") else
+                 "History pair document hashes are not part of the research report; only the target pair hashes are stored.")
     return JsdCalibrationProfile(
         calibration_id=calibration_id_for(scope, profile_method, history_latest),
         scope=scope, method=profile_method, calibration=profile_calibration,
         decision_rule={"rule": rule, **RULE_OUTCOMES},
-        source_document_hashes=[str(doc["sha256"]) for doc in documents],
+        source_document_hashes=hashes,
         source_research_commit=source_research_commit,
         created_at=str(_required(report, "created_at")),
         imported_at=datetime.now(timezone.utc).isoformat(),
         status="active" if thresholds else "insufficient_history",
-        warnings=[*map(str, report.get("warnings") or []),
-                  "History pair document hashes are not part of the research report; only the target pair hashes are stored."],
+        warnings=[*map(str, report.get("warnings") or []), hash_note],
     )
 
 
