@@ -10,6 +10,9 @@ from app.routers.conference_pdfs import router as conference_pdfs_router
 from app.routers.financial import router as financial_router
 from app.routers.official_events import router as official_events_router
 from app.routers.text_mining import router as text_mining_router
+from app.routers.research_dashboard import router as dashboard_router
+from app.routers.research_snapshot import router as research_snapshot_router
+from app.routers.research_validation import router as research_validation_router
 
 
 logging.basicConfig(
@@ -47,6 +50,9 @@ app.include_router(financial_router)
 app.include_router(conference_pdfs_router)
 app.include_router(official_events_router)
 app.include_router(text_mining_router)
+app.include_router(dashboard_router)
+app.include_router(research_snapshot_router)
+app.include_router(research_validation_router)
 
 
 @app.get("/")
