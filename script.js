@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // analyzing.html
   // =========================================================
 
-  if (page === 'analyzing.html') {
+  if (page === 'analyzing.html' || page === 'analyzing') {
 
     const query =
       localStorage.getItem(
@@ -435,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Result Page
   // =========================================================
 
-  if (page === 'result.html') {
+  if (page === 'result.html' || page === 'result') {
 
     renderRiskResult();
 
