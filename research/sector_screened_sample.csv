@@ -1,0 +1,5 @@
+case_id,publication_date,sector_tags,screening_group,source_url,notes
+CASE-A,2024-03-08,biotech,retail_unlisted_sales,https://www.cna.com.tw/news/asoc/202403080308.aspx,Police briefing reported biotech sales pitch; 2024 release
+CASE-B,2026-06-04,semiconductor|renewable_energy,retail_fake_platform,https://www.cib.npa.gov.tw/ch/app/news/view?id=1885&module=news&serno=6b1c2c2d-4597-4b14-b1f0-d8fa2ab597c6,One investigation with multiple sector themes
+CASE-C,2026-03-10,biotech,separate_suspected_share_offering,https://www.cna.com.tw/news/asoc/202603100260.aspx,Investigative allegation; keep separate from strict fake-platform cohort
+CASE-D,2026-04-02,not_stated,sector_unclassifiable,https://www.cib.npa.gov.tw/ch/app/news/view?id=1885&module=news&serno=1b7fcee3-94f0-4936-8949-513a0b9c5313,Unlisted-share case without a documented investment sector

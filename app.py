@@ -12,6 +12,7 @@ from flask_data_repository import DuplicateRecordError, build_flask_data_reposit
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from data_shift import data_shift_bp
+from taiwan_shift import taiwan_shift_bp
 
 BASE_DIR = Path(__file__).resolve().parent
 APP_ENV = os.environ.get("APP_ENV", "development").strip().lower()
@@ -29,6 +30,7 @@ app.config.update(
 )
 app.register_blueprint(create_financial_blueprint())
 app.register_blueprint(data_shift_bp)
+app.register_blueprint(taiwan_shift_bp)
 
 repository = build_flask_data_repository(BASE_DIR)
 repository.initialize()

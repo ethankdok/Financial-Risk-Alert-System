@@ -1,0 +1,23 @@
+name: Taiwan Chinese Data Shift tests
+on:
+  push:
+    branches: [feature/taiwan-scam-text-shift]
+  pull_request:
+    paths:
+      - 'taiwan_shift.py'
+      - 'tests/test_taiwan_shift.py'
+      - '.github/workflows/taiwan-shift-tests.yml'
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run Taiwan shift tests
+        run: python -m unittest discover -s tests -p 'test_taiwan_shift.py' -v
