@@ -5,6 +5,11 @@ from typing import Any
 
 from app.official_event_models import OfficialEvidenceCardResponse
 from app.services.analysis_repository import AnalysisRepository
+from app.services.conference_document_digest import (
+    ConferenceDocumentDigestService,
+    archive_identity,
+    conference_target,
+)
 from app.services.official_document_extraction import enrich_conferences_with_document_extraction
 from app.services.official_evidence_service import OfficialEvidenceService
 from app.services.text_intelligence import FinancialTextIntelligenceService, documents_from_official_events
@@ -46,11 +51,54 @@ def _source_status(conferences: list[Any], material_events: list[Any], snapshot:
     }
 
 
+def _attach_document_digests(
+    ticker: str,
+    items: list[dict[str, Any]],
+    service: ConferenceDocumentDigestService,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Attach an archived MOPS PDF digest to each conference item whose period or
+    date matches the archived document; never borrow another period's document.
+
+    Returns the card-level digest (latest archived document, only when no item
+    matched) and a status summary. Items keep every existing field.
+    """
+    by_target: dict[tuple[str | None, str | None], tuple[dict[str, Any] | None, str]] = {}
+    matched = 0
+    for item in items:
+        target = conference_target(item)
+        if target == (None, None):
+            item["summary_status"] = "no_conference_period"
+            continue
+        if target not in by_target:
+            by_target[target] = service.digest_for(ticker, period=target[0], conference_date=target[1])
+        digest, status = by_target[target]
+        item["summary_status"] = status
+        if digest is not None:
+            matched += 1
+            item["document_digest"] = digest
+            item["evidence_coverage"] = digest["coverage"]
+            item["archive_identity"] = archive_identity(digest)
+    card_digest = None
+    card_status = "attached_to_conference" if matched else "not_requested"
+    if not matched:
+        card_digest, card_status = service.digest_for(ticker)
+    return card_digest, {
+        "matched_conference_count": matched,
+        "card_level_digest_status": card_status,
+        "conference_summary_statuses": [item.get("summary_status") for item in items],
+    }
+
+
 class OfficialEvidenceCardBuilder:
     """Build a stable UI payload for Flask/Jinja dashboards and detail pages."""
 
-    def __init__(self, repository: AnalysisRepository | None = None) -> None:
+    def __init__(
+        self,
+        repository: AnalysisRepository | None = None,
+        digest_service: ConferenceDocumentDigestService | None = None,
+    ) -> None:
         self.repository = repository
+        self.digest_service = digest_service
 
     def build(
         self,
@@ -112,6 +160,15 @@ class OfficialEvidenceCardBuilder:
             if snapshot is not None
             else f"{summary.company_name} 尚未建立財報 snapshot"
         )
+        conference_items = [_dump(item) for item in conferences]
+        conference_document_digest = None
+        if self.digest_service is not None and include_conferences:
+            try:
+                conference_document_digest, status["document_digest_status"] = _attach_document_digests(
+                    summary.ticker, conference_items, self.digest_service,
+                )
+            except Exception:
+                status["document_digest_status"] = {"card_level_digest_status": "digest_failed"}
         if status["conference_available_count"]:
             headline += "，並含法說會／IR 證據"
         elif include_conferences:
@@ -128,7 +185,8 @@ class OfficialEvidenceCardBuilder:
             financial_snapshot=snapshot,
             key_metrics=key_metrics,
             rule_cards=rule_cards,
-            investor_conferences=[_dump(item) for item in conferences],
+            investor_conferences=conference_items,
+            conference_document_digest=conference_document_digest,
             material_events=[_dump(item) for item in summary.material_events],
             disclosure_claims=claims,
             text_evidence=text_evidence,

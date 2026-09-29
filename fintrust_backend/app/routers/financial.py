@@ -66,6 +66,7 @@ from app.services.official_document_extraction import (
     OfficialDocumentExtractionService,
     enrich_conferences_with_document_extraction,
 )
+from app.services.conference_document_digest import ConferenceDocumentDigestService, build_narrator_from_env
 from app.services.official_evidence_cards import OfficialEvidenceCardBuilder
 from app.services.official_event_ingestion import OfficialEventIngestionService
 from app.services.official_event_sources import (
@@ -373,6 +374,18 @@ def official_evidence(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+def get_conference_digest_service() -> ConferenceDocumentDigestService | None:
+    """Digest of archived MOPS conference PDFs; None when no archive backend is configured.
+
+    The optional LLM overview is enabled only by CONFERENCE_DIGEST_LLM_PROVIDER=gemini.
+    """
+    try:
+        archive = build_conference_pdf_archive_repository()
+    except ValueError:
+        return None
+    return ConferenceDocumentDigestService(archive, narrator=build_narrator_from_env())
+
+
 @router.get("/companies/{ticker}/official-evidence-card", response_model=OfficialEvidenceCardResponse)
 def official_evidence_card(
     ticker: str,
@@ -382,9 +395,10 @@ def official_evidence_card(
     extract_documents: bool = Query(default=False),
     material_event_year: int | None = Query(default=None, ge=2019, le=datetime.now().year),
     repository: AnalysisRepository = Depends(get_analysis_repository),
+    digest_service: ConferenceDocumentDigestService | None = Depends(get_conference_digest_service),
 ) -> OfficialEvidenceCardResponse:
     try:
-        return OfficialEvidenceCardBuilder(repository=repository).build(
+        return OfficialEvidenceCardBuilder(repository=repository, digest_service=digest_service).build(
             ticker,
             include_conferences=include_conferences,
             include_material_events=include_material_events,
