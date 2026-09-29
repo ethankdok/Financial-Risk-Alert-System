@@ -1,0 +1,86 @@
+{
+ "ticker": "2454",
+ "year": 2025,
+ "market": "sii",
+ "listing_url": "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1?step=1&firstin=1&off=1&TYPEK=sii&year=114&co_id=2454",
+ "retrieved_at": "2026-09-26T16:18:22.016566+00:00",
+ "documents": [
+  {
+   "filename": "245420251031M001.pdf",
+   "language": "zh",
+   "ticker": "2454",
+   "company_name": "聯發科",
+   "conference_dates": [
+    "114/10/31",
+    "114/11/17 至 114/11/25"
+   ],
+   "listing_summaries": [
+    "(1) 公布本公司2025年第3季財務報告及2025年第4季業績展望。 (2) 參加方式：請參見https://www.mediatek.com/zh-tw/investor-relations/financial-information#quarterly-earnings-release",
+    "公告本公司114年11月17日至11月18日受邀參加摩根大通證券於香港舉辦之Global TMT Conference in Asia、114年11月17日受邀參加麥格里證券於台北舉辦之Macquarie Taiwan Conference、114年11月19日至11月20日受邀參加摩根史丹利證券於新加坡舉辦之Asia Pacific Summit 、114年11月21日受邀參加高盛證券於台北舉辦之AI Ecosystem & Global Expansion Conference、 114年11月24日至11月25日受邀參加花旗證券於台北舉辦之Taiwan Corporate Day 及114年11月25日受邀參加Jefferies證券舉辦之GEMs Conference 2025，簡報資料請參閱公開資訊觀測站。"
+   ],
+   "download_fields": {
+    "step": "9",
+    "filePath": "/home/html/nas/STR/",
+    "fileName": "245420251031M001.pdf",
+    "functionName": "t100sb02_1"
+   },
+   "status": "needs_review",
+   "sha256": "23bb35fa060a626dc89b51892a49f250a73806b36aa018f23ae6ce73505258b6",
+   "page_count": 20,
+   "identity_version": "conference-identity-v1",
+   "period": "2025Q3",
+   "period_validation_status": "verified",
+   "document_type": "earnings_presentation",
+   "document_language": "zh-Hant",
+   "quarantined": false,
+   "duplicate_of": null,
+   "pages_path": "245420251031M001.pages.json",
+   "semantic_path": "245420251031M001.semantic.json",
+   "analysis_path": "245420251031M001.analysis.json"
+  },
+  {
+   "filename": "245420250730M001.pdf",
+   "language": "zh",
+   "ticker": "2454",
+   "company_name": "聯發科",
+   "conference_dates": [
+    "114/07/30",
+    "114/08/20",
+    "114/09/08 至 114/09/18"
+   ],
+   "listing_summaries": [
+    "(1) 公布本公司2025年第2季財務報告及2025年第3季業績展望。 (2) 參加方式：請參見https://corp.mediatek.tw/investor-relations/financial-information/quarterly-earnings",
+    "公告本公司114年8月20日受邀參加美林證券於台北舉辦之2025 Taiwan Tech Forum，簡報資料請參閱公開資訊觀測站。",
+    "公告本公司114年9月8日至9月10日受邀參加里昂證券於香港舉辦之Investors' Forum 2025、114年9月11日受邀參加花旗證券於台北舉辦之Tech Forum、114年9月15日至9月17日受邀參加瑞銀證券於台北舉辦之Taiwan Summit 2025及114年9月17日至9月18日受邀參加麥格里證券於香港舉辦之Asia Technology & Internet Conference 2025，簡報資料請參閱公開資訊觀測站。"
+   ],
+   "download_fields": {
+    "step": "9",
+    "filePath": "/home/html/nas/STR/",
+    "fileName": "245420250730M001.pdf",
+    "functionName": "t100sb02_1"
+   },
+   "status": "needs_review",
+   "sha256": "e7bb1583c37c2364584494fbe29311b1e54e73372749f687e652d3db9a0f9790",
+   "page_count": 20,
+   "identity_version": "conference-identity-v1",
+   "period": "2025Q2",
+   "period_validation_status": "verified",
+   "document_type": "earnings_presentation",
+   "document_language": "zh-Hant",
+   "quarantined": false,
+   "duplicate_of": null,
+   "pages_path": "245420250730M001.pages.json",
+   "semantic_path": "245420250730M001.semantic.json",
+   "analysis_path": "245420250730M001.analysis.json"
+  }
+ ],
+ "fixture_provenance": {
+  "source": "MOPS FileDownLoad archive (public investor conference PDFs), trimmed for tests",
+  "derived_from": "fintrust_backend/data/official-ir-pdfs-live-test/2454/2025",
+  "trimming": "pages.json text only; semantic.json without decorative regions; analysis.json table_or_metric_row only; PDFs not included",
+  "pdf_sha256": {
+   "245420251031M001.pdf": "23bb35fa060a626dc89b51892a49f250a73806b36aa018f23ae6ce73505258b6",
+   "245420250730M001.pdf": "e7bb1583c37c2364584494fbe29311b1e54e73372749f687e652d3db9a0f9790"
+  }
+ }
+}

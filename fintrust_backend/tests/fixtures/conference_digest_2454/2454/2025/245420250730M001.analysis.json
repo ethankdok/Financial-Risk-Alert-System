@@ -1,0 +1,1203 @@
+[
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 3,
+  "line": 6,
+  "values": [
+   "153,312",
+   "150,369"
+  ],
+  "source_excerpt": "153,312 150,369",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 5,
+  "line": 6,
+  "values": [
+   "35,782",
+   "36,923"
+  ],
+  "source_excerpt": "35,782 36,923",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 5,
+  "line": 8,
+  "values": [
+   "2,985",
+   "2,632"
+  ],
+  "source_excerpt": "2,985 2,632",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 5,
+  "line": 10,
+  "values": [
+   "4,990",
+   "4,944"
+  ],
+  "source_excerpt": "4,990 4,944",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 5,
+  "line": 26,
+  "values": [
+   "44",
+   "756"
+  ],
+  "source_excerpt": "44,49943,756",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 6,
+  "line": 6,
+  "values": [
+   "30,053",
+   "29,379"
+  ],
+  "source_excerpt": "30,053 29,379",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 7,
+  "line": 4,
+  "values": [
+   "19.6%",
+   "19.6%",
+   "19.5%"
+  ],
+  "source_excerpt": "19.6% 19.6% 19.5%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 8,
+  "line": 6,
+  "values": [
+   "29,529",
+   "28,064"
+  ],
+  "source_excerpt": "29,529 28,064",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 9,
+  "line": 4,
+  "values": [
+   "20.4%",
+   "19.3%"
+  ],
+  "source_excerpt": "20.4% 19.3%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 10,
+  "line": 6,
+  "values": [
+   "18.43",
+   "17.50"
+  ],
+  "source_excerpt": "18.43 17.50",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 11,
+  "line": 4,
+  "values": [
+   "1,301",
+   "1,400"
+  ],
+  "source_excerpt": "• 合併營收：新台幣 1,301億 ~ 1,400億元",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 11,
+  "line": 5,
+  "values": [
+   "1",
+   "29"
+  ],
+  "source_excerpt": "(假設2025-Q3美元兌新台幣平均匯率為1:29)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 11,
+  "line": 6,
+  "values": [
+   "47%",
+   "1.5%"
+  ],
+  "source_excerpt": "• 合併毛利率：47% ± 1.5%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 11,
+  "line": 7,
+  "values": [
+   "31%",
+   "2%"
+  ],
+  "source_excerpt": "• 合併營業費用率：31% ± 2%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 12,
+  "values": [
+   "150,369",
+   "153,312",
+   "127,271",
+   "1.9%",
+   "18.1%"
+  ],
+  "source_excerpt": "營業收入 150,369 153,312 127,271 (1.9%) 18.1%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 13,
+  "values": [
+   "76,491",
+   "79,503",
+   "65,135"
+  ],
+  "source_excerpt": "營業成本 (76,491) (79,503) (65,135)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 14,
+  "values": [
+   "73,878",
+   "73,809",
+   "62,136",
+   "0.1%",
+   "18.9%"
+  ],
+  "source_excerpt": "營業毛利 73,878 73,809 62,136 0.1% 18.9%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 15,
+  "values": [
+   "4,944",
+   "4,990",
+   "3,401"
+  ],
+  "source_excerpt": "推銷費用 (4,944) (4,990) (3,401)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 16,
+  "values": [
+   "2,632",
+   "2,985",
+   "2,947"
+  ],
+  "source_excerpt": "管理費用 (2,632) (2,985) (2,947)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 17,
+  "values": [
+   "36,923",
+   "35,782",
+   "30,833"
+  ],
+  "source_excerpt": "研究發展費用 (36,923) (35,782) (30,833)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 18,
+  "values": [
+   "44,499",
+   "43,756",
+   "37,180"
+  ],
+  "source_excerpt": "營業費用合計 (44,499) (43,756) (37,180)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 19,
+  "values": [
+   "29,379",
+   "30,053",
+   "24,956",
+   "2.2%",
+   "17.7%"
+  ],
+  "source_excerpt": "營業利益 29,379 30,053 24,956 (2.2%) 17.7%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 20,
+  "values": [
+   "3,849",
+   "4,500",
+   "4,241"
+  ],
+  "source_excerpt": "營業外收入及支出 3,849 4,500 4,241",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 21,
+  "values": [
+   "33,228",
+   "34,553",
+   "29,197"
+  ],
+  "source_excerpt": "稅前淨利 33,228 34,553 29,197",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 22,
+  "values": [
+   "5,163",
+   "5,024",
+   "3,242"
+  ],
+  "source_excerpt": "所得稅費用 (5,163) (5,024) (3,242)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 23,
+  "values": [
+   "28,064",
+   "29,529",
+   "25,955",
+   "5.0%",
+   "8.1%"
+  ],
+  "source_excerpt": "本期淨利 28,064 29,529 25,955 (5.0%) 8.1%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 24,
+  "values": [
+   "27,848",
+   "29,325",
+   "25,716",
+   "5.0%",
+   "8.3%"
+  ],
+  "source_excerpt": "母公司業主 27,848 29,325 25,716 (5.0%) 8.3%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 25,
+  "values": [
+   "216",
+   "204",
+   "240"
+  ],
+  "source_excerpt": "非控制權益 216 204 240",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 26,
+  "values": [
+   "17.50",
+   "18.43",
+   "16.19"
+  ],
+  "source_excerpt": "每股盈餘(元) 17.50 18.43 16.19",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 13,
+  "line": 27,
+  "values": [
+   "30.88",
+   "32.88",
+   "32.35"
+  ],
+  "source_excerpt": "平均匯率(美金/新台幣) 30.88 32.88 32.35",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 14,
+  "line": 12,
+  "values": [
+   "49.1%",
+   "48.1%",
+   "48.8%"
+  ],
+  "source_excerpt": "營業毛利率 49.1% 48.1% 48.8%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 14,
+  "line": 13,
+  "values": [
+   "3.3%",
+   "3.3%",
+   "2.7%"
+  ],
+  "source_excerpt": "推銷費用率 (3.3%) (3.3%) (2.7%)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 14,
+  "line": 14,
+  "values": [
+   "1.8%",
+   "1.9%",
+   "2.3%"
+  ],
+  "source_excerpt": "管理費用率 (1.8%) (1.9%) (2.3%)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 14,
+  "line": 15,
+  "values": [
+   "24.6%",
+   "23.3%",
+   "24.2%"
+  ],
+  "source_excerpt": "研究發展費用率 (24.6%) (23.3%) (24.2%)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 14,
+  "line": 16,
+  "values": [
+   "19.5%",
+   "19.6%",
+   "19.6%"
+  ],
+  "source_excerpt": "營業利益率 19.5% 19.6% 19.6%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 14,
+  "line": 17,
+  "values": [
+   "2.6%",
+   "2.9%",
+   "3.3%"
+  ],
+  "source_excerpt": "營業外收入及支出率 2.6% 2.9% 3.3%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 14,
+  "line": 18,
+  "values": [
+   "3.4%",
+   "3.3%",
+   "2.5%"
+  ],
+  "source_excerpt": "所得稅費用率 (3.4%) (3.3%) (2.5%)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 14,
+  "line": 19,
+  "values": [
+   "18.7%",
+   "19.3%",
+   "20.4%"
+  ],
+  "source_excerpt": "本期淨利率 18.7% 19.3% 20.4%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 13,
+  "values": [
+   "196,735",
+   "210,445",
+   "208,674"
+  ],
+  "source_excerpt": "現金及金融資產-流動 196,735 210,445 208,674",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 14,
+  "values": [
+   "69,733",
+   "79,152",
+   "45,945"
+  ],
+  "source_excerpt": "應收帳款淨額 69,733 79,152 45,945",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 15,
+  "values": [
+   "55,482",
+   "54,537",
+   "53,578"
+  ],
+  "source_excerpt": "存貨淨額 55,482 54,537 53,578",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 16,
+  "values": [
+   "27,182",
+   "34,362",
+   "23,796"
+  ],
+  "source_excerpt": "其他流動資產 27,182 34,362 23,796",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 17,
+  "values": [
+   "148,670",
+   "169,494",
+   "159,645"
+  ],
+  "source_excerpt": "基金及投資 148,670 169,494 159,645",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 18,
+  "values": [
+   "81,342",
+   "81,646",
+   "82,430"
+  ],
+  "source_excerpt": "無形資產 81,342 81,646 82,430",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 19,
+  "values": [
+   "90,071",
+   "88,648",
+   "107,307"
+  ],
+  "source_excerpt": "其他非流動資產 90,071 88,648 107,307",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 20,
+  "values": [
+   "669,214",
+   "718,284",
+   "681,374"
+  ],
+  "source_excerpt": "資產總計 669,214 718,284 681,374",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 21,
+  "values": [
+   "5,940",
+   "31,240",
+   "9,080"
+  ],
+  "source_excerpt": "短期借款 5,940 31,240 9,080",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 22,
+  "values": [
+   "39,070",
+   "40,808",
+   "32,253"
+  ],
+  "source_excerpt": "應付帳款 39,070 40,808 32,253",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 23,
+  "values": [
+   "213,205",
+   "224,493",
+   "224,950"
+  ],
+  "source_excerpt": "其他流動負債 213,205 224,493 224,950",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 24,
+  "values": [
+   "26,472",
+   "25,951",
+   "24,468"
+  ],
+  "source_excerpt": "非流動負債合計 26,472 25,951 24,468",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 15,
+  "line": 25,
+  "values": [
+   "384,528",
+   "395,792",
+   "390,624"
+  ],
+  "source_excerpt": "權益總計 384,528 395,792 390,624",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 16,
+  "line": 13,
+  "values": [
+   "45,669",
+   "13,423",
+   "49,940"
+  ],
+  "source_excerpt": "營業活動之淨現金流入(出) 45,669 13,423 49,940",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 16,
+  "line": 14,
+  "values": [
+   "10,212",
+   "7,533",
+   "6,659"
+  ],
+  "source_excerpt": "投資活動之淨現金流入(出) (10,212) (7,533) (6,659)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 16,
+  "line": 15,
+  "values": [
+   "25,936",
+   "16,140",
+   "1,045"
+  ],
+  "source_excerpt": "籌資活動之淨現金流入(出) (25,936) (16,140) 1,045",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 16,
+  "line": 16,
+  "values": [
+   "19,861",
+   "2,244",
+   "2,180"
+  ],
+  "source_excerpt": "匯率變動對現金及約當現金之影響 (19,861) 2,244 2,180",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 16,
+  "line": 17,
+  "values": [
+   "10,340",
+   "8,007",
+   "46,507"
+  ],
+  "source_excerpt": "本期現金及約當現金增加(減少)數 (10,340) (8,007) 46,507",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 16,
+  "line": 18,
+  "values": [
+   "185,349",
+   "195,689",
+   "189,852"
+  ],
+  "source_excerpt": "期末現金及約當現金餘額 185,349 195,689 189,852",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 20,
+  "values": [
+   "29,379",
+   "30,053",
+   "24,956",
+   "2.2%",
+   "17.7%"
+  ],
+  "source_excerpt": "TIFRS 營業利益 29,379 30,053 24,956 (2.2%) 17.7%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 21,
+  "values": [
+   "19.5%",
+   "19.6%",
+   "19.6%"
+  ],
+  "source_excerpt": "營業利益率(%) 19.5% 19.6% 19.6%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 23,
+  "values": [
+   "517",
+   "517",
+   "245"
+  ],
+  "source_excerpt": "股份基礎給付獎酬 517 517 245",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 24,
+  "values": [
+   "95",
+   "95",
+   "75"
+  ],
+  "source_excerpt": "因企業合併產生之資產增值攤銷 95 95 75",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 26,
+  "values": [
+   "29,990",
+   "30,665",
+   "25,276",
+   "2.2%",
+   "18.7%"
+  ],
+  "source_excerpt": "營業利益 29,990 30,665 25,276 (2.2%) 18.7%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 27,
+  "values": [
+   "19.9%",
+   "20.0%",
+   "19.9%"
+  ],
+  "source_excerpt": "營業利益率 (%) 19.9% 20.0% 19.9%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 29,
+  "values": [
+   "28,064",
+   "29,529",
+   "25,955",
+   "5.0%",
+   "8.1%"
+  ],
+  "source_excerpt": "本期淨利 28,064 29,529 25,955 (5.0%) 8.1%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 30,
+  "values": [
+   "18.7%",
+   "19.3%",
+   "20.4%"
+  ],
+  "source_excerpt": "本期淨利率(%) 18.7% 19.3% 20.4%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 31,
+  "values": [
+   "27,848",
+   "29,325",
+   "25,716",
+   "5.0%",
+   "8.3%"
+  ],
+  "source_excerpt": "本期淨利-母公司業主 27,848 29,325 25,716 (5.0%) 8.3%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 32,
+  "values": [
+   "17.50",
+   "18.43",
+   "16.19"
+  ],
+  "source_excerpt": "每股盈餘(NT$) 17.50 18.43 16.19",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 34,
+  "values": [
+   "517",
+   "517",
+   "245"
+  ],
+  "source_excerpt": "股份基礎給付獎酬 517 517 245",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 35,
+  "values": [
+   "95",
+   "95",
+   "75"
+  ],
+  "source_excerpt": "因企業合併產生之資產增值攤銷 95 95 75",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 36,
+  "values": [
+   "92",
+   "91",
+   "44"
+  ],
+  "source_excerpt": "所得稅影響數 (92) (91) (44)",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 38,
+  "values": [
+   "28,584",
+   "30,049",
+   "26,231",
+   "4.9%",
+   "9.0%"
+  ],
+  "source_excerpt": "本期淨利 28,584 30,049 26,231 (4.9%) 9.0%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 39,
+  "values": [
+   "19.0%",
+   "19.6%",
+   "20.6%"
+  ],
+  "source_excerpt": "本期淨利率(%) 19.0% 19.6% 20.6%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 40,
+  "values": [
+   "28,352",
+   "29,830",
+   "25,987",
+   "5.0%",
+   "9.1%"
+  ],
+  "source_excerpt": "本期淨利-母公司業主 28,352 29,830 25,987 (5.0%) 9.1%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 18,
+  "line": 41,
+  "values": [
+   "17.81",
+   "18.74",
+   "16.36"
+  ],
+  "source_excerpt": "每股盈餘(NT$) 17.81 18.74 16.36",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 19,
+  "line": 5,
+  "values": [
+   "1",
+   "100%"
+  ],
+  "source_excerpt": "註1：百分比加總不等於100%，因四捨五入造成。",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 19,
+  "line": 13,
+  "values": [
+   "52%",
+   "-9%",
+   "13%",
+   "-3%",
+   "19%"
+  ],
+  "source_excerpt": "Mobile Phone 52% -9% 13% -3% 19%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 19,
+  "line": 14,
+  "values": [
+   "43%",
+   "7%",
+   "26%",
+   "14%",
+   "32%"
+  ],
+  "source_excerpt": "Smart Edge Platforms 43% 7% 26% 14% 32%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 19,
+  "line": 15,
+  "values": [
+   "6%",
+   "17%",
+   "11%",
+   "24%",
+   "16%"
+  ],
+  "source_excerpt": "Power IC 6% 17% 11% 24% 16%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ },
+ {
+  "kind": "table_or_metric_row",
+  "filename": "245420250730M001.pdf",
+  "page": 19,
+  "line": 16,
+  "values": [
+   "100%",
+   "-2%",
+   "18%",
+   "4%",
+   "24%"
+  ],
+  "source_excerpt": "Total 100% -2% 18% 4% 24%",
+  "extraction_method": "selectable_text",
+  "confidence": "medium",
+  "verification_status": "needs_context_review"
+ }
+]

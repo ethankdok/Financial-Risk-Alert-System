@@ -1,0 +1,3244 @@
+[
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 1,
+  "evidence_type": "text",
+  "region": {
+   "x0": 66.61,
+   "y0": 192.9,
+   "x1": 831.3,
+   "y1": 524.28
+  },
+  "title": "聯發科技2025年第三季法人說明會",
+  "labels": [
+   "聯發科技2025年第三季法人說明會"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. October 31, 2025 聯發科技2025年第三季法人說明會 MediaTek 2025-Q3 Investor Conference",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p1r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 2,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.65,
+   "y0": 42.99,
+   "x1": 822.01,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E 投資安全聲明 簡報內所提供之資訊 (除歷史資訊外)屬預測性陳述，受到各種風險及不確定性因素影響，可能造成實際結果與陳述內容發生 顯著不符，這些不確定性因素包括：受到競爭性產品及定價之影響、設計是否及時被客戶接受、新技術是否及時導入利用、 新產品大量量產之能力、產業及市場對半導體產品之供給及需求移轉、產業及市場是否供給過剩、製造產能可得利用情況、",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p2r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 3,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 617.2,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E 合併營業收入 (單位：新台幣佰萬元) 131,813 150,369",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p3r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 3,
+  "evidence_type": "chart",
+  "region": {
+   "x0": 465.6,
+   "y0": 224.52,
+   "x1": 709.44,
+   "y1": 424.32
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "150,369 131,813 142,097 0 3Q24 2Q25 3Q25",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.6,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "chart_type": null,
+  "unit": null,
+  "is_forecast": null,
+  "mapping_status": "candidates_only",
+  "trend_source": null,
+  "numeric_candidates": [
+   "150,369",
+   "131,813",
+   "142,097",
+   "0"
+  ],
+  "period_candidates": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "unit_candidates": [],
+  "primitive_count": {
+   "drawings": 5,
+   "images": 0
+  },
+  "region_area_ratio": 0.094,
+  "region_id": "245420251031M001.pdf#p3r3"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 3,
+  "evidence_type": "unknown",
+  "region": {
+   "x0": 497.34,
+   "y0": 124.14,
+   "x1": 683.58,
+   "y1": 178.74
+  },
+  "title": "YoY",
+  "labels": [],
+  "values": [],
+  "trend": null,
+  "source_text": "QoQ YoY -5.5% 7.8% 150,369",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.35,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "numeric_candidates": [
+   "-5.5%",
+   "7.8%",
+   "150,369"
+  ],
+  "period_candidates": [],
+  "unit_candidates": [
+   "%"
+  ],
+  "primitive_count": {
+   "drawings": 2,
+   "images": 0
+  },
+  "region_area_ratio": 0.0196,
+  "region_id": "245420251031M001.pdf#p3r4"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 4,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 682.87,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 合併營業毛利率 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E 48.8% 49.1% 46.5%",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p4r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 4,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 205.75,
+   "x1": 595.14,
+   "y1": 279.18
+  },
+  "title": "55%",
+  "labels": [
+   "合併營業毛利率"
+  ],
+  "values": [
+   {
+    "row_label": "合併營業毛利率",
+    "values": [
+     "50%",
+     "48.8%",
+     "49.1%"
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "合併營業毛利率 50% 48.8% 49.1%",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.62,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [],
+  "mapping_status": "row_only",
+  "region_id": "245420251031M001.pdf#p4r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 4,
+  "evidence_type": "chart",
+  "region": {
+   "x0": 440.76,
+   "y0": 214.68,
+   "x1": 697.44,
+   "y1": 431.52
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "values": [
+   {
+    "label": "3Q24",
+    "value_text": "48.8%"
+   },
+   {
+    "label": "2Q25",
+    "value_text": "49.1%"
+   },
+   {
+    "label": "3Q25",
+    "value_text": "46.5%"
+   }
+  ],
+  "trend": "mixed",
+  "source_text": "48.8% 49.1% 46.5% 3Q24 2Q25 3Q25",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.72,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "chart_type": null,
+  "unit": "%",
+  "is_forecast": null,
+  "mapping_status": "aligned",
+  "trend_source": "deterministic",
+  "numeric_candidates": [
+   "48.8%",
+   "49.1%",
+   "46.5%"
+  ],
+  "period_candidates": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "unit_candidates": [
+   "%"
+  ],
+  "primitive_count": {
+   "drawings": 10,
+   "images": 0
+  },
+  "region_area_ratio": 0.1074,
+  "region_id": "245420251031M001.pdf#p4r4"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 4,
+  "evidence_type": "unknown",
+  "region": {
+   "x0": 459.42,
+   "y0": 127.74,
+   "x1": 652.62,
+   "y1": 182.34
+  },
+  "title": "-2.6pts",
+  "labels": [],
+  "values": [],
+  "trend": null,
+  "source_text": "QoQ YoY -2.6pts -2.3pts",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.35,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "numeric_candidates": [
+   "-2",
+   "-2"
+  ],
+  "period_candidates": [],
+  "unit_candidates": [],
+  "primitive_count": {
+   "drawings": 2,
+   "images": 0
+  },
+  "region_area_ratio": 0.0203,
+  "region_id": "245420251031M001.pdf#p4r5"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 5,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 597.62,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 合併營業費用 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E (單位：新台幣佰萬元) 33,261 36,923",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p5r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 5,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 192.02,
+   "x1": 703.81,
+   "y1": 279.18
+  },
+  "title": "45,000",
+  "labels": [
+   "合併營業費用"
+  ],
+  "values": [
+   {
+    "row_label": "合併營業費用",
+    "values": [
+     "4,237",
+     "2,632",
+     "2,588"
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "合併營業費用 4,237 2,632 2,588",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.62,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [],
+  "mapping_status": "row_only",
+  "region_id": "245420251031M001.pdf#p5r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 5,
+  "evidence_type": "chart",
+  "region": {
+   "x0": 429.96,
+   "y0": 114.06,
+   "x1": 726.24,
+   "y1": 442.44
+  },
+  "title": "YoY",
+  "labels": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "QoQ YoY -1.3% 8.5% 43,924 44,499 40,483 4,944 4,984 4,237 2,632 2,588 2,985 36,923 36,353 33,261 0 3Q24 2Q25 3Q25",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.6,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "chart_type": null,
+  "unit": "%",
+  "is_forecast": null,
+  "mapping_status": "candidates_only",
+  "trend_source": null,
+  "numeric_candidates": [
+   "-1.3%",
+   "8.5%",
+   "43,924",
+   "44,499",
+   "40,483",
+   "4,944",
+   "4,984",
+   "4,237",
+   "2,632",
+   "2,588",
+   "2,985",
+   "36,923",
+   "36,353",
+   "33,261",
+   "0"
+  ],
+  "period_candidates": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "unit_candidates": [
+   "%"
+  ],
+  "primitive_count": {
+   "drawings": 8,
+   "images": 0
+  },
+  "region_area_ratio": 0.1877,
+  "region_id": "245420251031M001.pdf#p5r4"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 6,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 618.02,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 合併營業利益 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E (單位：新台幣佰萬元) 23,864 29,379",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p6r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 6,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 198.46,
+   "x1": 707.15,
+   "y1": 292.17
+  },
+  "title": "35,000",
+  "labels": [
+   "合併營業利益"
+  ],
+  "values": [
+   {
+    "row_label": "合併營業利益",
+    "values": [
+     "25,000",
+     "23,864",
+     "22,188"
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "合併營業利益 25,000 23,864 22,188",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.62,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [],
+  "mapping_status": "row_only",
+  "region_id": "245420251031M001.pdf#p6r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 6,
+  "evidence_type": "chart",
+  "region": {
+   "x0": 459.24,
+   "y0": 207.36,
+   "x1": 725.4,
+   "y1": 438.72
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "29,379 23,864 22,188 0 3Q24 2Q25 3Q25",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.6,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "chart_type": null,
+  "unit": null,
+  "is_forecast": null,
+  "mapping_status": "candidates_only",
+  "trend_source": null,
+  "numeric_candidates": [
+   "29,379",
+   "23,864",
+   "22,188",
+   "0"
+  ],
+  "period_candidates": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "unit_candidates": [],
+  "primitive_count": {
+   "drawings": 6,
+   "images": 0
+  },
+  "region_area_ratio": 0.1188,
+  "region_id": "245420251031M001.pdf#p6r4"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 6,
+  "evidence_type": "unknown",
+  "region": {
+   "x0": 490.86,
+   "y0": 124.02,
+   "x1": 676.98,
+   "y1": 178.62
+  },
+  "title": "YoY",
+  "labels": [],
+  "values": [],
+  "trend": null,
+  "source_text": "QoQ YoY -24.5% -7%",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.35,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "numeric_candidates": [
+   "-24.5%",
+   "-7%"
+  ],
+  "period_candidates": [],
+  "unit_candidates": [
+   "%"
+  ],
+  "primitive_count": {
+   "drawings": 2,
+   "images": 0
+  },
+  "region_area_ratio": 0.0196,
+  "region_id": "245420251031M001.pdf#p6r5"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 7,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 696.5,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 合併營業利益率 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E 18.1% 19.5% 15.6%",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p7r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 7,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 205.19,
+   "x1": 696.5,
+   "y1": 299.11
+  },
+  "title": "30%",
+  "labels": [
+   "合併營業利益率"
+  ],
+  "values": [
+   {
+    "row_label": "合併營業利益率",
+    "values": [
+     "20%",
+     "18.1%",
+     "19.5%",
+     "15.6%"
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "合併營業利益率 20% 18.1% 19.5% 15.6%",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.62,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [],
+  "mapping_status": "row_only",
+  "region_id": "245420251031M001.pdf#p7r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 7,
+  "evidence_type": "chart",
+  "region": {
+   "x0": 465.6,
+   "y0": 214.08,
+   "x1": 708.36,
+   "y1": 414.48
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "19.5% 18.1% 15.6% 5% 0% 3Q24 2Q25 3Q25",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.6,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "chart_type": null,
+  "unit": "%",
+  "is_forecast": null,
+  "mapping_status": "candidates_only",
+  "trend_source": null,
+  "numeric_candidates": [
+   "19.5%",
+   "18.1%",
+   "15.6%",
+   "5%",
+   "0%"
+  ],
+  "period_candidates": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "unit_candidates": [
+   "%"
+  ],
+  "primitive_count": {
+   "drawings": 10,
+   "images": 0
+  },
+  "region_area_ratio": 0.0938,
+  "region_id": "245420251031M001.pdf#p7r4"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 7,
+  "evidence_type": "unknown",
+  "region": {
+   "x0": 480.06,
+   "y0": 128.58,
+   "x1": 673.26,
+   "y1": 183.18
+  },
+  "title": "-3.9pts",
+  "labels": [],
+  "values": [],
+  "trend": null,
+  "source_text": "QoQ YoY -3.9pts -2.5pts",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.35,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "numeric_candidates": [
+   "-3",
+   "-2"
+  ],
+  "period_candidates": [],
+  "unit_candidates": [],
+  "primitive_count": {
+   "drawings": 2,
+   "images": 0
+  },
+  "region_area_ratio": 0.0203,
+  "region_id": "245420251031M001.pdf#p7r5"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 8,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 620.12,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 合併本期淨利 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E (單位：新台幣佰萬元) 25,590 28,064",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p8r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 8,
+  "evidence_type": "chart",
+  "region": {
+   "x0": 468.0,
+   "y0": 104.46,
+   "x1": 724.8,
+   "y1": 427.92
+  },
+  "title": "YoY",
+  "labels": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "QoQ YoY -9.3% -0.5% 28,064 25,590 25,451 0 3Q24 2Q25 3Q25",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.6,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "chart_type": null,
+  "unit": "%",
+  "is_forecast": null,
+  "mapping_status": "candidates_only",
+  "trend_source": null,
+  "numeric_candidates": [
+   "-9.3%",
+   "-0.5%",
+   "28,064",
+   "25,590",
+   "25,451",
+   "0"
+  ],
+  "period_candidates": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "unit_candidates": [
+   "%"
+  ],
+  "primitive_count": {
+   "drawings": 8,
+   "images": 0
+  },
+  "region_area_ratio": 0.1602,
+  "region_id": "245420251031M001.pdf#p8r3"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 9,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 702.79,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 合併本期淨利率 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E 19.4% 18.7% 17.9%",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p9r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 9,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 197.9,
+   "x1": 702.79,
+   "y1": 282.74
+  },
+  "title": "30%",
+  "labels": [
+   "合併本期淨利率"
+  ],
+  "values": [
+   {
+    "row_label": "合併本期淨利率",
+    "values": [
+     "20%",
+     "19.4%",
+     "18.7%",
+     "17.9%"
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "合併本期淨利率 20% 19.4% 18.7% 17.9%",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.62,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [],
+  "mapping_status": "row_only",
+  "region_id": "245420251031M001.pdf#p9r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 9,
+  "evidence_type": "chart",
+  "region": {
+   "x0": 467.52,
+   "y0": 206.76,
+   "x1": 717.12,
+   "y1": 418.2
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "19.4% 18.7% 17.9% 5% 0% 3Q24 2Q25 3Q25",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.6,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "chart_type": null,
+  "unit": "%",
+  "is_forecast": null,
+  "mapping_status": "candidates_only",
+  "trend_source": null,
+  "numeric_candidates": [
+   "19.4%",
+   "18.7%",
+   "17.9%",
+   "5%",
+   "0%"
+  ],
+  "period_candidates": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "unit_candidates": [
+   "%"
+  ],
+  "primitive_count": {
+   "drawings": 10,
+   "images": 0
+  },
+  "region_area_ratio": 0.1018,
+  "region_id": "245420251031M001.pdf#p9r4"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 9,
+  "evidence_type": "unknown",
+  "region": {
+   "x0": 486.42,
+   "y0": 129.42,
+   "x1": 679.62,
+   "y1": 184.02
+  },
+  "title": "-0.8pts",
+  "labels": [],
+  "values": [],
+  "trend": null,
+  "source_text": "QoQ YoY -0.8pts -1.5pts",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.35,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "numeric_candidates": [
+   "-0",
+   "-1"
+  ],
+  "period_candidates": [],
+  "unit_candidates": [],
+  "primitive_count": {
+   "drawings": 2,
+   "images": 0
+  },
+  "region_area_ratio": 0.0203,
+  "region_id": "245420251031M001.pdf#p9r5"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 10,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 604.05,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 合併每股盈餘 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E (單位：新台幣元) 15.94 17.50",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p10r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 10,
+  "evidence_type": "chart",
+  "region": {
+   "x0": 461.16,
+   "y0": 181.56,
+   "x1": 707.52,
+   "y1": 425.64
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "values": [
+   {
+    "label": "3Q24",
+    "value_text": "15.94"
+   },
+   {
+    "label": "2Q25",
+    "value_text": "17.50"
+   },
+   {
+    "label": "3Q25",
+    "value_text": "15.84"
+   }
+  ],
+  "trend": "mixed",
+  "source_text": "17.50 15.94 15.84 3Q24 2Q25 3Q25",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.72,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "chart_type": null,
+  "unit": null,
+  "is_forecast": null,
+  "mapping_status": "aligned",
+  "trend_source": "deterministic",
+  "numeric_candidates": [
+   "17.50",
+   "15.94",
+   "15.84"
+  ],
+  "period_candidates": [
+   "3Q24",
+   "2Q25",
+   "3Q25"
+  ],
+  "unit_candidates": [],
+  "primitive_count": {
+   "drawings": 6,
+   "images": 0
+  },
+  "region_area_ratio": 0.116,
+  "region_id": "245420251031M001.pdf#p10r3"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 10,
+  "evidence_type": "unknown",
+  "region": {
+   "x0": 501.3,
+   "y0": 104.58,
+   "x1": 664.38,
+   "y1": 159.18
+  },
+  "title": "-$1.66",
+  "labels": [],
+  "values": [],
+  "trend": null,
+  "source_text": "QoQ YoY -$1.66 -$0.1 17.50",
+  "extraction_method": "pdf_visual_structure",
+  "confidence": 0.35,
+  "verification_status": "needs_review",
+  "gemini_eligible": true,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "numeric_candidates": [
+   "1.66",
+   "0.1",
+   "17.50"
+  ],
+  "period_candidates": [],
+  "unit_candidates": [
+   "$"
+  ],
+  "primitive_count": {
+   "drawings": 2,
+   "images": 0
+  },
+  "region_area_ratio": 0.0172,
+  "region_id": "245420251031M001.pdf#p10r4"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 11,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 674.39,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 2025年 第四季營運展望 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E • 合併營收：新台幣 1,421億 ~ 1,506億元 (假設2025-Q4美元兌新台幣平均匯率為1:30.6) • 合併毛利率：46% ± 1.5%",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p11r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 12,
+  "evidence_type": "text",
+  "region": {
+   "x0": 63.53,
+   "y0": 126.48,
+   "x1": 558.0,
+   "y1": 524.28
+  },
+  "title": "(TIFRS)",
+  "labels": [
+   "(TIFRS)"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 金管會認可之國際財務報導準則(TIFRS) 財務報表 (TIFRS)",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p12r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 13,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 468.28,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 註：數字加總不等，因四捨五入造成。 聯發科技股份有限公司 合併損益表(自結數) 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E (單位:新台幣佰萬元)",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p13r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 13,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 87.61,
+   "x1": 896.22,
+   "y1": 453.71
+  },
+  "title": "第三季",
+  "labels": [
+   "營業收入",
+   "營業成本",
+   "營業毛利",
+   "推銷費用",
+   "管理費用",
+   "研究發展費用",
+   "聯發科技股份有限公司 營業費用合計",
+   "營業利益",
+   "合併損益表(自結數) 營業外收入及支出",
+   "稅前淨利",
+   "所得稅費用",
+   "本期淨利",
+   "母公司業主",
+   "非控制權益",
+   "每股盈餘(元)",
+   "平均匯率(美金/新台幣)"
+  ],
+  "values": [
+   {
+    "row_label": "營業收入",
+    "values": [
+     "142,097",
+     "150,369",
+     "131,813",
+     "(5.5%)",
+     "7.8%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "142,097"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "150,369"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "131,813"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(5.5%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "7.8%"
+     }
+    ]
+   },
+   {
+    "row_label": "營業成本",
+    "values": [
+     "(75,985)",
+     "(76,491)",
+     "(67,466)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(75,985)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(76,491)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(67,466)"
+     }
+    ]
+   },
+   {
+    "row_label": "營業毛利",
+    "values": [
+     "66,112",
+     "73,878",
+     "64,348",
+     "(10.5%)",
+     "2.7%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "66,112"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "73,878"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "64,348"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(10.5%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "2.7%"
+     }
+    ]
+   },
+   {
+    "row_label": "推銷費用",
+    "values": [
+     "(4,984)",
+     "(4,944)",
+     "(4,237)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(4,984)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(4,944)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(4,237)"
+     }
+    ]
+   },
+   {
+    "row_label": "管理費用",
+    "values": [
+     "(2,588)",
+     "(2,632)",
+     "(2,985)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(2,588)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(2,632)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(2,985)"
+     }
+    ]
+   },
+   {
+    "row_label": "研究發展費用",
+    "values": [
+     "(36,353)",
+     "(36,923)",
+     "(33,261)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(36,353)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(36,923)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(33,261)"
+     }
+    ]
+   },
+   {
+    "row_label": "聯發科技股份有限公司 營業費用合計",
+    "values": [
+     "(43,924)",
+     "(44,499)",
+     "(40,483)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(43,924)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(44,499)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(40,483)"
+     }
+    ]
+   },
+   {
+    "row_label": "營業利益",
+    "values": [
+     "22,188",
+     "29,379",
+     "23,864",
+     "(24.5%)",
+     "(7.0%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "22,188"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "29,379"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "23,864"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(24.5%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "(7.0%)"
+     }
+    ]
+   },
+   {
+    "row_label": "合併損益表(自結數) 營業外收入及支出",
+    "values": [
+     "7,772",
+     "3,849",
+     "4,577"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "7,772"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "3,849"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "4,577"
+     }
+    ]
+   },
+   {
+    "row_label": "稅前淨利",
+    "values": [
+     "29,960",
+     "33,228",
+     "28,441"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "29,960"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "33,228"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "28,441"
+     }
+    ]
+   },
+   {
+    "row_label": "所得稅費用",
+    "values": [
+     "(4,509)",
+     "(5,163)",
+     "(2,851)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(4,509)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(5,163)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(2,851)"
+     }
+    ]
+   },
+   {
+    "row_label": "本期淨利",
+    "values": [
+     "25,451",
+     "28,064",
+     "25,590",
+     "(9.3%)",
+     "(0.5%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "25,451"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "28,064"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "25,590"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(9.3%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "(0.5%)"
+     }
+    ]
+   },
+   {
+    "row_label": "母公司業主",
+    "values": [
+     "25,221",
+     "27,848",
+     "25,346",
+     "(9.4%)",
+     "(0.5%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "25,221"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "27,848"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "25,346"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(9.4%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "(0.5%)"
+     }
+    ]
+   },
+   {
+    "row_label": "非控制權益",
+    "values": [
+     "230",
+     "216",
+     "243"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "230"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "216"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "243"
+     }
+    ]
+   },
+   {
+    "row_label": "每股盈餘(元)",
+    "values": [
+     "15.84",
+     "17.50",
+     "15.94"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "15.84"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "17.50"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "15.94"
+     }
+    ]
+   },
+   {
+    "row_label": "平均匯率(美金/新台幣)",
+    "values": [
+     "29.95",
+     "30.88",
+     "32.30"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "29.95"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "30.88"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "32.30"
+     }
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "2025年 第三季 | 2025年 第二季 | 2024年 第三季 | Q-Q | Y-Y\n營業收入 142,097 150,369 131,813 (5.5%) 7.8%\n營業成本 (75,985) (76,491) (67,466)\n營業毛利 66,112 73,878 64,348 (10.5%) 2.7%\n推銷費用 (4,984) (4,944) (4,237)\n管理費用 (2,588) (2,632) (2,985)\n研究發展費用 (36,353) (36,923) (33,261)\n聯發科技股份有限公司 營業費用合計 (43,924) (44,499) (40,483)\n營業利益 22,188 29,379 23,864 (24.5%) (7.0%)\n合併損益表(自結數) 營業外收入及支出 7,772 3,849 4,577\n稅前淨利 29,960 33,228 28,441\n所得稅費用 (4,509) (5,163) (2,851)\n本期淨利 25,451 28,064 25,590 (9.3%) (0.5%)\n母公司業主 25,221 27,848 25,346 (9.4%) (0.5%)\n非控制權益 230 216 243\n每股盈餘(元) 15.84 17.50 15.94\n平均匯率(美金/新台幣) 29.95 30.88 32.30",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.82,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [
+   "2025年 第三季",
+   "2025年 第二季",
+   "2024年 第三季",
+   "Q-Q",
+   "Y-Y"
+  ],
+  "mapping_status": "aligned",
+  "ruled": true,
+  "region_id": "245420251031M001.pdf#p13r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 14,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 654.17,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 聯發科技股份有限公司 合併損益表(佔營收比例) 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E 註：數字加總不等，因四捨五入造成。 2025年",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p14r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 14,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 133.55,
+   "x1": 848.16,
+   "y1": 395.01
+  },
+  "title": "第三季",
+  "labels": [
+   "營業毛利率",
+   "推銷費用率",
+   "管理費用率",
+   "研究發展費用率",
+   "合併損益表(佔營收比例) 營業利益率",
+   "營業外收入及支出率",
+   "所得稅費用率",
+   "本期淨利率"
+  ],
+  "values": [
+   {
+    "row_label": "營業毛利率",
+    "values": [
+     "46.5%",
+     "49.1%",
+     "48.8%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "46.5%"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "49.1%"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "48.8%"
+     }
+    ]
+   },
+   {
+    "row_label": "推銷費用率",
+    "values": [
+     "(3.5%)",
+     "(3.3%)",
+     "(3.2%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(3.5%)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(3.3%)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(3.2%)"
+     }
+    ]
+   },
+   {
+    "row_label": "管理費用率",
+    "values": [
+     "(1.8%)",
+     "(1.8%)",
+     "(2.3%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(1.8%)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(1.8%)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(2.3%)"
+     }
+    ]
+   },
+   {
+    "row_label": "研究發展費用率",
+    "values": [
+     "(25.6%)",
+     "(24.6%)",
+     "(25.2%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(25.6%)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(24.6%)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(25.2%)"
+     }
+    ]
+   },
+   {
+    "row_label": "合併損益表(佔營收比例) 營業利益率",
+    "values": [
+     "15.6%",
+     "19.5%",
+     "18.1%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "15.6%"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "19.5%"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "18.1%"
+     }
+    ]
+   },
+   {
+    "row_label": "營業外收入及支出率",
+    "values": [
+     "5.5%",
+     "2.6%",
+     "3.5%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "5.5%"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "2.6%"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "3.5%"
+     }
+    ]
+   },
+   {
+    "row_label": "所得稅費用率",
+    "values": [
+     "(3.2%)",
+     "(3.4%)",
+     "(2.2%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(3.2%)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(3.4%)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(2.2%)"
+     }
+    ]
+   },
+   {
+    "row_label": "本期淨利率",
+    "values": [
+     "17.9%",
+     "18.7%",
+     "19.4%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "17.9%"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "18.7%"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "19.4%"
+     }
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "2025年 第三季 | 2025年 第二季 | 2024年 第三季\n營業毛利率 46.5% 49.1% 48.8%\n推銷費用率 (3.5%) (3.3%) (3.2%)\n管理費用率 (1.8%) (1.8%) (2.3%)\n研究發展費用率 (25.6%) (24.6%) (25.2%)\n合併損益表(佔營收比例) 營業利益率 15.6% 19.5% 18.1%\n營業外收入及支出率 5.5% 2.6% 3.5%\n所得稅費用率 (3.2%) (3.4%) (2.2%)\n本期淨利率 17.9% 18.7% 19.4%",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.82,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [
+   "2025年 第三季",
+   "2025年 第二季",
+   "2024年 第三季"
+  ],
+  "mapping_status": "aligned",
+  "region_id": "245420251031M001.pdf#p14r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 15,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 317.0,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E 聯發科技股份有限公司 合併資產負債表 (自結數) 註：數字加總不等，因四捨五入造成。",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p15r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 15,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 105.22,
+   "x1": 884.64,
+   "y1": 439.0
+  },
+  "title": "第三季",
+  "labels": [
+   "現金及金融資產-流動",
+   "應收帳款淨額",
+   "存貨淨額",
+   "其他流動資產",
+   "基金及投資",
+   "聯發科技股份有限公司 無形資產",
+   "合併資產負債表 其他非流動資產",
+   "資產總計",
+   "(自結數) 短期借款",
+   "應付帳款",
+   "其他流動負債",
+   "非流動負債合計",
+   "權益總計"
+  ],
+  "values": [
+   {
+    "row_label": "現金及金融資產-流動",
+    "values": [
+     "210,604",
+     "196,735",
+     "198,020"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "210,604"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "196,735"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "198,020"
+     }
+    ]
+   },
+   {
+    "row_label": "應收帳款淨額",
+    "values": [
+     "67,168",
+     "69,733",
+     "47,219"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "67,168"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "69,733"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "47,219"
+     }
+    ]
+   },
+   {
+    "row_label": "存貨淨額",
+    "values": [
+     "56,964",
+     "55,482",
+     "55,635"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "56,964"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "55,482"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "55,635"
+     }
+    ]
+   },
+   {
+    "row_label": "其他流動資產",
+    "values": [
+     "24,215",
+     "27,182",
+     "26,215"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "24,215"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "27,182"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "26,215"
+     }
+    ]
+   },
+   {
+    "row_label": "基金及投資",
+    "values": [
+     "157,900",
+     "148,670",
+     "166,784"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "157,900"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "148,670"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "166,784"
+     }
+    ]
+   },
+   {
+    "row_label": "聯發科技股份有限公司 無形資產",
+    "values": [
+     "80,240",
+     "81,342",
+     "83,552"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "80,240"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "81,342"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "83,552"
+     }
+    ]
+   },
+   {
+    "row_label": "合併資產負債表 其他非流動資產",
+    "values": [
+     "90,762",
+     "90,071",
+     "99,104"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "90,762"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "90,071"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "99,104"
+     }
+    ]
+   },
+   {
+    "row_label": "資產總計",
+    "values": [
+     "687,852",
+     "669,214",
+     "676,528"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "687,852"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "669,214"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "676,528"
+     }
+    ]
+   },
+   {
+    "row_label": "(自結數) 短期借款",
+    "values": [
+     "15,423",
+     "5,940",
+     "19,134"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "15,423"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "5,940"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "19,134"
+     }
+    ]
+   },
+   {
+    "row_label": "應付帳款",
+    "values": [
+     "37,855",
+     "39,070",
+     "35,682"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "37,855"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "39,070"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "35,682"
+     }
+    ]
+   },
+   {
+    "row_label": "其他流動負債",
+    "values": [
+     "178,226",
+     "213,205",
+     "174,132"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "178,226"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "213,205"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "174,132"
+     }
+    ]
+   },
+   {
+    "row_label": "非流動負債合計",
+    "values": [
+     "27,803",
+     "26,472",
+     "24,122"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "27,803"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "26,472"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "24,122"
+     }
+    ]
+   },
+   {
+    "row_label": "權益總計",
+    "values": [
+     "428,544",
+     "384,528",
+     "423,458"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "428,544"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "384,528"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "423,458"
+     }
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "2025年 第三季 | 2025年 第二季 | 2024年 第三季\n現金及金融資產-流動 210,604 196,735 198,020\n應收帳款淨額 67,168 69,733 47,219\n存貨淨額 56,964 55,482 55,635\n其他流動資產 24,215 27,182 26,215\n基金及投資 157,900 148,670 166,784\n聯發科技股份有限公司 無形資產 80,240 81,342 83,552\n合併資產負債表 其他非流動資產 90,762 90,071 99,104\n資產總計 687,852 669,214 676,528\n(自結數) 短期借款 15,423 5,940 19,134\n應付帳款 37,855 39,070 35,682\n其他流動負債 178,226 213,205 174,132\n非流動負債合計 27,803 26,472 24,122\n權益總計 428,544 384,528 423,458",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.82,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [
+   "2025年 第三季",
+   "2025年 第二季",
+   "2024年 第三季"
+  ],
+  "mapping_status": "aligned",
+  "region_id": "245420251031M001.pdf#p15r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 16,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 317.0,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E 聯發科技股份有限公司 合併現金流量表 (自結數) 註：數字加總不等，因四捨五入造成。",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p16r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 16,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 138.2,
+   "x1": 856.03,
+   "y1": 377.58
+  },
+  "title": "第三季",
+  "labels": [
+   "營業活動之淨現金流入(出)",
+   "投資活動之淨現金流入(出)",
+   "聯發科技股份有限公司 籌資活動之淨現金流入(出)",
+   "合併現金流量表 匯率變動對現金及約當現金之影響",
+   "(自結數) 本期現金及約當現金增加(減少)數",
+   "期末現金及約當現金餘額"
+  ],
+  "values": [
+   {
+    "row_label": "營業活動之淨現金流入(出)",
+    "values": [
+     "39,181",
+     "45,669",
+     "36,225"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "39,181"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "45,669"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "36,225"
+     }
+    ]
+   },
+   {
+    "row_label": "投資活動之淨現金流入(出)",
+    "values": [
+     "(3,370)",
+     "(10,212)",
+     "(3,844)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(3,370)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(10,212)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(3,844)"
+     }
+    ]
+   },
+   {
+    "row_label": "聯發科技股份有限公司 籌資活動之淨現金流入(出)",
+    "values": [
+     "(31,020)",
+     "(25,936)",
+     "(38,885)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(31,020)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(25,936)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(38,885)"
+     }
+    ]
+   },
+   {
+    "row_label": "合併現金流量表 匯率變動對現金及約當現金之影響",
+    "values": [
+     "7,631",
+     "(19,861)",
+     "(3,517)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "7,631"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(19,861)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(3,517)"
+     }
+    ]
+   },
+   {
+    "row_label": "(自結數) 本期現金及約當現金增加(減少)數",
+    "values": [
+     "12,421",
+     "(10,340)",
+     "(10,022)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "12,421"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(10,340)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(10,022)"
+     }
+    ]
+   },
+   {
+    "row_label": "期末現金及約當現金餘額",
+    "values": [
+     "197,770",
+     "185,349",
+     "179,830"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "197,770"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "185,349"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "179,830"
+     }
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "2025年 第三季 | 2025年 第二季 | 2024年 第三季\n營業活動之淨現金流入(出) 39,181 45,669 36,225\n投資活動之淨現金流入(出) (3,370) (10,212) (3,844)\n聯發科技股份有限公司 籌資活動之淨現金流入(出) (31,020) (25,936) (38,885)\n合併現金流量表 匯率變動對現金及約當現金之影響 7,631 (19,861) (3,517)\n(自結數) 本期現金及約當現金增加(減少)數 12,421 (10,340) (10,022)\n期末現金及約當現金餘額 197,770 185,349 179,830",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.82,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [
+   "2025年 第三季",
+   "2025年 第二季",
+   "2024年 第三季"
+  ],
+  "mapping_status": "aligned",
+  "region_id": "245420251031M001.pdf#p16r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 17,
+  "evidence_type": "text",
+  "region": {
+   "x0": 63.53,
+   "y0": 123.68,
+   "x1": 655.92,
+   "y1": 524.28
+  },
+  "title": "補充資訊",
+  "labels": [
+   "補充資訊"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 非金管會認可之國際財務報導準則(Non-TIFRS) 財務資訊調節表及季度營收產品類別 補充資訊",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p17r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 18,
+  "evidence_type": "text",
+  "region": {
+   "x0": 65.66,
+   "y0": 42.99,
+   "x1": 317.0,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E 非金管會認可之 國際財務報導準則 (Non-TIFRS) 財務資訊調節表註2",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p18r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 18,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 83.48,
+   "x1": 904.81,
+   "y1": 476.07
+  },
+  "title": "第三季",
+  "labels": [
+   "營業利益",
+   "營業利益率(%)",
+   "股份基礎給付獎酬",
+   "因企業合併產生之資產增值攤銷",
+   "非金管會認可之 Non-TIFRS 營業利益",
+   "國際財務報導準則 營業利益率(%)",
+   "(Non-TIFRS) 本期淨利",
+   "本期淨利率(%)",
+   "本期淨利-母公司業主",
+   "每股盈餘(NT$)",
+   "股份基礎給付獎酬",
+   "調節項目 因企業合併產生之資產增值攤銷",
+   "所得稅影響數",
+   "註2：非金管會認可之國際財務報導準則(Non-TIFRS)為 本期淨利",
+   "資訊，調節項目為股份基礎給付獎酬、因企業合併產生 本期淨利率(%)",
+   "之資產增值攤銷及所得稅影響數等，其僅為補充而非替 本期淨利-母公司業主",
+   "務報導準則(TIFRS)的財務數據為準。 每股盈餘(NT$)"
+  ],
+  "values": [
+   {
+    "row_label": "營業利益",
+    "values": [
+     "22,188",
+     "29,379",
+     "23,864",
+     "(24.5%)",
+     "(7.0%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "22,188"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "29,379"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "23,864"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(24.5%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "(7.0%)"
+     }
+    ]
+   },
+   {
+    "row_label": "營業利益率(%)",
+    "values": [
+     "15.6%",
+     "19.5%",
+     "18.1%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "15.6%"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "19.5%"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "18.1%"
+     }
+    ]
+   },
+   {
+    "row_label": "股份基礎給付獎酬",
+    "values": [
+     "561",
+     "517",
+     "300"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "561"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "517"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "300"
+     }
+    ]
+   },
+   {
+    "row_label": "因企業合併產生之資產增值攤銷",
+    "values": [
+     "95",
+     "95",
+     "112"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "95"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "95"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "112"
+     }
+    ]
+   },
+   {
+    "row_label": "非金管會認可之 Non-TIFRS 營業利益",
+    "values": [
+     "22,843",
+     "29,990",
+     "24,276",
+     "(23.8%)",
+     "(5.9%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "22,843"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "29,990"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "24,276"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(23.8%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "(5.9%)"
+     }
+    ]
+   },
+   {
+    "row_label": "國際財務報導準則 營業利益率(%)",
+    "values": [
+     "16.1%",
+     "19.9%",
+     "18.4%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "16.1%"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "19.9%"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "18.4%"
+     }
+    ]
+   },
+   {
+    "row_label": "(Non-TIFRS) 本期淨利",
+    "values": [
+     "25,451",
+     "28,064",
+     "25,590",
+     "(9.3%)",
+     "(0.5%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "25,451"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "28,064"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "25,590"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(9.3%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "(0.5%)"
+     }
+    ]
+   },
+   {
+    "row_label": "本期淨利率(%)",
+    "values": [
+     "17.9%",
+     "18.7%",
+     "19.4%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "17.9%"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "18.7%"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "19.4%"
+     }
+    ]
+   },
+   {
+    "row_label": "本期淨利-母公司業主",
+    "values": [
+     "25,221",
+     "27,848",
+     "25,346",
+     "(9.4%)",
+     "(0.5%)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "25,221"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "27,848"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "25,346"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(9.4%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "(0.5%)"
+     }
+    ]
+   },
+   {
+    "row_label": "每股盈餘(NT$)",
+    "values": [
+     "15.84",
+     "17.50",
+     "15.94"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "15.84"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "17.50"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "15.94"
+     }
+    ]
+   },
+   {
+    "row_label": "股份基礎給付獎酬",
+    "values": [
+     "561",
+     "517",
+     "300"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "561"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "517"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "300"
+     }
+    ]
+   },
+   {
+    "row_label": "調節項目 因企業合併產生之資產增值攤銷",
+    "values": [
+     "95",
+     "95",
+     "112"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "95"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "95"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "112"
+     }
+    ]
+   },
+   {
+    "row_label": "所得稅影響數",
+    "values": [
+     "(98)",
+     "(92)",
+     "(56)"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "(98)"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "(92)"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "(56)"
+     }
+    ]
+   },
+   {
+    "row_label": "註2：非金管會認可之國際財務報導準則(Non-TIFRS)為 本期淨利",
+    "values": [
+     "26,007",
+     "28,584",
+     "25,946",
+     "(9.0%)",
+     "0.2%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "26,007"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "28,584"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "25,946"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(9.0%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "0.2%"
+     }
+    ]
+   },
+   {
+    "row_label": "資訊，調節項目為股份基礎給付獎酬、因企業合併產生 本期淨利率(%)",
+    "values": [
+     "18.3%",
+     "19.0%",
+     "19.7%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "18.3%"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "19.0%"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "19.7%"
+     }
+    ]
+   },
+   {
+    "row_label": "之資產增值攤銷及所得稅影響數等，其僅為補充而非替 本期淨利-母公司業主",
+    "values": [
+     "25,762",
+     "28,352",
+     "25,677",
+     "(9.1%)",
+     "0.3%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "25,762"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "28,352"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "25,677"
+     },
+     {
+      "column": "Q-Q",
+      "value_text": "(9.1%)"
+     },
+     {
+      "column": "Y-Y",
+      "value_text": "0.3%"
+     }
+    ]
+   },
+   {
+    "row_label": "務報導準則(TIFRS)的財務數據為準。 每股盈餘(NT$)",
+    "values": [
+     "16.18",
+     "17.81",
+     "16.15"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季",
+      "value_text": "16.18"
+     },
+     {
+      "column": "2025年 第二季",
+      "value_text": "17.81"
+     },
+     {
+      "column": "2024年 第三季",
+      "value_text": "16.15"
+     }
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "2025年 第三季 | 2025年 第二季 | 2024年 第三季 | Q-Q | Y-Y\n營業利益 22,188 29,379 23,864 (24.5%) (7.0%)\n營業利益率(%) 15.6% 19.5% 18.1%\n股份基礎給付獎酬 561 517 300\n因企業合併產生之資產增值攤銷 95 95 112\n非金管會認可之 Non-TIFRS 營業利益 22,843 29,990 24,276 (23.8%) (5.9%)\n國際財務報導準則 營業利益率(%) 16.1% 19.9% 18.4%\n(Non-TIFRS) 本期淨利 25,451 28,064 25,590 (9.3%) (0.5%)\n本期淨利率(%) 17.9% 18.7% 19.4%\n本期淨利-母公司業主 25,221 27,848 25,346 (9.4%) (0.5%)\n每股盈餘(NT$) 15.84 17.50 15.94\n股份基礎給付獎酬 561 517 300\n調節項目 因企業合併產生之資產增值攤銷 95 95 112\n所得稅影響數 (98) (92) (56)\n註2：非金管會認可之國際財務報導準則(Non-TIFRS)為 本期淨利 26,007 28,584 25,946 (9.0%) 0.2%\n資訊，調節項目為股份基礎給付獎酬、因企業合併產生 本期淨利率(%) 18.3% 19.0% 19.7%\n之資產增值攤銷及所得稅影響數等，其僅為補充而非替 本期淨利-母公司業主 25,762 28,352 25,677 (9.1%) 0.3%\n務報導準則(TIFRS)的財務數據為準。 每股盈餘(NT$) 16.18 17.81 16.15",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.82,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [
+   "2025年 第三季",
+   "2025年 第二季",
+   "2024年 第三季",
+   "Q-Q",
+   "Y-Y"
+  ],
+  "mapping_status": "aligned",
+  "ruled": true,
+  "region_id": "245420251031M001.pdf#p18r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 19,
+  "evidence_type": "text",
+  "region": {
+   "x0": 58.16,
+   "y0": 42.99,
+   "x1": 317.0,
+   "y1": 524.28
+  },
+  "title": "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E",
+  "labels": [
+   "2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. 2 0 2 5 - Q 3 I N V E S T O R C O N F E R E N C E 本季產品類別 營收佔比 註1：百分比加總不等於100%，因四捨五入造成。 * Mobile Phone：5G/4G/3G智慧型手機、功能型手機",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p19r1"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 19,
+  "evidence_type": "table",
+  "region": {
+   "x0": 65.66,
+   "y0": 168.41,
+   "x1": 878.21,
+   "y1": 350.77
+  },
+  "title": "QoQ%",
+  "labels": [
+   "本季產品類別 Mobile Phone",
+   "營收佔比 Smart Edge Platforms",
+   "Power IC",
+   "Total"
+  ],
+  "values": [
+   {
+    "row_label": "本季產品類別 Mobile Phone",
+    "values": [
+     "53%",
+     "-4%",
+     "4%",
+     "-1%",
+     "13%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季 營收佔比 (註1)",
+      "value_text": "53%"
+     },
+     {
+      "column": "以新台幣計價之營收 QoQ%",
+      "value_text": "-4%"
+     },
+     {
+      "column": "以新台幣計價之營收 YoY%",
+      "value_text": "4%"
+     },
+     {
+      "column": "以美金計價之營收 QoQ%",
+      "value_text": "-1%"
+     },
+     {
+      "column": "以美金計價之營收 YoY%",
+      "value_text": "13%"
+     }
+    ]
+   },
+   {
+    "row_label": "營收佔比 Smart Edge Platforms",
+    "values": [
+     "42%",
+     "-6%",
+     "14%",
+     "-4%",
+     "23%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季 營收佔比 (註1)",
+      "value_text": "42%"
+     },
+     {
+      "column": "以新台幣計價之營收 QoQ%",
+      "value_text": "-6%"
+     },
+     {
+      "column": "以新台幣計價之營收 YoY%",
+      "value_text": "14%"
+     },
+     {
+      "column": "以美金計價之營收 QoQ%",
+      "value_text": "-4%"
+     },
+     {
+      "column": "以美金計價之營收 YoY%",
+      "value_text": "23%"
+     }
+    ]
+   },
+   {
+    "row_label": "Power IC",
+    "values": [
+     "5%",
+     "-10%",
+     "-4%",
+     "-7%",
+     "3%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季 營收佔比 (註1)",
+      "value_text": "5%"
+     },
+     {
+      "column": "以新台幣計價之營收 QoQ%",
+      "value_text": "-10%"
+     },
+     {
+      "column": "以新台幣計價之營收 YoY%",
+      "value_text": "-4%"
+     },
+     {
+      "column": "以美金計價之營收 QoQ%",
+      "value_text": "-7%"
+     },
+     {
+      "column": "以美金計價之營收 YoY%",
+      "value_text": "3%"
+     }
+    ]
+   },
+   {
+    "row_label": "Total",
+    "values": [
+     "100%",
+     "-6%",
+     "8%",
+     "-3%",
+     "16%"
+    ],
+    "cells": [
+     {
+      "column": "2025年 第三季 營收佔比 (註1)",
+      "value_text": "100%"
+     },
+     {
+      "column": "以新台幣計價之營收 QoQ%",
+      "value_text": "-6%"
+     },
+     {
+      "column": "以新台幣計價之營收 YoY%",
+      "value_text": "8%"
+     },
+     {
+      "column": "以美金計價之營收 QoQ%",
+      "value_text": "-3%"
+     },
+     {
+      "column": "以美金計價之營收 YoY%",
+      "value_text": "16%"
+     }
+    ]
+   }
+  ],
+  "trend": null,
+  "source_text": "2025年 第三季 營收佔比 (註1) | 以新台幣計價之營收 QoQ% | 以新台幣計價之營收 YoY% | 以美金計價之營收 QoQ% | 以美金計價之營收 YoY%\n本季產品類別 Mobile Phone 53% -4% 4% -1% 13%\n營收佔比 Smart Edge Platforms 42% -6% 14% -4% 23%\nPower IC 5% -10% -4% -7% 3%\nTotal 100% -6% 8% -3% 16%",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.82,
+  "verification_status": "partially_verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "columns": [
+   "2025年 第三季 營收佔比 (註1)",
+   "以新台幣計價之營收 QoQ%",
+   "以新台幣計價之營收 YoY%",
+   "以美金計價之營收 QoQ%",
+   "以美金計價之營收 YoY%"
+  ],
+  "mapping_status": "aligned",
+  "ruled": true,
+  "region_id": "245420251031M001.pdf#p19r2"
+ },
+ {
+  "filename": "245420251031M001.pdf",
+  "page": 20,
+  "evidence_type": "text",
+  "region": {
+   "x0": 66.61,
+   "y0": 230.16,
+   "x1": 626.29,
+   "y1": 524.28
+  },
+  "title": "www.mediatek.com",
+  "labels": [
+   "www.mediatek.com"
+  ],
+  "values": [],
+  "trend": null,
+  "source_text": "Copyright © MediaTek Inc. All rights reserved. www.mediatek.com",
+  "extraction_method": "pdf_text_layout",
+  "confidence": 0.86,
+  "verification_status": "verified",
+  "gemini_eligible": false,
+  "semantic_provider": "deterministic",
+  "semantic_provider_status": "not_requested",
+  "ocr_eligible": false,
+  "ocr_status": "not_requested",
+  "region_id": "245420251031M001.pdf#p20r1"
+ }
+]
