@@ -176,4 +176,22 @@ footer{border-top:1px solid var(--line);background:white}.footer-inner{max-width
 .financial-source-link{display:inline-flex;margin-top:8px;color:var(--blue);font-weight:800;font-size:13px}
 .financial-source-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-bottom:1px solid #edf2f7;padding:9px 0}
 .financial-source-row small{grid-column:1/-1;color:var(--muted)}
+.financial-official-group-wide{grid-column:1/-1}
+.financial-digest{margin-top:10px;display:grid;gap:10px}
+.financial-digest-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.financial-digest-title{margin:4px 0 0;font-size:15px;color:var(--navy)}
+.financial-digest-overview p{margin:6px 0;line-height:1.8;color:#304258}
+.financial-digest-warning{margin:0;padding:9px 11px;border:1px solid #f3d9a6;border-radius:11px;background:#fff8ea;color:#7a5410;font-size:13px}
+.financial-digest-section{border-top:1px solid #edf2f7;padding-top:9px}
+.financial-digest-list{margin:8px 0 0;padding-left:18px;display:grid;gap:8px}
+.financial-digest-bullet{color:#374961;line-height:1.7}
+.financial-digest-bullet.is-low-confidence{color:#6b7a8d}
+.financial-digest-bullet-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:3px}
+.financial-digest-evidence,.financial-digest-more{margin-top:4px;font-size:13px}
+.financial-digest-evidence summary,.financial-digest-more summary{cursor:pointer;color:var(--blue);font-weight:700}
+.financial-digest-ref-list{display:grid;gap:6px;margin-top:6px}
+.financial-digest-ref{border:1px solid #e4ebf3;border-radius:10px;background:#fff;padding:8px 10px;display:grid;gap:4px}
+.financial-digest-ref b{font-size:12px;color:var(--navy);word-break:break-all}
+.financial-digest-ref small{white-space:pre-wrap;color:#54657c;word-break:break-word}
+.financial-digest-provenance .financial-note-list span{word-break:break-all}
 @media(max-width:900px){.financial-section-head{display:block}.financial-section-head .status-tag{margin-top:12px}.financial-summary-grid,.financial-metric-grid,.financial-dimension-grid,.financial-official-grid{grid-template-columns:1fr}.financial-compact-row{grid-template-columns:1fr}.financial-rule-head{display:block}.financial-rule-head .status-tag{margin-top:6px}}

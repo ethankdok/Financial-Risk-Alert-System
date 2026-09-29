@@ -1851,6 +1851,210 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const DIGEST_STATUS_LABELS = {
+    verified: '已驗證',
+    partially_verified: '部分驗證',
+    needs_review: '待人工複核',
+  };
+  const DIGEST_COVERAGE_LABELS = {
+    complete: '涵蓋完整',
+    partial: '涵蓋部分',
+    limited: '涵蓋有限',
+  };
+  const DIGEST_DOCUMENT_TYPES = {
+    earnings_presentation: '法說會簡報',
+    full_earnings_transcript: '法說會逐字稿',
+    financial_results_release: '財務結果新聞稿',
+    investor_presentation: '投資人簡報',
+  };
+  const DIGEST_LANGUAGES = { 'zh-Hant': '中文', en: '英文', bilingual: '中英雙語' };
+  const DIGEST_SECTION_PREVIEW = 6;
+
+  const safeHttpsLink = (href, label) => {
+    // Only real https GET URLs become links; the MOPS PDF download is a POST form, never a link.
+    if (typeof href !== 'string' || !/^https:\/\//i.test(href)) return null;
+    const link = el('a', 'financial-source-link', label);
+    link.href = href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    return link;
+  };
+
+  const appendDigestRefs = (parent, refs) => {
+    const values = refs || [];
+    if (!values.length) return;
+    const details = el('details', 'financial-digest-evidence');
+    appendText(details, 'summary', null, `來源 Evidence（${values.length}）`);
+    const list = el('div', 'financial-digest-ref-list');
+    values.forEach((ref) => {
+      const row = el('div', 'financial-digest-ref');
+      const where = [
+        `第 ${text(ref.page, '?')} 頁`,
+        ref.region_id || ref.evidence_type,
+        DIGEST_STATUS_LABELS[ref.verification_status] || ref.verification_status,
+        ref.extraction_method,
+        ref.role === 'corroborating' ? '交叉對應' : null,
+      ];
+      appendText(row, 'b', null, where.filter(Boolean).join(' · '));
+      if (ref.excerpt) appendText(row, 'small', null, ref.excerpt);
+      list.appendChild(row);
+    });
+    details.appendChild(list);
+    parent.appendChild(details);
+  };
+
+  const appendDigestBullet = (list, bullet) => {
+    const row = el('li', bullet.low_confidence ? 'financial-digest-bullet is-low-confidence' : 'financial-digest-bullet');
+    appendText(row, 'span', null, bullet.text);
+    const meta = el('div', 'financial-digest-bullet-meta');
+    if (bullet.pages?.length) appendText(meta, 'small', 'muted-text', `第 ${bullet.pages.join('、')} 頁`);
+    meta.appendChild(buildBadge(
+      DIGEST_STATUS_LABELS[bullet.verification_status] || bullet.verification_status,
+      bullet.low_confidence ? 'tag-orange' : 'tag-blue',
+    ));
+    row.appendChild(meta);
+    appendDigestRefs(row, bullet.evidence_refs);
+    list.appendChild(row);
+  };
+
+  const appendDigestSection = (parent, section) => {
+    const bullets = section.bullets || [];
+    if (!bullets.length) return;
+    const details = el('details', 'financial-details financial-digest-section');
+    appendText(details, 'summary', null, `${section.title_zh} ${section.title_en}（${bullets.length}）`);
+    const list = el('ul', 'financial-digest-list');
+    bullets.slice(0, DIGEST_SECTION_PREVIEW).forEach((bullet) => appendDigestBullet(list, bullet));
+    details.appendChild(list);
+    if (bullets.length > DIGEST_SECTION_PREVIEW) {
+      const more = el('details', 'financial-digest-more');
+      appendText(more, 'summary', null, `顯示其餘 ${bullets.length - DIGEST_SECTION_PREVIEW} 項`);
+      const rest = el('ul', 'financial-digest-list');
+      bullets.slice(DIGEST_SECTION_PREVIEW).forEach((bullet) => appendDigestBullet(rest, bullet));
+      more.appendChild(rest);
+      details.appendChild(more);
+    }
+    parent.appendChild(details);
+  };
+
+  const appendDigestKeyDisclosures = (parent, items, coverage) => {
+    if (!items?.length) return;
+    const details = el('details', 'financial-details financial-digest-section');
+    appendText(details, 'summary', null, `重要量化資訊 Key Quantitative Disclosures（${items.length}）`);
+    const list = el('div', 'financial-compact-list');
+    items.forEach((item) => {
+      const row = el('div', 'financial-compact-row');
+      appendText(row, 'b', null, item.label);
+      const unit = item.unit_text ? `（${item.unit_text}）` : '';
+      appendText(row, 'span', null, `${item.column === 'guidance' ? '展望' : item.column} ${item.value_text}${unit}`);
+      const pages = [...new Set((item.evidence_refs || []).map((ref) => ref.page))];
+      row.appendChild(buildBadge(`第 ${pages.join('、')} 頁`, 'tag-blue'));
+      if (item.changes?.length) {
+        appendText(row, 'small', null, item.changes.map((change) => `${change.column} ${change.value_text}`).join('；'));
+      }
+      list.appendChild(row);
+    });
+    details.appendChild(list);
+    if (coverage?.key_quantitative_truncated_count) {
+      appendText(details, 'small', 'muted-text', `另有 ${coverage.key_quantitative_truncated_count} 筆量化資料列於上方各主題分類中。`);
+    }
+    parent.appendChild(details);
+  };
+
+  const appendDigestProvenance = (parent, digest) => {
+    const source = digest.source || {};
+    const coverage = digest.coverage || {};
+    const details = el('details', 'financial-details financial-digest-provenance');
+    appendText(details, 'summary', null, '查看原始證據 / Provenance');
+    const rows = el('div', 'financial-note-list');
+    appendText(rows, 'span', null, `原始文件：${text(source.filename)}（MOPS 公開資訊觀測站，共 ${text(source.page_count, '?')} 頁）`);
+    appendText(rows, 'span', null, 'MOPS 原始 PDF 以 POST 表單下載，無法建立直接下載連結；請由法說會列表頁取得。');
+    appendText(rows, 'span', null, `SHA-256：${text(source.sha256)}`);
+    appendText(rows, 'span', null, `期間：${text(digest.period)}（${text(digest.period_validation_status, 'unverified')}）；法說會日期：${(source.conference_dates || []).join('；') || '尚未提供'}`);
+    appendText(rows, 'span', null, [
+      `涵蓋：${(coverage.covered_content_pages || []).length}/${text(coverage.content_page_count, 0)} 個內容頁`,
+      `納入 ${text(coverage.included_evidence_count, 0)} 項、排除 ${text(coverage.excluded_evidence_count, 0)} 項`,
+      `已驗證 ${text(coverage.verified_count, 0)}、部分驗證 ${text(coverage.partially_verified_count, 0)}、待複核 ${text(coverage.needs_review_count, 0)}`,
+    ].join('；'));
+    appendText(rows, 'span', null, `摘要模式：${text(digest.summary_mode)}（${text(digest.digest_version)}）`);
+    details.appendChild(rows);
+    const listing = safeHttpsLink(source.listing_url, 'MOPS 法說會列表頁');
+    if (listing) details.appendChild(listing);
+    const notices = digest.document_notices || [];
+    if (notices.length) {
+      const noticeList = el('div', 'financial-note-list');
+      appendText(noticeList, 'b', null, '文件聲明與註記（非公司風險判定）');
+      notices.forEach((notice) => {
+        const page = notice.evidence_refs?.[0]?.page;
+        appendText(noticeList, 'span', null, `${page ? `第 ${page} 頁｜` : ''}${notice.text}`);
+      });
+      details.appendChild(noticeList);
+    }
+    const limitations = [...(coverage.coverage_warnings || []), ...(digest.limitations || [])];
+    if (limitations.length) {
+      const limitationList = el('div', 'financial-note-list');
+      appendText(limitationList, 'b', null, '摘要限制');
+      limitations.forEach((item) => appendText(limitationList, 'span', null, item));
+      details.appendChild(limitationList);
+    }
+    parent.appendChild(details);
+  };
+
+  const appendConferenceDigest = (parent, digest) => {
+    const wrap = el('div', 'financial-digest');
+    const coverage = digest.coverage || {};
+    const meta = el('div', 'financial-digest-meta');
+    const facts = [
+      digest.conference_date,
+      'MOPS 公開資訊觀測站',
+      DIGEST_DOCUMENT_TYPES[digest.document_type] || digest.document_type,
+      DIGEST_LANGUAGES[digest.language] || digest.language,
+      digest.period,
+    ];
+    appendText(meta, 'small', 'muted-text', facts.filter(Boolean).join(' · '));
+    meta.appendChild(buildBadge(
+      DIGEST_COVERAGE_LABELS[coverage.coverage_status] || '涵蓋未知',
+      coverage.coverage_status === 'complete' ? 'tag-green' : 'tag-orange',
+    ));
+    wrap.appendChild(meta);
+    if (coverage.coverage_status && coverage.coverage_status !== 'complete') {
+      const banner = coverage.coverage_status === 'limited' ? '摘要涵蓋有限 / Coverage limited' : '摘要涵蓋部分 / Coverage partial';
+      const warnings = (coverage.coverage_warnings || []).join(' ');
+      // Backend warnings already lead with the coverage label; only prefix when missing.
+      appendText(wrap, 'p', 'financial-digest-warning', warnings.startsWith(banner) ? warnings : `${banner}：${warnings}`);
+    }
+    appendText(wrap, 'h5', 'financial-digest-title', '官方文件摘要 Official Document Summary');
+    const overview = el('div', 'financial-digest-overview');
+    (digest.overview || []).forEach((sentence) => appendText(overview, 'p', null, sentence.text));
+    wrap.appendChild(overview);
+    (digest.sections || []).forEach((section) => appendDigestSection(wrap, section));
+    appendDigestKeyDisclosures(wrap, digest.key_quantitative_disclosures, coverage);
+    appendDigestProvenance(wrap, digest);
+    parent.appendChild(wrap);
+  };
+
+  const appendTechnicalDetails = (parent, item, includeSummary) => {
+    const hasTechnical = includeSummary || item.extracted_topics?.length || item.related_metrics?.length
+      || item.document_extract_status || item.category || item.limitations?.length;
+    if (!hasTechnical) return;
+    const details = el('details', 'financial-details');
+    appendText(details, 'summary', null, '技術細節 Technical details');
+    if (includeSummary && (item.summary || item.document_text_preview)) {
+      appendText(details, 'p', 'muted-text', item.summary || item.document_text_preview);
+    }
+    appendTagList(details, 'topics', item.extracted_topics);
+    appendTagList(details, 'related metrics', item.related_metrics);
+    if (item.document_extract_status) {
+      appendText(details, 'small', 'muted-text', `document extract: ${item.document_extract_status}`);
+    }
+    if (item.category) {
+      appendText(details, 'small', 'muted-text', `category: ${item.category}`);
+    }
+    if (item.limitations?.length) {
+      appendText(details, 'small', 'muted-text', `限制：${item.limitations.join('；')}`);
+    }
+    parent.appendChild(details);
+  };
+
   const renderOfficialItems = (title, items, emptyText) => {
     const group = el('article', 'financial-official-group');
     appendText(group, 'h4', null, title);
@@ -1858,28 +2062,30 @@ document.addEventListener('DOMContentLoaded', () => {
       appendText(group, 'p', 'muted-text', emptyText);
       return group;
     }
+    if (items.some((item) => item.document_digest)) group.classList.add('financial-official-group-wide');
     items.slice(0, 4).forEach((item) => {
       const row = el('div', 'financial-official-item');
       const rowHead = el('div', 'financial-rule-head');
       appendText(rowHead, 'b', null, item.title || item.document_title || item.source_name);
       rowHead.appendChild(buildBadge(item.status || item.document_extract_status || item.category));
       row.appendChild(rowHead);
-      appendText(row, 'p', null, item.summary || item.raw_text || item.document_text_preview || '目前僅取得官方基本資料。');
-      const dateText = [item.conference_date || item.event_date || item.generated_at, item.event_time].filter(Boolean).join(' ');
-      appendText(row, 'small', 'muted-text', text(dateText, '日期尚未提供'));
-      appendTagList(row, 'topics', item.extracted_topics);
-      appendTagList(row, 'related metrics', item.related_metrics);
-      if (item.document_extract_status) {
-        appendText(row, 'small', 'muted-text', `document extract: ${item.document_extract_status}`);
-      }
-      if (item.category) {
-        appendText(row, 'small', 'muted-text', `category: ${item.category}`);
+      const digest = item.document_digest;
+      if (digest) {
+        if (item.standalone_archive_digest) {
+          appendText(row, 'small', 'muted-text', '此為最新已歸檔之 MOPS 官方法說會文件，與其他法說會資料為不同文件，內容未混用。');
+        }
+        appendConferenceDigest(row, digest);
+      } else {
+        appendText(row, 'p', null, item.summary || item.raw_text || item.document_text_preview || '目前僅取得官方基本資料。');
+        const dateText = [item.conference_date || item.event_date || item.generated_at, item.event_time].filter(Boolean).join(' ');
+        appendText(row, 'small', 'muted-text', text(dateText, '日期尚未提供'));
+        if (item.summary_status === 'no_matching_archive') {
+          appendText(row, 'p', 'muted-text', '官方文件摘要：尚無此期間的 MOPS 歸檔法說會文件。');
+        }
       }
       appendDisclosureClaims(row, item.disclosure_claims);
       row.appendChild(buildSourceLink(item));
-      if (item.limitations?.length) {
-        appendText(row, 'small', 'muted-text', `限制：${item.limitations.join('；')}`);
-      }
+      appendTechnicalDetails(row, item, Boolean(digest));
       group.appendChild(row);
     });
     return group;
@@ -1887,7 +2093,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const renderOfficialEvidence = (card, snapshot) => {
     clear(nodes.official);
-    const conferences = card.investor_conferences || card.raw?.conferences || [];
+    const conferences = [...(card.investor_conferences || card.raw?.conferences || [])];
+    const standaloneDigest = card.conference_document_digest;
+    if (standaloneDigest && !conferences.some((item) => item.document_digest)) {
+      conferences.unshift({
+        title: `MOPS 法說會文件 ${text(standaloneDigest.period, '')}`.trim(),
+        status: 'archived',
+        document_digest: standaloneDigest,
+        standalone_archive_digest: true,
+        source_name: 'MOPS 公開資訊觀測站',
+        source_url: standaloneDigest.source?.listing_url,
+      });
+    }
     const materialEvents = card.material_events || card.raw?.material_events || [];
     const sources = [...(card.sources || []), ...(snapshot.sources || [])];
     nodes.official.appendChild(renderOfficialItems('法說會 Investor Conference Evidence', conferences, '目前未取得法說會資料。'));
