@@ -12,8 +12,10 @@ from app.services.conference_document_digest import (
     ConferenceDigestNarrator,
     ConferenceDocumentDigestService,
     build_document_digest,
+    explain_archive_selection,
     select_archive_document,
 )
+from app.services.conference_document_identity import IDENTITY_VERSION
 from app.services.mops_conference_pdf_repository import FileConferencePdfArchiveRepository
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "conference_digest_2454"
@@ -68,13 +70,30 @@ def write_archive(root: Path, ticker: str, year: int, documents: list[dict], pag
 
 
 def archive_document(filename: str, period: str, *, language: str = "zh-Hant", verified: bool = True,
-                     document_type: str = "earnings_presentation", dates: list[str] | None = None) -> dict:
+                     document_type: str = "earnings_presentation", dates: list[str] | None = None,
+                     sha256: str | None = None, identity_version: str | None = IDENTITY_VERSION) -> dict:
+    """A manifest entry whose stored identity is current (trusted as stored) unless
+    identity_version says it was written by an older identity version."""
     return {
-        "filename": filename, "sha256": "a" * 64, "company_name": "測試公司", "page_count": 1, "period": period,
+        "filename": filename, "sha256": sha256 or (filename.encode().hex() * 8)[:64], "company_name": "測試公司",
+        "page_count": 1, "period": period,
         "period_validation_status": "verified" if verified else "unverified", "document_type": document_type,
         "document_language": language, "quarantined": False, "duplicate_of": None,
-        "conference_dates": dates or ["114/01/01"],
+        "conference_dates": dates or ["114/01/01"], "identity_version": identity_version,
     }
+
+
+def current_identity_fixture(root: Path) -> Path:
+    """Copy of the 2454 fixture whose manifest identity is already current."""
+    target = root / "2454" / "2025"
+    target.mkdir(parents=True)
+    for item in FIXTURE_DIR.iterdir():
+        target.joinpath(item.name).write_bytes(item.read_bytes())
+    manifest = json.loads((target / "manifest.json").read_text(encoding="utf-8"))
+    for document in manifest["documents"]:
+        document["identity_version"] = IDENTITY_VERSION
+    (target / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+    return root
 
 
 class CountingRepository(FileConferencePdfArchiveRepository):
@@ -379,11 +398,29 @@ class DigestServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         ConferenceDocumentDigestService.clear_cache()
 
-    def test_only_the_selected_document_is_hydrated(self) -> None:
+    def test_only_the_selected_document_is_hydrated_when_identity_is_current(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            repo = CountingRepository(current_identity_fixture(Path(folder)))
+            digest, status = ConferenceDocumentDigestService(repo).digest_for("2454", period="2025Q3")
+        self.assertEqual(status, "available")
+        self.assertEqual(digest["source"]["filename"], Q3_FILE)
+        self.assertFalse(digest["source"]["identity"]["recomputed_from_archive"])
+        self.assertEqual(repo.calls, [("pages", Q3_FILE), ("semantic", Q3_FILE)])
+
+    def test_stale_identity_is_recomputed_once_then_cached(self) -> None:
+        # The committed fixture keeps the real stale manifest (conference-identity-v1).
         repo = CountingRepository(FIXTURE_ROOT)
         digest, status = ConferenceDocumentDigestService(repo).digest_for("2454", period="2025Q3")
         self.assertEqual(status, "available")
-        self.assertEqual(digest["source"]["filename"], Q3_FILE)
+        self.assertTrue(digest["source"]["identity"]["recomputed_from_archive"])
+        self.assertEqual(digest["source"]["identity"]["stored_identity_version"], "conference-identity-v1")
+        self.assertEqual(digest["period"], "2025Q3")
+        self.assertEqual(digest["document_type"], "earnings_presentation")
+        self.assertEqual(sorted(repo.calls), sorted([("pages", Q3_FILE), ("pages", Q2_FILE), ("pages", Q3_FILE), ("semantic", Q3_FILE)]))
+        self.assertNotIn(("semantic", Q2_FILE), repo.calls)
+        ConferenceDocumentDigestService._cache.clear()  # digest cache only; identity cache stays warm
+        repo.calls.clear()
+        ConferenceDocumentDigestService(repo).digest_for("2454", period="2025Q3")
         self.assertEqual(repo.calls, [("pages", Q3_FILE), ("semantic", Q3_FILE)])
 
     def test_failures_and_timeouts_are_statuses(self) -> None:
@@ -395,7 +432,14 @@ class DigestServiceTests(unittest.TestCase):
             def available_years(self, ticker):
                 raise RuntimeError("gcs unavailable")
 
-        self.assertEqual(ConferenceDocumentDigestService(Broken(FIXTURE_ROOT)).digest_for("2454", period="2025Q3"), (None, "digest_failed"))
+        with tempfile.TemporaryDirectory() as folder:
+            current = current_identity_fixture(Path(folder))
+            self.assertEqual(ConferenceDocumentDigestService(Broken(current)).digest_for("2454", period="2025Q3"), (None, "digest_failed"))
+        # A stale manifest whose page text cannot be read is rejected, never guessed.
+        self.assertEqual(ConferenceDocumentDigestService(Broken(FIXTURE_ROOT)).digest_for("2454", period="2025Q3"), (None, "no_matching_archive"))
+        reasons = {item["document"]["filename"]: item["reason"]
+                   for item in explain_archive_selection(Broken(FIXTURE_ROOT), "2454")["candidates"]}
+        self.assertEqual(set(reasons.values()), {"rejected:period_identity_unavailable"})
         self.assertEqual(ConferenceDocumentDigestService(Unreachable()).digest_for("2454"), (None, "archive_unavailable"))
         self.assertEqual(ConferenceDocumentDigestService(FIXTURE_ROOT and FileConferencePdfArchiveRepository(FIXTURE_ROOT), timeout_seconds=-1)
                          .digest_for("2454", period="2025Q3"), (None, "digest_timeout"))

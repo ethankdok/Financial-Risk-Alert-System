@@ -31,6 +31,11 @@ from datetime import date
 from typing import Any
 
 from app.services.claim_evidence_adapter import _roc_date
+from app.services.conference_document_identity import (
+    IDENTITY_VERSION,
+    assess_document_identity,
+    reconcile_documents,
+)
 from app.services.jsd_bridge_service import TYPE_PREFERENCE
 
 DIGEST_VERSION = "conference-document-digest-v1"
@@ -251,40 +256,79 @@ def _ref(filename: str, page: int, *, evidence_type: str, verification_status: s
 
 # --- document selection ----------------------------------------------------------------
 
-def _eligible(document: dict[str, Any]) -> bool:
-    return bool(document.get("sha256")) and not document.get("quarantined") and not document.get("duplicate_of")
+# Quarterly results documents; the untargeted "latest" pick prefers these so a
+# newer roadshow / marketing deck never displaces the latest results deck.
+RESULTS_DOCUMENT_TYPES = ("full_earnings_transcript", "earnings_presentation", "financial_results_release")
+_IDENTITY_FIELDS = (
+    "period", "period_validation_status", "period_detected_in_document", "period_claimed_by_source",
+    "document_type", "document_type_method", "document_type_confidence", "quarantined", "quarantine_reasons",
+)
+_IDENTITY_CACHE: dict[tuple, dict[str, Any]] = {}
+_IDENTITY_CACHE_LOCK = threading.Lock()
 
 
-def _document_matches(document: dict[str, Any], period: str | None, conference_date: str | None) -> bool:
+def _current_identity(archive_repo: Any, ticker: str, year: int, document: dict[str, Any]) -> dict[str, Any]:
+    """Identity under the current IDENTITY_VERSION, mirroring the JSD corpus adapter:
+    a manifest written by an older identity version is re-assessed from its archived
+    page text (cached per sha256, read-only) instead of being trusted as stored."""
+    if document.get("identity_version") == IDENTITY_VERSION:
+        identity = {key: document.get(key) for key in _IDENTITY_FIELDS}
+        identity["language"] = document.get("document_language") or document.get("language")
+        identity["identity_recomputed"] = False
+    else:
+        key = (ticker, document.get("filename"), document.get("sha256"), IDENTITY_VERSION)
+        with _IDENTITY_CACHE_LOCK:
+            cached = _IDENTITY_CACHE.get(key)
+        if cached is None:
+            pages = archive_repo.pages(ticker, year, document["filename"])
+            fresh = assess_document_identity(pages, language=document.get("language"),
+                                             summaries=document.get("listing_summaries") or [])
+            cached = {name: fresh.get(name) for name in _IDENTITY_FIELDS}
+            cached.update(language=fresh.get("language"), identity_recomputed=True)
+            with _IDENTITY_CACHE_LOCK:
+                _IDENTITY_CACHE[key] = cached
+        identity = copy.deepcopy(cached)
+    identity["quarantine_reasons"] = list(identity.get("quarantine_reasons") or [])
+    identity.update(ticker=ticker, filename=document.get("filename"), sha256=document.get("sha256"))
+    return identity
+
+
+def _document_matches(document: dict[str, Any], identity: dict[str, Any], period: str | None,
+                      conference_date: str | None) -> bool:
     if period:
-        return document.get("period") == period
+        return identity.get("period") == period
     if conference_date:
         return any(start <= conference_date <= end for start, end in _conference_dates(document))
     return True
 
 
-def _rank(document: dict[str, Any], year: int, exact: bool) -> tuple:
-    doc_type = document.get("document_type")
-    language = document.get("document_language") or document.get("language")
+def _preference(value: Any, order: list[str]) -> int:
+    return -(order.index(value) if value in order else len(order))
+
+
+def _rank(document: dict[str, Any], identity: dict[str, Any], year: int, targeted: bool) -> tuple:
     dates = _conference_dates(document)
-    recency = (document.get("period") or "", dates[0][0] if dates else "", year)
-    return (
-        1 if exact else 0,
-        1 if document.get("period_validation_status") == "verified" else 0,
-        -(TYPE_PREFERENCE.index(doc_type) if doc_type in TYPE_PREFERENCE else len(TYPE_PREFERENCE)),
-        recency,
-        -(LANGUAGE_PREFERENCE.index(language) if language in LANGUAGE_PREFERENCE else len(LANGUAGE_PREFERENCE)),
+    within_period = (
+        _preference(identity.get("document_type"), TYPE_PREFERENCE),
+        _preference(identity.get("language"), LANGUAGE_PREFERENCE),
+        (dates[0][0] if dates else "", year),
     )
+    if targeted:
+        return within_period
+    # Latest: results documents first, then the newest valid period, and only
+    # within that period document type, language and announcement recency.
+    return (1 if identity.get("document_type") in RESULTS_DOCUMENT_TYPES else 0, identity.get("period") or "", *within_period)
 
 
-def select_archive_document(archive_repo: Any, ticker: str, *, period: str | None = None,
-                            conference_date: str | None = None, max_years: int = 2
-                            ) -> tuple[int, dict[str, Any], dict[str, Any]] | None:
-    """Pick one archived document by scanning manifests only (no page hydration).
+def explain_archive_selection(archive_repo: Any, ticker: str, *, period: str | None = None,
+                              conference_date: str | None = None, max_years: int = 2) -> dict[str, Any]:
+    """Every candidate with its current identity and a selected / rejected reason.
 
     An explicit period / conference_date searches exactly the announcement years
-    that can hold it, however old. Only the untargeted "latest" fallback is
-    limited to the most recent ``max_years`` years.
+    that can hold it, however old; only the untargeted "latest" pick is limited to
+    the most recent ``max_years`` years. Manifests are read for those years; page
+    text is read only for documents whose stored identity is from an older
+    identity version (then cached per sha256), and nothing is written.
     """
     available = list(archive_repo.available_years(ticker) or [])
     if period and re.fullmatch(r"20\d{2}Q[1-4]", period):
@@ -296,18 +340,68 @@ def select_archive_document(archive_repo: Any, ticker: str, *, period: str | Non
         period = conference_date = None
         years = sorted(available, reverse=True)[:max_years]
     targeted = bool(period or conference_date)
-    best: tuple[tuple, int, dict[str, Any], dict[str, Any]] | None = None
+    candidates: list[dict[str, Any]] = []
     for year in years:
         manifest = archive_repo.latest_manifest(ticker, year) or {}
         for document in manifest.get("documents", []) or []:
-            if not _eligible(document):
+            if not document.get("sha256"):
                 continue
-            if targeted and not _document_matches(document, period, conference_date):
-                continue
-            key = _rank(document, year, targeted)
-            if best is None or key > best[0]:
-                best = (key, year, manifest, document)
-    return None if best is None else (best[1], best[2], best[3])
+            try:
+                identity = _current_identity(archive_repo, ticker, year, document)
+            except Exception:
+                # A stale manifest whose page text cannot be read has no trustworthy identity.
+                identity = {"ticker": ticker, "filename": document.get("filename"), "sha256": document.get("sha256"),
+                            "period_validation_status": "identity_unavailable", "quarantine_reasons": []}
+            candidates.append({"year": year, "manifest": manifest, "document": document, "identity": identity})
+    reconcile_documents([candidate["identity"] for candidate in candidates])
+    best: dict[str, Any] | None = None
+    for candidate in candidates:
+        identity, document = candidate["identity"], candidate["document"]
+        if identity.get("quarantined"):
+            candidate["reason"] = "rejected:quarantined"
+        elif identity.get("duplicate_of"):
+            candidate["reason"] = "rejected:duplicate_document"
+        elif identity.get("period_validation_status") != "verified" or not identity.get("period"):
+            candidate["reason"] = f"rejected:period_{identity.get('period_validation_status') or 'missing'}"
+        elif targeted and not _document_matches(document, identity, period, conference_date):
+            candidate["reason"] = "rejected:not_target_period_or_date"
+        else:
+            candidate["rank"] = _rank(document, identity, candidate["year"], targeted)
+            candidate["reason"] = "eligible"
+            if best is None or candidate["rank"] > best["rank"]:
+                best = candidate
+    if best is not None:
+        best["reason"] = "selected"
+    return {"targeted": targeted, "period": period, "conference_date": conference_date, "years": years,
+            "candidates": candidates, "selected": best}
+
+
+def select_archive_document(archive_repo: Any, ticker: str, *, period: str | None = None,
+                            conference_date: str | None = None, max_years: int = 2
+                            ) -> tuple[int, dict[str, Any], dict[str, Any]] | None:
+    """(announcement year, manifest, document) for the chosen archived document.
+
+    The returned document carries its current identity (period, type, language);
+    the stored manifest values are kept under ``stored_*`` keys for provenance.
+    """
+    best = explain_archive_selection(archive_repo, ticker, period=period, conference_date=conference_date,
+                                     max_years=max_years)["selected"]
+    if best is None:
+        return None
+    document, identity = best["document"], best["identity"]
+    selected = {
+        **document,
+        "period": identity.get("period"),
+        "period_validation_status": identity.get("period_validation_status"),
+        "document_type": identity.get("document_type"),
+        "document_language": identity.get("language"),
+        "identity_version": IDENTITY_VERSION,
+        "identity_recomputed": bool(identity.get("identity_recomputed")),
+        "stored_identity_version": document.get("identity_version"),
+        "stored_document_type": document.get("document_type"),
+        "stored_period": document.get("period"),
+    }
+    return best["year"], best["manifest"], selected
 
 
 # --- page structure ------------------------------------------------------------------------
@@ -999,6 +1093,13 @@ def build_document_digest(ticker: str, manifest_document: dict[str, Any], pages:
             "conference_dates": manifest_document.get("conference_dates") or [],
             "announcement_year": announcement_year,
             "listing_url": listing_url,
+            "identity": {
+                "identity_version": manifest_document.get("identity_version"),
+                "recomputed_from_archive": bool(manifest_document.get("identity_recomputed")),
+                "stored_identity_version": manifest_document.get("stored_identity_version", manifest_document.get("identity_version")),
+                "stored_document_type": manifest_document.get("stored_document_type", manifest_document.get("document_type")),
+                "stored_period": manifest_document.get("stored_period", manifest_document.get("period")),
+            },
             # FileDownLoad is a POST form: kept as provenance only, never a GET link.
             "download_form": {
                 "method": "POST",
@@ -1188,6 +1289,8 @@ class ConferenceDocumentDigestService:
     def clear_cache(cls) -> None:
         with cls._cache_lock:
             cls._cache.clear()
+        with _IDENTITY_CACHE_LOCK:
+            _IDENTITY_CACHE.clear()
 
     def digest_for(self, ticker: str, *, period: str | None = None,
                    conference_date: str | None = None) -> tuple[dict[str, Any] | None, str]:
@@ -1254,4 +1357,5 @@ def archive_identity(digest: dict[str, Any]) -> dict[str, Any]:
         "document_type": digest.get("document_type"),
         "language": digest.get("language"),
         "digest_version": digest.get("digest_version"),
+        "identity": source.get("identity"),
     }
