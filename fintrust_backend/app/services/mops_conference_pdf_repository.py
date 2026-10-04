@@ -6,6 +6,17 @@ from pathlib import Path
 from typing import Any, Protocol
 
 
+class ConferenceArchiveUnavailableError(RuntimeError):
+    """The archive backend itself could not be read (missing bucket, permission
+    denied, transport/API failure), as opposed to a readable archive that simply
+    has no matching document. Carries only the operation and exception type."""
+
+    def __init__(self, operation: str, error_type: str) -> None:
+        super().__init__(f"conference archive {operation} failed: {error_type}")
+        self.operation = operation
+        self.error_type = error_type
+
+
 class ConferencePdfArchiveRepository(Protocol):
     backend_name: str
 

@@ -345,12 +345,12 @@
     };
   }
 
-  function params(reset=false){
-    if(reset){state.page=1;state.records=[];}
+  // Query for an explicit page; building it never mutates the committed state.
+  function params(page){
     const q = new URLSearchParams({
       ticker: state.ticker,
       type: state.type,
-      page: String(state.page),
+      page: String(page),
       limit: String(state.limit),
       sort: $('sort').value
     });
@@ -361,14 +361,42 @@
     return q;
   }
 
+  // Latest intent wins. Every request gets a monotonic id; a newer intent (ticker,
+  // tab, filter, sort) supersedes and aborts the one in flight, and a response is
+  // applied only if its id is still the latest. Load More appends only from a
+  // settled state and commits its page number when its own response lands.
+  let requestSeq = 0;
+  let activeController = null;
+  let pendingReset = false;  // a newer intent is debounced but not loaded yet
+
+  function supersede(){
+    requestSeq += 1;
+    if(activeController) activeController.abort();
+    activeController = null;
+  }
+
+  function setLoading(loading){
+    state.loading = loading;
+    $('loadMore').disabled = loading;
+  }
+
   async function load(reset=false){
-    if(state.loading) return;
-    state.loading = true;
-    $('records').innerHTML = reset ? '<div class="empty">Loading official evidence...</div>' : $('records').innerHTML;
+    if(!reset && (state.loading || pendingReset)) return;
+    if(reset) pendingReset = false;
+    supersede();
+    const id = requestSeq;
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    activeController = controller;
+    const page = reset ? 1 : state.page + 1;
+    setLoading(true);
+    if(reset) $('records').innerHTML = '<div class="empty">Loading official evidence...</div>';
     try{
-      const response = await fetch(`/api/official-evidence/browser?${params(reset).toString()}`, {headers:{Accept:'application/json'}});
+      const response = await fetch(`/api/official-evidence/browser?${params(page).toString()}`,
+        {headers:{Accept:'application/json'}, signal: controller ? controller.signal : undefined});
       const data = await response.json();
+      if(id !== requestSeq) return;
       if(!response.ok || data.success === false) throw new Error(data.error || 'official evidence unavailable');
+      state.page = page;
       state.hasMore = Boolean(data.pagination?.has_more);
       state.records = reset ? (data.records || []) : state.records.concat(data.records || []);
       renderSummary(data.summary || {});
@@ -378,10 +406,14 @@
       renderText(data.text_intelligence, data.narrative_shift, data.text_intelligence_error, data.official_card_error);
       $('loadMore').hidden = !state.hasMore;
     }catch(error){
+      if(id !== requestSeq) return;
       $('records').innerHTML = `<div class="empty">目前無法讀取官方證據：${esc(error.message)}</div>`;
       $('loadMore').hidden = true;
     }finally{
-      state.loading = false;
+      if(id === requestSeq){
+        activeController = null;
+        setLoading(false);
+      }
     }
   }
 
@@ -600,12 +632,15 @@
   });
   ['ticker','source','topic','startDate','endDate','sort'].forEach(id => {
     $(id).addEventListener(id === 'ticker' || id === 'sort' ? 'change' : 'input', () => {
-      state.ticker = $('ticker').value;
+      // The select holds only a placeholder until the company list arrives.
+      state.ticker = $('ticker').value || state.ticker;
+      supersede();  // the in-flight response no longer matches the visible intent
+      pendingReset = true;
       clearTimeout(window.__evidenceFilterTimer);
       window.__evidenceFilterTimer = setTimeout(() => load(true), 250);
     });
   });
-  $('loadMore').addEventListener('click', () => {state.page += 1; load(false);});
+  $('loadMore').addEventListener('click', () => load(false));
   loadCompanies().finally(() => load(true));
   </script>
 </body>

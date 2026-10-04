@@ -32,6 +32,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
+from app.services.mops_conference_pdf_repository import ConferenceArchiveUnavailableError
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_PREFIX = "conference-pdf-archive"
@@ -161,6 +163,18 @@ class GcsConferencePdfArchiveRepository:
         return payload
 
     def available_years(self, ticker: str) -> list[int]:
+        """Lenient listing kept for existing callers (JSD corpus, claim evidence):
+        a backend failure is logged and reads as no archived years."""
+        try:
+            return self.list_available_years(ticker)
+        except ConferenceArchiveUnavailableError as exc:
+            logger.warning("conference archive listing failed: %s", exc.error_type)
+            return []
+
+    def list_available_years(self, ticker: str) -> list[int]:
+        """Strict listing: a readable archive with nothing for this ticker returns [],
+        while a backend failure (bucket missing, permission denied, transport/API
+        error) raises ConferenceArchiveUnavailableError."""
         prefix = "/".join(filter(None, [self.prefix, _segment(ticker)])) + "/"
         try:
             iterator = self._get_client().list_blobs(self.bucket_name, prefix=prefix, delimiter="/",
@@ -169,8 +183,7 @@ class GcsConferencePdfArchiveRepository:
                 pass
             prefixes = list(getattr(iterator, "prefixes", []) or [])
         except Exception as exc:
-            logger.warning("conference archive listing failed: %s", type(exc).__name__)
-            return []
+            raise ConferenceArchiveUnavailableError("listing", type(exc).__name__) from exc
         years = []
         for item in prefixes:
             segment = item[len(prefix):].strip("/")

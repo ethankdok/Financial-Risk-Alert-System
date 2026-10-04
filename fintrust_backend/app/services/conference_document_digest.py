@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import logging
 import os
 import re
 import threading
@@ -37,6 +38,8 @@ from app.services.conference_document_identity import (
     reconcile_documents,
 )
 from app.services.jsd_bridge_service import TYPE_PREFERENCE
+
+logger = logging.getLogger(__name__)
 
 DIGEST_VERSION = "conference-document-digest-v1"
 KEY_DISCLOSURE_LIMIT = 30
@@ -330,7 +333,10 @@ def explain_archive_selection(archive_repo: Any, ticker: str, *, period: str | N
     text is read only for documents whose stored identity is from an older
     identity version (then cached per sha256), and nothing is written.
     """
-    available = list(archive_repo.available_years(ticker) or [])
+    # Repositories with a strict listing (GCS) raise when the backend itself is
+    # unreadable, so an outage is not mistaken for "no matching document".
+    list_years = getattr(archive_repo, "list_available_years", None) or archive_repo.available_years
+    available = list(list_years(ticker) or [])
     if period and re.fullmatch(r"20\d{2}Q[1-4]", period):
         target_year = int(period[:4])
         years = [year for year in available if year in (target_year, target_year + 1)]
@@ -1301,7 +1307,9 @@ class ConferenceDocumentDigestService:
         started = time.monotonic()
         try:
             selected = select_archive_document(self.archive_repo, ticker, period=period, conference_date=conference_date)
-        except Exception:
+        except Exception as exc:  # e.g. ConferenceArchiveUnavailableError from a strict listing
+            logger.warning("conference digest archive unavailable for %s: %s", ticker,
+                           getattr(exc, "error_type", None) or type(exc).__name__)
             return None, "archive_unavailable"
         if selected is None:
             return None, "no_matching_archive"
