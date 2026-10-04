@@ -58,6 +58,17 @@
     .metric span{font-size:12px;color:#65738b;font-weight:800}
     .metric strong{display:block;font-size:20px;margin-top:4px}
     pre{white-space:pre-wrap;word-break:break-word;background:#f7f9fc;border:1px solid #e0e7f0;border-radius:8px;padding:10px;max-height:260px;overflow:auto}
+    .source-block{background:#f7f9fc;border:1px solid #e0e7f0;border-radius:8px;padding:10px 12px;display:grid;gap:6px}
+    .source-block strong{font-size:13px;color:#1f3b73}
+    .source-rows{display:flex;flex-wrap:wrap;gap:6px 14px;color:#35445d;font-size:13px}
+    .source-rows span{overflow-wrap:anywhere;word-break:break-word}
+    .state-line{margin:0;color:#526179;font-size:13px}
+    .digest-compact{border-top:1px dashed #cfd9e6;padding-top:10px;display:grid;gap:8px}
+    .digest-compact h4{margin:0;font-size:15px}
+    .digest-overview p{margin:4px 0;color:#35445d;line-height:1.7}
+    .coverage-badge{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:800;background:#fff3dc;color:#7a5410}
+    .coverage-badge.complete{background:#e6f6ec;color:#1d6b3a}
+    .coverage-note{background:#fff8ea;border:1px solid #f3d9a6;border-radius:8px;padding:8px 10px;color:#7a5410;font-size:13px;line-height:1.6}
     @media (max-width:900px){.toolbar,.summary-grid,.record-grid,.metrics-grid{grid-template-columns:1fr 1fr}.page-head{display:block}}
     @media (max-width:620px){.toolbar,.summary-grid,.record-grid,.metrics-grid{grid-template-columns:1fr}.evidence-header-inner{align-items:flex-start;flex-direction:column}}
   </style>
@@ -116,6 +127,8 @@
     </section>
 
     <section class="summary-grid" id="summary"></section>
+
+    <section class="panel" id="officialDocumentPanel" hidden></section>
 
     <div class="tabs" role="tablist">
       <button class="active" data-type="all" type="button">All</button>
@@ -186,6 +199,149 @@
     ? `<div class="tag-list">${items.slice(0,8).map(item => `<span>${esc(topicLabel(item))}</span>`).join('')}</div>`
     : '';
 
+  // Contract 1.2.0 wording, kept identical to the result page. Unknown values get a
+  // neutral label instead of the raw enum.
+  const SOURCE_TYPE_LABELS = {
+    company_ir: '公司官方投資人關係（IR）',
+    twse_openapi: '臺灣證券交易所 OpenAPI',
+    mops_listing: '公開資訊觀測站（MOPS）公告',
+    mops_conference_pdf: '公開資訊觀測站（MOPS）法說會文件',
+    metadata_placeholder: '公開資訊觀測站（MOPS）查詢入口，僅有基本資料',
+    demo_fixture: '示範資料（非官方即時資料）',
+    unknown: '來源未分類'
+  };
+  const AVAILABILITY_LABELS = {
+    available: '可用',
+    metadata_only: '僅有基本資料',
+    needs_review: '待人工確認',
+    blocked: '來源限制，暫無法取得',
+    unavailable: '目前無法取得'
+  };
+  const SUMMARY_STATE_LABELS = {
+    attached: '已連結同期間 MOPS 法說會文件',
+    standalone_latest: '顯示最新可用的 MOPS 法說會文件',
+    no_matching_archive: '尚無此期間的 MOPS 歸檔法說會文件',
+    archive_unavailable: 'MOPS 文件歸檔目前無法讀取',
+    digest_failed: '官方文件摘要產生失敗',
+    digest_timeout: '官方文件摘要處理逾時',
+    not_configured: '此次資料未啟用官方文件摘要'
+  };
+  const ITEM_SUMMARY_STATUS_LABELS = {
+    ...SUMMARY_STATE_LABELS,
+    available: SUMMARY_STATE_LABELS.attached,
+    no_conference_period: '此筆資料沒有可比對的期間或日期，未連結 MOPS 法說會文件'
+  };
+  const DOCUMENT_TYPE_LABELS = {
+    earnings_presentation: '法說會簡報',
+    full_earnings_transcript: '法說會逐字稿',
+    financial_results_release: '財務結果新聞稿',
+    investor_presentation: '投資人簡報',
+    analyst_conference_presentation: '分析師會議簡報',
+    other_official_conference_document: '其他官方法說會文件'
+  };
+  const LANGUAGE_LABELS = {'zh-Hant': '中文', en: '英文', bilingual: '中英雙語'};
+  const COVERAGE_LABELS = {complete: '涵蓋完整', partial: '涵蓋部分', limited: '涵蓋有限'};
+  const httpsLink = (href, label) => typeof href === 'string' && /^https:\/\//i.test(href)
+    ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : '';
+
+  // One labelled source block; only fields present on the identity are shown and the
+  // link comes from this identity's own provenance.
+  function sourceBlock(identity, heading){
+    const rows = [
+      ['來源', SOURCE_TYPE_LABELS[identity.source_type] || SOURCE_TYPE_LABELS.unknown],
+      ['期間', identity.period],
+      ['文件類型', identity.document_type ? (DOCUMENT_TYPE_LABELS[identity.document_type] || identity.document_type) : ''],
+      ['文件', identity.filename],
+      ['日期', identity.event_date],
+      ['狀態', identity.availability ? (AVAILABILITY_LABELS[identity.availability] || '狀態未分類') : '']
+    ].filter(([, value]) => value);
+    const linkLabel = identity.source_type === 'mops_conference_pdf' ? 'MOPS 法說會列表頁' : '官方來源連結';
+    const sourceLink = httpsLink(identity.provenance?.url, linkLabel);
+    return `<div class="source-block"><strong>${esc(heading)}</strong>
+      <div class="source-rows">${rows.map(([label, value]) => `<span>${esc(label)}：${esc(value)}</span>`).join('')}</div>
+      ${sourceLink ? `<div class="links">${sourceLink}</div>` : ''}</div>`;
+  }
+
+  // Compact view of the digest supplied by the browser API; nothing is recomputed and
+  // the full bullets / evidence refs stay on the result page.
+  function digestCompact(digest, heading){
+    const identity = digest.source_identity;
+    const coverage = digest.coverage || {};
+    const coverageStatus = coverage.coverage_status;
+    const covered = Array.isArray(coverage.covered_content_pages) ? coverage.covered_content_pages.length : null;
+    const overview = (digest.overview || []).filter(Boolean).slice(0, 6);
+    const sections = (digest.sections || []).filter(section => section && section.bullet_count);
+    const provenance = digest.provenance || {};
+    const fallbackIdentity = {
+      source_type: 'mops_conference_pdf', period: digest.period, document_type: digest.document_type,
+      filename: digest.filename, event_date: digest.conference_date, provenance: {url: provenance.listing_url}
+    };
+    return `<div class="digest-compact">
+      ${sourceBlock(identity || fallbackIdentity, heading)}
+      <h4>官方文件摘要（精簡）</h4>
+      <div class="meta">
+        ${digest.language ? `<span>語言：${esc(LANGUAGE_LABELS[digest.language] || digest.language)}</span>` : ''}
+        ${coverageStatus ? `<span class="coverage-badge ${coverageStatus === 'complete' ? 'complete' : ''}">${esc(COVERAGE_LABELS[coverageStatus] || '涵蓋狀態未分類')}</span>` : ''}
+        ${covered !== null && coverage.content_page_count ? `<span>涵蓋 ${esc(covered)}/${esc(coverage.content_page_count)} 個內容頁</span>` : ''}
+      </div>
+      ${coverageStatus && coverageStatus !== 'complete' && (coverage.coverage_warnings || []).length
+        ? `<div class="coverage-note">${(coverage.coverage_warnings || []).map(esc).join(' ')}</div>` : ''}
+      ${overview.length ? `<div class="digest-overview">${overview.map(item => `<p>${esc(item)}</p>`).join('')}</div>` : ''}
+      ${sections.length ? `<div class="tag-list">${sections.map(section => `<span>${esc(firstText(section.title_zh, section.title_en, '未命名段落'))}（${esc(section.bullet_count)} 項）</span>`).join('')}${digest.key_quantitative_count ? `<span>重要量化資訊（${esc(digest.key_quantitative_count)} 項）</span>` : ''}</div>` : ''}
+      <p class="state-line">完整分層摘要、逐項證據與頁碼請至分析結果頁的「官方補充證據」查看。</p>
+      <details>
+        <summary>查看原始證據 / Provenance</summary>
+        ${detailList([
+          ['原始文件', provenance.filename || digest.filename],
+          ['SHA-256', provenance.sha256],
+          ['期間', digest.period],
+          ['摘要模式', [digest.summary_mode, digest.digest_version].filter(Boolean).join(' / ')]
+        ])}
+        ${httpsLink(provenance.listing_url, 'MOPS 法說會列表頁') ? `<div class="links">${httpsLink(provenance.listing_url, 'MOPS 法說會列表頁')}</div>` : ''}
+        <p class="state-line">MOPS 原始 PDF 以 POST 表單下載，無法建立直接下載連結；請由法說會列表頁取得。</p>
+        ${limitationsList(digest.limitations)}
+      </details>
+    </div>`;
+  }
+
+  // Card-level latest MOPS document: its own panel, never attached to an unrelated record.
+  function renderOfficialDocument(digest, summaryState){
+    const panel = $('officialDocumentPanel');
+    const stateLabel = SUMMARY_STATE_LABELS[summaryState];
+    if(!digest && !stateLabel){
+      panel.hidden = true;
+      panel.innerHTML = '';
+      return;
+    }
+    panel.hidden = false;
+    panel.innerHTML = `<h2>最新可用的 MOPS 法說會文件</h2>
+      ${stateLabel ? `<p class="state-line">官方文件摘要狀態：${esc(stateLabel)}</p>` : ''}
+      ${digest ? `<p class="state-line">此文件為最新歸檔之 MOPS 官方法說會文件，不一定與下方公司 IR 法說會資料屬於同一期間或來源。</p>
+        ${digestCompact(compactStandaloneDigest(digest), 'MOPS 歸檔法說會文件')}` : ''}`;
+  }
+
+  // The card-level digest arrives in full form; reduce it to the compact shape the
+  // browser records already use (copied fields only).
+  function compactStandaloneDigest(digest){
+    const source = digest.source || {};
+    const coverage = digest.coverage || {};
+    return {
+      source_identity: digest.source_identity, period: digest.period, document_type: digest.document_type,
+      language: digest.language, conference_date: digest.conference_date, filename: source.filename,
+      overview: (digest.overview || []).map(item => item && item.text).filter(Boolean),
+      sections: (digest.sections || []).map(section => ({
+        title_zh: section.title_zh, title_en: section.title_en, bullet_count: (section.bullets || []).length
+      })),
+      key_quantitative_count: (digest.key_quantitative_disclosures || []).length,
+      coverage: {
+        coverage_status: coverage.coverage_status, content_page_count: coverage.content_page_count,
+        covered_content_pages: coverage.covered_content_pages, coverage_warnings: coverage.coverage_warnings
+      },
+      provenance: {listing_url: source.listing_url, filename: source.filename, sha256: source.sha256},
+      summary_mode: digest.summary_mode, digest_version: digest.digest_version, limitations: digest.limitations
+    };
+  }
+
   function params(reset=false){
     if(reset){state.page=1;state.records=[];}
     const q = new URLSearchParams({
@@ -213,6 +369,7 @@
       state.hasMore = Boolean(data.pagination?.has_more);
       state.records = reset ? (data.records || []) : state.records.concat(data.records || []);
       renderSummary(data.summary || {});
+      renderOfficialDocument(data.conference_document_digest, data.conference_summary_state);
       renderSources(data.summary?.official_sources || []);
       renderRecords();
       renderText(data.text_intelligence, data.narrative_shift, data.text_intelligence_error, data.official_card_error);
@@ -256,6 +413,11 @@
     const isConference = record.type === 'investor_conference';
     const title = record.title || (isConference ? 'Untitled investor conference' : 'Untitled material event');
     const dateLabel = isConference ? 'conference date' : 'event date';
+    // The record's own identity (e.g. company IR) and a nested MOPS digest identity
+    // are rendered as two separate source blocks.
+    const identity = record.source_identity && typeof record.source_identity === 'object' ? record.source_identity : null;
+    const digest = isConference && record.document_digest && typeof record.document_digest === 'object' ? record.document_digest : null;
+    const statusLabel = isConference ? ITEM_SUMMARY_STATUS_LABELS[record.summary_status] : null;
     const sentences = uniqueBy(record.representative_evidence_sentences || [], evidenceKey);
     const preview = compact(record.preview || '', 620);
     const topics = [
@@ -265,8 +427,10 @@
       record.category
     ].filter(Boolean);
     return `<article class="record-card">
-      <div class="meta"><span>${esc(isConference ? 'Investor Conference' : 'Material Event')}</span><span>status: ${fmt(record.status)}</span><span>source: ${fmt(record.source_name)}</span></div>
+      <div class="meta"><span>${esc(isConference ? 'Investor Conference' : 'Material Event')}</span>${identity ? '' : `<span>status: ${fmt(record.status)}</span><span>source: ${fmt(record.source_name)}</span>`}</div>
       <h3>${esc(title)}</h3>
+      ${identity ? sourceBlock(identity, isConference ? '法說會資料來源' : '公告來源') : ''}
+      ${statusLabel ? `<p class="state-line">官方文件摘要：${esc(statusLabel)}。</p>` : ''}
       <div class="meta">
         <span>${dateLabel}: ${fmt(record.date)} ${esc(record.event_time || '')}</span>
         ${record.category ? `<span>category: ${esc(record.category)}</span>` : ''}
@@ -297,6 +461,7 @@
         ])}
         ${limitationsList(record.limitations)}
       </details>
+      ${digest ? digestCompact(digest, 'MOPS 歸檔法說會文件') : ''}
     </article>`;
   }
 
@@ -357,7 +522,7 @@
         <div class="metric"><span>Run ID</span><strong>${esc(text?.run_id || 'unavailable')}</strong></div>
         <div class="metric"><span>Relevant sentence count</span><strong>${esc(sentenceCount || 0)}</strong></div>
         <div class="metric"><span>Main topics</span><strong>${esc(modelTopics.size)}</strong></div>
-        <div class="metric"><span>Narrative Shift</span><strong>${narrative ? 'available' : 'insufficient data'}</strong></div>
+        <div class="metric"><span>文字敘事變化</span><strong>${narrative ? 'available' : 'insufficient data'}</strong></div>
       </div>
       ${textError ? `<p class="empty">Persisted Text Intelligence unavailable: ${esc(textError.message || 'not found')}</p>` : ''}
       ${cardError ? `<p class="empty">Live narrative card unavailable: ${esc(cardError.message || 'not found')}</p>` : ''}
@@ -367,7 +532,7 @@
   }
 
   function narrativeSection(narrative, metrics){
-    if(!narrative) return '<p class="empty">目前沒有足夠的可比較官方期間產生 Narrative Shift。</p>';
+    if(!narrative) return '<p class="empty">目前沒有足夠的可比較期間產生文字敘事變化分析。</p>';
     const changes = narrative.topic_distribution_changes || narrative.topic_changes || {};
     const support = uniqueBy(narrative.supporting_sentences || narrative.representative_evidence || [], evidenceKey);
     const changeItems = Array.isArray(changes)
@@ -376,7 +541,8 @@
     const emerging = narrative.emerging_terms || [];
     const disappearing = narrative.disappearing_terms || [];
     return `<section>
-      <h3>與上一期比較 / Narrative Shift</h3>
+      <h3>文字敘事變化（Text Intelligence，非官方法說會 JSD 校準）</h3>
+      <p class="state-line">此區為文字敘事變化分析，與系統中的官方法說會跨期 JSD 校準為不同分析。</p>
       <div class="metrics-grid">
         <div class="metric"><span>Baseline period</span><strong>${esc(narrative.baseline_period || narrative.previous_period || narrative.period_1 || 'unavailable')}</strong></div>
         <div class="metric"><span>Current period</span><strong>${esc(narrative.current_period || narrative.period_2 || 'unavailable')}</strong></div>

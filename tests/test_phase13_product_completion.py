@@ -233,7 +233,7 @@ class Phase13ProductCompletionTests(unittest.TestCase):
         self.assertIn("/api/official-evidence/browser", html)
         self.assertIn("官方資料日期", html)
         self.assertIn("系統同步時間", html)
-        self.assertIn("與上一期比較 / Narrative Shift", html)
+        self.assertIn("文字敘事變化（Text Intelligence，非官方法說會 JSD 校準）", html)
         self.assertIn("Relevant-text JSD", html)
         self.assertIn("TF-IDF Cosine", html)
         self.assertIn("target=\"_blank\"", html)
