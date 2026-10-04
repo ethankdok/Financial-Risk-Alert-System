@@ -194,4 +194,10 @@ footer{border-top:1px solid var(--line);background:white}.footer-inner{max-width
 .financial-digest-ref b{font-size:12px;color:var(--navy);word-break:break-all}
 .financial-digest-ref small{white-space:pre-wrap;color:#54657c;word-break:break-word}
 .financial-digest-provenance .financial-note-list span{word-break:break-all}
+.financial-source-identity{margin-top:9px;padding:9px 11px;border:1px solid #e4ebf3;border-radius:11px;background:#fff;display:grid;gap:5px}
+.financial-source-identity-heading{font-size:13px;color:var(--navy)}
+.financial-source-identity-rows{display:flex;flex-wrap:wrap;gap:6px 14px;color:#43536a;font-size:13px}
+.financial-source-identity .financial-source-link{margin-top:2px}
+.financial-digest-source{margin-top:12px;padding-top:10px;border-top:1px dashed #d5e0ec}
+.financial-summary-state{margin:6px 0 0;font-size:13px}
 @media(max-width:900px){.financial-section-head{display:block}.financial-section-head .status-tag{margin-top:12px}.financial-summary-grid,.financial-metric-grid,.financial-dimension-grid,.financial-official-grid{grid-template-columns:1fr}.financial-compact-row{grid-template-columns:1fr}.financial-rule-head{display:block}.financial-rule-head .status-tag{margin-top:6px}}

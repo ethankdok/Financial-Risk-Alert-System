@@ -2003,14 +2003,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrap = el('div', 'financial-digest');
     const coverage = digest.coverage || {};
     const meta = el('div', 'financial-digest-meta');
-    const facts = [
-      digest.conference_date,
-      'MOPS 公開資訊觀測站',
-      DIGEST_DOCUMENT_TYPES[digest.document_type] || digest.document_type,
-      DIGEST_LANGUAGES[digest.language] || digest.language,
-      digest.period,
-    ];
-    appendText(meta, 'small', 'muted-text', facts.filter(Boolean).join(' · '));
+    // With contract 1.2.0 the MOPS source block above already shows these facts.
+    if (!digest.source_identity) {
+      const facts = [
+        digest.conference_date,
+        'MOPS 公開資訊觀測站',
+        DIGEST_DOCUMENT_TYPES[digest.document_type] || digest.document_type,
+        DIGEST_LANGUAGES[digest.language] || digest.language,
+        digest.period,
+      ];
+      appendText(meta, 'small', 'muted-text', facts.filter(Boolean).join(' · '));
+    } else if (digest.language) {
+      appendText(meta, 'small', 'muted-text', `語言：${DIGEST_LANGUAGES[digest.language] || digest.language}`);
+    }
     meta.appendChild(buildBadge(
       DIGEST_COVERAGE_LABELS[coverage.coverage_status] || '涵蓋未知',
       coverage.coverage_status === 'complete' ? 'tag-green' : 'tag-orange',
@@ -2030,6 +2035,83 @@ document.addEventListener('DOMContentLoaded', () => {
     appendDigestKeyDisclosures(wrap, digest.key_quantitative_disclosures, coverage);
     appendDigestProvenance(wrap, digest);
     parent.appendChild(wrap);
+  };
+
+  // Contract 1.2.0 labels. Unknown values fall back to a neutral wording, never a raw enum.
+  const SOURCE_TYPE_LABELS = {
+    company_ir: '公司官方投資人關係（IR）',
+    twse_openapi: '臺灣證券交易所 OpenAPI',
+    mops_listing: '公開資訊觀測站（MOPS）公告',
+    mops_conference_pdf: '公開資訊觀測站（MOPS）法說會文件',
+    metadata_placeholder: '公開資訊觀測站（MOPS）查詢入口，僅有基本資料',
+    demo_fixture: '示範資料（非官方即時資料）',
+    unknown: '來源未分類',
+  };
+  const AVAILABILITY_LABELS = {
+    available: '可用',
+    metadata_only: '僅有基本資料',
+    needs_review: '待人工確認',
+    blocked: '來源限制，暫無法取得',
+    unavailable: '目前無法取得',
+  };
+  const SUMMARY_STATE_LABELS = {
+    attached: '已連結同期間 MOPS 法說會文件',
+    standalone_latest: '顯示最新可用的 MOPS 法說會文件',
+    no_matching_archive: '尚無此期間的 MOPS 歸檔法說會文件',
+    archive_unavailable: 'MOPS 文件歸檔目前無法讀取',
+    digest_failed: '官方文件摘要產生失敗',
+    digest_timeout: '官方文件摘要處理逾時',
+    not_configured: '此次資料未啟用官方文件摘要',
+  };
+  // Item-level summary_status also uses "available" (digest attached) and
+  // "no_conference_period" (the item has no period or date to match).
+  const ITEM_SUMMARY_STATUS_LABELS = {
+    ...SUMMARY_STATE_LABELS,
+    available: SUMMARY_STATE_LABELS.attached,
+    no_conference_period: '此筆資料沒有可比對的期間或日期，未連結 MOPS 法說會文件',
+  };
+
+  const selectFinancialSnapshot = (card) => card.financial_snapshot || card.raw?.snapshot || {};
+
+  const sourceTypeLabel = (identity, companyName) => {
+    const label = SOURCE_TYPE_LABELS[identity.source_type] || SOURCE_TYPE_LABELS.unknown;
+    return identity.source_type === 'company_ir' && companyName ? `${companyName} ${label}` : label;
+  };
+
+  // One labelled source block. Only fields present on source_identity are shown;
+  // the link comes from this identity's own provenance and nothing else.
+  const appendSourceIdentity = (parent, identity, heading, companyName) => {
+    const block = el('div', 'financial-source-identity');
+    appendText(block, 'b', 'financial-source-identity-heading', heading);
+    const rows = [
+      ['來源', sourceTypeLabel(identity, companyName)],
+      ['期間', identity.period],
+      ['文件類型', identity.document_type ? (DIGEST_DOCUMENT_TYPES[identity.document_type] || identity.document_type) : null],
+      ['文件', identity.filename],
+      ['日期', identity.event_date],
+      ['狀態', identity.availability ? (AVAILABILITY_LABELS[identity.availability] || '狀態未分類') : null],
+    ];
+    const list = el('div', 'financial-source-identity-rows');
+    rows.filter(([, value]) => value).forEach(([label, value]) => appendText(list, 'span', null, `${label}：${value}`));
+    block.appendChild(list);
+    const linkLabel = identity.source_type === 'mops_conference_pdf' ? 'MOPS 法說會列表頁' : '官方來源連結';
+    const link = safeHttpsLink(identity.provenance?.url, linkLabel);
+    if (link) block.appendChild(link);
+    parent.appendChild(block);
+    return block;
+  };
+
+  // Schema 1.1.0 items have no source_identity: show the record's own source as before.
+  const appendLegacySource = (parent, item, heading) => {
+    const block = el('div', 'financial-source-identity');
+    appendText(block, 'b', 'financial-source-identity-heading', heading);
+    const dateText = [item.conference_date || item.event_date || item.generated_at, item.event_time].filter(Boolean).join(' ');
+    const list = el('div', 'financial-source-identity-rows');
+    appendText(list, 'span', null, `來源：${text(item.source_name, '來源未標示')}`);
+    appendText(list, 'span', null, `日期：${text(dateText, '日期尚未提供')}`);
+    block.appendChild(list);
+    block.appendChild(buildSourceLink(item));
+    parent.appendChild(block);
   };
 
   const appendTechnicalDetails = (parent, item, includeSummary) => {
@@ -2055,9 +2137,17 @@ document.addEventListener('DOMContentLoaded', () => {
     parent.appendChild(details);
   };
 
-  const renderOfficialItems = (title, items, emptyText) => {
+  const itemBadgeLabel = (item) => {
+    if (item.standalone_archive_digest) return '已歸檔';
+    const availability = item.source_identity?.availability;
+    if (availability) return AVAILABILITY_LABELS[availability] || '狀態未分類';
+    return item.status || item.document_extract_status || item.category;
+  };
+
+  const renderOfficialItems = (title, items, emptyText, options = {}) => {
     const group = el('article', 'financial-official-group');
     appendText(group, 'h4', null, title);
+    if (options.stateText) appendText(group, 'p', 'financial-summary-state muted-text', options.stateText);
     if (!items.length) {
       appendText(group, 'p', 'muted-text', emptyText);
       return group;
@@ -2066,26 +2156,36 @@ document.addEventListener('DOMContentLoaded', () => {
     items.slice(0, 4).forEach((item) => {
       const row = el('div', 'financial-official-item');
       const rowHead = el('div', 'financial-rule-head');
-      appendText(rowHead, 'b', null, item.title || item.document_title || item.source_name);
-      rowHead.appendChild(buildBadge(item.status || item.document_extract_status || item.category));
+      appendText(rowHead, 'b', null, text(item.title || item.document_title || item.source_name, '未命名的官方資料'));
+      rowHead.appendChild(buildBadge(itemBadgeLabel(item)));
       row.appendChild(rowHead);
       const digest = item.document_digest;
-      if (digest) {
-        if (item.standalone_archive_digest) {
-          appendText(row, 'small', 'muted-text', '此為最新已歸檔之 MOPS 官方法說會文件，與其他法說會資料為不同文件，內容未混用。');
+      // Source A: the conference / announcement record itself (never for the standalone MOPS item).
+      if (!item.standalone_archive_digest) {
+        if (item.source_identity) {
+          appendSourceIdentity(row, item.source_identity, options.recordHeading || '資料來源', options.companyName);
+        } else {
+          appendLegacySource(row, item, options.recordHeading || '資料來源');
         }
-        appendConferenceDigest(row, digest);
+        if (!digest) appendText(row, 'p', null, item.summary || item.raw_text || item.document_text_preview || '目前僅取得官方基本資料。');
+        const statusLabel = ITEM_SUMMARY_STATUS_LABELS[item.summary_status];
+        if (statusLabel) appendText(row, 'p', 'financial-summary-state muted-text', `官方文件摘要：${statusLabel}。`);
       } else {
-        appendText(row, 'p', null, item.summary || item.raw_text || item.document_text_preview || '目前僅取得官方基本資料。');
-        const dateText = [item.conference_date || item.event_date || item.generated_at, item.event_time].filter(Boolean).join(' ');
-        appendText(row, 'small', 'muted-text', text(dateText, '日期尚未提供'));
-        if (item.summary_status === 'no_matching_archive') {
-          appendText(row, 'p', 'muted-text', '官方文件摘要：尚無此期間的 MOPS 歸檔法說會文件。');
+        appendText(row, 'small', 'muted-text', '此為最新已歸檔之 MOPS 官方法說會文件，與上列其他法說會資料為不同文件，內容未混用。');
+      }
+      // Source B: the archived MOPS PDF digest, with its own identity and provenance.
+      if (digest) {
+        const section = el('div', 'financial-digest-source');
+        if (digest.source_identity) {
+          appendSourceIdentity(section, digest.source_identity, 'MOPS 歸檔法說會文件', options.companyName);
+        } else {
+          appendText(section, 'b', 'financial-source-identity-heading', 'MOPS 歸檔法說會文件');
         }
+        appendConferenceDigest(section, digest);
+        row.appendChild(section);
       }
       appendDisclosureClaims(row, item.disclosure_claims);
-      row.appendChild(buildSourceLink(item));
-      appendTechnicalDetails(row, item, Boolean(digest));
+      appendTechnicalDetails(row, item, Boolean(digest) && !item.standalone_archive_digest);
       group.appendChild(row);
     });
     return group;
@@ -2098,17 +2198,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (standaloneDigest && !conferences.some((item) => item.document_digest)) {
       conferences.unshift({
         title: `MOPS 法說會文件 ${text(standaloneDigest.period, '')}`.trim(),
-        status: 'archived',
         document_digest: standaloneDigest,
         standalone_archive_digest: true,
-        source_name: 'MOPS 公開資訊觀測站',
-        source_url: standaloneDigest.source?.listing_url,
       });
     }
     const materialEvents = card.material_events || card.raw?.material_events || [];
     const sources = [...(card.sources || []), ...(snapshot.sources || [])];
-    nodes.official.appendChild(renderOfficialItems('法說會 Investor Conference Evidence', conferences, '目前未取得法說會資料。'));
-    nodes.official.appendChild(renderOfficialItems('重大訊息 Material Event Evidence', materialEvents, '目前未取得重大訊息資料。'));
+    const summaryState = SUMMARY_STATE_LABELS[card.conference_summary_state];
+    const companyName = card.company_name || snapshot.company_name;
+    nodes.official.appendChild(renderOfficialItems('法說會 Investor Conference Evidence', conferences, '目前未取得法說會資料。', {
+      stateText: summaryState ? `官方文件摘要狀態：${summaryState}` : null,
+      recordHeading: '法說會資料來源',
+      companyName,
+    }));
+    nodes.official.appendChild(renderOfficialItems('重大訊息 Material Event Evidence', materialEvents, '目前未取得重大訊息資料。', {
+      recordHeading: '公告來源',
+      companyName,
+    }));
     const sourceGroup = el('article', 'financial-official-group');
     appendText(sourceGroup, 'h4', null, 'Official Sources');
     if (!sources.length) {
@@ -2133,7 +2239,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const renderFinancialEvidence = (card) => {
-    const snapshot = card.raw?.snapshot || card.financial_snapshot || {};
+    const snapshot = selectFinancialSnapshot(card);
     const aiAnalysis = snapshot.ai_analysis || {};
     const metrics = snapshot.key_metrics || card.key_metrics || [];
     const ruleCards = snapshot.rule_cards || card.rule_cards || [];

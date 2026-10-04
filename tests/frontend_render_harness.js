@@ -70,8 +70,9 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
 const code = [
   slice(source, '  const text = (value', '  const setState = '),
   slice(source, '  const severityTag = ', '  const showEmpty = '),
-  slice(source, '  const DIGEST_STATUS_LABELS = ', '  const renderOfficialEvidence = '),
-  'return { renderOfficialItems };',
+  'const nodes = { official: document.createElement("div") };',
+  slice(source, '  const DIGEST_STATUS_LABELS = ', '  const renderFinancialEvidence = '),
+  'return { renderOfficialItems, renderOfficialEvidence, selectFinancialSnapshot, nodes };',
 ].join('\n');
 
 const document = {
@@ -79,8 +80,18 @@ const document = {
   createDocumentFragment: () => new FakeNode('#fragment'),
 };
 // eslint-disable-next-line no-new-func
-const { renderOfficialItems } = new Function('document', code)(document);
+const api = new Function('document', code)(document);
 
+// Modes: "items" (default) renders one group; "evidence" renders the whole
+// Official Evidence section from a card; "snapshot" returns the chosen snapshot.
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-const group = renderOfficialItems(input.title || '法說會 Investor Conference Evidence', input.items || [], '目前未取得法說會資料。');
-process.stdout.write(JSON.stringify({ html: toHtml(group), text: group.textContent, links: collectLinks(group) }));
+const render = (node) => ({ html: toHtml(node), text: node.textContent, links: collectLinks(node) });
+if (input.mode === 'snapshot') {
+  process.stdout.write(JSON.stringify({ snapshot: api.selectFinancialSnapshot(input.card) }));
+} else if (input.mode === 'evidence') {
+  api.renderOfficialEvidence(input.card, api.selectFinancialSnapshot(input.card));
+  process.stdout.write(JSON.stringify(render(api.nodes.official)));
+} else {
+  const group = api.renderOfficialItems(input.title || '法說會 Investor Conference Evidence', input.items || [], '目前未取得法說會資料。');
+  process.stdout.write(JSON.stringify(render(group)));
+}
