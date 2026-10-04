@@ -163,6 +163,13 @@ class NarrativeShiftResponse(BaseModel):
     ticker: str
     period_1: str | None = None
     period_2: str | None = None
+    # What each period value is (fiscal_quarter | conference_date | announcement_date |
+    # event_date | unspecified) and which kind of document it labels. Descriptive only;
+    # the values above are never converted between bases.
+    period_1_basis: str | None = None
+    period_2_basis: str | None = None
+    period_1_source_type: str | None = None
+    period_2_source_type: str | None = None
     metrics: dict[str, float]
     data_quality: dict[str, Any]
     topic_changes: list[TopicChange]

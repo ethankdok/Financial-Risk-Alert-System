@@ -72,7 +72,7 @@ class FinancialEvidencePageTests(unittest.TestCase):
         return [html.unescape(part) for part in re.split(r'(?=<article class="record-card">)', records_html)[1:]]
 
     def conference_card(self, output: dict) -> str:
-        return next(card for card in self.cards(output["html"]["records"]) if "Investor Conference" in card)
+        return next(card for card in self.cards(output["html"]["records"]) if "<span>法說會</span>" in card)
 
     def test_2454_company_ir_record_and_standalone_mops_document_are_separate(self) -> None:
         output = self.page(self.browser_payload(standalone_card()))
@@ -118,7 +118,7 @@ class FinancialEvidencePageTests(unittest.TestCase):
 
     def test_source_identity_fields_render_with_chinese_labels(self) -> None:
         output = self.page(self.browser_payload(standalone_card()))
-        event = next(card for card in self.cards(output["html"]["records"]) if "Material Event" in card)
+        event = next(card for card in self.cards(output["html"]["records"]) if "<span>重大訊息</span>" in card)
         self.assertIn("公告來源", event)
         self.assertIn("來源：臺灣證券交易所 OpenAPI", event)
         self.assertIn("日期：2026-09-01", event)
@@ -126,6 +126,8 @@ class FinancialEvidencePageTests(unittest.TestCase):
         self.assertNotIn("期間：", event)
         self.assertNotIn("source: twse_openapi", event)
         self.assertNotIn("status: available", event)
+        self.assertNotIn("來源：twse_openapi", event)
+        self.assertNotIn("狀態：available", event)
 
     def test_every_summary_state_has_chinese_wording(self) -> None:
         for state, label in STATE_LABELS.items():
@@ -150,7 +152,7 @@ class FinancialEvidencePageTests(unittest.TestCase):
 
     def test_schema_110_and_fallback_payloads_render_safely(self) -> None:
         legacy = self.page(self.browser_payload(legacy_card_v110()))
-        self.assertIn("source: company_official_ir", html.unescape(legacy["html"]["records"]))
+        self.assertIn("來源：company_official_ir", html.unescape(legacy["html"]["records"]))
         self.assertTrue(legacy["hidden"]["officialDocumentPanel"] is False)  # card digest still exists
         fallback = self.page(self.browser_payload(standalone_card(), fail_card=True))
         self.assertTrue(fallback["hidden"]["officialDocumentPanel"])

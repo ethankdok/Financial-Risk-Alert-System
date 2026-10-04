@@ -580,6 +580,10 @@ class FinancialTextIntelligenceService:
             ticker=document_1.ticker,
             period_1=document_1.period,
             period_2=document_2.period,
+            period_1_basis=period_basis(document_1),
+            period_2_basis=period_basis(document_2),
+            period_1_source_type=document_1.source_type,
+            period_2_source_type=document_2.source_type,
             metrics=metrics,
             data_quality=check_data_quality(document_1.text, document_2.text),
             topic_changes=topic_changes,
@@ -669,6 +673,23 @@ def rank_supporting_sentences(sentences: list[TextEvidenceSentence], *, limit: i
     relevant = [sentence for sentence in sentences if sentence.relevant]
     relevant.sort(key=lambda sentence: (sentence.relevance_score, len(sentence.topics)), reverse=True)
     return relevant[:limit]
+
+
+_FISCAL_QUARTER = re.compile(r"^\d{4}Q[1-4]$")
+_DATE_BASIS_BY_SOURCE = {"investor_conference": "conference_date", "material_event": "announcement_date"}
+
+
+def period_basis(document: OfficialTextDocumentInput) -> str:
+    """What a document's period label is, read from the fields it was built from.
+    A date stays a date; it is never mapped onto a fiscal quarter."""
+    period = (document.period or "").strip()
+    if not period:
+        return "unspecified"
+    if _FISCAL_QUARTER.match(period):
+        return "fiscal_quarter"
+    if document.event_date and period == document.event_date:
+        return _DATE_BASIS_BY_SOURCE.get(document.source_type, "event_date")
+    return "unspecified"
 
 
 def documents_from_official_events(

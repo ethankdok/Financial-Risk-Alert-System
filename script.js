@@ -1995,9 +1995,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const row = el('div', 'financial-compact-row');
       appendText(row, 'b', null, item.label);
       const unit = item.unit_text ? `（${item.unit_text}）` : '';
-      appendText(row, 'span', null, `${item.column === 'guidance' ? '展望' : item.column} ${item.value_text}${unit}`);
-      const pages = [...new Set((item.evidence_refs || []).map((ref) => ref.page))];
-      row.appendChild(buildBadge(`第 ${pages.join('、')} 頁`, 'tag-blue'));
+      const column = item.column === 'guidance' ? '展望' : item.column;
+      appendText(row, 'span', null, `${[column, item.value_text].filter(Boolean).join(' ')}${unit}`);
+      const pages = [...new Set((item.evidence_refs || []).map((ref) => ref.page).filter(Boolean))];
+      if (pages.length) row.appendChild(buildBadge(`第 ${pages.join('、')} 頁`, 'tag-blue'));
       if (item.changes?.length) {
         appendText(row, 'small', null, item.changes.map((change) => `${change.column} ${change.value_text}`).join('；'));
       }
@@ -2103,6 +2104,15 @@ document.addEventListener('DOMContentLoaded', () => {
     needs_review: '待人工確認',
     blocked: '來源限制，暫無法取得',
     unavailable: '目前無法取得',
+  };
+  // Source-list statuses use the same wording; the raw value still picks the badge colour.
+  const SOURCE_STATUS_LABELS = {
+    ...AVAILABILITY_LABELS,
+    archived: '已歸檔',
+    blocked_by_source: '來源限制，暫無法取得',
+    needs_manual_review: '待人工確認',
+    missing: '查無資料',
+    error: '讀取失敗',
   };
   const SUMMARY_STATE_LABELS = {
     attached: '已連結同期間 MOPS 法說會文件',
@@ -2266,14 +2276,15 @@ document.addEventListener('DOMContentLoaded', () => {
       companyName,
     }));
     const sourceGroup = el('article', 'financial-official-group');
-    appendText(sourceGroup, 'h4', null, 'Official Sources');
+    appendText(sourceGroup, 'h4', null, '官方資料來源 Official Sources');
     if (!sources.length) {
       appendText(sourceGroup, 'p', 'muted-text', 'backend 未提供官方來源連結。');
     } else {
       sources.slice(0, 8).forEach((source) => {
         const row = el('div', 'financial-source-row');
         row.appendChild(buildSourceLink(source));
-        row.appendChild(buildBadge(source.status || 'available'));
+        const status = source.status || 'available';
+        row.appendChild(buildBadge(SOURCE_STATUS_LABELS[status] || status, severityTag(status)));
         appendText(row, 'small', 'muted-text', text(source.period || source.limitation, ''));
         sourceGroup.appendChild(row);
       });

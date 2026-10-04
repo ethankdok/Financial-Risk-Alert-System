@@ -64,7 +64,7 @@ class EvidenceBrowserRaceTests(unittest.TestCase):
 
     def assert_settled(self, output: dict) -> None:
         self.assertFalse(output["disabled"]["loadMore"])
-        self.assertNotIn("Loading official evidence", output["html"]["records"])
+        self.assertNotIn("正在載入官方證據", output["html"]["records"])
 
     def test_tab_switch_wins_over_a_slower_earlier_request(self) -> None:
         output = self.page(

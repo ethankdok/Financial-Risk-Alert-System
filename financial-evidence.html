@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>官方財務證據｜FinTrust</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
   <style>
     body.evidence-body{margin:0;background:#f6f8fb;color:#172033;font-family:"Noto Sans TC","Segoe UI",sans-serif}
@@ -90,7 +91,7 @@
   <main class="evidence-shell">
     <section class="page-head">
       <div>
-        <span class="eyebrow">Persisted Official Evidence</span>
+        <span class="eyebrow">已保存的官方證據</span>
         <h1>官方證據瀏覽器</h1>
         <p>本頁只透過 Flask proxy 讀取 FastAPI 已持久化的官方資料。JSD / Cosine 屬於跨期間文字差異描述，不是投資建議、因果證明或獨立風險分數。</p>
       </div>
@@ -106,7 +107,7 @@
         <input id="source" list="sourceOptions" placeholder="twse_openapi">
         <datalist id="sourceOptions"></datalist>
       </label>
-      <label class="field">Topic / Metric
+      <label class="field">主題 / 指標
         <input id="topic" placeholder="revenue_orders">
       </label>
       <label class="field">開始日期
@@ -117,8 +118,8 @@
       </label>
       <label class="field">排序
         <select id="sort">
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
+          <option value="newest">由新到舊</option>
+          <option value="oldest">由舊到新</option>
         </select>
       </label>
     </section>
@@ -128,15 +129,15 @@
     <section class="panel" id="officialDocumentPanel" hidden></section>
 
     <div class="tabs" role="tablist">
-      <button class="active" data-type="all" type="button">All</button>
-      <button data-type="investor_conference" type="button">Investor Conferences</button>
-      <button data-type="material_event" type="button">Material Events</button>
+      <button class="active" data-type="all" type="button">全部</button>
+      <button data-type="investor_conference" type="button">法說會</button>
+      <button data-type="material_event" type="button">重大訊息</button>
     </div>
 
     <section class="panel">
-      <h2>Official Records</h2>
+      <h2>官方紀錄</h2>
       <div id="records" class="record-grid"></div>
-      <button id="loadMore" class="load-more" type="button" hidden>Load More</button>
+      <button id="loadMore" class="load-more" type="button" hidden>載入更多</button>
     </section>
 
     <section class="panel" id="textPanel"></section>
@@ -152,12 +153,12 @@
   const resultPageHref = () => `result.html?ticker=${encodeURIComponent(state.ticker)}`;
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-  const fmt = (value) => value ? esc(value) : 'unavailable';
+  const fmt = (value) => value ? esc(value) : '無資料';
   const compact = (value, limit=520) => {
     const text = String(value || '').trim();
     return text.length > limit ? `${text.slice(0, limit)}...` : text;
   };
-  const link = (href, label) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : `<span>${esc(label)} unavailable</span>`;
+  const link = (href, label) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : `<span>${esc(label)}：無</span>`;
   const firstText = (...values) => values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
   const topicLabel = (item) => {
     if(item === undefined || item === null) return '';
@@ -243,6 +244,36 @@
     other_official_conference_document: '其他官方法說會文件'
   };
   const LANGUAGE_LABELS = {'zh-Hant': '中文', en: '英文', bilingual: '中英雙語'};
+  // Text Intelligence comparison periods: each label states what the value is (a fiscal
+  // quarter or a document date). Values are shown as given; a date never becomes a quarter.
+  const TEXT_SOURCE_LABELS = {
+    investor_conference: '法說會',
+    material_event: '重大訊息',
+    official_ir: '公司官方 IR',
+    financial_snapshot: '財務資料快照',
+    uploaded_text: '上傳文字',
+    synthetic_fixture: '示範資料',
+    other: '其他官方文字'
+  };
+  const PERIOD_BASIS_LABELS = {
+    fiscal_quarter: '會計期間',
+    conference_date: '法說會日期',
+    announcement_date: '公告日期',
+    event_date: '事件日期'
+  };
+  // Without backend metadata only the value's own format is used: YYYYQn is a fiscal
+  // quarter, YYYY-MM-DD a date, anything else a plain period.
+  const periodBasisOf = (value, basis) => {
+    if(PERIOD_BASIS_LABELS[basis]) return basis;
+    const textValue = String(value ?? '').trim();
+    if(/^\d{4}Q[1-4]$/.test(textValue)) return 'fiscal_quarter';
+    if(/^\d{4}-\d{2}-\d{2}$/.test(textValue)) return 'date';
+    return 'unspecified';
+  };
+  const periodLabel = (value, basis) => {
+    const resolved = periodBasisOf(value, basis);
+    return PERIOD_BASIS_LABELS[resolved] || (resolved === 'date' ? '日期' : '期間');
+  };
   const COVERAGE_LABELS = {complete: '涵蓋完整', partial: '涵蓋部分', limited: '涵蓋有限'};
   const httpsLink = (href, label) => typeof href === 'string' && /^https:\/\//i.test(href)
     ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : '';
@@ -389,13 +420,13 @@
     activeController = controller;
     const page = reset ? 1 : state.page + 1;
     setLoading(true);
-    if(reset) $('records').innerHTML = '<div class="empty">Loading official evidence...</div>';
+    if(reset) $('records').innerHTML = '<div class="empty">正在載入官方證據…</div>';
     try{
       const response = await fetch(`/api/official-evidence/browser?${params(page).toString()}`,
         {headers:{Accept:'application/json'}, signal: controller ? controller.signal : undefined});
       const data = await response.json();
       if(id !== requestSeq) return;
-      if(!response.ok || data.success === false) throw new Error(data.error || 'official evidence unavailable');
+      if(!response.ok || data.success === false) throw new Error(data.error || '官方證據目前無法取得');
       state.page = page;
       state.hasMore = Boolean(data.pagination?.has_more);
       state.records = reset ? (data.records || []) : state.records.concat(data.records || []);
@@ -423,11 +454,11 @@
 
   function renderSummary(summary){
     $('summary').innerHTML = [
-      ['公司', `${summary.ticker || state.ticker} ${summary.company_name || ''}`, summary.subindustry || 'registered semiconductor company'],
-      ['官方資料日期', summary.latest_official_event_date || 'unavailable', '由持久化官方紀錄計算，不使用今天日期代替'],
-      ['系統同步時間', summary.system_last_synchronized_at || 'unavailable', 'repository retrieved_at / synchronized time'],
-      ['Investor Conferences', summary.investor_conference_count ?? 0, 'persisted available records'],
-      ['Material Events', summary.material_event_count ?? 0, 'persisted available records']
+      ['公司', `${summary.ticker || state.ticker} ${summary.company_name || ''}`, summary.subindustry || '已登錄的半導體公司'],
+      ['官方資料日期', summary.latest_official_event_date || '無資料', '由持久化官方紀錄計算，不使用今天日期代替'],
+      ['系統同步時間', summary.system_last_synchronized_at || '無資料', '官方資料最近一次同步至系統的時間'],
+      ['法說會', summary.investor_conference_count ?? 0, '已保存的可用紀錄'],
+      ['重大訊息', summary.material_event_count ?? 0, '已保存的可用紀錄']
     ].map(([label,value,note]) => `<article class="summary-card"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(note)}</small></article>`).join('')
       + `<article class="summary-card"><span>分析結果頁</span><strong><a class="result-link" href="${esc(resultPageHref())}">${esc(state.ticker)} 結果頁</a></strong><small>財報、規則與官方證據的完整檢視</small></article>`;
   }
@@ -466,8 +497,8 @@
 
   function recordCard(record){
     const isConference = record.type === 'investor_conference';
-    const title = record.title || (isConference ? 'Untitled investor conference' : 'Untitled material event');
-    const dateLabel = isConference ? 'conference date' : 'event date';
+    const title = record.title || (isConference ? '未命名法說會' : '未命名重大訊息');
+    const dateLabel = isConference ? '法說會日期' : '公告日期';
     // The record's own identity (e.g. company IR) and a nested MOPS digest identity
     // are rendered as two separate source blocks.
     const identity = record.source_identity && typeof record.source_identity === 'object' ? record.source_identity : null;
@@ -482,28 +513,28 @@
       record.category
     ].filter(Boolean);
     return `<article class="record-card">
-      <div class="meta"><span>${esc(isConference ? 'Investor Conference' : 'Material Event')}</span>${identity ? '' : `<span>status: ${fmt(record.status)}</span><span>source: ${fmt(record.source_name)}</span>`}</div>
+      <div class="meta"><span>${esc(isConference ? '法說會' : '重大訊息')}</span>${identity ? '' : `<span>狀態：${fmt(record.status)}</span><span>來源：${fmt(record.source_name)}</span>`}</div>
       <h3>${esc(title)}</h3>
       ${identity ? sourceBlock(identity, isConference ? '法說會資料來源' : '公告來源') : ''}
       ${statusLabel ? `<p class="state-line">官方文件摘要：${esc(statusLabel)}。</p>` : ''}
       <div class="meta">
-        <span>${dateLabel}: ${fmt(record.date)} ${esc(record.event_time || '')}</span>
-        ${record.category ? `<span>category: ${esc(record.category)}</span>` : ''}
-        ${record.document_type ? `<span>document: ${esc(record.document_type)}</span>` : ''}
-        ${record.document_extract_status ? `<span>extraction: ${esc(record.document_extract_status)}</span>` : ''}
-        <span>synchronized: ${fmt(record.retrieved_at)}</span>
-        <span>relevant sentences: ${esc(record.relevant_sentence_count || 0)}</span>
+        <span>${dateLabel}：${fmt(record.date)} ${esc(record.event_time || '')}</span>
+        ${record.category ? `<span>類別：${esc(record.category)}</span>` : ''}
+        ${record.document_type ? `<span>文件類型：${esc(record.document_type)}</span>` : ''}
+        ${record.document_extract_status ? `<span>文字擷取：${esc(record.document_extract_status)}</span>` : ''}
+        <span>同步時間：${fmt(record.retrieved_at)}</span>
+        <span>相關句數：${esc(record.relevant_sentence_count || 0)}</span>
       </div>
-      ${preview ? `<p class="preview clamp">${esc(preview)}</p>` : '<p class="preview">No official disclosure preview persisted.</p>'}
+      ${preview ? `<p class="preview clamp">${esc(preview)}</p>` : '<p class="preview">尚未保存官方揭露內容預覽。</p>'}
       ${tagList(topics)}
-      ${sentences.length ? `<details><summary>Representative evidence sentences</summary><div class="record-grid">${sentences.slice(0,4).map(evidenceCard).join('')}</div></details>` : ''}
+      ${sentences.length ? `<details><summary>代表性證據句</summary><div class="record-grid">${sentences.slice(0,4).map(evidenceCard).join('')}</div></details>` : ''}
       <div class="links">
-        ${link(record.source_url, 'official source URL')}
-        ${link(record.detail_url, 'detail URL')}
-        ${link(record.document_url, 'document URL')}
+        ${link(record.source_url, '官方來源連結')}
+        ${link(record.detail_url, '詳細頁連結')}
+        ${link(record.document_url, '文件連結')}
       </div>
       <details>
-        <summary>Provenance details</summary>
+        <summary>資料來源細節 / Provenance</summary>
         ${detailList([
           ['event_id', record.event_id || record.id],
           ['source_name', record.source_name],
@@ -524,7 +555,7 @@
     for(const key of keys){
       if(metrics && metrics[key] !== undefined && metrics[key] !== null) return metrics[key];
     }
-    return 'unavailable';
+    return '無資料';
   }
 
   function evidenceCard(item){
@@ -533,19 +564,19 @@
     const limitations = item.limitations || [];
     return `<article class="record-card">
       <div class="meta">
-        <span>${esc(item.source_type || 'official text')}</span>
-        ${item.event_date ? `<span>date: ${esc(item.event_date)}</span>` : ''}
-        ${item.period ? `<span>period: ${esc(item.period)}</span>` : ''}
-        ${item.relevance_score !== undefined ? `<span>relevance: ${esc(item.relevance_score)}</span>` : ''}
+        <span>${esc(TEXT_SOURCE_LABELS[item.source_type] || item.source_type || '官方文字')}</span>
+        ${item.event_date ? `<span>日期：${esc(item.event_date)}</span>` : ''}
+        ${item.period ? `<span>${esc(periodLabel(item.period))}：${esc(item.period)}</span>` : ''}
+        ${item.relevance_score !== undefined ? `<span>相關度：${esc(item.relevance_score)}</span>` : ''}
       </div>
-      ${snippet ? `<p class="preview clamp">${esc(snippet)}</p>` : '<p class="preview">No sentence preview available.</p>'}
+      ${snippet ? `<p class="preview clamp">${esc(snippet)}</p>` : '<p class="preview">沒有可預覽的句子。</p>'}
       ${tagList(topics, 8)}
       <div class="links">
-        ${link(item.source_url, 'official source URL')}
-        ${link(item.document_url, 'document URL')}
+        ${link(item.source_url, '官方來源連結')}
+        ${link(item.document_url, '文件連結')}
       </div>
       <details>
-        <summary>Evidence details</summary>
+        <summary>證據細節</summary>
         ${detailList([
           ['evidence_id', item.evidence_id],
           ['document_id', item.document_id],
@@ -558,7 +589,7 @@
           ['retrieved_at', item.retrieved_at]
         ])}
         ${limitationsList(limitations)}
-        ${item.original_text ? `<h4>Original text</h4><div class="detail-text">${esc(item.original_text)}</div>` : ''}
+        ${item.original_text ? `<h4>原文</h4><div class="detail-text">${esc(item.original_text)}</div>` : ''}
       </details>
     </article>`;
   }
@@ -571,19 +602,34 @@
     evidence.forEach(item => (item.topics || []).forEach(topic => modelTopics.add(topicLabel(topic))));
     const metrics = narrative?.metrics || {};
     const terms = [...(narrative?.emerging_terms || []), ...(narrative?.disappearing_terms || [])];
-    $('textPanel').innerHTML = `<h2>Text Intelligence</h2>
-      <div class="notice">WEAK SUPERVISION research metrics are not shown as validated performance claims. Narrative Shift JSD = distribution difference; Cosine = text similarity. These descriptive metrics are not a standalone financial-risk score or investment signal.</div>
+    $('textPanel').innerHTML = `<h2>文字分析（Text Intelligence）</h2>
+      <div class="notice">以下為弱監督（WEAK SUPERVISION）研究指標，不代表經驗證的模型績效。JSD 描述文字分布差異，Cosine 描述文字相似度；這些描述性指標不是獨立的財務風險分數，也不是投資訊號。</div>
       <div class="metrics-grid">
-        <div class="metric"><span>Run ID</span><strong>${esc(text?.run_id || 'unavailable')}</strong></div>
-        <div class="metric"><span>Relevant sentence count</span><strong>${esc(sentenceCount || 0)}</strong></div>
-        <div class="metric"><span>Main topics</span><strong>${esc(modelTopics.size)}</strong></div>
-        <div class="metric"><span>文字敘事變化</span><strong>${narrative ? 'available' : 'insufficient data'}</strong></div>
+        <div class="metric"><span>分析批次（Run ID）</span><strong>${esc(text?.run_id || '無資料')}</strong></div>
+        <div class="metric"><span>相關句數</span><strong>${esc(sentenceCount || 0)}</strong></div>
+        <div class="metric"><span>主要主題數</span><strong>${esc(modelTopics.size)}</strong></div>
+        <div class="metric"><span>文字敘事變化</span><strong>${narrative ? '可用' : '資料不足'}</strong></div>
       </div>
-      ${textError ? `<p class="empty">Persisted Text Intelligence unavailable: ${esc(textError.message || 'not found')}</p>` : ''}
-      ${cardError ? `<p class="empty">Live narrative card unavailable: ${esc(cardError.message || 'not found')}</p>` : ''}
+      ${textError ? `<p class="empty">目前無法讀取已保存的 Text Intelligence 結果：${esc(textError.message || '查無資料')}</p>` : ''}
+      ${cardError ? `<p class="empty">目前無法讀取即時官方證據卡：${esc(cardError.message || '查無資料')}</p>` : ''}
       ${(modelTopics.size || terms.length) ? `<div class="tag-list">${[...modelTopics].slice(0,12).map(topic => `<span>${esc(topic)}</span>`).join('')}${terms.slice(0,12).map(term => `<span>${esc(topicLabel(term))}</span>`).join('')}</div>` : ''}
       ${narrativeSection(narrative, metrics)}
-      ${evidence.length ? `<h3>Representative Evidence</h3><div class="record-grid">${evidence.slice(0,8).map(evidenceCard).join('')}</div>` : ''}`;
+      ${evidence.length ? `<h3>代表性證據</h3><div class="record-grid">${evidence.slice(0,8).map(evidenceCard).join('')}</div>` : ''}`;
+  }
+
+  // The basis metadata describes period_1 / period_2 only, so it is applied when the
+  // shown value is that field; legacy keys fall back to the value's format.
+  function comparisonSide(value, field, basis, sourceType){
+    const shown = value === undefined || value === null ? '' : String(value);
+    const ownBasis = shown && shown === String(field ?? '') ? basis : null;
+    const resolved = periodBasisOf(shown, ownBasis);
+    return {value: shown, basis: resolved, label: periodLabel(shown, ownBasis),
+      source: shown && shown === String(field ?? '') ? TEXT_SOURCE_LABELS[sourceType] || '' : ''};
+  }
+
+  function periodMetric(title, side){
+    const heading = `${title}・${side.label}${side.source ? `（${side.source}）` : ''}`;
+    return `<div class="metric"><span>${esc(heading)}</span><strong>${esc(side.value || '無資料')}</strong></div>`;
   }
 
   function narrativeSection(narrative, metrics){
@@ -595,30 +641,36 @@
       : Object.entries(changes || {}).map(([topic, value]) => typeof value === 'object' && value !== null ? {topic, ...value} : {topic, change: value});
     const emerging = narrative.emerging_terms || [];
     const disappearing = narrative.disappearing_terms || [];
+    const baseline = comparisonSide(firstText(narrative.baseline_period, narrative.previous_period, narrative.period_1),
+      narrative.period_1, narrative.period_1_basis, narrative.period_1_source_type);
+    const current = comparisonSide(firstText(narrative.current_period, narrative.period_2),
+      narrative.period_2, narrative.period_2_basis, narrative.period_2_source_type);
+    const mixedBasis = baseline.value && current.value && baseline.basis !== current.basis;
     return `<section>
       <h3>文字敘事變化（Text Intelligence，非官方法說會 JSD 校準）</h3>
       <p class="state-line">此區為文字敘事變化分析，與系統中的官方法說會跨期 JSD 校準為不同分析。</p>
+      ${mixedBasis ? `<div class="notice">兩份比較文件的期間依據不同（${esc(baseline.label)}／${esc(current.label)}），數值依原始標示呈現，未將日期換算為會計季度；此結果僅描述兩份官方文字的差異，不代表同一會計期間的前後變化。</div>` : ''}
       <div class="metrics-grid">
-        <div class="metric"><span>Baseline period</span><strong>${esc(narrative.baseline_period || narrative.previous_period || narrative.period_1 || 'unavailable')}</strong></div>
-        <div class="metric"><span>Current period</span><strong>${esc(narrative.current_period || narrative.period_2 || 'unavailable')}</strong></div>
+        ${periodMetric('比較基準', baseline)}
+        ${periodMetric('比較對象', current)}
         <div class="metric"><span>Relevant-text JSD</span><strong>${esc(metricValue(metrics,'relevant_text_word_jsd','relevant_jsd'))}</strong></div>
         <div class="metric"><span>Topic JSD</span><strong>${esc(metricValue(metrics,'topic_distribution_jsd'))}</strong></div>
         <div class="metric"><span>TF-IDF Cosine</span><strong>${esc(metricValue(metrics,'semantic_tfidf_cosine_similarity','tfidf_cosine_similarity','tfidf_cosine'))}</strong></div>
         <div class="metric"><span>Semantic Cosine</span><strong>${esc(metricValue(metrics,'semantic_embedding_cosine_similarity'))}</strong></div>
       </div>
-      ${narrative.data_quality ? `<div class="notice">Data quality: ${esc(narrative.data_quality.passed === false ? 'limited / descriptive only' : 'passed')} ${esc(narrative.data_quality.reason || narrative.data_quality.limitation || '')}</div>` : ''}
-      ${changeItems.length ? `<details open><summary>Topic distribution changes</summary><div class="record-grid">${changeItems.slice(0,8).map(item => `<article class="record-card"><h3>${esc(topicLabel(item))}</h3>${detailList([
+      ${narrative.data_quality ? `<div class="notice">資料品質：${esc(narrative.data_quality.passed === false ? '有限，僅供描述參考' : '通過')} ${esc(narrative.data_quality.reason || narrative.data_quality.limitation || '')}</div>` : ''}
+      ${changeItems.length ? `<details open><summary>主題分布變化</summary><div class="record-grid">${changeItems.slice(0,8).map(item => `<article class="record-card"><h3>${esc(topicLabel(item))}</h3>${detailList([
         ['period_1_rate', item.period_1_rate],
         ['period_2_rate', item.period_2_rate],
         ['change', item.change],
         ['period_1_count', item.period_1_count],
         ['period_2_count', item.period_2_count]
       ])}</article>`).join('')}</div></details>` : ''}
-      ${(emerging.length || disappearing.length) ? `<details open><summary>Emerging / disappearing terms</summary>
-        <h4>Emerging</h4>${tagList(emerging, 12)}
-        <h4>Disappearing</h4>${tagList(disappearing, 12)}
+      ${(emerging.length || disappearing.length) ? `<details open><summary>新出現 / 消失的詞彙</summary>
+        <h4>新出現</h4>${tagList(emerging, 12)}
+        <h4>消失</h4>${tagList(disappearing, 12)}
       </details>` : ''}
-      ${support.length ? `<h3>Supporting official evidence</h3><div class="record-grid">${support.slice(0,6).map(evidenceCard).join('')}</div>` : ''}
+      ${support.length ? `<h3>支持的官方證據</h3><div class="record-grid">${support.slice(0,6).map(evidenceCard).join('')}</div>` : ''}
     </section>`;
   }
 
