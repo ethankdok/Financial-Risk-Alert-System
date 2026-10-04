@@ -75,7 +75,7 @@ def create_financial_blueprint(client: FinTrustClient | None = None, admin_requi
     def frontend_card(ticker: str):
         live = request.args.get("live", "false").lower() == "true"
         extract = request.args.get("extract", "false").lower() == "true"
-        payload = frontend_card_payload(ticker, fetch_conference_live=live, extract_documents=extract)
+        payload = frontend_card_payload(ticker, fetch_conference_live=live, extract_documents=extract, client=get_client())
         return to_response({"success": not bool(payload.get("errors")), "data": payload}, 207 if payload.get("errors") else 200)
 
     @blueprint.get("/api/financial/companies/<ticker>/raw")

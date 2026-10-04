@@ -335,9 +335,16 @@ class FinTrustClient:
         )
 
 
-def safe_financial_payload(ticker: str, *, fetch_conference_live: bool = False, extract_documents: bool = False) -> dict[str, Any]:
+def safe_financial_payload(
+    ticker: str,
+    *,
+    fetch_conference_live: bool = False,
+    extract_documents: bool = False,
+    client: FinTrustClient | None = None,
+    include_card: bool = True,
+) -> dict[str, Any]:
     """Return a Flask-template-safe payload with partial failure handling."""
-    client = FinTrustClient()
+    client = client or FinTrustClient()
     payload: dict[str, Any] = {
         "ticker": ticker,
         "snapshot": None,
@@ -355,6 +362,8 @@ def safe_financial_payload(ticker: str, *, fetch_conference_live: bool = False, 
         ("conferences", lambda: client.conferences(ticker, fetch_live=fetch_conference_live)),
         ("material_events", lambda: client.material_events(ticker)),
     ]
+    if not include_card:
+        calls = [call for call in calls if call[0] != "official_evidence_card"]
     if extract_documents:
         calls.append(("conference_documents", lambda: client.conference_documents(ticker, fetch_live=fetch_conference_live)))
     for key, call in calls:
@@ -365,16 +374,73 @@ def safe_financial_payload(ticker: str, *, fetch_conference_live: bool = False, 
     return payload
 
 
-def frontend_card_payload(ticker: str, *, fetch_conference_live: bool = False, extract_documents: bool = False) -> dict[str, Any]:
-    """Build a compact payload for dashboard/detail cards."""
-    payload = safe_financial_payload(ticker, fetch_conference_live=fetch_conference_live, extract_documents=extract_documents)
-    backend_card = payload.get("official_evidence_card")
-    if isinstance(backend_card, dict):
-        backend_card = dict(backend_card)
-        backend_card["errors"] = payload.get("errors", [])
-        backend_card["raw"] = payload
+# Legacy ``raw`` keys that the card-first path does not reproduce, and why.
+CARD_FIRST_RAW_OMISSIONS = {
+    "official_evidence": (
+        "not fetched; its readiness and sources are card.evidence_readiness and card.sources, "
+        "but its evidence_layers and own limitations are not part of the card"
+    ),
+    "conference_documents": (
+        "live extraction from a separate endpoint; not reconstructable from the card "
+        "(card conference items carry document_extractions when extract=true)"
+    ),
+    "official_evidence_card": "identical to the top-level payload; not duplicated",
+}
+
+
+def _card_first_raw(ticker: str, card: dict[str, Any]) -> dict[str, Any]:
+    """Legacy ``raw`` keys rebuilt only from equivalent card data; nothing is invented."""
+    return {
+        "mode": "card_first",
+        "ticker": ticker,
+        "snapshot": card.get("financial_snapshot"),
+        "official_evidence": None,
+        "official_evidence_card": None,
+        "conferences": card.get("investor_conferences") or [],
+        "conference_documents": [],
+        "material_events": card.get("material_events") or [],
+        "errors": [],
+        "derived_from_card": {
+            "snapshot": "financial_snapshot (same persisted snapshot as analysis/latest)",
+            "conferences": "investor_conferences (available records preferred)",
+            "material_events": "material_events (available records preferred)",
+        },
+        "omitted": dict(CARD_FIRST_RAW_OMISSIONS),
+    }
+
+
+def frontend_card_payload(
+    ticker: str,
+    *,
+    fetch_conference_live: bool = False,
+    extract_documents: bool = False,
+    client: FinTrustClient | None = None,
+) -> dict[str, Any]:
+    """Build the dashboard/detail card payload from the canonical official-evidence-card.
+
+    A successful card request is the only backend call. Only when that request
+    fails does the legacy multi-call flow run, as a fallback.
+    """
+    client = client or FinTrustClient()
+    try:
+        card = client.official_evidence_card(ticker, fetch_conference_live=fetch_conference_live, extract_documents=extract_documents)
+        card_error = None if isinstance(card, dict) else {
+            "layer": "official_evidence_card", "message": "official evidence card payload is not an object",
+            "status_code": None, "detail": None,
+        }
+    except FinTrustClientError as exc:
+        card = None
+        card_error = {"layer": "official_evidence_card", "message": str(exc), "status_code": exc.status_code, "detail": exc.detail}
+    if card_error is None:
+        backend_card = dict(card)
+        backend_card["errors"] = []
+        backend_card["raw"] = _card_first_raw(ticker, card)
         return backend_card
 
+    payload = safe_financial_payload(ticker, fetch_conference_live=fetch_conference_live,
+                                     extract_documents=extract_documents, client=client, include_card=False)
+    payload["errors"].insert(0, card_error)
+    payload["mode"] = "legacy_fallback"
     snapshot = payload.get("snapshot") or {}
     evidence = payload.get("official_evidence") or {}
     conferences = payload.get("conferences") or []

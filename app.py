@@ -578,12 +578,45 @@ def _record_date(record: dict[str, Any], record_type: str) -> str:
     return str(record.get("event_date") or record.get("conference_date") or "")
 
 
+def _compact_digest(digest: Any) -> dict[str, Any] | None:
+    """Browser-sized view of a MOPS conference digest; values are copied, never recomputed."""
+    if not isinstance(digest, dict):
+        return None
+    source = digest.get("source") if isinstance(digest.get("source"), dict) else {}
+    coverage = digest.get("coverage") if isinstance(digest.get("coverage"), dict) else {}
+    sections = [section for section in digest.get("sections") or [] if isinstance(section, dict)]
+    return {
+        "source_identity": digest.get("source_identity"),
+        "document_title": digest.get("document_title"),
+        "period": digest.get("period"),
+        "document_type": digest.get("document_type"),
+        "language": digest.get("language"),
+        "conference_date": digest.get("conference_date"),
+        "filename": source.get("filename"),
+        "overview": [item.get("text") for item in digest.get("overview") or [] if isinstance(item, dict) and item.get("text")],
+        "sections": [
+            {"section_type": section.get("section_type"), "title_zh": section.get("title_zh"),
+             "title_en": section.get("title_en"), "bullet_count": len(section.get("bullets") or [])}
+            for section in sections
+        ],
+        "key_quantitative_count": len(digest.get("key_quantitative_disclosures") or []),
+        "coverage": {key: coverage.get(key) for key in (
+            "coverage_status", "coverage_ratio", "content_page_count", "covered_content_pages",
+            "uncovered_content_pages", "coverage_warnings")},
+        "provenance": {"listing_url": source.get("listing_url"), "filename": source.get("filename"),
+                       "sha256": source.get("sha256"), "identity": source.get("identity")},
+        "summary_mode": digest.get("summary_mode"),
+        "digest_version": digest.get("digest_version"),
+        "limitations": digest.get("limitations") or [],
+    }
+
+
 def _official_record(record: dict[str, Any], record_type: str) -> dict[str, Any]:
     official_url = _official_link(record)
     topics = _record_topics(record)
     evidence_text = record.get("document_text_preview") or record.get("raw_text") or record.get("summary") or ""
     representative = record.get("representative_evidence_sentences") or record.get("representative_sentences") or record.get("supporting_sentences") or []
-    return {
+    output = {
         "type": record_type,
         "event_id": record.get("event_id"),
         "ticker": record.get("ticker"),
@@ -607,7 +640,14 @@ def _official_record(record: dict[str, Any], record_type: str) -> dict[str, Any]
         "representative_evidence_sentences": representative,
         "has_full_text": bool(record.get("document_full_text") or record.get("raw_text") or record.get("document_text_preview")),
         "status": record.get("status"),
+        # Contract 1.2.0 (absent on older payloads, so it may be None). The record's own
+        # identity and any MOPS digest identity stay separate.
+        "source_identity": record.get("source_identity"),
     }
+    if record_type == "investor_conference":
+        output["summary_status"] = record.get("summary_status")
+        output["document_digest"] = _compact_digest(record.get("document_digest"))
+    return output
 
 
 def _optional_fintrust_call(call) -> tuple[Any | None, dict[str, Any] | None]:
@@ -630,17 +670,38 @@ def official_evidence_browser():
     page = max(int(request.args.get("page", 1) or 1), 1)
     limit = min(max(int(request.args.get("limit", 20) or 20), 1), 50)
     client = FinTrustClient()
-    try:
-        companies_payload = client.companies()
-        company_rows = _as_list(companies_payload, "companies")
-        company = next((item for item in company_rows if str(item.get("ticker")) == ticker), {"ticker": ticker, "name": ticker})
-        conferences = [_official_record(item, "investor_conference") for item in _as_list(client.conferences(ticker), "conferences", "items") if _is_product_official_record(item)]
-        material_events = [_official_record(item, "material_event") for item in _as_list(client.material_events(ticker), "material_events", "items") if _is_product_official_record(item)]
-    except FinTrustClientError as exc:
-        return jsonify({"success": False, "error": str(exc), "detail": exc.detail}), exc.status_code or 502
+    # Canonical source: the official evidence card. The legacy company / conference /
+    # material-event list calls run only when the card itself is unavailable.
+    official_card, card_error = _optional_fintrust_call(lambda: client.official_evidence_card(ticker))
+    card_lists_ok = isinstance(official_card, dict) and all(
+        isinstance(official_card.get(key), list) for key in ("investor_conferences", "material_events"))
+    if card_lists_ok:
+        evidence_source = "official_evidence_card"
+        raw_conferences, raw_events = official_card["investor_conferences"], official_card["material_events"]
+        company = {"ticker": ticker, "name": official_card.get("company_name"), "subindustry": official_card.get("subindustry")}
+        if not company["name"] or not company["subindustry"]:
+            companies_payload, _companies_error = _optional_fintrust_call(client.companies)
+            listed = next((item for item in _as_list(companies_payload, "companies") if str(item.get("ticker")) == ticker), {})
+            company["name"] = company["name"] or listed.get("name") or listed.get("company_name") or ticker
+            company["subindustry"] = company["subindustry"] or listed.get("subindustry")
+    else:
+        evidence_source = "legacy_lists"
+        if card_error is None:
+            card_error = {"message": "official evidence card payload is incomplete", "status_code": None, "detail": None}
+        try:
+            companies_payload = client.companies()
+            company_rows = _as_list(companies_payload, "companies")
+            company = next((item for item in company_rows if str(item.get("ticker")) == ticker), {"ticker": ticker, "name": ticker})
+            raw_conferences = _as_list(client.conferences(ticker), "conferences", "items")
+            raw_events = _as_list(client.material_events(ticker), "material_events", "items")
+        except FinTrustClientError as exc:
+            return jsonify({"success": False, "error": str(exc), "detail": exc.detail}), exc.status_code or 502
+    conferences = [_official_record(item, "investor_conference") for item in raw_conferences
+                   if isinstance(item, dict) and _is_product_official_record(item)]
+    material_events = [_official_record(item, "material_event") for item in raw_events
+                       if isinstance(item, dict) and _is_product_official_record(item)]
 
     text_intelligence, text_error = _optional_fintrust_call(lambda: client.latest_text_intelligence(ticker))
-    official_card, card_error = _optional_fintrust_call(lambda: client.official_evidence_card(ticker))
     narrative_shift = None
     if isinstance(text_intelligence, dict):
         narrative_shift = text_intelligence.get("narrative_shift")
@@ -681,6 +742,10 @@ def official_evidence_browser():
         "text_intelligence_error": text_error,
         "narrative_shift": narrative_shift,
         "official_card_error": card_error,
+        "evidence_source": evidence_source,
+        "conference_document_digest": official_card.get("conference_document_digest") if card_lists_ok else None,
+        "conference_summary_state": official_card.get("conference_summary_state") if card_lists_ok else None,
+        "source_status": official_card.get("source_status") if card_lists_ok else None,
         "records": visible,
         "pagination": {"page": page, "limit": limit, "total": len(records), "has_more": offset + limit < len(records)},
         "filters": {"type": record_type, "source": source, "topic": topic, "start_date": start_date, "end_date": end_date, "sort": sort_order, "text_available": text_available},
