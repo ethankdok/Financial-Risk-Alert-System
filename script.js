@@ -437,11 +437,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (page === 'result.html') {
 
-    renderRiskResult();
+    // Opened as result.html?ticker=XXXX: the cached text-risk analysis belongs to
+    // an earlier query, possibly about another company, so it is not rendered.
+    const tickerParam = new URLSearchParams(location.search).get('ticker');
 
-    renderStoredDataShiftResult();
+    if (tickerParam === null) {
+
+      renderRiskResult();
+
+      renderStoredDataShiftResult();
+
+    } else {
+
+      renderTickerEntry(tickerParam.trim());
+
+    }
 
     bindAutoDataShift();
+
+  }
+
+
+  function renderTickerEntry(ticker) {
+
+    const heroText = document.querySelector('.page-hero p');
+
+    if (heroText) heroText.textContent = `公司代號：${ticker}（由公司連結開啟）`;
+
+    const summary = document.querySelector('.result-report-main p');
+
+    if (summary) {
+
+      summary.textContent = '此頁由公司代號連結開啟，未載入先前的文字風險分析結果；下方顯示該公司的財報與官方證據。';
+
+    }
+
+    const riskLevel = document.querySelector('.risk-box strong');
+
+    if (riskLevel) riskLevel.textContent = '—';
+
+    const riskNote = document.querySelector('.risk-box small');
+
+    if (riskNote) riskNote.textContent = '未進行文字分析';
 
   }
 
@@ -1656,6 +1693,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return text(localStorage.getItem('analysisQuery') || document.querySelector('.page-hero p')?.textContent, '');
   };
 
+  // result.html?ticker=XXXX selects the company explicitly. When the parameter is
+  // present the cached analysis text is never consulted, so an invalid or
+  // unsupported ticker cannot fall back to another company's cached result.
+  const urlTickerParam = () => {
+    const value = new URLSearchParams(location.search).get('ticker');
+    return value === null ? null : value.trim();
+  };
+
   const pickSupportedCompany = async () => {
     const response = await fetch('/api/financial/companies');
     const payload = await response.json().catch(() => ({}));
@@ -1663,6 +1708,11 @@ document.addEventListener('DOMContentLoaded', () => {
       throw new Error(payload.error || '無法讀取 FinTrust 支援公司清單。');
     }
     const companies = payload.data?.companies || payload.companies || [];
+    const requested = urlTickerParam();
+    if (requested !== null) {
+      if (!/^\d{4,6}$/.test(requested)) return { rejected: 'invalid', ticker: requested };
+      return companies.find((company) => String(company.ticker) === requested) || { rejected: 'unsupported', ticker: requested };
+    }
     const analysisText = getAnalysisText();
     const explicitTicker = analysisText.match(/\b\d{4}\b/)?.[0];
     if (explicitTicker) {
@@ -2262,6 +2312,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadFinancialEvidence = async () => {
     try {
       const company = await pickSupportedCompany();
+      if (company?.rejected === 'invalid') {
+        showEmpty('網址中的公司代號格式不正確。', '請使用 4 至 6 碼數字的台股代號，例如 result.html?ticker=2454；本頁不會改用先前查詢的資料。');
+        return;
+      }
+      if (company?.rejected === 'unsupported') {
+        showEmpty(`公司代號 ${company.ticker} 不在 FinTrust 支援的台股半導體公司清單中。`, '本頁不會改用先前查詢的資料；請確認代號或改由分析流程進入。');
+        return;
+      }
       if (!company) {
         showEmpty('此查詢未對應 FinTrust 目前支援的台股半導體公司。', '原本風險分析已完成；Financial Evidence 區塊不會影響美股或未支援 ticker 的流程。');
         return;

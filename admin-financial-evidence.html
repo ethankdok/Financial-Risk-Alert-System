@@ -39,7 +39,7 @@
           <p>檢查已持久化的財報 facts、規則結果、官方事件、文字證據與執行歷史。</p>
         </div>
         <div class="admin-toolbar-inline">
-          <select class="form-control" id="tickerSelect"><option value="2454">2454 聯發科</option><option value="2330">2330 台積電</option><option value="2303">2303 聯電</option><option value="3711">3711 日月光投控</option></select>
+          <select class="form-control" id="tickerSelect"><option value="2454">2454</option></select>
           <button class="btn btn-primary" id="refreshEvidenceBtn" type="button">Refresh Company Evidence</button>
         </div>
       </div>
@@ -70,6 +70,19 @@
   </main>
   <script>
   const state={ticker:'2454',overview:null};
+  // Options come from the canonical FinTrust company list; 2454 stays the default.
+  async function loadCompanyOptions(){
+    const select=document.getElementById('tickerSelect');
+    try{
+      const response=await fetch('/api/financial/companies',{headers:{Accept:'application/json'}});
+      const payload=await response.json();
+      const companies=(payload.data&&payload.data.companies)||payload.companies||[];
+      if(!companies.length)return;
+      select.innerHTML=companies.map(company=>`<option value="${esc(company.ticker)}">${esc(company.ticker)} ${esc(company.name||'')}</option>`).join('');
+      select.value=companies.some(company=>String(company.ticker)===state.ticker)?state.ticker:String(companies[0].ticker);
+      state.ticker=select.value;
+    }catch(_){}
+  }
   const esc=AdminAuth.escapeHtml;
   function tag(label,type='blue'){return `<span class="status-tag tag-${type}">${esc(label||'—')}</span>`}
   function metricValue(v){return v===null||v===undefined?'—':Number(v).toLocaleString('zh-TW',{maximumFractionDigits:2})}
@@ -104,7 +117,7 @@
   document.getElementById('tickerSelect').addEventListener('change',e=>{state.ticker=e.target.value;loadOverview();});
   document.getElementById('factSearch').addEventListener('input',renderFacts);
   document.getElementById('refreshEvidenceBtn').addEventListener('click',async()=>{const btn=document.getElementById('refreshEvidenceBtn');btn.disabled=true;btn.textContent='Refreshing';try{await AdminAuth.api(`/api/financial/admin/companies/${state.ticker}/unified-refresh`,{method:'POST',body:JSON.stringify({source_mode:'official',trigger:'manual',include_gemini:false})});await loadOverview();}catch(e){alert(e.message)}finally{btn.disabled=false;btn.textContent='Refresh Company Evidence'}});
-  loadRuntime();loadOverview();
+  loadRuntime();loadCompanyOptions().finally(loadOverview);
   </script>
 </body>
 </html>

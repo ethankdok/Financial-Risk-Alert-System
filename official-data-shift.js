@@ -58,6 +58,9 @@
 
   // Same company context the financial-evidence section uses: stored analysis text.
   const contextTicker = async () => {
+    // result.html?ticker=XXXX wins and the cached analysis text is then ignored.
+    const requested = new URLSearchParams(location.search).get('ticker');
+    if (requested !== null) return /^\d{4,6}$/.test(requested.trim()) ? requested.trim() : '';
     let text = '';
     try {
       const raw = localStorage.getItem('analysisResult');

@@ -50,7 +50,7 @@ from app.services.ai_financial_analysis_service import AIFinancialAnalysisServic
 from app.services.analysis_repository import AnalysisRepository, SnapshotConcurrencyError
 from app.services.claim_parser import extract_claim
 from app.services.company_master_repository import CompanyMasterRepository
-from app.services.company_registry import list_companies
+from app.services.company_registry import list_supported_companies
 from app.services.financial_analysis_service import (
     FinancialAnalysisService,
     UnsupportedCompanyError,
@@ -208,10 +208,13 @@ async def generate_and_persist_narrative_from_latest_snapshot(
 
 
 @router.get("/companies", response_model=CompanyListResponse)
-def companies() -> CompanyListResponse:
+def companies(
+    repository: CompanyMasterRepository = Depends(get_company_master_repository),
+) -> CompanyListResponse:
+    # Same source and scope as company resolution for every company endpoint.
     return CompanyListResponse(
-        companies=list_companies(),
-        note="此為可擴充的半導體公司 seed registry；系統依晶圓代工、IC 設計、封裝測試載入共通規則與子產業複合規則。",
+        companies=list_supported_companies(repository),
+        note="FinTrust 支援的台股上市半導體公司：已審核的 seed 公司加上公司主檔中上市的半導體業（產業代碼 24）公司。",
     )
 
 

@@ -14,6 +14,10 @@ const code = scripts[scripts.length - 1][1];
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));
 const responses = [...(input.responses || [])];
 const fetches = [];
+const companyFetches = [];
+// The company list request is answered separately so browser payloads keep their order.
+const companiesPayload = input.companies || {success: true, data: {companies: [
+  {ticker: '2330', name: '台積電'}, {ticker: '2454', name: '聯發科'}]}};
 
 const makeElement = (id, value = '') => ({
   id, value, hidden: false, innerHTML: '', listeners: {},
@@ -32,6 +36,11 @@ const document = {
   querySelectorAll: (selector) => (selector === '.tabs button' ? tabs : []),
 };
 const fetchStub = async (url) => {
+  if (url.startsWith('/api/financial/companies')) {
+    companyFetches.push(url);
+    if (companiesPayload === 'fail') throw new Error('network down');
+    return { ok: true, json: async () => companiesPayload };
+  }
   fetches.push(url);
   const payload = responses.length ? responses.shift() : { success: false, error: 'no stub response' };
   return { ok: payload.success !== false, json: async () => payload };
@@ -42,7 +51,8 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
 
 (async () => {
   // eslint-disable-next-line no-new-func
-  new Function('document', 'fetch', 'window', code)(document, fetchStub, windowStub);
+  const locationStub = { search: input.search || '' };
+  new Function('document', 'fetch', 'window', 'location', code)(document, fetchStub, windowStub, locationStub);
   await settle();
   for (const action of input.actions || []) {
     if (action === 'loadMore') elements.loadMore.listeners.click();
@@ -55,7 +65,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
     }
     await settle();
   }
-  const out = { fetches, hidden: {}, html: {} };
+  const out = { fetches, companyFetches, hidden: {}, html: {}, values: { ticker: elements.ticker.value } };
   Object.entries(elements).forEach(([id, element]) => {
     out.html[id] = element.innerHTML;
     out.hidden[id] = element.hidden;

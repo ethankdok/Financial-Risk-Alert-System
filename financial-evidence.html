@@ -22,7 +22,7 @@
     .toolbar{background:#fff;border:1px solid #dfe5ee;border-radius:8px;padding:14px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:18px}
     .field{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#42516a}
     .field input,.field select{min-height:38px;border:1px solid #ccd5e2;border-radius:6px;padding:0 10px;background:#fff;color:#172033}
-    .summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:18px}
+    .summary-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:18px}
     .summary-card,.panel,.record-card{background:#fff;border:1px solid #dfe5ee;border-radius:8px}
     .summary-card{min-width:0;padding:14px;overflow:hidden}
     .summary-card span{display:block;font-size:12px;color:#6b7890;font-weight:800;text-transform:uppercase}
@@ -99,10 +99,7 @@
     <section class="toolbar" aria-label="filters">
       <label class="field">公司
         <select id="ticker">
-          <option value="2454">2454 聯發科</option>
-          <option value="2330">2330 台積電</option>
-          <option value="2303">2303 聯電</option>
-          <option value="3711">3711 日月光投控</option>
+          <option value="">載入公司清單中…</option>
         </select>
       </label>
       <label class="field">來源
@@ -146,7 +143,13 @@
   </main>
 
   <script>
-  const state = {ticker:'2454', type:'all', page:1, limit:10, hasMore:false, loading:false, records:[]};
+  // ?ticker=XXXX preselects a company; otherwise 2454 as before.
+  const requestedTicker = (() => {
+    const value = new URLSearchParams(location.search).get('ticker');
+    return value && /^\d{4,6}$/.test(value.trim()) ? value.trim() : '2454';
+  })();
+  const state = {ticker:requestedTicker, type:'all', page:1, limit:10, hasMore:false, loading:false, records:[]};
+  const resultPageHref = () => `result.html?ticker=${encodeURIComponent(state.ticker)}`;
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const fmt = (value) => value ? esc(value) : 'unavailable';
@@ -288,7 +291,7 @@
         ? `<div class="coverage-note">${(coverage.coverage_warnings || []).map(esc).join(' ')}</div>` : ''}
       ${overview.length ? `<div class="digest-overview">${overview.map(item => `<p>${esc(item)}</p>`).join('')}</div>` : ''}
       ${sections.length ? `<div class="tag-list">${sections.map(section => `<span>${esc(firstText(section.title_zh, section.title_en, '未命名段落'))}（${esc(section.bullet_count)} 項）</span>`).join('')}${digest.key_quantitative_count ? `<span>重要量化資訊（${esc(digest.key_quantitative_count)} 項）</span>` : ''}</div>` : ''}
-      <p class="state-line">完整分層摘要、逐項證據與頁碼請至分析結果頁的「官方補充證據」查看。</p>
+      <p class="state-line">完整分層摘要、逐項證據與頁碼請至<a class="result-link" href="${esc(resultPageHref())}">此公司的分析結果頁</a>「官方補充證據」查看。</p>
       <details>
         <summary>查看原始證據 / Provenance</summary>
         ${detailList([
@@ -393,7 +396,27 @@
       ['系統同步時間', summary.system_last_synchronized_at || 'unavailable', 'repository retrieved_at / synchronized time'],
       ['Investor Conferences', summary.investor_conference_count ?? 0, 'persisted available records'],
       ['Material Events', summary.material_event_count ?? 0, 'persisted available records']
-    ].map(([label,value,note]) => `<article class="summary-card"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(note)}</small></article>`).join('');
+    ].map(([label,value,note]) => `<article class="summary-card"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(note)}</small></article>`).join('')
+      + `<article class="summary-card"><span>分析結果頁</span><strong><a class="result-link" href="${esc(resultPageHref())}">${esc(state.ticker)} 結果頁</a></strong><small>財報、規則與官方證據的完整檢視</small></article>`;
+  }
+
+  // Company options come from the canonical FinTrust company list (same source the
+  // backend resolves companies from); there is no page-local ticker list.
+  async function loadCompanies(){
+    let companies = [];
+    try{
+      const response = await fetch('/api/financial/companies', {headers:{Accept:'application/json'}});
+      const payload = await response.json();
+      companies = (payload.data && payload.data.companies) || payload.companies || [];
+    }catch(_){
+      companies = [];
+    }
+    const options = companies.map(company => `<option value="${esc(company.ticker)}">${esc(company.ticker)} ${esc(company.name || '')}</option>`);
+    if(!companies.some(company => String(company.ticker) === state.ticker)){
+      options.unshift(`<option value="${esc(state.ticker)}">${esc(state.ticker)}</option>`);
+    }
+    $('ticker').innerHTML = options.join('');
+    $('ticker').value = state.ticker;
   }
 
   function renderRecords(){
@@ -583,7 +606,7 @@
     });
   });
   $('loadMore').addEventListener('click', () => {state.page += 1; load(false);});
-  load(true);
+  loadCompanies().finally(() => load(true));
   </script>
 </body>
 </html>

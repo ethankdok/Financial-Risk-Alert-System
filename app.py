@@ -457,8 +457,13 @@ def member_watchlist_add():
     member = current_member()
     data = request.get_json(silent=True) or {}
     ticker = str(data.get("ticker", "")).strip()
-    if ticker not in {"2454", "2330", "2303", "3711"}:
-        return jsonify({"error": "目前僅支援 2454、2330、2303、3711"}), 400
+    # Same canonical company list the frontend selectors use (FastAPI /companies).
+    try:
+        supported = {str(item.get("ticker")) for item in _as_list(FinTrustClient().companies(), "companies")}
+    except FinTrustClientError as exc:
+        return jsonify({"error": "公司清單暫時無法讀取，請稍後再試", "detail": exc.detail}), 503
+    if ticker not in supported:
+        return jsonify({"error": "此公司代號不在 FinTrust 支援的台股半導體公司清單中"}), 400
     now = utc_now_str()
     item = repository.upsert_watchlist_item(member["uid"], {
         "ticker": ticker,
