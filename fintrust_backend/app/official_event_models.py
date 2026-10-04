@@ -189,7 +189,7 @@ class OfficialEvidenceSummary(BaseModel):
 
 
 class OfficialEvidenceCardResponse(BaseModel):
-    schema_version: str = "frontend-official-evidence-card-1.1.0"
+    schema_version: str = "frontend-official-evidence-card-1.2.0"
     ticker: str
     company_name: str
     subindustry: str
@@ -205,6 +205,12 @@ class OfficialEvidenceCardResponse(BaseModel):
     # 1.1.0: digest of one archived MOPS conference PDF, used only when no
     # conference item matched an archived document by period/date.
     conference_document_digest: dict[str, Any] | None = None
+    # 1.2.0: how the conference summary relates to the conference items; every
+    # conference item, material event and digest also carries source_identity.
+    conference_summary_state: Literal[
+        "attached", "standalone_latest", "no_matching_archive", "archive_unavailable",
+        "digest_failed", "digest_timeout", "not_configured",
+    ] = "not_configured"
     material_events: list[dict[str, Any]] = Field(default_factory=list)
     disclosure_claims: list[dict[str, Any]] = Field(default_factory=list)
     text_evidence: list[dict[str, Any]] = Field(default_factory=list)
