@@ -8,7 +8,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from typing import Any, Protocol
 
 from app.ai_analysis_models import AIFinancialAnalysisReport
@@ -56,6 +56,8 @@ FACT_KEY_VERSION = "financial-fact-v2"
 class AnalysisRepository(Protocol):
     backend_name: str
 
+    # promote_latest=False records the run, its metrics/rules and its history snapshot but
+    # keeps the current latest snapshot; preserve_filing_periods are filing rows left untouched.
     def save_pipeline_result(
         self,
         *,
@@ -66,6 +68,10 @@ class AnalysisRepository(Protocol):
         latest_report: FinancialStatementAnalysisReport,
         historical_report: HistoricalFinancialAnalysisReport,
         snapshot: FrontendAnalysisSnapshot,
+        promote_latest: bool = True,
+        run_status: str = "completed",
+        run_error_message: str | None = None,
+        preserve_filing_periods: Collection[str] = (),
     ) -> PersistenceCounts: ...
 
     def get_latest_snapshot(self, ticker: str) -> FrontendAnalysisSnapshot | None: ...
@@ -647,6 +653,10 @@ class SqliteAnalysisRepository:
         latest_report: FinancialStatementAnalysisReport,
         historical_report: HistoricalFinancialAnalysisReport,
         snapshot: FrontendAnalysisSnapshot,
+        promote_latest: bool = True,
+        run_status: str = "completed",
+        run_error_message: str | None = None,
+        preserve_filing_periods: Collection[str] = (),
     ) -> PersistenceCounts:
         facts = latest_fact_rows(latest_report) + historical_fact_rows(historical_report)
         metrics = metric_rows(run_id, latest_report, historical_report)
@@ -655,11 +665,12 @@ class SqliteAnalysisRepository:
             connection.execute(
                 "INSERT OR REPLACE INTO analysis_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (run_id, historical_report.ticker, historical_report.company_name,
-                 historical_report.subindustry, "combined", trigger, "completed",
+                 historical_report.subindustry, "combined", trigger, run_status,
                  started_at.isoformat(), completed_at.isoformat(), historical_report.rule_version,
-                 snapshot.overall_severity.value, snapshot.summary, None),
+                 snapshot.overall_severity.value, snapshot.summary, run_error_message),
             )
-            for period in historical_report.periods:
+            filings = [period for period in historical_report.periods if period.period not in preserve_filing_periods]
+            for period in filings:
                 connection.execute(
                     """INSERT INTO financial_filings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(ticker, period) DO UPDATE SET source_url=excluded.source_url,
@@ -711,16 +722,17 @@ class SqliteAnalysisRepository:
                      to_json(rule["evidence_periods"]), to_json(rule["evidence_metrics"]),
                      rule["rule_scope"], rule["logic_expression"], to_json(rule["actual_values"])),
                 )
-            connection.execute(
-                "INSERT OR REPLACE INTO latest_analysis_snapshots VALUES (?, ?, ?, ?)",
-                (snapshot.ticker, run_id, to_json(snapshot.model_dump(mode="json")), completed_at.isoformat()),
-            )
+            if promote_latest:
+                connection.execute(
+                    "INSERT OR REPLACE INTO latest_analysis_snapshots VALUES (?, ?, ?, ?)",
+                    (snapshot.ticker, run_id, to_json(snapshot.model_dump(mode="json")), completed_at.isoformat()),
+                )
             connection.execute(
                 "INSERT OR REPLACE INTO analysis_snapshots VALUES (?, ?, ?, ?)",
                 (run_id, snapshot.ticker, to_json(snapshot.model_dump(mode="json")), completed_at.isoformat()),
             )
         return PersistenceCounts(
-            filings=len(historical_report.periods), facts=len(facts), metrics=len(metrics),
+            filings=len(filings), facts=len(facts), metrics=len(metrics),
             rule_results=len(rules), snapshots=1,
         )
 

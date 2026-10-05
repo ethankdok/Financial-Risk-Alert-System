@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from typing import Literal
 from uuid import uuid4
@@ -14,6 +15,7 @@ from app.pipeline_models import (
     BatchCompanyResult,
     BatchIngestionRunRecord,
     CompanyRefreshResult,
+    FrontendAnalysisSnapshot,
     IngestionRunRecord,
     PersistenceCounts,
     RefreshAllResult,
@@ -27,6 +29,7 @@ from app.services.demo_fixture_sources import DEMO_SOURCE_URL, DemoMopsInlineXbr
 from app.services.financial_analysis_service import FinancialAnalysisService, UnsupportedCompanyError
 from app.services.frontend_presenter import build_frontend_snapshot
 from app.services.historical_analysis_service import HistoricalFinancialAnalysisService
+from app.services.mops_inline_xbrl import DEGRADED_SOURCE_DIAGNOSTICS
 from app.services.ingestion_run_repository import (
     IngestionRunRepository,
     build_ingestion_run_repository,
@@ -47,6 +50,17 @@ TRANSIENT_ERROR_MARKERS = (
     "timeout", "timed out", "connection", "http 429", "http 500",
     "http 502", "http 503", "http 504", "rate limit", "temporarily unavailable",
 )
+_ANNUAL_PERIOD = re.compile(r"\d{4}FY")
+
+
+def snapshot_usable_years(snapshot: FrontendAnalysisSnapshot | None) -> int:
+    """Usable MOPS annual years recorded in a persisted snapshot's source list."""
+    if snapshot is None:
+        return 0
+    return sum(
+        1 for source in snapshot.sources
+        if source.status == "available" and _ANNUAL_PERIOD.fullmatch(source.period or "")
+    )
 
 
 def validate_refresh_tickers(tickers: list[str] | tuple[str, ...]) -> tuple[str, ...]:
@@ -259,6 +273,36 @@ class FinancialIngestionPipeline:
                 else "completed"
             )
 
+            # A run with no usable year because MOPS returned throttle/invalid content or failed
+            # in transport is recorded, but never replaces a previous snapshot that had usable years.
+            degraded_periods = [
+                period.period for period in historical_report.periods
+                if period.source_diagnostic in DEGRADED_SOURCE_DIAGNOSTICS
+            ]
+            promote_latest = True
+            degraded_reason: str | None = None
+            if historical_report.available_years == 0 and degraded_periods:
+                previous = self.repository.get_latest_snapshot(profile.ticker)
+                previous_years = snapshot_usable_years(previous) if previous and previous.ticker == profile.ticker else 0
+                promote_latest = previous_years == 0
+                diagnostics = sorted({
+                    period.source_diagnostic for period in historical_report.periods
+                    if period.source_diagnostic in DEGRADED_SOURCE_DIAGNOSTICS
+                })
+                degraded_reason = (
+                    f"source_degraded: MOPS 未回傳有效 iXBRL（{'、'.join(diagnostics)}：{'、'.join(degraded_periods)}），本次 0 個可用年度；"
+                    + (
+                        f"保留先前有效 snapshot（run_id={previous.analysis_run_id}，{previous_years} 個可用年度），未覆寫最新結果。"
+                        if not promote_latest and previous is not None
+                        else "尚無先前有效 snapshot，本次以資料降級狀態保存。"
+                    )
+                )
+                result_status = "partial"
+                logger.warning(
+                    "stage=source_degraded run_id=%s ticker=%s periods=%s diagnostics=%s promote_latest=%s previous_usable_years=%s",
+                    run_id, profile.ticker, degraded_periods, diagnostics, promote_latest, previous_years,
+                )
+
             logger.info("stage=persist run_id=%s ticker=%s backend=%s", run_id, profile.ticker, self.repository.backend_name)
             persistence = self.repository.save_pipeline_result(
                 run_id=run_id,
@@ -268,6 +312,10 @@ class FinancialIngestionPipeline:
                 latest_report=latest_report,
                 historical_report=historical_report,
                 snapshot=snapshot,
+                promote_latest=promote_latest,
+                run_status="partial" if degraded_reason else "completed",
+                run_error_message=degraded_reason,
+                preserve_filing_periods=() if promote_latest else degraded_periods,
             )
             logger.info(
                 "pipeline_completed run_id=%s ticker=%s source_mode=%s filings=%s facts=%s metrics=%s rules=%s snapshots=%s ai=%s",
@@ -282,6 +330,7 @@ class FinancialIngestionPipeline:
                         "records_found": persistence.facts,
                         "records_written": persistence.facts,
                         "persistence": persistence,
+                        "error_message": degraded_reason,
                     }
                 )
             )
@@ -301,6 +350,7 @@ class FinancialIngestionPipeline:
                 persistence=persistence,
                 snapshot=snapshot,
                 ai_analysis=ai_analysis,
+                error=degraded_reason,
             )
         except Exception as exc:
             completed_at = datetime.now(timezone.utc)

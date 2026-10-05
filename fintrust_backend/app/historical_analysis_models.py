@@ -35,6 +35,10 @@ class HistoricalPeriodRecord(BaseModel):
     source_name: str = "公開資訊觀測站 MOPS Inline XBRL"
     source_url: str
     status: Literal["available", "missing", "error"]
+    # In-process acquisition diagnostic (see mops_inline_xbrl); excluded from every payload.
+    source_diagnostic: Literal["filing_not_found", "source_invalid_content", "source_unavailable"] | None = Field(
+        default=None, exclude=True
+    )
 
     revenue: float | None = None
     cost_of_goods_sold: float | None = None

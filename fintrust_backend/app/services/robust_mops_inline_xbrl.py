@@ -16,6 +16,7 @@ from app.services.mops_inline_xbrl import (
     _object_value,
     _parse_date,
     parse_financial_value,
+    source_diagnostic_for,
 )
 
 
@@ -264,7 +265,7 @@ class RobustMopsInlineXbrlClient(MopsInlineXbrlClient):
                 self._write_cache(profile, roc_year, content)
             return self.parser.parse(content, profile.ticker, roc_year, 4)
         except (MOPSXBRLClientError, XBRLParserError) as exc:
-            raise MopsInlineXbrlError(str(exc)) from exc
+            raise MopsInlineXbrlError(str(exc), source_diagnostic=source_diagnostic_for(exc)) from exc
         except Exception as exc:
             raise MopsInlineXbrlError(f"MOPS iXBRL 下載或解析失敗：{exc}") from exc
 
@@ -313,6 +314,7 @@ class RobustMopsInlineXbrlClient(MopsInlineXbrlClient):
                         status="error",
                         warnings=[str(exc)],
                         fields_missing=list(FIELD_ALIASES),
+                        source_diagnostic=exc.source_diagnostic,
                     )
                 )
             candidate -= 1

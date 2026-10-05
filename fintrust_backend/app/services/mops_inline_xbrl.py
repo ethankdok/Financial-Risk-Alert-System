@@ -36,7 +36,74 @@ except ImportError:  # pragma: no cover - deployment dependency guard
 
 
 class MopsInlineXbrlError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, source_diagnostic: str | None = None) -> None:
+        super().__init__(message)
+        self.source_diagnostic = source_diagnostic
+
+
+# Source diagnostics for a period MOPS did not deliver as iXBRL/ZIP.
+# filing_not_found: MOPS's exact "file does not exist" page (a legitimate no-filing).
+# source_invalid_content: any other non-iXBRL body, e.g. a throttle page; fails closed.
+# source_unavailable: transport failure (non-200, timeout, connection error).
+FILING_NOT_FOUND = "filing_not_found"
+SOURCE_INVALID_CONTENT = "source_invalid_content"
+SOURCE_UNAVAILABLE = "source_unavailable"
+DEGRADED_SOURCE_DIAGNOSTICS = frozenset({SOURCE_INVALID_CONTENT, SOURCE_UNAVAILABLE})
+
+# The complete page MOPS FileDownLoad serves (Big5, HTTP 200) when the requested filing does not exist.
+_MOPS_FILING_NOT_FOUND_PAGE = (
+    "<html><body><center><br><h4 align='center'><font color='red'>下載檔名或路徑不正確，請檢查!!</font></h4>"
+    "<form action='/server-java/FileDownLoad'><center><input type='button' value=' 回上頁 ' "
+    "onClick={window.history.back()}></center></form></center></body></html>"
+)
+_WHITESPACE = re.compile(r"\s+")
+_MOPS_FILING_NOT_FOUND_KEY = _WHITESPACE.sub("", _MOPS_FILING_NOT_FOUND_PAGE)
+
+
+def classify_mops_non_ixbrl_body(content: bytes) -> str:
+    """Only the exact known not-found page is a legitimate no-filing; everything else fails closed."""
+    for encoding in ("cp950", "utf-8-sig"):
+        try:
+            text = content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+        if _WHITESPACE.sub("", text) == _MOPS_FILING_NOT_FOUND_KEY:
+            return FILING_NOT_FOUND
+    return SOURCE_INVALID_CONTENT
+
+
+class MopsSourceContentError(MOPSXBRLClientError):
+    def __init__(self, diagnostic: str, size: int) -> None:
+        message = (
+            f"MOPS 查無此申報檔案（{diagnostic}）" if diagnostic == FILING_NOT_FOUND
+            else f"MOPS returned invalid content ({diagnostic}, {size} bytes)"
+        )
+        super().__init__(message)
+        self.diagnostic = diagnostic
+
+
+def source_diagnostic_for(exc: BaseException) -> str | None:
+    """Diagnostic for a download/parse failure; parser errors are not source failures."""
+    if isinstance(exc, MopsSourceContentError):
+        return exc.diagnostic
+    if isinstance(exc, MOPSXBRLClientError):
+        return SOURCE_UNAVAILABLE
+    return None
+
+
+if MOPSXBRLClient is not None:
+    class ClassifyingMOPSXBRLClient(MOPSXBRLClient):
+        """The vendored client passes every HTTP 200 body through is_ixbrl() before
+        rejecting it, so the same fetched body is classified here without another request."""
+
+        def is_ixbrl(self, content: bytes) -> bool:
+            if super().is_ixbrl(content):
+                return True
+            if content[:2] == b"PK":
+                return False
+            raise MopsSourceContentError(classify_mops_non_ixbrl_body(content), len(content))
+else:  # pragma: no cover - deployment dependency guard
+    ClassifyingMOPSXBRLClient = None  # type: ignore[assignment,misc]
 
 
 MOPS_DOWNLOAD_TEMPLATE = (
@@ -324,7 +391,7 @@ class MopsInlineXbrlClient:
             raise MopsInlineXbrlError(
                 "缺少 Arelle；請安裝 twmops[xbrl]，避免 iXBRL scale 或 taxonomy 解析不完整。"
             )
-        self.xbrl_client = xbrl_client or MOPSXBRLClient()
+        self.xbrl_client = xbrl_client or ClassifyingMOPSXBRLClient()
         self.parser = parser or XBRLParser()
         parser_mode = os.getenv("MOPS_XBRL_PARSER_MODE", "arelle").strip().lower()
         if parser is None and parser_mode == "lightweight":
@@ -390,7 +457,7 @@ class MopsInlineXbrlClient:
                 self._write_cache(profile, roc_year, content)
             package = self.parser.parse(content, profile.ticker, roc_year, 4)
         except (MOPSXBRLClientError, XBRLParserError) as exc:
-            raise MopsInlineXbrlError(str(exc)) from exc
+            raise MopsInlineXbrlError(str(exc), source_diagnostic=source_diagnostic_for(exc)) from exc
         except Exception as exc:
             raise MopsInlineXbrlError(f"MOPS iXBRL 下載或解析失敗：{exc}") from exc
 
@@ -438,6 +505,7 @@ class MopsInlineXbrlClient:
                         status="error",
                         warnings=[str(exc)],
                         fields_missing=list(FIELD_ALIASES),
+                        source_diagnostic=exc.source_diagnostic,
                     )
                 )
             candidate -= 1

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import datetime, timezone
 from typing import Any
 
@@ -49,6 +50,10 @@ class FirestoreAnalysisRepository:
         latest_report: FinancialStatementAnalysisReport,
         historical_report: HistoricalFinancialAnalysisReport,
         snapshot: FrontendAnalysisSnapshot,
+        promote_latest: bool = True,
+        run_status: str = "completed",
+        run_error_message: str | None = None,
+        preserve_filing_periods: Collection[str] = (),
     ) -> PersistenceCounts:
         facts = latest_fact_rows(latest_report) + historical_fact_rows(historical_report)
         metrics = metric_rows(run_id, latest_report, historical_report)
@@ -64,17 +69,18 @@ class FirestoreAnalysisRepository:
                 "subindustry": historical_report.subindustry,
                 "analysis_type": "combined",
                 "trigger": trigger,
-                "status": "completed",
+                "status": run_status,
                 "started_at": started_at,
                 "completed_at": completed_at,
                 "rule_version": historical_report.rule_version,
                 "overall_severity": snapshot.overall_severity.value,
                 "summary": snapshot.summary,
-                "error_message": None,
+                "error_message": run_error_message,
             },
         )
 
-        for period in historical_report.periods:
+        filings = [period for period in historical_report.periods if period.period not in preserve_filing_periods]
+        for period in filings:
             batch.set(
                 self.client.collection("financial_filings").document(
                     document_id(historical_report.ticker, period.period)
@@ -126,10 +132,11 @@ class FirestoreAnalysisRepository:
                 {**rule, "created_at": completed_at},
             )
 
-        batch.set(
-            self.client.collection("latest_analysis_snapshots").document(snapshot.ticker),
-            {**snapshot.model_dump(mode="python"), "updated_at": completed_at},
-        )
+        if promote_latest:
+            batch.set(
+                self.client.collection("latest_analysis_snapshots").document(snapshot.ticker),
+                {**snapshot.model_dump(mode="python"), "updated_at": completed_at},
+            )
         batch.set(
             self.client.collection("analysis_snapshots").document(run_id),
             {
@@ -143,7 +150,7 @@ class FirestoreAnalysisRepository:
         batch.commit()
 
         return PersistenceCounts(
-            filings=len(historical_report.periods),
+            filings=len(filings),
             facts=len(facts),
             metrics=len(metrics),
             rule_results=len(rules),
