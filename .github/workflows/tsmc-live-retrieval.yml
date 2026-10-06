@@ -1,0 +1,48 @@
+name: TSMC official source retrieval pilot
+on:
+  push:
+    branches: [feature/tsmc-quarterly-corpus]
+    paths:
+      - '.github/workflows/tsmc-live-retrieval.yml'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/tsmc-live-retrieval.yml'
+
+jobs:
+  limited-official-source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Retrieve 2017–2025 official quarterly transcript PDF links
+        run: python scripts/build_tsmc_corpus.py --start 2017 --end 2025 --delay 1.0
+      - name: Report source completeness and available pilot metrics
+        shell: bash
+        run: |
+          python - <<'PY'
+          import csv
+          from collections import Counter
+          with open("data/tsmc_corpus/tsmc_source_index.csv", encoding="utf-8-sig") as f:
+              rows = list(csv.DictReader(f))
+          print("SOURCE_STATUS", dict(Counter(row["status"] for row in rows)))
+          print("OFFICIAL_PDF_PERIODS", [row["period"] for row in rows if row["status"] == "ok"])
+          PY
+          python scripts/calibrate_tsmc_shift.py --period1 2025Q3 --period2 2025Q4 || echo 'Pilot comparison not possible; inspect source index.'
+      - name: Diagnose 2025Q3 vs 2025Q4 metric discrepancy
+        run: python scripts/diagnose_tsmc_shift.py --period1 2025Q3 --period2 2025Q4
+      - name: Compare vendor/repetition sensitivity with separately recalibrated thresholds
+        run: python scripts/sensitivity_tsmc_shift.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tsmc-source-index-and-metrics
+          path: |
+            data/tsmc_corpus/tsmc_source_index.csv
+            data/tsmc_corpus/calibration_result.json
+            data/tsmc_corpus/diagnostic_report.json
+            data/tsmc_corpus/sensitivity_report.json
+          retention-days: 7
