@@ -19,6 +19,11 @@ from app.services.analysis_feature_engine import AnalysisFeatureEngine
 from app.services.llm_provider_protocol import FinancialLLMProvider, create_financial_llm_provider
 from app.services.llm_evidence_selection import select_llm_text_evidence
 from app.services.monitorable_rule_engine import MonitorableFinancialRuleEngine
+from app.services.narrative_presentation import (
+    build_presentation_glossary,
+    dimension_summary_text,
+    humanize_narrative,
+)
 from app.services.semiconductor_coverage import rule_coverage_for, technically_supported
 
 if TYPE_CHECKING:
@@ -81,9 +86,8 @@ class AIFinancialAnalysisService:
             if signal == DimensionSignal.INSUFFICIENT_DATA:
                 summary = "目前缺少足夠欄位，暫不形成此面向結論。"
             elif triggered:
-                summary = "；".join(
-                    f"{item.name}（{item.severity.value}／{item.rule_scope}）" for item in triggered
-                )
+                # Rule scope and IDs stay in rule_monitoring / triggered_rule_ids for traceability.
+                summary = "；".join(dimension_summary_text(item.name, item.severity.value) for item in triggered)
             else:
                 summary = "目前可用規則均未觸發顯著注意或正向訊號。"
             assessments.append(
@@ -145,6 +149,7 @@ class AIFinancialAnalysisService:
                 list(official_text_evidence or []),
                 narrative_shift=narrative_shift,
             )
+            glossary = build_presentation_glossary(features=features, rules=rules, dimensions=dimensions)
             narrative, trace = await self.llm_analyst.analyze(
                 company_name=report.company_name,
                 ticker=report.ticker,
@@ -157,10 +162,12 @@ class AIFinancialAnalysisService:
                     "source_method": report.source_method,
                     "rule_coverage_status": coverage.status,
                     "rule_coverage_note": coverage.note,
+                    "presentation_glossary": glossary.as_prompt_payload(),
                 },
                 official_text_evidence=selected_evidence,
                 narrative_shift=narrative_shift,
             )
+            narrative = humanize_narrative(narrative, glossary)
             trace.llm_evidence_ids = llm_evidence_ids
         else:
             narrative = None
@@ -230,6 +237,9 @@ class AIFinancialAnalysisService:
             list(analysis.official_text_evidence),
             narrative_shift=analysis.narrative_shift,
         )
+        glossary = build_presentation_glossary(
+            features=analysis.features, rules=analysis.rule_monitoring, dimensions=analysis.dimension_assessments,
+        )
         narrative, trace = await self.llm_analyst.analyze(
             company_name=analysis.company_name,
             ticker=analysis.ticker,
@@ -245,10 +255,12 @@ class AIFinancialAnalysisService:
                 "source_method": analysis.source_method,
                 "rule_coverage_status": analysis.rule_coverage_status,
                 "rule_coverage_note": analysis.rule_coverage_note,
+                "presentation_glossary": glossary.as_prompt_payload(),
             },
             official_text_evidence=selected_evidence,
             narrative_shift=analysis.narrative_shift,
         )
+        narrative = humanize_narrative(narrative, glossary)
         trace.llm_evidence_ids = llm_evidence_ids
         limitations = list(analysis.limitations)
         if trace.status == "not_configured":

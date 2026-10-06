@@ -5,7 +5,7 @@ import re
 import hashlib
 import ssl
 from http.cookiejar import CookieJar
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from html import unescape
 from pathlib import Path
 from typing import Any, Iterable
@@ -18,13 +18,21 @@ from app.official_event_models import (
     MaterialEventRecord,
     OfficialClaimType,
     OfficialDisclosureClaim,
+    OfficialEventSyncStatus,
 )
 from app.services.company_registry import get_company
 from app.services.financial_analysis_service import UnsupportedCompanyError
 
 
 MOPS_BASE = "https://mops.twse.com.tw/mops/web"
+# mops.twse.com.tw/mops/web/t05st01 now redirects to the new MOPS SPA or returns the
+# security page; the server-rendered listing is served from the mopsov mirror, the
+# same host the conference PDF pipeline uses.
+MOPS_MATERIAL_LISTING_URL = "https://mopsov.twse.com.tw/mops/web/ajax_t05st01"
 TWSE_MATERIAL_EVENTS_OPENAPI_URL = "https://openapi.twse.com.tw/v1/opendata/t187ap04_L"
+TAIPEI_TZ = timezone(timedelta(hours=8))
+MATERIAL_EVENT_WINDOW_DAYS = 90
+MATERIAL_EVENT_MAX_RECORDS = 20
 
 CONFERENCE_TOPIC_METRICS: dict[str, list[str]] = {
     "晶圓代工": ["capex_intensity", "free_cash_flow", "gross_margin", "operating_margin", "debt_ratio"],
@@ -62,6 +70,9 @@ SPACE_RE = re.compile(r"\s+")
 DATE_RE = re.compile(r"(?P<year>20\d{2}|1\d{2})[./\-年](?P<month>\d{1,2})[./\-月](?P<day>\d{1,2})")
 TIME_RE = re.compile(r"(?P<hour>[0-2]?\d):(?P<minute>[0-5]\d)(?::(?P<second>[0-5]\d))?")
 ROC_COMPACT_DATE_RE = re.compile(r"^(?P<year>\d{3})(?P<month>\d{2})(?P<day>\d{2})$")
+# The MOPS listing's 詳細資料 button posts a form; these onclick assignments identify the announcement.
+MOPS_DETAIL_FIELD_RE = re.compile(r"\b(seq_no|spoke_time|spoke_date|co_id)\.value\s*=\s*['\"]([^'\"]*)['\"]")
+MATERIAL_HEADER_COLUMNS = {"date": ("發言日期", "日期"), "time": ("發言時間", "時間"), "title": ("主旨",)}
 TWSE_CONFERENCE_KEYWORDS = (
     "法人說明會",
     "法說會",
@@ -265,10 +276,8 @@ def investor_conference_query_url(ticker: str) -> str:
 
 
 def material_event_query_url(ticker: str, year: int | None = None) -> str:
-    params = {"co_id": ticker, "firstin": "true", "step": "1"}
-    if year is not None:
-        params["year"] = str(year - 1911 if year > 1911 else year)
-    return f"{MOPS_BASE}/t05st01?{urlencode(params)}"
+    """The exact public GET listing the MOPS fallback reads (provenance for parsed rows)."""
+    return f"{MOPS_MATERIAL_LISTING_URL}?{urlencode(_material_event_query_params(ticker, year=year))}"
 
 
 def investor_conference_identity(record: InvestorConferenceRecord) -> str:
@@ -872,6 +881,103 @@ def build_twse_material_event_metadata(ticker: str, *, max_items: int = 5) -> li
     return parse_twse_material_event_rows(ticker, fetch_twse_material_event_rows(), max_items=max_items)
 
 
+def taipei_today() -> date:
+    return datetime.now(TAIPEI_TZ).date()
+
+
+def current_day_material_event_check(
+    ticker: str,
+    rows: list[dict[str, Any]] | None,
+    *,
+    error: str | None = None,
+    checked_at: datetime | None = None,
+) -> tuple[list[MaterialEventRecord], OfficialEventSyncStatus]:
+    """Records and sync status from one TWSE OpenAPI daily-feed read.
+
+    The feed lists only the current day's announcements, so an absent ticker is
+    "no_current_day_records", never "no recent events".
+    """
+    company = _require_company(ticker)
+    checked_at = checked_at or datetime.now(timezone.utc)
+    if rows is None:
+        return [], OfficialEventSyncStatus(
+            ticker=company.ticker, coverage="current_day", source_name="twse_openapi",
+            source_url=TWSE_MATERIAL_EVENTS_OPENAPI_URL, outcome="source_unavailable",
+            checked_at=checked_at, error=(error or "unavailable")[:200],
+        )
+    records = [record for record in parse_twse_material_event_rows(company.ticker, rows) if is_persistable_material_event(record)]
+    feed_dates = sorted({date_text for row in rows if (date_text := _parse_twse_date(_twse_field(row, "發言日期")))})
+    return records, OfficialEventSyncStatus(
+        ticker=company.ticker, coverage="current_day", source_name="twse_openapi",
+        source_url=TWSE_MATERIAL_EVENTS_OPENAPI_URL,
+        outcome="records_found" if records else "no_current_day_records",
+        checked_at=checked_at,
+        window_start=feed_dates[0] if feed_dates else None,
+        window_end=feed_dates[-1] if feed_dates else None,
+        records_found=len(records),
+    )
+
+
+def fetch_material_event_listing_html(ticker: str, year: int, *, timeout_seconds: float = 15.0) -> str:
+    """One public GET of the MOPS yearly material-event listing."""
+    return _mops_request(
+        MOPS_MATERIAL_LISTING_URL,
+        params=_material_event_query_params(ticker, year=year),
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def check_recent_mops_material_events(
+    ticker: str,
+    *,
+    today: date | None = None,
+    window_days: int = MATERIAL_EVENT_WINDOW_DAYS,
+    max_records: int = MATERIAL_EVENT_MAX_RECORDS,
+    fetch_html=None,
+) -> tuple[list[MaterialEventRecord], OfficialEventSyncStatus]:
+    """Bounded MOPS history check: at most one listing GET per calendar year the window touches (two).
+
+    "no_records_in_window" is reported only when every listing was a recognisable
+    MOPS listing; a blocked, failed or unrecognised response is "source_unavailable".
+    """
+    company = _require_company(ticker)
+    fetch = fetch_html or fetch_material_event_listing_html
+    today = today or taipei_today()
+    window_start = today - timedelta(days=window_days)
+    checked_at = datetime.now(timezone.utc)
+    years = sorted({window_start.year, today.year}, reverse=True)
+
+    def status(outcome: str, *, found: int = 0, error: str | None = None) -> OfficialEventSyncStatus:
+        return OfficialEventSyncStatus(
+            ticker=company.ticker, coverage="recent_window", source_name="mops",
+            source_url=material_event_query_url(company.ticker, year=years[0]), outcome=outcome,  # type: ignore[arg-type]
+            checked_at=checked_at, window_start=window_start.isoformat(), window_end=today.isoformat(),
+            records_found=found, error=error,
+        )
+
+    parsed: list[MaterialEventRecord] = []
+    for year in years:
+        try:
+            html = fetch(company.ticker, year)
+        except Exception as exc:  # live MOPS availability is external
+            return [], status("source_unavailable", error=f"{type(exc).__name__}: {exc}"[:200])
+        if _is_blocked_by_source_text(_strip_tags(html)):
+            return [], status("source_unavailable", error="blocked_by_source")
+        if not is_mops_material_listing(html):
+            return [], status("source_unavailable", error="unrecognized_listing")
+        parsed.extend(parse_material_event_list_html(
+            company.ticker, html, source_url=material_event_query_url(company.ticker, year=year), max_items=500,
+        ))
+    in_window = {
+        record.event_id: record
+        for record in parsed
+        if record.event_date and window_start.isoformat() <= record.event_date <= today.isoformat()
+        and is_persistable_material_event(record)
+    }
+    records = sorted(in_window.values(), key=lambda item: (item.event_date or "", item.event_time or ""), reverse=True)[:max_records]
+    return records, status("records_found" if records else "no_records_in_window", found=len(records))
+
+
 def is_persistable_investor_conference(record: InvestorConferenceRecord) -> bool:
     """Return True only for real official conference records, not source diagnostics."""
     return bool(
@@ -967,10 +1073,10 @@ def fetch_material_event_html_variants(
 ) -> list[dict[str, Any]]:
     company = _require_company(ticker)
     params = _material_event_query_params(company.ticker, year=year)
+    # The legacy mops.twse.com.tw t05st01 / ajax_t05st01 entries are blocked or
+    # redirected, so only the mirror listing is requested (one GET per call).
     attempts: list[tuple[str, str, str, dict[str, str]]] = [
-        ("get_entry", "GET", f"{MOPS_BASE}/t05st01", params),
-        ("get_ajax", "GET", f"{MOPS_BASE}/ajax_t05st01", params),
-        ("post_ajax", "POST", f"{MOPS_BASE}/ajax_t05st01", params),
+        ("mopsov_listing", "GET", MOPS_MATERIAL_LISTING_URL, params),
     ]
     variants: list[dict[str, Any]] = []
     for strategy, method, endpoint, attempt_params in attempts:
@@ -1107,6 +1213,33 @@ def _claims_for_material_event(
     ]
 
 
+def _material_header_columns(cells: list[str]) -> dict[str, int] | None:
+    """Column positions of a MOPS listing header row (發言日期 / 發言時間 / 主旨)."""
+    columns: dict[str, int] = {}
+    for key, names in MATERIAL_HEADER_COLUMNS.items():
+        index = next((position for position, cell in enumerate(cells) if cell in names), None)
+        if index is not None:
+            columns[key] = index
+    return columns if {"date", "title"} <= columns.keys() else None
+
+
+def _mops_listing_identity(row_html: str) -> dict[str, str]:
+    fields = dict(MOPS_DETAIL_FIELD_RE.findall(row_html))
+    return fields if {"seq_no", "spoke_date", "spoke_time"} <= fields.keys() else {}
+
+
+def is_mops_material_listing(html: str) -> bool:
+    """True when the HTML is a recognisable MOPS listing: a 主旨 header row or an explicit no-data notice.
+
+    Anything else (shell page, security page, redesigned markup) is not evidence that
+    a company has no announcements.
+    """
+    if any(_material_header_columns(list(row["cells"])) for row in _extract_table_rows(html)):
+        return True
+    text = _strip_tags(html)
+    return any(phrase in text for phrase in ("查無資料", "查無所需資料", "無符合條件"))
+
+
 def parse_material_event_list_html(
     ticker: str,
     html: str,
@@ -1115,27 +1248,64 @@ def parse_material_event_list_html(
     max_items: int = 5,
     fetch_details: bool = False,
 ) -> list[MaterialEventRecord]:
+    """Parse a MOPS material-event listing, newest announcement first."""
     company = _require_company(ticker)
     source = source_url or material_event_query_url(company.ticker)
-    records: list[MaterialEventRecord] = []
-    for row in _extract_table_rows(html):
-        if not _row_looks_like_material_event(row, company.name, company.ticker):
-            continue
+    rows = _extract_table_rows(html)
+    # A listing with a 主旨 header is read column by column, starting after the header;
+    # rows before it (the "本資料由…公司提供" banner) are not announcements.
+    header_index = next((index for index, row in enumerate(rows) if _material_header_columns(list(row["cells"]))), None)
+    columns = _material_header_columns(list(rows[header_index]["cells"])) if header_index is not None else None
+    candidates: list[dict[str, Any]] = []
+    for row in rows[header_index + 1:] if header_index is not None else rows:
         cells = list(row["cells"])
+        if _material_header_columns(cells):
+            continue
         row_text = str(row["row_text"])
-        links = _extract_links(str(row.get("row_html") or ""), source)
+        row_html = str(row.get("row_html") or "")
+        if columns:
+            if len(cells) <= max(columns.values()):
+                continue
+            event_date = _extract_first_date(cells[columns["date"]])
+            if not event_date:
+                continue
+            event_time = _extract_first_time(cells[columns["time"]]) if "time" in columns else None
+            title = cells[columns["title"]][:180] or f"{company.name} 重大訊息"
+        else:
+            if not _row_looks_like_material_event(row, company.name, company.ticker):
+                continue
+            event_date = _extract_first_date(row_text)
+            event_time = _extract_first_time(row_text)
+            title = _material_title_from_cells(cells, company.name, company.ticker)
+        candidates.append({
+            "row_text": row_text, "row_html": row_html, "title": title,
+            "event_date": event_date, "event_time": event_time,
+        })
+    # Listings are oldest-first; keep the newest announcements. Details are fetched
+    # only for the rows that are kept.
+    candidates.sort(key=lambda item: (item["event_date"] or "", item["event_time"] or ""), reverse=True)
+    records: list[MaterialEventRecord] = []
+    for candidate in candidates[:max_items]:
+        row_text, title = candidate["row_text"], candidate["title"]
+        event_date, event_time = candidate["event_date"], candidate["event_time"]
+        links = _extract_links(candidate["row_html"], source)
         detail_url = next((url for url, label in links if "t05st01" in url or "detail" in label.casefold() or "詳細" in label), links[0][0] if links else None)
-        title = _material_title_from_cells(cells, company.name, company.ticker)
+        listing_identity = _mops_listing_identity(candidate["row_html"])
         detail_text = None
         detail_error = None
         if fetch_details and detail_url:
             detail_text, detail_error = fetch_material_event_detail_text(detail_url)
         official_text = detail_text or row_text
         category, related_metrics, risk_related = classify_material_event(title, official_text)
-        event_date = _extract_first_date(row_text)
-        event_time = _extract_first_time(row_text)
+        listing_event_id = (
+            _stable_hash(
+                "mops_detail", "/mops/web/ajax_t05st01", listing_identity.get("co_id") or company.ticker,
+                listing_identity["spoke_date"], listing_identity["spoke_time"], listing_identity["seq_no"],
+            )
+            if listing_identity else None
+        )
         record = MaterialEventRecord(
-            event_id=_event_id_from_url(detail_url or "") or _stable_hash("material_event", company.ticker, event_date, event_time, _canonical_url(detail_url or source), title),
+            event_id=_event_id_from_url(detail_url or "") or listing_event_id or _stable_hash("material_event", company.ticker, event_date, event_time, _canonical_url(detail_url or source), title),
             ticker=company.ticker,
             company_name=company.name,
             subindustry=company.subindustry,
@@ -1162,13 +1332,18 @@ def parse_material_event_list_html(
             limitations=(
                 ["MOPS 明細頁抓取失敗；已保存清單列文字與 detail_url。", detail_error]
                 if detail_error
-                else ["重大訊息為近期官方揭露，只作為 recent official context，不改變年度財報規則判斷。"]
+                else [
+                    "重大訊息為近期官方揭露，只作為 recent official context，不改變年度財報規則判斷。",
+                    *(
+                        ["MOPS 清單的「詳細資料」以表單送出、沒有可直接開啟的明細網址；已保存清單列的發言日期、時間與主旨，未取得公告明細全文。"]
+                        if listing_identity and not detail_url
+                        else []
+                    ),
+                ]
             ),
             retrieved_at=datetime.now(timezone.utc),
         )
         records.append(record)
-        if len(records) >= max_items:
-            break
     return records
 
 

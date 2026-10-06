@@ -2,14 +2,18 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app.official_event_models import OfficialEventsRefreshResult
+from app.official_event_models import MaterialEventRecord, OfficialEventSyncStatus, OfficialEventsRefreshResult
 from app.services.analysis_repository import AnalysisRepository, build_analysis_repository
 from app.services.company_registry import get_company
 from app.services.financial_analysis_service import UnsupportedCompanyError
+from app.services.material_event_status import record_material_event_sync
 from app.services.official_document_extraction import enrich_conferences_with_document_extraction
 from app.services.official_event_sources import (
     build_investor_conference_metadata,
     build_material_event_metadata,
+    check_recent_mops_material_events,
+    current_day_material_event_check,
+    fetch_twse_material_event_rows,
     is_persistable_investor_conference,
     is_persistable_material_event,
 )
@@ -48,14 +52,19 @@ class OfficialEventIngestionService:
             outcomes["investor_conference"] = _source_outcome([item.status for item in conferences])
             limitations.extend(item for record in conferences for item in record.limitations)
 
+        sync_statuses: list[OfficialEventSyncStatus] = []
         if include_material_events:
-            material_events = build_material_event_metadata(
-                company.ticker,
-                year=material_event_year,
-                fetch_live=True,
-                fetch_details=material_fetch_details,
-            )
-            outcomes["material_event"] = _source_outcome([item.status for item in material_events])
+            if material_event_year is None:
+                material_events, sync_statuses = _recent_material_events(company.ticker)
+                outcomes["material_event"] = _sync_outcome(material_events, sync_statuses)
+            else:
+                material_events = build_material_event_metadata(
+                    company.ticker,
+                    year=material_event_year,
+                    fetch_live=True,
+                    fetch_details=material_fetch_details,
+                )
+                outcomes["material_event"] = _source_outcome([item.status for item in material_events])
             limitations.extend(item for record in material_events for item in record.limitations)
 
         persistable_conferences = [record for record in conferences if is_persistable_investor_conference(record)]
@@ -68,6 +77,14 @@ class OfficialEventIngestionService:
         )
         if include_material_events and material_events and not persistable_material_events:
             limitations.append("重大訊息 live refresh 僅取得來源診斷或查詢入口；未覆蓋既有 persisted material events。")
+        persisted_ids = {record.event_id for record in persistable_material_events}
+        record_material_event_sync(self.repository, [
+            status.model_copy(update={"records_persisted": sum(
+                1 for record in material_events
+                if record.event_id in persisted_ids and _status_covers(status, record)
+            )})
+            for status in sync_statuses
+        ])
         return OfficialEventsRefreshResult(
             ticker=company.ticker,
             company_name=company.name,
@@ -99,6 +116,33 @@ class OfficialEventIngestionService:
             material_events=material_events,
             limitations=list(dict.fromkeys(limitations)),
         )
+
+
+def _recent_material_events(ticker: str) -> tuple[list[MaterialEventRecord], list[OfficialEventSyncStatus]]:
+    """Current-day TWSE feed plus a bounded MOPS history window, each with its own check status."""
+    try:
+        rows = fetch_twse_material_event_rows()
+        current_records, current_status = current_day_material_event_check(ticker, rows)
+    except Exception as exc:  # live TWSE availability is external
+        current_records, current_status = current_day_material_event_check(ticker, None, error=f"{type(exc).__name__}: {exc}")
+    history_records, history_status = check_recent_mops_material_events(ticker)
+    merged = {record.event_id: record for record in [*history_records, *current_records]}
+    records = sorted(merged.values(), key=lambda item: (item.event_date or "", item.event_time or ""), reverse=True)
+    return records, [current_status, history_status]
+
+
+def _status_covers(status: OfficialEventSyncStatus, record: MaterialEventRecord) -> bool:
+    expected_source = "twse_openapi" if status.coverage == "current_day" else "mops"
+    return record.source_name == expected_source
+
+
+def _sync_outcome(records: list[MaterialEventRecord], statuses: list[OfficialEventSyncStatus]) -> str:
+    if records:
+        return "PASS"
+    history = next((status for status in statuses if status.coverage == "recent_window"), None)
+    if history is not None and history.outcome == "source_unavailable":
+        return "NETWORK_ERROR"
+    return "NO_DATA"
 
 
 def _source_outcome(statuses: list[str]) -> str:

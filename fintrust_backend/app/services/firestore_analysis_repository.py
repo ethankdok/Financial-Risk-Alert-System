@@ -8,7 +8,7 @@ from app.ai_analysis_models import AIFinancialAnalysisReport
 from app.financial_analysis_models import FinancialStatementAnalysisReport
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.models import FinancialFact
-from app.official_event_models import InvestorConferenceRecord, MaterialEventRecord
+from app.official_event_models import InvestorConferenceRecord, MaterialEventRecord, OfficialEventSyncStatus
 from app.pipeline_models import AnalysisRunSummary, FrontendAnalysisSnapshot, PersistenceCounts
 from app.text_intelligence_models import NarrativeShiftResponse, TextMiningAnalysisResponse
 from app.services.analysis_repository import (
@@ -325,6 +325,24 @@ class FirestoreAnalysisRepository:
         )
         records = [MaterialEventRecord.model_validate(row.get("payload") or {}) for row in rows]
         return [record for record in records if is_persistable_material_event(record)][:limit]
+
+    def save_official_event_sync_status(self, status: OfficialEventSyncStatus) -> None:
+        """Keep the latest check per (ticker, event type, coverage)."""
+        self.client.collection("official_event_sync_status").document(
+            f"{status.event_type}:{status.ticker}:{status.coverage}"
+        ).set(status.model_dump(mode="python"))
+
+    def list_official_event_sync_status(self, ticker: str, event_type: str = "material_event") -> list[OfficialEventSyncStatus]:
+        references = [
+            self.client.collection("official_event_sync_status").document(f"{event_type}:{ticker}:{coverage}")
+            for coverage in ("current_day", "recent_window")
+        ]
+        documents = [reference.get() for reference in references]
+        return [
+            OfficialEventSyncStatus.model_validate(document.to_dict() or {})
+            for document in documents
+            if getattr(document, "exists", False)
+        ]
 
     def list_metrics(
         self,

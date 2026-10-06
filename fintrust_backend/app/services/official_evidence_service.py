@@ -7,6 +7,7 @@ from app.official_event_models import OfficialEvidenceSummary, OfficialSourceLin
 from app.services.analysis_repository import AnalysisRepository
 from app.services.company_registry import get_company
 from app.services.financial_analysis_service import UnsupportedCompanyError
+from app.services.narrative_presentation import present_snapshot_payload
 from app.services.official_event_sources import (
     build_investor_conference_metadata,
     build_material_event_metadata,
@@ -48,7 +49,7 @@ class OfficialEvidenceService:
             raise UnsupportedCompanyError("MVP 僅分析已登錄的半導體公司；請先將公司加入 semiconductor registry。")
 
         snapshot_obj = self.repository.get_latest_snapshot(company.ticker) if self.repository else None
-        snapshot = _model_to_dict(snapshot_obj)
+        snapshot = present_snapshot_payload(_model_to_dict(snapshot_obj))
         conferences = []
         if include_conferences:
             if fetch_conference_live:

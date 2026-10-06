@@ -61,6 +61,7 @@ from app.services.historical_analysis_service import HistoricalFinancialAnalysis
 from app.services.ingestion_pipeline import FinancialIngestionPipeline
 from app.services.ingestion_run_repository import IngestionRunRepository
 from app.services.monitorable_rule_engine import MonitorableFinancialRuleEngine
+from app.services.narrative_presentation import present_snapshot_payload
 from app.services.mops_inline_xbrl import MopsInlineXbrlError
 from app.services.official_document_extraction import (
     OfficialDocumentExtractionService,
@@ -527,7 +528,8 @@ def latest_persisted_analysis(
     snapshot = repository.get_latest_snapshot(ticker)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="尚無已完成的分析快照；請等待排程或由管理端執行 refresh。")
-    return snapshot
+    # Stored narratives may predate the presentation layer; humanize on read, never write back.
+    return FrontendAnalysisSnapshot.model_validate(present_snapshot_payload(snapshot.model_dump(mode="json")))
 
 
 @router.get("/companies/{ticker}/metrics")

@@ -168,6 +168,48 @@ class MaterialEventRecord(BaseModel):
     retrieved_at: datetime | None = None
 
 
+# How one material-event source check ended. "current_day" covers only the TWSE
+# OpenAPI daily feed; "recent_window" is a bounded MOPS history query. Only a
+# successful recent_window check with no rows supports "no recent events".
+MaterialEventSyncCoverage = Literal["current_day", "recent_window"]
+MaterialEventSyncOutcome = Literal[
+    "records_found",
+    "no_current_day_records",
+    "no_records_in_window",
+    "source_unavailable",
+]
+MaterialEventState = Literal["available", "no_recent_events", "not_synced", "source_unavailable", "needs_refresh"]
+
+
+class OfficialEventSyncStatus(BaseModel):
+    ticker: str
+    event_type: Literal["material_event"] = "material_event"
+    coverage: MaterialEventSyncCoverage
+    source_name: str
+    source_url: str
+    outcome: MaterialEventSyncOutcome
+    checked_at: datetime
+    window_start: str | None = None
+    window_end: str | None = None
+    records_found: int = 0
+    records_persisted: int = 0
+    error: str | None = None
+
+
+class MaterialEventStatus(BaseModel):
+    """Card-level material-event state; the frontend never infers it from an empty list."""
+
+    state: MaterialEventState
+    message: str
+    record_count: int = 0
+    latest_event_date: str | None = None
+    last_checked_at: datetime | None = None
+    window_start: str | None = None
+    window_end: str | None = None
+    checked_sources: list[dict[str, Any]] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+
 class OfficialEvidenceSummary(BaseModel):
     ticker: str
     company_name: str
@@ -189,7 +231,7 @@ class OfficialEvidenceSummary(BaseModel):
 
 
 class OfficialEvidenceCardResponse(BaseModel):
-    schema_version: str = "frontend-official-evidence-card-1.2.0"
+    schema_version: str = "frontend-official-evidence-card-1.3.0"
     ticker: str
     company_name: str
     subindustry: str
@@ -212,6 +254,9 @@ class OfficialEvidenceCardResponse(BaseModel):
         "digest_failed", "digest_timeout", "not_configured",
     ] = "not_configured"
     material_events: list[dict[str, Any]] = Field(default_factory=list)
+    # 1.3.0: explicit material-event state (available / no_recent_events /
+    # not_synced / source_unavailable / needs_refresh) with the checks behind it.
+    material_event_status: MaterialEventStatus | None = None
     disclosure_claims: list[dict[str, Any]] = Field(default_factory=list)
     text_evidence: list[dict[str, Any]] = Field(default_factory=list)
     narrative_shift: dict[str, Any] | None = None

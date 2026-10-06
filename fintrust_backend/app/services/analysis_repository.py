@@ -15,7 +15,7 @@ from app.ai_analysis_models import AIFinancialAnalysisReport
 from app.financial_analysis_models import FinancialStatementAnalysisReport
 from app.historical_analysis_models import HistoricalFinancialAnalysisReport
 from app.models import FinancialFact
-from app.official_event_models import InvestorConferenceRecord, MaterialEventRecord
+from app.official_event_models import InvestorConferenceRecord, MaterialEventRecord, OfficialEventSyncStatus
 from app.pipeline_models import AnalysisRunSummary, FrontendAnalysisSnapshot, PersistenceCounts
 from app.services.official_event_sources import (
     investor_conference_identity,
@@ -92,6 +92,8 @@ class AnalysisRepository(Protocol):
     ) -> dict[str, int]: ...
     def list_investor_conferences(self, ticker: str, limit: int = 20) -> list[InvestorConferenceRecord]: ...
     def list_material_events(self, ticker: str, limit: int = 50) -> list[MaterialEventRecord]: ...
+    def save_official_event_sync_status(self, status: OfficialEventSyncStatus) -> None: ...
+    def list_official_event_sync_status(self, ticker: str, event_type: str = "material_event") -> list[OfficialEventSyncStatus]: ...
     def list_metrics(
         self,
         ticker: str,
@@ -595,6 +597,14 @@ class SqliteAnalysisRepository:
             );
             CREATE INDEX IF NOT EXISTS idx_official_events_ticker_type
                 ON official_events (ticker, event_type, event_date DESC, retrieved_at DESC);
+            CREATE TABLE IF NOT EXISTS official_event_sync_status (
+                ticker TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                coverage TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                checked_at TEXT NOT NULL,
+                PRIMARY KEY (ticker, event_type, coverage)
+            );
             CREATE TABLE IF NOT EXISTS text_model_runs (
                 run_id TEXT PRIMARY KEY,
                 ticker TEXT NOT NULL,
@@ -879,6 +889,30 @@ class SqliteAnalysisRepository:
             ).fetchall()
         records = [MaterialEventRecord.model_validate_json(row["payload_json"]) for row in rows]
         return [record for record in records if is_persistable_material_event(record)][:limit]
+
+    def save_official_event_sync_status(self, status: OfficialEventSyncStatus) -> None:
+        """Keep the latest check per (ticker, event type, coverage)."""
+        with self._connect() as connection:
+            connection.execute(
+                """INSERT INTO official_event_sync_status VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(ticker, event_type, coverage) DO UPDATE SET
+                    payload_json=excluded.payload_json, checked_at=excluded.checked_at""",
+                (
+                    status.ticker,
+                    status.event_type,
+                    status.coverage,
+                    to_json(status.model_dump(mode="json")),
+                    status.checked_at.isoformat(),
+                ),
+            )
+
+    def list_official_event_sync_status(self, ticker: str, event_type: str = "material_event") -> list[OfficialEventSyncStatus]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT payload_json FROM official_event_sync_status WHERE ticker = ? AND event_type = ?",
+                (ticker, event_type),
+            ).fetchall()
+        return [OfficialEventSyncStatus.model_validate_json(row["payload_json"]) for row in rows]
 
     def list_metrics(
         self,

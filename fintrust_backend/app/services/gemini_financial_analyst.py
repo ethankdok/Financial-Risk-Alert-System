@@ -51,7 +51,16 @@ _SYSTEM_PROMPT = (
     "若收到 official_text_evidence 或 narrative_shift，只能作為補充官方文字脈絡，不得用來改寫 deterministic rule results。"
     "rule_coverage_status 是規則涵蓋的權威標記；若為 common_only 或 partial，必須明確說明子產業專屬模型不完整，"
     "不得描述成完整的 subindustry model；若為 unsupported，不得假稱已有子產業規則。"
-    "每項具體判斷必須引用輸入中的期間、rule_id 或 actual_values；若輸入沒有具體值，必須明說證據不足。"
+    "每項具體判斷必須以輸入中的期間與 actual_values 為依據；若輸入沒有具體值，必須明說證據不足。"
+    "呈現方式：讀者是一般財經資訊使用者，請用自然的繁體中文說明「什麼改變了、為什麼值得注意」。"
+    "executive_summary、dimension_insights 與 watch_items 中不得出現規則代碼（例如 COM_GROWTH_002）、"
+    "英文欄位或指標鍵名（例如 revenue_growth_yoy、gross_margin_change_pp、evaluated_rules、actual_values）、"
+    "面向鍵名（例如 earnings_quality）或英文訊號值（normal、attention 等）。"
+    "指標與規則一律使用 source_context.presentation_glossary 提供的中文名稱；訊號依 glossary.signals 譯為中文"
+    "（normal 為「未見明顯異常」、attention 為「需注意」、high_attention 為「高度關注」、insufficient_data 為「資料不足」、positive 為「正向觀察」）。"
+    "數值只能沿用輸入提供的值並四捨五入至小數第二位：單位為 % 者寫成「年增 12.32%」，"
+    "單位為百分點者寫成「下降約 2.14 個百分點」，不得重新計算或推導新的數字。"
+    "可以說明營收與獲利等訊號之間的關係，但不得宣稱未經證據支持的因果。"
 )
 
 
@@ -59,7 +68,7 @@ class GeminiFinancialAnalyst:
     """Gemini Developer API provider over deterministic financial evidence."""
 
     provider_name = "gemini"
-    prompt_version = "financial-analysis-gemini-v2"
+    prompt_version = "financial-analysis-gemini-v3"
 
     def __init__(
         self,

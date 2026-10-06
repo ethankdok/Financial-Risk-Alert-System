@@ -10,6 +10,7 @@ from app.services.conference_document_digest import (
     archive_identity,
     conference_target,
 )
+from app.services.material_event_status import material_event_status, read_material_event_sync
 from app.services.official_document_extraction import enrich_conferences_with_document_extraction
 from app.services.official_evidence_service import OfficialEvidenceService
 from app.services.text_intelligence import FinancialTextIntelligenceService, documents_from_official_events
@@ -270,6 +271,11 @@ class OfficialEvidenceCardBuilder:
         material_event_items = [_dump(item) for item in summary.material_events]
         for item in material_event_items:
             item["source_identity"] = record_source_identity(item, "material_event")
+        event_status = (
+            material_event_status(summary.material_events, read_material_event_sync(self.repository, summary.ticker))
+            if include_material_events
+            else None
+        )
         if status["conference_available_count"]:
             headline += "，並含法說會／IR 證據"
         elif include_conferences:
@@ -290,6 +296,7 @@ class OfficialEvidenceCardBuilder:
             conference_document_digest=conference_document_digest,
             conference_summary_state=summary_state,
             material_events=material_event_items,
+            material_event_status=event_status,
             disclosure_claims=claims,
             text_evidence=text_evidence,
             narrative_shift=narrative_shift,

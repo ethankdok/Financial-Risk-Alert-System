@@ -73,7 +73,7 @@ class CardIdentityTests(unittest.TestCase):
 
     def test_2454_company_ir_2026q2_and_standalone_mops_2025q3_stay_separate(self) -> None:
         card = self.card([conference("q2-2026", year=2026, quarter=2, date="2026-07-31")], service=self.fixture_service())
-        self.assertEqual(card["schema_version"], "frontend-official-evidence-card-1.2.0")
+        self.assertEqual(card["schema_version"], "frontend-official-evidence-card-1.3.0")
         self.assertEqual(card["conference_summary_state"], "standalone_latest")
         item = card["investor_conferences"][0]["source_identity"]
         self.assertEqual((item["source_type"], item["source_name"], item["period"], item["period_basis"]),

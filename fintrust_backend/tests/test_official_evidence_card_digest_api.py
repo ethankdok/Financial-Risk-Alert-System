@@ -78,7 +78,7 @@ class OfficialEvidenceCardDigestApiTests(unittest.TestCase):
     def test_matching_period_attaches_digest_to_the_conference_item(self) -> None:
         repository = self.repository("match", [self.conference("q3", year=2025, quarter=3, date="2025-10-31", title="2025Q3 法說會")])
         card = self.get_card(repository, ConferenceDocumentDigestService(FileConferencePdfArchiveRepository(FIXTURE_ROOT)))
-        self.assertEqual(card["schema_version"], "frontend-official-evidence-card-1.2.0")
+        self.assertEqual(card["schema_version"], "frontend-official-evidence-card-1.3.0")
         self.assertTrue(self.LEGACY_CARD_KEYS <= set(card))
         item = card["investor_conferences"][0]
         self.assertTrue(set(InvestorConferenceRecord.model_fields) <= set(item))

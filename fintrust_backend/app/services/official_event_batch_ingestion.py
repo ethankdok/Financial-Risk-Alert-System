@@ -25,8 +25,10 @@ from app.services.company_registry import (
     register_company_profile,
 )
 from app.services.financial_analysis_service import UnsupportedCompanyError
+from app.services.material_event_status import record_material_event_sync
 from app.services.official_event_ingestion import OfficialEventIngestionService
 from app.services.official_event_sources import (
+    current_day_material_event_check,
     fetch_twse_material_event_rows,
     is_persistable_material_event,
     parse_twse_material_event_rows,
@@ -152,6 +154,13 @@ class OfficialEventBatchIngestionService:
             material_events=persistable,
             refreshed_at=refreshed_at,
         )
+        if material_event_year is None:
+            # The daily feed only proves what was announced today; the card reports
+            # "needs_refresh" rather than "no events" until a MOPS window check exists.
+            _records, status = current_day_material_event_check(company.ticker, rows, checked_at=refreshed_at)
+            record_material_event_sync(self.repository, [
+                status.model_copy(update={"records_persisted": int(persisted.get("material_events", 0))})
+            ])
         outcome = "PASS" if persistable else "NO_DATA"
         return OfficialEventsRefreshResult(
             ticker=company.ticker,
@@ -240,7 +249,16 @@ class OfficialEventBatchIngestionService:
 
         shared_material_rows: list[dict[str, Any]] | None = None
         if material_openapi_only:
-            shared_material_rows = await self._fetch_shared_material_rows()
+            try:
+                shared_material_rows = await self._fetch_shared_material_rows()
+            except Exception as exc:
+                if material_event_year is None:
+                    checked_at = datetime.now(timezone.utc)
+                    record_material_event_sync(self.repository, [
+                        current_day_material_event_check(ticker, None, error=f"{type(exc).__name__}: {exc}", checked_at=checked_at)[1]
+                        for ticker in requested_tickers
+                    ])
+                raise
             logger.info(
                 "official_events_material_feed batch_id=%s rows=%s",
                 batch_id,

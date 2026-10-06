@@ -1599,6 +1599,43 @@ document.addEventListener('DOMContentLoaded', () => {
     return 'tag-blue';
   };
 
+  // User-facing wording. Raw keys, signal values and rule IDs stay available inside
+  // the collapsed 技術與規則細節 for traceability, never in the primary cards.
+  const FINANCIAL_SIGNAL_LABELS = {
+    positive: '正向觀察',
+    normal: '未見明顯異常',
+    attention: '需注意',
+    high_attention: '高度關注',
+    mixed: '訊號分歧',
+    insufficient_data: '資料不足',
+    data_issue: '資料需確認',
+  };
+  const FINANCIAL_DIMENSION_LABELS = {
+    growth: '成長性',
+    profitability: '獲利能力',
+    rd_innovation: '研發與創新',
+    operating_efficiency: '營運效率',
+    cash_flow: '現金流品質',
+    financial_structure: '財務結構',
+    earnings_quality: '盈餘品質',
+    investment_efficiency: '投入轉化效率',
+  };
+  const EVIDENCE_READINESS_LABELS = {
+    ready_for_frontend_integration: '財報與官方事件證據已整合',
+    financial_plus_event_metadata: '財報證據與官方事件基本資料',
+    financial_only: '目前僅有財報證據',
+    needs_refresh: '官方證據尚待更新',
+  };
+  const RULE_EVALUATION_LABELS = { evaluated: '已評估', insufficient_data: '資料不足', error: '評估失敗' };
+  const LLM_STATE_LABELS = {
+    completed: 'AI 財報解讀已完成',
+    failed: 'AI 財報解讀暫時無法取得',
+    not_configured: 'AI 財報解讀暫時無法取得',
+    skipped: 'AI 財報解讀暫時無法取得',
+  };
+  const signalLabel = (value) => FINANCIAL_SIGNAL_LABELS[String(value || '').toLowerCase()] || text(value, '未標示');
+  const dimensionLabel = (key, label) => label || FINANCIAL_DIMENSION_LABELS[key] || '其他面向';
+
   const formatNumber = (value) => {
     if (value === null || value === undefined || value === '') return null;
     const number = Number(value);
@@ -1630,6 +1667,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const buildBadge = (value, className) => {
     const badge = el('span', `status-tag ${className || severityTag(value)}`, value);
     return badge;
+  };
+
+  // A Chinese label coloured by the raw signal value.
+  const signalBadge = (value) => buildBadge(signalLabel(value), severityTag(value));
+
+  const appendTechnicalRows = (parent, rows, summaryText = '技術與規則細節') => {
+    const values = rows.filter(([, value]) => value !== null && value !== undefined && value !== '');
+    if (!values.length) return null;
+    const details = el('details', 'financial-details financial-technical-details');
+    appendText(details, 'summary', null, summaryText);
+    const list = el('div', 'financial-period-list');
+    values.forEach(([label, value]) => appendText(list, 'span', null, `${label}：${value}`));
+    details.appendChild(list);
+    parent.appendChild(details);
+    return details;
   };
 
   const buildSourceLink = (item) => {
@@ -1737,13 +1789,16 @@ document.addEventListener('DOMContentLoaded', () => {
       ['產業分類', `${text(snapshot.industry || '半導體')} / ${text(card.subindustry || snapshot.subindustry)}`],
       ['財報期間', period],
       ['資料更新', formatDate(snapshot.data_updated_at || card.generated_at)],
-      ['整體狀態', text(card.overall_severity || snapshot.overall_severity)],
-      ['官方證據', text(card.evidence_readiness || card.raw?.official_evidence?.readiness)],
+      ['整體狀態', card.overall_severity || snapshot.overall_severity],
+      ['官方證據', (() => {
+        const readiness = card.evidence_readiness || card.raw?.official_evidence?.readiness;
+        return EVIDENCE_READINESS_LABELS[readiness] || text(readiness);
+      })()],
     ];
     items.forEach(([label, value]) => {
       const item = el('div', 'financial-summary-item');
       appendText(item, 'span', null, label);
-      if (label === '整體狀態') item.appendChild(buildBadge(value));
+      if (label === '整體狀態') item.appendChild(signalBadge(value));
       else appendText(item, 'strong', null, value);
       nodes.summary.appendChild(item);
     });
@@ -1797,17 +1852,18 @@ document.addEventListener('DOMContentLoaded', () => {
     rules.forEach((rule, index) => {
       const item = el('article', 'financial-rule-item');
       const head = el('div', 'financial-rule-head');
-      appendText(head, 'b', null, `${String(index + 1).padStart(2, '0')} ${rule.name || rule.rule_id}`);
-      head.appendChild(buildBadge(rule.severity || rule.signal || rule.evaluation_status));
+      appendText(head, 'b', null, `${String(index + 1).padStart(2, '0')} ${rule.name || '未命名規則'}`);
+      head.appendChild(signalBadge(rule.severity || rule.signal || rule.evaluation_status));
       item.appendChild(head);
-      appendText(item, 'p', null, rule.explanation || rule.rationale || rule.summary || 'backend 未提供規則說明');
+      appendText(item, 'p', null, rule.explanation || rule.rationale || rule.summary || '此規則尚無說明。');
       const evidence = el('div', 'financial-rule-evidence');
-      appendText(evidence, 'span', null, `判斷：${rule.triggered === true ? 'triggered' : rule.triggered === false ? 'not triggered' : text(rule.evaluation_status || rule.status)}`);
+      const evaluation = rule.evaluation_status || rule.status;
+      appendText(evidence, 'span', null, `判斷：${rule.triggered === true ? '符合規則條件' : rule.triggered === false ? '未符合規則條件' : (RULE_EVALUATION_LABELS[evaluation] || text(evaluation))}`);
       appendText(evidence, 'span', null, `證據期間：${(rule.evidence_periods || rule.evidence_references || []).join('、') || text(rule.evidence_basis)}`);
       appendText(evidence, 'span', null, `門檻：${text(rule.threshold_description || rule.threshold_basis)}`);
       item.appendChild(evidence);
-      const details = el('details', 'financial-details');
-      appendText(details, 'summary', null, '規則細節');
+      const details = el('details', 'financial-details financial-technical-details');
+      appendText(details, 'summary', null, '技術與規則細節');
       const detailList = el('div', 'financial-period-list');
       appendText(detailList, 'span', null, `rule_id：${text(rule.rule_id)}`);
       appendText(detailList, 'span', null, `scope：${text(rule.rule_scope)}`);
@@ -1821,14 +1877,14 @@ document.addEventListener('DOMContentLoaded', () => {
       nodes.rules.appendChild(item);
     });
     if (ruleMonitoring.length && ruleMonitoring.length !== rules.length) {
-      const allRules = el('details', 'financial-details financial-all-rules');
-      appendText(allRules, 'summary', null, `查看完整 rule monitoring（${ruleMonitoring.length} 條）`);
+      const allRules = el('details', 'financial-details financial-all-rules financial-technical-details');
+      appendText(allRules, 'summary', null, `查看完整規則監測（${ruleMonitoring.length} 條，含規則代碼）`);
       const list = el('div', 'financial-compact-list');
       ruleMonitoring.forEach((rule) => {
         const row = el('div', 'financial-compact-row');
         appendText(row, 'span', null, text(rule.rule_id));
         appendText(row, 'b', null, text(rule.name));
-        row.appendChild(buildBadge(rule.severity || rule.evaluation_status));
+        row.appendChild(signalBadge(rule.severity || rule.evaluation_status));
         appendText(row, 'small', null, text(rule.rationale || rule.evidence_basis));
         list.appendChild(row);
       });
@@ -1840,20 +1896,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const renderDimensions = (dimensions) => {
     clear(nodes.dimensions);
     if (!dimensions.length) {
-      appendText(nodes.dimensions, 'p', 'muted-text', '目前 backend 未提供 dimension assessments。');
+      appendText(nodes.dimensions, 'p', 'muted-text', '目前尚無八大面向評估結果。');
       return;
     }
     dimensions.forEach((dimension) => {
       const item = el('article', 'financial-dimension-item');
       const head = el('div', 'financial-rule-head');
-      appendText(head, 'b', null, dimension.label || dimension.dimension);
-      head.appendChild(buildBadge(dimension.signal || '未標示'));
+      appendText(head, 'b', null, dimensionLabel(dimension.dimension, dimension.label));
+      head.appendChild(signalBadge(dimension.signal));
       item.appendChild(head);
-      appendText(item, 'p', null, dimension.summary || 'backend 未提供面向摘要');
-      appendText(item, 'small', 'muted-text', `coverage: ${formatMetricValue(dimension.coverage_ratio, '')}｜rules: ${text(dimension.evaluated_rules)}/${text(dimension.total_rules)}`);
-      if (dimension.triggered_rule_ids?.length) {
-        appendText(item, 'small', 'muted-text', `triggered rules: ${dimension.triggered_rule_ids.join('、')}`);
-      }
+      appendText(item, 'p', null, dimension.summary || '此面向尚無摘要。');
+      appendTechnicalRows(item, [
+        ['面向代碼', dimension.dimension],
+        ['訊號原始值', dimension.signal],
+        ['規則涵蓋比例 coverage', formatMetricValue(dimension.coverage_ratio, '')],
+        ['已評估規則 rules', `${text(dimension.evaluated_rules)}/${text(dimension.total_rules)}`],
+        ['觸發規則 triggered rules', (dimension.triggered_rule_ids || []).join('、') || '無'],
+        ['直接指標欄位', (dimension.direct_metrics || []).join('、')],
+      ]);
       nodes.dimensions.appendChild(item);
     });
   };
@@ -1862,26 +1922,34 @@ document.addEventListener('DOMContentLoaded', () => {
     clear(nodes.llm);
     const narrative = aiAnalysis?.llm_narrative;
     const trace = aiAnalysis?.llm_trace || {};
+    const traceRows = [
+      ['AI 狀態', trace.status],
+      ['提供者', trace.provider],
+      ['模型', trace.effective_model || trace.model],
+      ['提示版本', trace.prompt_version],
+      ['引用規則代碼', (trace.used_rule_ids || []).join('、')],
+      ['錯誤類型', trace.error_type],
+    ];
     if (!narrative) {
       if (nodes.llmState) {
-        nodes.llmState.textContent = trace.status === 'failed' ? 'LLM failed' : '暫時無法取得';
+        nodes.llmState.textContent = LLM_STATE_LABELS.failed;
         nodes.llmState.className = `status-tag ${trace.status === 'failed' ? 'tag-red' : 'tag-orange'}`;
       }
-      appendText(nodes.llm, 'p', 'muted-text', 'AI 財報解讀目前無法取得；官方財報數據、deterministic rules 與官方證據仍可正常檢視。');
-      if (trace.status) appendText(nodes.llm, 'small', 'muted-text', `LLM status: ${trace.status}`);
+      appendText(nodes.llm, 'p', 'muted-text', 'AI 財報解讀目前無法取得；官方財報數據、規則判斷結果與官方證據仍可正常檢視。');
+      appendTechnicalRows(nodes.llm, traceRows);
       return;
     }
     if (nodes.llmState) {
-      nodes.llmState.textContent = trace.status === 'completed' ? 'LLM completed' : text(trace.status, 'available');
+      nodes.llmState.textContent = trace.status === 'completed' ? LLM_STATE_LABELS.completed : 'AI 財報解讀';
       nodes.llmState.className = `status-tag ${trace.status === 'completed' ? 'tag-green' : 'tag-blue'}`;
     }
     appendText(nodes.llm, 'p', 'financial-llm-summary', narrative.executive_summary);
     const insights = Object.entries(narrative.dimension_insights || {});
     if (insights.length) {
       const list = el('div', 'financial-compact-list');
-      insights.forEach(([label, insight]) => {
+      insights.forEach(([key, insight]) => {
         const row = el('div', 'financial-compact-row');
-        appendText(row, 'b', null, label);
+        appendText(row, 'b', null, dimensionLabel(key));
         appendText(row, 'small', null, insight);
         list.appendChild(row);
       });
@@ -1899,6 +1967,7 @@ document.addEventListener('DOMContentLoaded', () => {
       narrative.limitations.forEach((item) => appendText(limitations, 'span', null, item));
       nodes.llm.appendChild(limitations);
     }
+    appendTechnicalRows(nodes.llm, traceRows);
   };
 
   const DIGEST_STATUS_LABELS = {
@@ -2130,6 +2199,61 @@ document.addEventListener('DOMContentLoaded', () => {
     available: SUMMARY_STATE_LABELS.attached,
     no_conference_period: '此筆資料沒有可比對的期間或日期，未連結 MOPS 法說會文件',
   };
+  // card.material_event_status.state (schema 1.3.0). An empty list alone never means "no events".
+  const MATERIAL_EVENT_STATE_LABELS = {
+    available: '已取得 {count} 筆近期重大訊息',
+    no_recent_events: '目前查詢期間內未發現重大訊息',
+    not_synced: '重大訊息尚未完成同步',
+    source_unavailable: '官方來源目前無法取得，請稍後再試',
+    needs_refresh: '重大訊息尚未完成同步（已檢查當日公告，尚未完成近期歷史查詢）',
+  };
+  const MATERIAL_EVENT_EMPTY_TEXT = {
+    no_recent_events: '此結果來自公開資訊觀測站的近期重大訊息查詢。',
+    not_synced: '系統尚未完成本公司重大訊息查詢，因此無法判斷近期是否有重大訊息。',
+    source_unavailable: '本次無法讀取官方來源，因此無法判斷近期是否有重大訊息。',
+    needs_refresh: '每日重大訊息來源只涵蓋當日公告；當日未出現本公司不代表近期沒有重大訊息。',
+  };
+  const LEGACY_MATERIAL_EVENT_EMPTY = '目前沒有可顯示的重大訊息；此資料未提供同步狀態，不代表公司沒有重大訊息。';
+  const MATERIAL_EVENT_CATEGORY_LABELS = {
+    financial_outlook: '財務與營運展望',
+    capacity_or_capex: '產能與資本支出',
+    revenue_or_orders: '營收與訂單',
+    inventory_or_demand: '庫存與需求',
+    financing_or_debt: '籌資與負債',
+    ma_or_investment: '投資、取得與處分',
+    operation_disruption: '營運中斷',
+    legal_or_penalty: '法律與裁罰',
+    governance: '公司治理',
+    other: '其他公告',
+  };
+
+  const materialEventStateText = (status, records) => {
+    if (!status) return null;
+    const template = MATERIAL_EVENT_STATE_LABELS[status.state];
+    const parts = [template
+      ? template.replace('{count}', String(status.record_count ?? records.length))
+      : text(status.message, '重大訊息狀態未分類')];
+    if (status.state === 'available' && status.latest_event_date) parts.push(`最新公告日：${status.latest_event_date}`);
+    if (status.state === 'no_recent_events' && status.window_start && status.window_end) {
+      parts.push(`查詢期間：${status.window_start} 至 ${status.window_end}`);
+    }
+    if (status.last_checked_at) parts.push(`最後檢查：${formatDate(status.last_checked_at)}`);
+    return parts.join('｜');
+  };
+
+  const appendMaterialEventProvenance = (parent, item) => {
+    const values = [
+      item.event_time ? `發言時間：${item.event_time}` : null,
+      item.category ? `類別：${MATERIAL_EVENT_CATEGORY_LABELS[item.category] || '其他公告'}` : null,
+      item.retrieved_at ? `擷取時間：${formatDate(item.retrieved_at)}` : null,
+    ].filter(Boolean);
+    if (values.length) appendText(parent, 'small', 'financial-event-provenance muted-text', values.join('｜'));
+  };
+
+  const officialExcerpt = (value, limit = 280) => {
+    const body = text(value, '').replace(/\s+/g, ' ').trim();
+    return body.length > limit ? `${body.slice(0, limit)}…` : body;
+  };
 
   const selectFinancialSnapshot = (card) => card.financial_snapshot || card.raw?.snapshot || {};
 
@@ -2178,7 +2302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const hasTechnical = includeSummary || item.extracted_topics?.length || item.related_metrics?.length
       || item.document_extract_status || item.category || item.limitations?.length;
     if (!hasTechnical) return;
-    const details = el('details', 'financial-details');
+    const details = el('details', 'financial-details financial-technical-details');
     appendText(details, 'summary', null, '技術細節 Technical details');
     if (includeSummary && (item.summary || item.document_text_preview)) {
       appendText(details, 'p', 'muted-text', item.summary || item.document_text_preview);
@@ -2227,7 +2351,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           appendLegacySource(row, item, options.recordHeading || '資料來源');
         }
-        if (!digest) appendText(row, 'p', null, item.summary || item.raw_text || item.document_text_preview || '目前僅取得官方基本資料。');
+        if (options.kind === 'material_event') {
+          // The official announcement text first; the system's own summary stays in the details.
+          appendMaterialEventProvenance(row, item);
+          appendText(row, 'p', null, officialExcerpt(item.raw_text || item.summary) || '目前僅取得官方基本資料。');
+        } else if (!digest) {
+          appendText(row, 'p', null, item.summary || item.raw_text || item.document_text_preview || '目前僅取得官方基本資料。');
+        }
         const statusLabel = ITEM_SUMMARY_STATUS_LABELS[item.summary_status];
         if (statusLabel) appendText(row, 'p', 'financial-summary-state muted-text', `官方文件摘要：${statusLabel}。`);
       } else {
@@ -2245,7 +2375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.appendChild(section);
       }
       appendDisclosureClaims(row, item.disclosure_claims);
-      appendTechnicalDetails(row, item, Boolean(digest) && !item.standalone_archive_digest);
+      appendTechnicalDetails(row, item, options.kind === 'material_event' || (Boolean(digest) && !item.standalone_archive_digest));
       group.appendChild(row);
     });
     return group;
@@ -2271,10 +2401,18 @@ document.addEventListener('DOMContentLoaded', () => {
       recordHeading: '法說會資料來源',
       companyName,
     }));
-    nodes.official.appendChild(renderOfficialItems('重大訊息 Material Event Evidence', materialEvents, '目前未取得重大訊息資料。', {
-      recordHeading: '公告來源',
-      companyName,
-    }));
+    const eventStatus = card.material_event_status;
+    nodes.official.appendChild(renderOfficialItems(
+      '重大訊息 Material Event Evidence',
+      materialEvents,
+      eventStatus ? (MATERIAL_EVENT_EMPTY_TEXT[eventStatus.state] || text(eventStatus.message, LEGACY_MATERIAL_EVENT_EMPTY)) : LEGACY_MATERIAL_EVENT_EMPTY,
+      {
+        stateText: materialEventStateText(eventStatus, materialEvents),
+        recordHeading: '公告來源',
+        companyName,
+        kind: 'material_event',
+      },
+    ));
     const sourceGroup = el('article', 'financial-official-group');
     appendText(sourceGroup, 'h4', null, '官方資料來源 Official Sources');
     if (!sources.length) {
