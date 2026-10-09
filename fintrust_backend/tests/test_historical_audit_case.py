@@ -614,10 +614,13 @@ class Case13MigrationTests(unittest.TestCase):
             def legacy_state() -> tuple:
                 connection = sqlite3.connect(legacy)
                 try:
+                    from app.services.historical_audit.evidence_store import EVIDENCE_TABLES
+
+                    added = ("financial_filing_versions", "versioned_financial_facts",
+                             "filing_version_annotations", "sqlite_sequence", *EVIDENCE_TABLES)
                     schema = connection.execute(
                         "SELECT name, sql FROM sqlite_master WHERE tbl_name NOT LIKE 'historical_%' "
-                        "AND tbl_name NOT IN ('financial_filing_versions','versioned_financial_facts',"
-                        "'filing_version_annotations','sqlite_sequence') ORDER BY name"
+                        f"AND tbl_name NOT IN ({','.join('?' * len(added))}) ORDER BY name", added
                     ).fetchall()
                     rows = connection.execute("SELECT * FROM normalized_financial_facts").fetchall()
                     return schema, rows

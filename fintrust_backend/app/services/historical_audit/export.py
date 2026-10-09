@@ -21,7 +21,7 @@ from app.services.historical_audit.repository import HistoricalAuditRepository
 
 
 CONTRACT_NAME = "fintrust.historical_financial_facts"
-CONTRACT_VERSION = "1.0"
+CONTRACT_VERSION = "1.1"
 EXPORT_FIELDS: tuple[str, ...] = (
     "ticker",
     "company",
@@ -47,6 +47,12 @@ EXPORT_FIELDS: tuple[str, ...] = (
     "quality_status",
     "validation_status",
     "point_in_time_eligible",
+    # v1.1 (Phase 1B, appended): evidence typing and observation-level availability.
+    "evidence_type",
+    "accounting_framework",
+    "completeness",
+    "availability_scope",
+    "effective_available_at",
 )
 
 
@@ -92,6 +98,11 @@ def build_export_records(
             "quality_status": row["quality_status"],
             "validation_status": row["validation_status"],
             "point_in_time_eligible": bool(row["point_in_time_eligible"]),
+            "evidence_type": "official_filing_fact",
+            "accounting_framework": row["accounting_framework"],
+            "completeness": "full_statement_filing",
+            "availability_scope": row["availability_scope"],
+            "effective_available_at": row["effective_available_at"],
         }
         for row in rows
     ]

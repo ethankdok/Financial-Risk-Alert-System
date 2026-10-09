@@ -1,0 +1,923 @@
+{
+ "plan_version": 1,
+ "ticker": "1785",
+ "reviewed": "2026-10-10",
+ "note": "Every request targets an official TPEx/MOPS/TWSE URL observed during Phase 1B source discovery. Event quotes must be present verbatim (whitespace-insensitive) in the archived document.",
+ "sources": [
+  {
+   "source_key": "tpex-announcement-10502004811",
+   "category": "official_publication_notice",
+   "issuer": "TPEx",
+   "document_type": "TPEx trading-suspension announcement",
+   "parser": "tpex_announcement",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/eb_data/10505/10502004811.htm"
+   },
+   "events": [
+    {
+     "event_key": "trading_suspension_from_20160517",
+     "event_type": "trading_suspension",
+     "event_date": "2016-05-17",
+     "quote": "自105年5月17日起，停止在證券商營業處所買賣"
+    },
+    {
+     "event_key": "misstatement_admitted_20160513",
+     "event_type": "misstatement_admission",
+     "event_date": "2016-05-13",
+     "quote": "致有財務報表不實表達之情事"
+    }
+   ]
+  },
+  {
+   "source_key": "tpex-announcement-10502013431",
+   "category": "official_publication_notice",
+   "issuer": "TPEx",
+   "document_type": "TPEx continued-suspension announcement",
+   "parser": "tpex_announcement",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/eb_data/10511/10502013431.htm"
+   },
+   "events": [
+    {
+     "event_key": "restated_annual_reports_filed_20161114",
+     "event_type": "restated_annual_reports_filed",
+     "event_date": "2016-11-14",
+     "affected_periods": [
+      "2011FY",
+      "2012FY",
+      "2013FY",
+      "2014FY",
+      "2015FY"
+     ],
+     "affected_scopes": [
+      "consolidated",
+      "individual"
+     ],
+     "affects_version_types": [
+      "restated"
+     ],
+     "quote": "光洋科公司業於105年11月14日公告並申報105年第1季、第2季及第3季財務報告，暨重編之100年至104年之年度財務報告"
+    },
+    {
+     "event_key": "interim_restatements_overdue_20161115",
+     "event_type": "interim_restatement_overdue",
+     "event_date": null,
+     "quote": "有關100年至104年之期中報告，仍有經通知重編而逾期仍未重編之情事"
+    }
+   ]
+  },
+  {
+   "source_key": "tpex-announcement-10502015021",
+   "category": "official_publication_notice",
+   "issuer": "TPEx",
+   "document_type": "TPEx trading-resumption announcement",
+   "parser": "tpex_announcement",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/eb_data/10512/10502015021.htm"
+   },
+   "events": [
+    {
+     "event_key": "restatement_and_corrections_completed_20161205",
+     "event_type": "restatement_and_corrections_completed",
+     "event_date": "2016-12-05",
+     "affected_periods": [
+      "2011FY",
+      "2012FY",
+      "2013FY",
+      "2014FY",
+      "2015FY"
+     ],
+     "affected_scopes": [
+      "consolidated",
+      "individual"
+     ],
+     "affects_version_types": [
+      "restated"
+     ],
+     "quote": "12月5日完成100年至104年之財務報告重編及更(補)正公告申報"
+    },
+    {
+     "event_key": "trading_resumption_20170103",
+     "event_type": "trading_resumption",
+     "event_date": "2017-01-03",
+     "quote": "自106年1月3日起恢復在證券商營業處所買賣"
+    },
+    {
+     "event_key": "restated_fy2015_eps_cited",
+     "event_type": "restated_figure_cited",
+     "event_date": null,
+     "affected_periods": [
+      "2015FY"
+     ],
+     "quote": "104年度重編後財務報告所示每股虧損2.62元"
+    }
+   ]
+  },
+  {
+   "source_key": "mops-material-listing-101",
+   "category": "official_document_index",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information listing (t05st01)",
+   "parser": "mops_material_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01?encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=all&co_id=1785&year=101"
+   }
+  },
+  {
+   "source_key": "mops-material-listing-102",
+   "category": "official_document_index",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information listing (t05st01)",
+   "parser": "mops_material_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01?encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=all&co_id=1785&year=102"
+   }
+  },
+  {
+   "source_key": "mops-material-listing-103",
+   "category": "official_document_index",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information listing (t05st01)",
+   "parser": "mops_material_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01?encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=all&co_id=1785&year=103"
+   }
+  },
+  {
+   "source_key": "mops-material-listing-104",
+   "category": "official_document_index",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information listing (t05st01)",
+   "parser": "mops_material_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01?encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=all&co_id=1785&year=104"
+   }
+  },
+  {
+   "source_key": "mops-material-listing-105",
+   "category": "official_document_index",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information listing (t05st01)",
+   "parser": "mops_material_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01?encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=all&co_id=1785&year=105"
+   }
+  },
+  {
+   "source_key": "mops-material-listing-106",
+   "category": "official_document_index",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information listing (t05st01)",
+   "parser": "mops_material_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01?encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=all&co_id=1785&year=106"
+   }
+  },
+  {
+   "source_key": "mops-material-detail-20160819-171005-1",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "105",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20160819",
+     "spoke_time": "171005",
+     "seq_no": "1",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20160819:171005:1",
+     "event_type": "restatement_required",
+     "event_date": null,
+     "affected_periods": [],
+     "affected_scopes": [
+      "consolidated",
+      "individual"
+     ],
+     "quote": "更正且重編之財務報告年季:100年至104年間各受影響季度之財報"
+    }
+   ]
+  },
+  {
+   "source_key": "mops-material-detail-20161113-212531-2",
+   "category": "official_restatement_comparison",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "105",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20161113",
+     "spoke_time": "212531",
+     "seq_no": "2",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20161113:212531:2",
+     "event_type": "restatement_disclosure",
+     "event_date": null,
+     "affected_periods": [
+      "2011FY",
+      "2012FY",
+      "2013FY",
+      "2014FY",
+      "2015FY"
+     ],
+     "affected_scopes": [
+      "individual"
+     ],
+     "quote": "更正且重編之財務報告年季:100年至104年各期個體財報",
+     "affects_version_types": [
+      "restated"
+     ]
+    }
+   ],
+   "comparison_scope": "individual"
+  },
+  {
+   "source_key": "mops-material-detail-20161113-212622-3",
+   "category": "official_restatement_comparison",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "105",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20161113",
+     "spoke_time": "212622",
+     "seq_no": "3",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20161113:212622:3",
+     "event_type": "restatement_disclosure",
+     "event_date": null,
+     "affected_periods": [
+      "2011FY",
+      "2012FY",
+      "2013FY",
+      "2014FY",
+      "2015FY"
+     ],
+     "affected_scopes": [
+      "consolidated"
+     ],
+     "quote": "更正且重編之財務報告年季:100年至104年各期合併財報",
+     "affects_version_types": [
+      "restated"
+     ]
+    }
+   ],
+   "comparison_scope": "consolidated"
+  },
+  {
+   "source_key": "mops-material-detail-20161117-182226-2",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "105",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20161117",
+     "spoke_time": "182226",
+     "seq_no": "2",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20161117:182226:2",
+     "event_type": "auditor_opinion_correction",
+     "event_date": null,
+     "affected_periods": [
+      "2011FY",
+      "2012FY",
+      "2013FY",
+      "2014FY",
+      "2015FY"
+     ],
+     "affected_scopes": [
+      "consolidated",
+      "individual"
+     ],
+     "quote": "100~104各年度部分：修正式無保留意見--欲強調某一事項",
+     "affects_version_types": [
+      "restated"
+     ]
+    }
+   ]
+  },
+  {
+   "source_key": "mops-material-detail-20161205-174316-2",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "105",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20161205",
+     "spoke_time": "174316",
+     "seq_no": "2",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20161205:174316:2",
+     "event_type": "financial_report_correction",
+     "event_date": null,
+     "affected_periods": [
+      "2011FY",
+      "2012FY",
+      "2013FY",
+      "2014FY",
+      "2015FY"
+     ],
+     "affected_scopes": [
+      "consolidated",
+      "individual"
+     ],
+     "quote": "因財務報告內容有誤植之情事，予以更(補)正其內容",
+     "affects_version_types": [
+      "restated"
+     ]
+    }
+   ]
+  },
+  {
+   "source_key": "mops-material-detail-20170120-143127-1",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "106",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20170120",
+     "spoke_time": "143127",
+     "seq_no": "1",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20170120:143127:1",
+     "event_type": "financial_report_correction",
+     "event_date": null,
+     "affected_periods": [
+      "2014FY"
+     ],
+     "affected_scopes": [
+      "consolidated"
+     ],
+     "quote": "103年度重編後合併財報第83頁:民國一○二年重編前及影響金額誤植",
+     "affects_version_types": [
+      "restated"
+     ]
+    }
+   ]
+  },
+  {
+   "source_key": "mops-material-detail-20170321-191945-1",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "106",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20170321",
+     "spoke_time": "191945",
+     "seq_no": "1",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20170321:191945:1",
+     "event_type": "board_dividend_resolution",
+     "event_date": null,
+     "affected_periods": [],
+     "affected_scopes": [],
+     "quote": "董事會決議日期：106/03/21"
+    }
+   ]
+  },
+  {
+   "source_key": "twse-ebook-listing-100",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=100&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "twse-ebook-listing-101",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=101&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "twse-ebook-listing-102",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=102&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "twse-ebook-listing-103",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=103&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "twse-ebook-listing-104",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=104&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "twse-ebook-listing-105",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=105&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "twse-ebook-201104_1785_A01",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-100",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201104_1785_A01.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201104_1785_A02",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-100",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201104_1785_A02.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201104_1785_A06",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-100",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201104_1785_A06.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201204_1785_A01",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-101",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201204_1785_A01.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201204_1785_A02",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-101",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201204_1785_A02.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201204_1785_A06",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-101",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201204_1785_A06.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201304_1785_AI1",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-102",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201304_1785_AI1.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201304_1785_AI4",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-102",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201304_1785_AI4.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201404_1785_AI1",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-103",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201404_1785_AI1.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201404_1785_AI4",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-103",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201404_1785_AI4.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201504_1785_AI1",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-104",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201504_1785_AI1.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201504_1785_AI4",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-104",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201504_1785_AI4.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201604_1785_AI1",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-105",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201604_1785_AI1.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2011Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2011Q4.xls"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2012Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2012Q4.xls"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2013Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2013Q4.xls"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2014Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2014Q4.xls"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2015Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2015Q4.xls"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2016Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2016Q4.xls"
+   }
+  }
+ ]
+}

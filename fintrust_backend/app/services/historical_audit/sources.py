@@ -23,7 +23,7 @@ from app.services.mops_inline_xbrl import (
 )
 
 
-OFFICIAL_HOSTS = frozenset({"mopsov.twse.com.tw", "mops.twse.com.tw", "doc.twse.com.tw"})
+OFFICIAL_HOSTS = frozenset({"mopsov.twse.com.tw", "mops.twse.com.tw", "doc.twse.com.tw", "www.tpex.org.tw"})
 MOPS_ANNUAL_XBRL_URL = (
     "https://mopsov.twse.com.tw/server-java/FileDownLoad"
     "?functionName=t164sb01&step=9&co_id={ticker}&year={fiscal_year}&season=4&report_id={report_id}"
@@ -59,11 +59,13 @@ class FetchResult:
     response_headers: dict[str, str] = field(default_factory=dict)
     attempts: int = 0
     error: str | None = None
+    request: dict[str, Any] = field(default_factory=dict)
 
     def metadata(self) -> dict[str, Any]:
         """Response metadata safe to persist: no request headers, cookies or credentials."""
         return {
             "source_url": self.url,
+            "request": self.request,
             "final_url": self.final_url,
             "retrieved_at": self.retrieved_at.isoformat() if self.retrieved_at else None,
             "http_status": self.http_status,
@@ -73,8 +75,24 @@ class FetchResult:
         }
 
 
-def classify_body(content: bytes, *, expect: tuple[str, ...]) -> tuple[str, str | None]:
+_OLE2_MAGIC = bytes.fromhex("d0cf11e0a1b11ae1")
+
+
+def detect_evidence_format(content: bytes) -> str | None:
+    """XBRL formats and PDF via detect_format, plus legacy Excel (OLE2) and HTML pages."""
     detected = detect_format(content)
+    if detected is not None:
+        return detected
+    if content[:8] == _OLE2_MAGIC:
+        return "xls"
+    head = content[:2048].lstrip().lower()
+    if head.startswith((b"<!doctype html", b"<html")) or b"<html" in head or b"<body" in head:
+        return "html"
+    return None
+
+
+def classify_body(content: bytes, *, expect: tuple[str, ...]) -> tuple[str, str | None]:
+    detected = detect_evidence_format(content) if {"html", "xls"} & set(expect) else detect_format(content)
     if detected in expect:
         return "ok", detected
     if detected is None:
@@ -115,32 +133,48 @@ class OfficialSourceFetcher:
                 await self.sleep(wait)
             self._last_request = time.monotonic()
 
-    async def _get(self, client: httpx.AsyncClient, url: str) -> httpx.Response:
+    async def _get(
+        self, client: httpx.AsyncClient, url: str, *, method: str = "GET", data: dict[str, str] | None = None
+    ) -> httpx.Response:
         current = ensure_official_url(url)
         for _ in range(4):
-            response = await client.get(current)
+            if method == "POST":
+                response = await client.post(current, data=data or {})
+                method, data = "GET", None  # a redirect after POST is followed with GET
+            else:
+                response = await client.get(current)
             if response.status_code in {301, 302, 303, 307, 308} and response.headers.get("location"):
                 current = ensure_official_url(urljoin(current, response.headers["location"]))
                 continue
             return response
         raise httpx.TooManyRedirects("Too many redirects", request=response.request)
 
-    async def fetch(self, url: str, *, expect: tuple[str, ...]) -> FetchResult:
+    async def fetch(
+        self,
+        url: str,
+        *,
+        expect: tuple[str, ...],
+        method: str = "GET",
+        data: dict[str, str] | None = None,
+        referer: str | None = None,
+    ) -> FetchResult:
         ensure_official_url(url)
-        result = FetchResult(status=SOURCE_UNAVAILABLE, url=url)
+        if method not in {"GET", "POST"}:
+            raise ValueError(f"Unsupported method {method}")
+        result = FetchResult(status=SOURCE_UNAVAILABLE, url=url, request={"method": method, "data": dict(data or {})})
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(self.timeout_seconds),
             follow_redirects=False,
             verify=True,
             transport=self.transport,
-            headers={"User-Agent": self.user_agent, "Referer": "https://mopsov.twse.com.tw/mops/web/t203sb01"},
+            headers={"User-Agent": self.user_agent, "Referer": referer or "https://mopsov.twse.com.tw/mops/web/t203sb01"},
         ) as client:
             for attempt in range(1, self.max_attempts + 1):
                 result.attempts = attempt
                 await self._respect_interval()
                 retryable = False
                 try:
-                    response = await self._get(client, url)
+                    response = await self._get(client, url, method=method, data=data)
                     result.http_status = response.status_code
                     result.final_url = str(response.url)
                     result.retrieved_at = utc_now()

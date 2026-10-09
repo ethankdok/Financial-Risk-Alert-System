@@ -1,0 +1,4 @@
+-r requirements.txt
+# Historical audit-case research tooling only (TPEx legacy .xls summaries).
+# Kept out of requirements.txt so the production API image is unchanged.
+xlrd>=2.0.1,<3.0

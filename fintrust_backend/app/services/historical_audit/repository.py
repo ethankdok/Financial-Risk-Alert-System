@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from app.services.historical_audit.evidence_store import EVIDENCE_TABLES, initialize_evidence_schema
 from app.services.historical_audit.models import (
     HistoricalAuditCase,
     PARSER_VERSION,
@@ -267,6 +268,7 @@ class HistoricalAuditRepository:
                 "ON CONFLICT(key) DO NOTHING",
                 (SCHEMA_VERSION,),
             )
+            initialize_evidence_schema(connection)
 
     def schema_version(self) -> str | None:
         with self.connect() as connection:
@@ -454,6 +456,7 @@ class HistoricalAuditRepository:
         tables = (
             "historical_audit_cases", "financial_filing_versions", "versioned_financial_facts",
             "filing_version_annotations", "historical_ingestion_runs", "historical_acquisition_attempts",
+            *EVIDENCE_TABLES,
         )
         with self.connect() as connection:
             return {

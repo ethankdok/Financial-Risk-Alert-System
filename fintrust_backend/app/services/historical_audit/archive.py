@@ -20,6 +20,8 @@ _EXTENSIONS = {
     "inline_xbrl": ".html",
     "zip": ".zip",
     "pdf": ".pdf",
+    "xls": ".xls",
+    "html": ".html",
 }
 
 

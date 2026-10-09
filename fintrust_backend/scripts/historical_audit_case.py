@@ -17,8 +17,10 @@ from typing import Any
 from app.services.historical_audit.archive import RawEvidenceArchive
 from app.services.historical_audit.backfill import HistoricalBackfillService
 from app.services.historical_audit.case_registry import get_case, load_cases
+from app.services.historical_audit.evidence_export import DATASETS, export_evidence_dataset
+from app.services.historical_audit.evidence_import import HistoricalEvidenceService, load_plan
 from app.services.historical_audit.export import export_historical_facts
-from app.services.historical_audit.quality import quality_report
+from app.services.historical_audit.quality import eps_unit_investigation, quality_report, unmapped_concept_report
 from app.services.historical_audit.reader import VERSION_POLICIES, list_historical_facts
 from app.services.historical_audit.repository import DEFAULT_DATABASE_PATH, HistoricalAuditRepository
 
@@ -122,6 +124,43 @@ def command_export(args: argparse.Namespace) -> None:
     _emit({"output": str(args.output), "format": args.format, "records": count})
 
 
+def _evidence_service(args: argparse.Namespace) -> HistoricalEvidenceService:
+    return HistoricalEvidenceService(repository=_repository(args), archive=RawEvidenceArchive(args.archive))
+
+
+def command_evidence_acquire(args: argparse.Namespace) -> None:
+    plan = load_plan(args.ticker, args.plan)
+    if args.dry_run:
+        _emit({"ticker": args.ticker, "dry_run": True, "sources": [
+            {"source_key": s["source_key"], "category": s["category"], "parser": s["parser"],
+             "method": s["request"]["method"], "url": s["request"]["url"]} for s in plan["sources"]
+            if not args.only or s["source_key"] in args.only]})
+        return
+    outcomes = asyncio.run(_evidence_service(args).acquire(plan, refresh=args.refresh, only=set(args.only or []) or None))
+    _emit({"ticker": args.ticker, "outcomes": [vars(outcome) for outcome in outcomes]}, args.report_json)
+
+
+def command_evidence_import(args: argparse.Namespace) -> None:
+    report = _evidence_service(args).import_evidence(load_plan(args.ticker, args.plan))
+    _emit({"ticker": args.ticker, "counts": report.counts, "errors": report.errors, "warnings": report.warnings}, args.report_json)
+
+
+def command_evidence_export(args: argparse.Namespace) -> None:
+    ticker, start, end = _years(args)
+    count = export_evidence_dataset(_repository(args), ticker, args.dataset, output_path=args.output,
+                                    output_format=args.format, as_of=args.as_of, start_year=start, end_year=end)
+    _emit({"output": str(args.output), "dataset": args.dataset, "format": args.format, "records": count})
+
+
+def command_eps_investigation(args: argparse.Namespace) -> None:
+    _emit(eps_unit_investigation(_repository(args), RawEvidenceArchive(args.archive), args.ticker), args.output)
+
+
+def command_concept_coverage(args: argparse.Namespace) -> None:
+    ticker, start, end = _years(args)
+    _emit(unmapped_concept_report(_repository(args), ticker, start, end), args.output)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Historical audit-case ingestion (isolated SQLite).")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -168,6 +207,41 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             command.add_argument("--format", choices=("csv", "json"), default="csv")
             command.add_argument("--output", type=Path, required=True)
         command.set_defaults(func=func)
+    acquire = sub.add_parser("evidence-acquire", help="Bounded acquisition of the reviewed official evidence plan.")
+    common(acquire, years=False)
+    acquire.add_argument("--ticker", required=True)
+    acquire.add_argument("--plan", type=Path)
+    acquire.add_argument("--only", action="append", help="Restrict to these source_key values.")
+    acquire.add_argument("--refresh", action="store_true", help="Download again even if an archived copy exists.")
+    acquire.add_argument("--dry-run", action="store_true", help="List the planned requests; no network or writes.")
+    acquire.add_argument("--report-json", type=Path)
+    acquire.set_defaults(func=command_evidence_acquire)
+
+    importer = sub.add_parser("evidence-import", help="Offline parse/link/corroborate of archived evidence.")
+    common(importer, years=False)
+    importer.add_argument("--ticker", required=True)
+    importer.add_argument("--plan", type=Path)
+    importer.add_argument("--report-json", type=Path)
+    importer.set_defaults(func=command_evidence_import)
+
+    evidence_export = sub.add_parser("evidence-export", help="Export one evidence dataset (CSV/JSON).")
+    common(evidence_export)
+    evidence_export.add_argument("--dataset", choices=(*DATASETS, "coverage_matrix"), required=True)
+    evidence_export.add_argument("--format", choices=("csv", "json"), default="csv")
+    evidence_export.add_argument("--as-of")
+    evidence_export.add_argument("--output", type=Path, required=True)
+    evidence_export.set_defaults(func=command_evidence_export)
+
+    eps = sub.add_parser("eps-investigation", help="EPS unit evidence report.")
+    common(eps, years=False)
+    eps.add_argument("--ticker", required=True)
+    eps.add_argument("--output", type=Path)
+    eps.set_defaults(func=command_eps_investigation)
+
+    concepts = sub.add_parser("concept-coverage", help="Prioritized unmapped-concept report.")
+    common(concepts)
+    concepts.add_argument("--output", type=Path)
+    concepts.set_defaults(func=command_concept_coverage)
     return parser.parse_args(argv)
 
 

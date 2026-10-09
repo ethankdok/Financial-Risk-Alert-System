@@ -26,20 +26,42 @@ SELECT f.fact_id, f.filing_version_id, f.ticker, f.period, f.fiscal_year, f.metr
        v.filing_version_type, v.version_type_evidence_json, v.source_published_at,
        v.available_at, v.availability_status, v.availability_basis,
        v.verification_evidence_json, v.document_dated_at, v.retrieved_at,
-       v.content_hash, v.raw_storage_path, v.parser_version, v.validation_status
+       v.content_hash, v.raw_storage_path, v.parser_version, v.validation_status,
+       v.statement_scope_evidence, oa.observation_available_at, oa.observation_basis
 FROM versioned_financial_facts AS f
 JOIN financial_filing_versions AS v ON v.filing_version_id = f.filing_version_id
+LEFT JOIN (
+    SELECT observation_id, MIN(available_at) AS observation_available_at,
+           GROUP_CONCAT(basis, ' | ') AS observation_basis
+    FROM observation_availability WHERE observation_kind = 'versioned_fact' GROUP BY observation_id
+) AS oa ON oa.observation_id = f.fact_id
 WHERE f.ticker = ? AND f.fiscal_year BETWEEN ? AND ?
   AND v.validation_status IN ('validated', 'validated_with_warnings')
 """
 
 
-def point_in_time_eligible(row: dict[str, Any]) -> bool:
+def version_availability_verified(row: dict[str, Any]) -> bool:
     return row.get("availability_status") == "verified" and row.get("available_at") is not None
 
 
+def effective_availability(row: dict[str, Any]) -> tuple[datetime | None, str | None]:
+    """Earliest verified time: the filing version's own, or a verified disclosure of this exact value."""
+    candidates = []
+    if version_availability_verified(row):
+        candidates.append((parse_timestamp(row["available_at"]), "filing_version"))
+    if row.get("observation_available_at"):
+        candidates.append((parse_timestamp(row["observation_available_at"]), "observation"))
+    if not candidates:
+        return None, None
+    return min(candidates, key=lambda item: item[0])
+
+
+def point_in_time_eligible(row: dict[str, Any]) -> bool:
+    return effective_availability(row)[0] is not None
+
+
 def _version_sort_key(row: dict[str, Any]) -> tuple[Any, ...]:
-    available = parse_timestamp(row.get("available_at"))
+    available = parse_timestamp(row.get("effective_available_at") or row.get("available_at"))
     published = parse_timestamp(row.get("source_published_at"))
     return (
         available is not None,
@@ -51,7 +73,7 @@ def _version_sort_key(row: dict[str, Any]) -> tuple[Any, ...]:
 
 
 def _earliest_sort_key(row: dict[str, Any]) -> tuple[Any, ...]:
-    available = parse_timestamp(row.get("available_at"))
+    available = parse_timestamp(row.get("effective_available_at") or row.get("available_at"))
     published = parse_timestamp(row.get("source_published_at"))
     return (
         available is None,
@@ -98,13 +120,17 @@ def list_historical_facts(
         row["quality_notes"] = json.loads(row.pop("quality_notes_json") or "[]")
         row["version_type_evidence"] = json.loads(row.pop("version_type_evidence_json") or "[]")
         row["verification_evidence"] = json.loads(row.pop("verification_evidence_json") or "[]")
-        row["point_in_time_eligible"] = point_in_time_eligible(row)
+        effective, scope = effective_availability(row)
+        row["effective_available_at"] = effective.isoformat() if effective else None
+        row["availability_scope"] = scope
+        row["accounting_framework"] = "TIFRS" if "tifrs" in (row.pop("statement_scope_evidence") or "") else "unknown"
+        row["point_in_time_eligible"] = effective is not None
 
     if as_of is not None:
         cutoff = as_of_cutoff(as_of)
         rows = [
             row for row in rows
-            if row["point_in_time_eligible"] and parse_timestamp(row["available_at"]) < cutoff
+            if row["point_in_time_eligible"] and parse_timestamp(row["effective_available_at"]) < cutoff
         ]
     if version_policy == "original_only":
         rows = [row for row in rows if row["filing_version_type"] == "original"]
@@ -124,3 +150,19 @@ def list_historical_facts(
         key=lambda row: (row["fiscal_year"], row["period"], row["metric_code"], row["statement_scope"],
                          row["unit"], _version_sort_key(row)),
     )
+
+
+def list_filing_versions_as_of(
+    repository: HistoricalAuditRepository,
+    ticker: str,
+    *,
+    as_of: date | datetime | str,
+    start_year: int | None = None,
+    end_year: int | None = None,
+) -> list[dict[str, Any]]:
+    """Filing artifacts (XBRL or PDF) whose own verified availability precedes the cutoff."""
+    cutoff = as_of_cutoff(as_of)
+    return [
+        version for version in repository.list_filing_versions(ticker, start_year, end_year)
+        if version_availability_verified(version) and parse_timestamp(version["available_at"]) < cutoff
+    ]
