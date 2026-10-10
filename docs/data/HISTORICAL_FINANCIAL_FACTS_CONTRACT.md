@@ -1,4 +1,4 @@
-# Historical Financial Facts → Downstream Research (contract v1.1)
+# Historical Financial Facts → Downstream Research (contract v1.2)
 
 Producer: `app/services/historical_audit/export.py`
 (`python -m scripts.historical_audit_case export …`).
@@ -61,7 +61,7 @@ field absent from a filing has **no row**; the JSON `coverage` section lists
 ```json
 {
   "contract": "fintrust.historical_financial_facts",
-  "contract_version": "1.1",
+  "contract_version": "1.2",
   "generated_at": "…",
   "filters": {"ticker": "1785", "start_year": 2011, "end_year": 2016,
               "as_of": null, "version_policy": "all", "include_test_fixtures": false},
@@ -82,6 +82,34 @@ field absent from a filing has **no row**; the JSON `coverage` section lists
   evidence. `original`: only with manifest verification evidence.
   `unknown_revision`: anything else — including the current MOPS document when
   nothing proves its status.
+
+## v1.2 changes (pre-Phase 1C review, additive)
+
+Four fields are appended after `effective_available_at`:
+
+| Field | Meaning |
+|---|---|
+| `availability_evidence_kind` | `filing_artifact` (the filing's own verified time) \| `restatement_disclosure` (an official notice stating this exact value) \| empty |
+| `availability_evidence_ref` | `filing_version_id`, or the notice key (e.g. `mops:20161113:212622:3`) |
+| `availability_evidence_url` | URL of the evidence document |
+| `availability_evidence_hash` | SHA-256 of the evidence document |
+
+When `availability_evidence_kind = restatement_disclosure`, the filing artifact
+(`content_hash`, `source_url`, `available_at`) is **not** dated by that notice:
+only the value is. Restated filing facts are dated only by 重編後 (post) values
+and original filing facts only by 重編前 (pre) values.
+
+## Research cutoffs (what the archive can support)
+
+| Analysis | Cutoff | Strict result (1785, current evidence) |
+|---|---|---|
+| Pre-event detection | before the 2016-05-13 public revelation | **no verified inputs**: 0 facts, 0 comparisons, 0 summaries, 0 artifacts |
+| Restatement analysis | from 2016-11-13 21:26:22 | 27 restated facts (observation level) + 158 before/after rows |
+| Retrospective | e.g. 2017-12-31 | same 27 facts + 8 artifact-verified PDFs |
+
+Pre-event detection requires verified first-publication evidence for the
+original 2012–2016 reports, which is not yet available. TPEx summary values
+exist but their availability is unverified.
 
 ## v1.1 changes (Phase 1B, additive)
 

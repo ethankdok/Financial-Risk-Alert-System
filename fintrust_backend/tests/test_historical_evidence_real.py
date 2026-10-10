@@ -105,3 +105,48 @@ class RealPointInTimeScenarios(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(_has_phase1b_evidence(), "real 1785 evidence archive not present locally")
+class RealResearchCutoffs(unittest.TestCase):
+    """Pre-event detection vs restatement analysis vs retrospective analysis (real evidence)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        copy = Path(cls._tmp.name) / "copy.sqlite3"
+        shutil.copyfile(REAL_DB, copy)
+        cls.repository = HistoricalAuditRepository(str(copy))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def test_pre_event_cutoff_before_may_2016_revelation_has_no_verified_data(self) -> None:
+        # TPEx 10502004811 (2016-05-13): misstatement admitted. Nothing in the archive is
+        # verifiably public before that, so a strict pre-event backtest has no inputs yet.
+        for cutoff in ("2016-05-12", "2016-05-13T00:00:00+08:00"):
+            self.assertEqual(list_historical_facts(self.repository, "1785", 2011, 2016, as_of=cutoff), [])
+            self.assertEqual(list_restatement_comparisons(self.repository, "1785", as_of=cutoff), [])
+            self.assertEqual(list_summary_observations(self.repository, "1785", as_of=cutoff), [])
+            self.assertEqual(list_filing_versions_as_of(self.repository, "1785", as_of=cutoff), [])
+
+    def test_restatement_cutoff_and_retrospective_cutoff(self) -> None:
+        restatement = list_historical_facts(self.repository, "1785", 2011, 2016, as_of="2016-11-14")
+        self.assertEqual(len(restatement), 27)
+        self.assertTrue(all(f["availability_evidence_kind"] == "restatement_disclosure" for f in restatement))
+        retrospective = list_historical_facts(self.repository, "1785", 2011, 2016, as_of="2017-12-31")
+        self.assertEqual({f["fact_id"] for f in retrospective}, {f["fact_id"] for f in restatement})
+        self.assertEqual(len(list_filing_versions_as_of(self.repository, "1785", as_of="2017-12-31")), 8)
+
+    def test_restated_facts_are_dated_by_post_restatement_values_only(self) -> None:
+        import sqlite3
+
+        connection = sqlite3.connect(self.repository.database_path)
+        try:
+            details = {row[0] for row in connection.execute(
+                "SELECT o.match_detail FROM observation_availability o JOIN versioned_financial_facts f ON f.fact_id = o.observation_id")}
+        finally:
+            connection.close()
+        self.assertTrue(details)
+        self.assertTrue(all("(post side" in d for d in details), details)

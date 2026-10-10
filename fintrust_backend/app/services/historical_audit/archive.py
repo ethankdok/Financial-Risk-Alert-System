@@ -55,7 +55,12 @@ class RawEvidenceArchive:
         retrieval: dict[str, Any],
     ) -> ArchivedArtifact:
         content_hash = sha256_hex(content)
+        for segment in (ticker, *period.split("/")):
+            if not segment or segment in {".", ".."} or "\\" in segment or ":" in segment:
+                raise ValueError(f"Unsafe archive path segment: {segment!r}")
         path = self.path_for(ticker, period, content_hash, detected_format)
+        if self.root.resolve() not in path.resolve().parents:
+            raise ValueError("Archive path escapes the archive root.")
         path.parent.mkdir(parents=True, exist_ok=True)
         newly_written = False
         if path.exists():

@@ -56,6 +56,47 @@ def effective_availability(row: dict[str, Any]) -> tuple[datetime | None, str | 
     return min(candidates, key=lambda item: item[0])
 
 
+_OBSERVATION_EVIDENCE = """
+SELECT o.observation_id, o.available_at, o.corroborating_id, o.match_detail, d.source_url, d.content_hash, e.event_key
+FROM observation_availability o
+JOIN restatement_comparisons c ON c.comparison_id = o.corroborating_id
+JOIN historical_source_documents d ON d.source_document_id = c.source_document_id
+JOIN historical_publication_events e ON e.event_id = c.event_id
+WHERE o.observation_kind = 'versioned_fact' AND o.observation_id IN ({placeholders})
+"""
+
+
+def _observation_evidence(connection, fact_ids: list[str]) -> dict[str, dict[str, Any]]:
+    """Earliest corroborating disclosure per fact (the document that actually dates the value)."""
+    best: dict[str, dict[str, Any]] = {}
+    for start in range(0, len(fact_ids), 500):
+        chunk = fact_ids[start:start + 500]
+        for row in connection.execute(_OBSERVATION_EVIDENCE.format(placeholders=",".join("?" * len(chunk))), chunk):
+            item = dict(row)
+            current = best.get(item["observation_id"])
+            key = (parse_timestamp(item["available_at"]), item["corroborating_id"])
+            if current is None or key < (parse_timestamp(current["available_at"]), current["corroborating_id"]):
+                best[item["observation_id"]] = item
+    return best
+
+
+def availability_evidence(row: dict[str, Any], scope: str | None) -> dict[str, Any]:
+    """Identity of the evidence that establishes ``effective_available_at``.
+
+    For ``filing_version`` it is the artifact itself; for ``observation`` it is the
+    official disclosure stating the value, never the filing artifact.
+    """
+    if scope == "filing_version":
+        return {"availability_evidence_kind": "filing_artifact", "availability_evidence_ref": row["filing_version_id"],
+                "availability_evidence_url": row["source_url"], "availability_evidence_hash": row["content_hash"]}
+    evidence = row.get("_observation_evidence")
+    if scope == "observation" and evidence:
+        return {"availability_evidence_kind": "restatement_disclosure", "availability_evidence_ref": evidence["event_key"],
+                "availability_evidence_url": evidence["source_url"], "availability_evidence_hash": evidence["content_hash"]}
+    return {"availability_evidence_kind": None, "availability_evidence_ref": None,
+            "availability_evidence_url": None, "availability_evidence_hash": None}
+
+
 def point_in_time_eligible(row: dict[str, Any]) -> bool:
     return effective_availability(row)[0] is not None
 
@@ -115,14 +156,18 @@ def list_historical_facts(
         query += " AND f.source_kind != 'test_fixture'"
     with repository.connect() as connection:
         rows = [dict(row) for row in connection.execute(query, params).fetchall()]
+        evidence = _observation_evidence(connection, [row["fact_id"] for row in rows])
 
     for row in rows:
         row["quality_notes"] = json.loads(row.pop("quality_notes_json") or "[]")
         row["version_type_evidence"] = json.loads(row.pop("version_type_evidence_json") or "[]")
         row["verification_evidence"] = json.loads(row.pop("verification_evidence_json") or "[]")
+        row["_observation_evidence"] = evidence.get(row["fact_id"])
         effective, scope = effective_availability(row)
         row["effective_available_at"] = effective.isoformat() if effective else None
         row["availability_scope"] = scope
+        row.update(availability_evidence(row, scope))
+        row.pop("_observation_evidence")
         row["accounting_framework"] = "TIFRS" if "tifrs" in (row.pop("statement_scope_evidence") or "") else "unknown"
         row["point_in_time_eligible"] = effective is not None
 

@@ -80,6 +80,8 @@ def load_plan(ticker: str, path: str | Path | None = None) -> dict[str, Any]:
     if len(keys) != len(set(keys)):
         raise EvidencePlanError("Duplicate source_key in evidence plan.")
     for source in plan["sources"]:
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", source["source_key"]) or ".." in source["source_key"]:
+            raise EvidencePlanError(f"Unsafe source_key {source['source_key']!r}")
         ensure_official_url(source["request"]["url"])
         if source["parser"] not in EXPECTED_FORMAT:
             raise EvidencePlanError(f"Unknown parser {source['parser']}")
@@ -309,7 +311,16 @@ class HistoricalEvidenceService:
         expected = "合併" if scope == "consolidated" else "個體"
         if expected not in detail.subject:
             raise EvidenceParseError(f"Comparison scope {scope} not stated in subject {detail.subject!r}.")
-        event_id = next(iter(ids.values()))
+        verified_events = [
+            row[0] for row in connection.execute(
+                "SELECT event_id FROM historical_publication_events WHERE source_document_id = ? "
+                "AND verification_status = 'verified_official_quote' ORDER BY event_id",
+                (document["source_document_id"],),
+            )
+        ]
+        if not verified_events:
+            raise EvidenceParseError("Comparison notice has no verified claim; before/after rows are not imported.")
+        event_id = verified_events[0]
         for row in parse_restatement_comparison(detail.body):
             report.add("comparisons_inserted", insert_ignore(connection, "restatement_comparisons", {
                 "comparison_id": evidence_id("hrc1", document["source_document_id"], row.statement, row.fiscal_year,
@@ -536,45 +547,75 @@ class HistoricalEvidenceService:
         }))
 
     # ------------------------------------------------------- corroboration
+    # Which side of a 重編前/重編後 table may vouch for a filing fact: a restated
+    # filing's value is only ever dated by the restated (post) disclosure and an
+    # original filing's value only by the previously-reported (pre) one.
+    FACT_SIDES = {"restated": ("post",), "original": ("pre",)}
+    SUMMARY_SIDES = ("pre", "post")
+
     def _corroborate(self, connection: sqlite3.Connection, ticker: str, report: ImportReport) -> None:
+        """Deterministically rebuild value-level availability (derived data, never raw evidence)."""
         comparisons = [dict(row) for row in connection.execute(
-            "SELECT * FROM restatement_comparisons WHERE ticker = ? AND canonical_metric IS NOT NULL", (ticker,)).fetchall()]
+            "SELECT * FROM restatement_comparisons WHERE ticker = ? AND canonical_metric IS NOT NULL "
+            "AND verification_status = 'verified_official_disclosure'", (ticker,)).fetchall()]
         facts = [dict(row) for row in connection.execute(
-            """SELECT f.fact_id, f.fiscal_year, f.metric_code, f.statement_scope, f.value_text, v.statement_scope_evidence
+            """SELECT f.fact_id, f.fiscal_year, f.metric_code, f.statement_scope, f.value_text,
+                      v.statement_scope_evidence, v.filing_version_type
             FROM versioned_financial_facts f JOIN financial_filing_versions v USING (filing_version_id)
             WHERE f.ticker = ?""", (ticker,)).fetchall()]
         summaries = [dict(row) for row in connection.execute(
             "SELECT * FROM official_summary_observations WHERE ticker = ? AND mapping_status = 'mapped' AND statement_scope != 'unknown'",
             (ticker,)).fetchall()]
+        rows: dict[str, dict[str, Any]] = {}
         for comparison in comparisons:
-            for side in ("pre", "post"):
-                disclosed = comparison[f"{side}_value_text"]
-                if disclosed is None:
+            key = (comparison["fiscal_year"], comparison["canonical_metric"], comparison["statement_scope"],
+                   comparison["accounting_framework"])
+            values = {
+                side: Decimal(comparison[f"{side}_value_text"]) * 1000 * comparison["sign_factor"]
+                for side in ("pre", "post") if comparison[f"{side}_value_text"] is not None
+            }
+            for fact in facts:
+                framework = "TIFRS" if "tifrs" in (fact["statement_scope_evidence"] or "") else "unknown"
+                if (fact["fiscal_year"], fact["metric_code"], fact["statement_scope"], framework) != key:
                     continue
-                value_twd = Decimal(disclosed) * 1000 * comparison["sign_factor"]
-                basis = (f"value disclosed in the {side}-restatement table of the MOPS notice published "
-                         f"{comparison['disclosed_at']} ({comparison['pre_label'] or comparison['post_label']})")
-                for fact in facts:
-                    framework = "TIFRS" if "tifrs" in (fact["statement_scope_evidence"] or "") else "unknown"
-                    if (fact["fiscal_year"], fact["metric_code"], fact["statement_scope"], framework) != \
-                            (comparison["fiscal_year"], comparison["canonical_metric"], comparison["statement_scope"], comparison["accounting_framework"]):
-                        continue
-                    if Decimal(fact["value_text"]) == value_twd:
-                        self._insert_availability(connection, report, "versioned_fact", fact["fact_id"], comparison, basis, side)
-                for summary in summaries:
-                    if (summary["fiscal_year"], summary["canonical_metric"], summary["statement_scope"], summary["accounting_framework"]) != \
-                            (comparison["fiscal_year"], comparison["canonical_metric"], comparison["statement_scope"], comparison["accounting_framework"]):
-                        continue
-                    if Decimal(summary["normalized_value_text"]) == value_twd:
-                        self._insert_availability(connection, report, "summary_observation", summary["observation_id"], comparison, basis, side)
+                sides = [side for side in self.FACT_SIDES.get(fact["filing_version_type"], ())
+                         if side in values and Decimal(fact["value_text"]) == values[side]]
+                if sides:
+                    self._availability_row(rows, "versioned_fact", fact["fact_id"], comparison, sides)
+            for summary in summaries:
+                if (summary["fiscal_year"], summary["canonical_metric"], summary["statement_scope"],
+                        summary["accounting_framework"]) != key:
+                    continue
+                sides = [side for side in self.SUMMARY_SIDES
+                         if side in values and Decimal(summary["normalized_value_text"]) == values[side]]
+                if sides:
+                    self._availability_row(rows, "summary_observation", summary["observation_id"], comparison, sides)
+        fact_ids = [f["fact_id"] for f in facts] + [s["observation_id"] for s in summaries]
+        existing_for_ticker = {
+            row[0] for row in connection.execute(
+                f"SELECT availability_id FROM observation_availability WHERE corroborating_kind = 'restatement_comparison' "
+                f"AND observation_id IN ({','.join('?' * len(fact_ids))})", fact_ids)
+        } if fact_ids else set()
+        stale = existing_for_ticker - set(rows)
+        if stale:
+            connection.executemany("DELETE FROM observation_availability WHERE availability_id = ?", [(i,) for i in sorted(stale)])
+        added = 0
+        for availability_id, row in sorted(rows.items()):
+            if availability_id not in existing_for_ticker:
+                added += insert_ignore(connection, "observation_availability", row)
+        report.add("corroborations_added", added)
+        report.add("corroborations_removed", len(stale))
 
     @staticmethod
-    def _insert_availability(connection, report, kind, observation_id, comparison, basis, side) -> None:
-        report.add(f"{kind}_corroborations_inserted", insert_ignore(connection, "observation_availability", {
-            "availability_id": evidence_id("hoa1", kind, observation_id, comparison["comparison_id"], side),
-            "observation_kind": kind, "observation_id": observation_id,
-            "available_at": comparison["disclosed_at"], "basis": basis,
+    def _availability_row(rows, kind, observation_id, comparison, sides) -> None:
+        side_text = "+".join(sides)
+        availability_id = evidence_id("hoa2", kind, observation_id, comparison["comparison_id"], side_text)
+        rows[availability_id] = {
+            "availability_id": availability_id, "observation_kind": kind, "observation_id": observation_id,
+            "available_at": comparison["disclosed_at"],
+            "basis": (f"value disclosed in the {side_text}-restatement column of the MOPS notice published "
+                      f"{comparison['disclosed_at']} ({comparison['pre_label'] or comparison['post_label']})"),
             "corroborating_kind": "restatement_comparison", "corroborating_id": comparison["comparison_id"],
-            "match_detail": f"exact value match ({side} side, sign factor {comparison['sign_factor']})",
+            "match_detail": f"exact value match ({side_text} side, sign factor {comparison['sign_factor']})",
             "created_at": iso(utc_now()),
-        }))
+        }

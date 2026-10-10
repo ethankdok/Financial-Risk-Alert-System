@@ -7,6 +7,7 @@ from typing import Any
 
 from app.services.historical_audit.archive import RawEvidenceArchive
 from app.services.historical_audit.export import coverage_summary
+from app.services.historical_audit.reader import list_historical_facts
 from app.services.historical_audit.repository import HistoricalAuditRepository
 
 
@@ -81,7 +82,14 @@ def quality_report(
         "checks": checks,
         "versions": versions,
         "coverage": coverage_summary(repository, ticker, start_year, end_year, include_test_fixtures=True),
+        # Artifact level: filing versions whose own bytes have a verified availability time.
         "point_in_time_eligible_versions": sum(v["availability_status"] == "verified" for v in versions),
+        "artifact_level_verified_versions": sum(v["availability_status"] == "verified" for v in versions),
+        # Observation level, using exactly the reader/export definition.
+        "point_in_time_eligible_facts": sum(
+            fact["point_in_time_eligible"]
+            for fact in list_historical_facts(repository, ticker, start_year, end_year, include_test_fixtures=False)
+        ),
     }
 
 

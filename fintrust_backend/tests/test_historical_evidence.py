@@ -404,8 +404,10 @@ class Evid09To11IdempotencyAndExportTests(EvidenceTestCase):
             self.assertEqual(json.loads(json_path.read_text(encoding="utf-8"))["record_count"], count)
         records = build_export_records(self.repository, "1785", 2013, 2014)
         self.assertEqual(tuple(records[0]), EXPORT_FIELDS)
-        self.assertEqual(EXPORT_FIELDS[-5:], ("evidence_type", "accounting_framework", "completeness",
-                                              "availability_scope", "effective_available_at"))
+        self.assertEqual(EXPORT_FIELDS[-9:-4], ("evidence_type", "accounting_framework", "completeness",
+                                                "availability_scope", "effective_available_at"))
+        self.assertEqual(EXPORT_FIELDS[-4:], ("availability_evidence_kind", "availability_evidence_ref",
+                                              "availability_evidence_url", "availability_evidence_hash"))
         self.assertEqual({r["accounting_framework"] for r in records}, {"TIFRS"})
         matrix = {row["fiscal_year"]: row for row in coverage_matrix(self.repository, "1785", 2013, 2014)}
         self.assertIn("pdf", matrix[2013]["original_evidence"])
