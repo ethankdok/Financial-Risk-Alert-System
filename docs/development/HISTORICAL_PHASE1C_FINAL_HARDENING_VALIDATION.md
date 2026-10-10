@@ -3,10 +3,16 @@
 Date: 2026-10-11 (Asia/Taipei) · Branch `feature/historical-research-portability-cloud` · starting commit `5f7d87a`
 (clean tree; no upstream; nothing pushed, merged or deployed).
 
-**Outcome**
+> **Current release (after the independent-review fixes F1/F2, see the last section):**
+> strict ZIP `304934a4a2e05dc16439155b267554a99a731ff6c07fa95e1cd05f25504f2bcf`,
+> audit sidecar `c3ce8507c63c842971d2c6cf025babec329b07aec344d5d02d4f3cb274b774e6`,
+> full ZIP unchanged `693e867155de00ebded16ffece99f6b32179d306e369028eee4045f6dfbaa826`.
+> The sections below, up to the F1/F2 section, record the hardening pass at commit `52e2a44`.
+
+**Outcome (hardening pass, commit `52e2a44`)**
 
 - **Strict package rebuilt** (schema 1.2). `fintrust_1785_asof_2016-11-14.zip` was replaced through the safe procedure.
-  - New SHA-256: `e665e3f5e97faf317f063e141f281f0a8bddad6689078e3708f69acbd8ec5954`.
+  - New SHA-256: `e665e3f5e97faf317f063e141f281f0a8bddad6689078e3708f69acbd8ec5954` (superseded by `304934a4…`).
   - Previous SHA-256: `84be7e2439b9e9dabdf2b28cfc470e73bb243841b576a35de094deea26749f49`.
   - The build is reproducible byte for byte.
 - **Retrospective package unchanged.** `fintrust_1785_2011_2016_full.zip` keeps SHA-256
@@ -193,3 +199,180 @@ Integrity checks:
   - No production access, no deployment.
   - No secrets in the diff.
   - Changes are confined to `historical_audit`, its scripts, tests and docs; no other team's module was modified.
+
+## Independent review fixes (F1, F2) — after `52e2a44`
+
+### F1 — summary verification was not independent
+
+**Confirmed.** An independent reviewer reproduced the gap:
+
+1. In a copy of the strict ZIP, change a retained summary's `pit_evidence_side` from `pre` to `post`.
+2. Recompute every checksum and the manifest.
+3. Run the shipped verifier, which still returned `verified`.
+
+We confirmed it on `e665e3f5…`. Mutating the value or the scope also verified. This was a gap in the verifier, not
+a data error: no financial value was wrong.
+
+**Fix.** `package_verify.py` is standard-library only and is shipped as `validation/verify_package.py`. It now has
+its own MOPS-notice parser, `parse_restatement_notice`, and does not import the producer. The parser reads:
+
+- the notice's own 序號, 發言日期 and 發言時間, which give the event key and publication time;
+- the 主旨 (subject), which gives the scope: 個體 or 合併;
+- the 重編前/重編後 tables, which must be in 仟元 and have ROC-year columns.
+
+Every summary row is then re-derived from the included raw notice. The verifier checks:
+
+- the metric, against a fixed independent label table: revenue = 營業收入淨額/營業收入, operating income = 營業淨利/營業利益;
+- that period, fiscal year and observation role are mutually consistent;
+- the accounting framework: TW-GAAP up to FY2012, TIFRS from FY2013;
+- the unit (TWD thousand, with `normalized_value` = value × 1000 in TWD);
+- the scope stated by the notice;
+- that the notice states the amount;
+- the exact side(s) carrying that amount, compared with `pit_evidence_side`;
+- the notice line, compared with `pit_evidence_label`;
+- the event key and URL;
+- that the effective time equals the notice's own publication time;
+- the side a report of that period must carry (pre if the report's fiscal year ended by the disclosure, else post);
+- that a matching `restatement_comparisons` row exists.
+
+`side_consistency` is still required to read `consistent`, but it is no longer sufficient on its own.
+
+All 158 comparison rows are also re-read from their notices:
+
+- identity and time;
+- scope and unit;
+- both the pre and the post amount.
+
+A notice that cannot be parsed, or that is not in 仟元, fails closed.
+
+Results on the real archive, reproduced with a scratch script that touches no tracked file:
+
+- 158 comparisons give 316 pre/post cells, all equal to the raw notices.
+- All 11 retained summaries match. Their raw sides are pre for the three operating-income rows and for FY2015
+  current, and pre+post for the seven revenue rows; each equals `pit_evidence_side`.
+- No financial value changed. The data files of the rebuilt ZIP are byte-identical to `e665e3f5…`: only
+  `verify_package.py`, the embedded package contract, the checksums and the manifest differ.
+
+Negative tests recompute every checksum and the manifest, so only semantic checks can catch them. Each fails for a
+named reason.
+
+Real tier (`RealStrictCutoffMatrix`):
+- side;
+- value (with a consistent `normalized_value`);
+- scope;
+- period;
+- metric;
+- metric mapping;
+- unit;
+- framework;
+- label;
+- evidence reference;
+- evidence identity (the other notice's hash and time);
+- a restated value placed in an earlier report;
+- the producer's `side_consistency` flag;
+- comparison pre value, post value, scope and announcement.
+
+Fixture tier (`test_historical_conference_strict`):
+- side, value, scope, year, unit and reference;
+- parser fail-closed cases: not a notice, missing time, a unit other than 仟元, unknown scope.
+
+All of these run under plain `unittest`. A scratch-only meta-test also confirmed that a deliberately wrong expected
+reason is reported as a failure.
+
+### F2 — the ZIP and the sidecar could be published inconsistently
+
+**Confirmed impact.** In `52e2a44`, the ZIP was replaced first and the sidecar was written afterwards. A crash
+between the two steps would leave the new, verified ZIP next to the old sidecar. That sidecar's `package_sha256`
+binds the previous ZIP, and nothing detected the mismatch. The research data stays correct in that case, but the
+reviewer-audit binding is silently broken.
+
+**Fix** (`scripts/rebuild_historical_packages.py`):
+
+1. **Staging.** Both artifacts are fully staged before anything is published. The staged sidecar already names the
+   final file, and publication checks that it binds the staged ZIP.
+2. **Journal.** `publish_release` writes `<zip>.release.json` atomically before the first rename. The journal
+   records the old and new hashes, the staged names and the hash-qualified backups.
+3. **Publication.** The script renames the ZIP, renames the sidecar, removes the journal, and validates the pair.
+4. **Pair check.** `verify_release_pair` fails closed on any of:
+   - a missing file;
+   - a journal that is still present;
+   - an unreadable sidecar;
+   - a sidecar whose `package_sha256`, `package_file` or `content_digest` does not bind the ZIP;
+   - a ZIP that fails package verification.
+5. **Recovery.** `recover_release` uses the journal to do one of three things:
+   - **roll forward**: the new ZIP is in place and the staged sidecar is present;
+   - **roll back**: nothing was published yet;
+   - **restore**: copy back the verified hash-qualified backups.
+
+   If none applies, it raises (fails closed).
+6. **Every run.** The script first recovers or validates the existing pair and refuses to continue on an invalid
+   one. `--check-release` validates only.
+7. **Backups.** Hash-qualified backups are unchanged and never overwritten.
+
+**Failure-injection tests** (`tests/test_historical_release_pair.py`, fixture tier, 7 tests). Failures are injected
+with `mock` into the renames, inside temporary directories:
+
+- a crash between the ZIP and sidecar renames is detected, then rolled forward;
+- a crash before the ZIP rename is rolled back;
+- a lost staged sidecar is restored from the hash-qualified backups;
+- an unrecoverable state with no backups fails closed;
+- a mismatched pair without a journal is never accepted, and `--check-release` exits 1;
+- an incomplete pair is rejected;
+- an unbound staged sidecar is refused before anything is published.
+
+### Results (actual)
+
+| Tier | Result |
+|---|---|
+| Historical, all modules (pytest) | 126 passed, 2 skipped |
+| — fixture | 97 passed: case 37, e2e 2, evidence 15, review fixes 10, research package 10, conference/strict 16, release pair 7 |
+| — real local archive (`test_historical_evidence_real.py`) | 19 passed (incl. the F1 real-tier mutations and the real-archive mock-cloud parity) |
+| — mock cloud (`test_historical_cloud.py`) | 10 passed |
+| — emulator | skipped (Firestore emulator not configured) |
+| — live MOPS | skipped (opt-in) |
+| Historical, all modules (plain `unittest`) | 128 tests run, OK, 2 skipped |
+| Conference / JSD / 2330 / 2454 (`-k "jsd or conference or 2330 or 2454"`) | 179 passed |
+| Full backend regression | 523 passed, 3 skipped (live MOPS, emulator, reportlab PDF fixture) |
+
+### Deliverables
+
+| Artifact | Path (`fintrust_backend/data/historical_audit/`) | SHA-256 |
+|---|---|---|
+| Strict ZIP | `packages/fintrust_1785_asof_2016-11-14.zip` | `304934a4a2e05dc16439155b267554a99a731ff6c07fa95e1cd05f25504f2bcf` |
+| Audit sidecar | `packages/fintrust_1785_asof_2016-11-14.audit.json` | `c3ce8507c63c842971d2c6cf025babec329b07aec344d5d02d4f3cb274b774e6` |
+| Full ZIP (unchanged) | `packages/fintrust_1785_2011_2016_full.zip` | `693e867155de00ebded16ffece99f6b32179d306e369028eee4045f6dfbaa826` |
+| Backup of the previous strict release | `packages/previous/fintrust_1785_asof_2016-11-14.e665e3f5e97f.zip` (+ `.ba3b334e7ceb.audit.json`) | `e665e3f5…` |
+
+Checks on the deliverables:
+
+- **Sidecar binding.** `package_sha256` equals the ZIP hash, `content_digest` equals the manifest
+  (`92087263…`), and `package_file` names the ZIP.
+- **Release pair.** `--check-release` reports `release_pair_valid`, and no journal remains.
+- **Verification.** The shipped verifier was run with system Python 3.14 (`python -I`) from a directory outside the
+  repository. It passed on the ZIP and, after `safe_extract`, on the extracted folder.
+- **Reviewer's reproduction.** Run against the new ZIP's own verifier, it now fails with
+  "pit_evidence_side 'post' but the notice states the value on pre".
+- **Reproducibility.** An independent rebuild from a copy of the database is byte-identical.
+- **Leakage.** The rebuild script's checks passed: no post-cutoff or modern markers, every timestamp is Taipei, and
+  no conference material or workbook reference.
+- **Data integrity.** Facts 27, versions 7, summaries 11, comparisons 158, events 249, raw 11 — unchanged.
+
+Reproduce:
+
+```bash
+cd fintrust_backend
+python -m scripts.rebuild_historical_packages --check-release
+python -m unittest tests.test_historical_release_pair tests.test_historical_conference_strict tests.test_historical_evidence_real
+python -I <outside-dir>/verify_package.py <outside-dir>/fintrust_1785_asof_2016-11-14.zip
+```
+
+### Remaining limitations
+
+- **Format-specific parser.** The independent parser supports the MOPS material-information layout used by the
+  2016-11-13 notices. Any other layout fails closed, so it must be extended before new notice formats are accepted.
+- **Fixed label table.** It covers the two summary metrics present (revenue, operating income). New summary metrics
+  need an explicit table entry; until then, a row with such a metric fails verification.
+- **Local recovery only.** Release recovery protects local publication on one machine. It is not a multi-writer
+  lock, so concurrent rebuilds are not supported.
+- **Earlier limitations unchanged.** There are still no verified inputs before 2016-05-13, and the wording issues in
+  the preserved full ZIP remain. The emulator tier is still not run.

@@ -372,3 +372,65 @@ class RealStrictCutoffMatrix(unittest.TestCase):
                             and n != "validation/verify_package.py").decode("utf-8", "replace")
             self.assertNotIn("2026-", text)
             self.assertTrue(Path(package["result"]["audit_path"]).exists())
+
+    def test_summary_verification_is_independent_of_producer_flags(self) -> None:
+        """F1: every retained summary is re-derived from the included raw notice; mutations fail for a named reason."""
+        from app.services.historical_audit.package_verify import PackageVerificationError, verify_package
+        from tests.historical_evidence_fixtures import mutate_csv, repack_package
+
+        package = self.packages["2016-11-14"]
+        source = Path(package["result"]["output"])
+        summaries = package["files"]["data/historical_summaries.csv"]
+        retained = package["rows"]["data/historical_summaries.csv"]
+        self.assertEqual(len(retained), 11)
+        individual = {r["statement_scope"]: r for r in retained}["individual"]["pit_evidence_hash"]
+        consolidated = {r["statement_scope"]: r for r in retained}["consolidated"]["pit_evidence_hash"]
+        op_income = {"report_period": "2011FY", "observation_role": "current_period", "source_metric_code": "tpex_operating_income"}
+        fy2015 = {"report_period": "2015FY", "observation_role": "current_period", "source_metric_code": "tpex_operating_revenue"}
+        cases = {
+            "side": (op_income, {"pit_evidence_side": "post"}, "pit_evidence_side 'post' but the notice states the value on pre"),
+            "value": (op_income, {"value": "1336551", "normalized_value": "1336551000"}, "value 1336551 is not stated"),
+            "scope": (op_income, {"statement_scope": "consolidated"}, "statement scope consolidated disagrees with the notice"),
+            "period": (op_income, {"report_period": "2010FY", "fiscal_year": "2010", "period": "2010FY"},
+                       "value 1336550 is not stated for 2010"),
+            "metric": (op_income, {"source_metric_code": "tpex_operating_revenue", "canonical_metric": "revenue"},
+                       "value 1336550 is not stated for 2011 revenue"),
+            "metric mapping": (op_income, {"canonical_metric": "net_income"}, "has no independent mapping"),
+            "unit": (op_income, {"published_unit": "TWD"}, "unit or normalized value disagrees"),
+            "framework": (op_income, {"accounting_framework": "TIFRS"}, "accounting framework does not fit"),
+            "label": (op_income, {"pit_evidence_label": "營業收入淨額"}, "is not the notice line stating the value"),
+            "evidence reference": (op_income, {"pit_evidence_ref": "mops:20161113:212622:3"}, "is not the included notice"),
+            "evidence identity": (op_income, {"pit_evidence_ref": "mops:20161113:212622:3", "pit_evidence_hash": consolidated,
+                                              "effective_available_at": "2016-11-13T21:26:22+08:00"},
+                                  "statement scope individual disagrees with the notice \(consolidated\)"),
+            "restated value in an earlier report": (fy2015, {"value": "61376037", "normalized_value": "61376037000",
+                                                             "pit_evidence_side": "post"},
+                                                    "a 2015FY report must carry the pre side; the notice states post"),
+            "producer flag": (fy2015, {"side_consistency": "inconsistent_side"}, "side_consistency='inconsistent_side'"),
+        }
+        self.assertNotEqual(individual, consolidated)
+        for label, (match, changes, reason) in cases.items():
+            with self.subTest(label):
+                target = Path(self._tmp.name) / f"mutated-{label.replace(' ', '_')}.zip"
+                repack_package(source, target, {"data/historical_summaries.csv": mutate_csv(summaries, match, changes)})
+                with self.assertRaisesRegex(PackageVerificationError, reason):
+                    verify_package(target)
+
+    def test_comparisons_are_reread_from_the_raw_notices(self) -> None:
+        from app.services.historical_audit.package_verify import PackageVerificationError, verify_package
+        from tests.historical_evidence_fixtures import mutate_csv, repack_package
+
+        package = self.packages["2016-11-14"]
+        data = package["files"]["data/restatement_comparisons.csv"]
+        row = {"period": "2011FY", "statement_scope": "individual", "pre_label": "營業淨利"}
+        cases = {"pre value": ({"pre_restatement_value": "1336551"}, "pre_restatement_value 1336551 is not what the notice states"),
+                 "post value": ({"post_restatement_value": "281539"}, "post_restatement_value 281539 is not what the notice states"),
+                 "scope": ({"statement_scope": "consolidated"}, "scope or unit disagrees"),
+                 "announcement": ({"announcement_key": "mops:20161113:212531:9"}, "announcement identity")}
+        for label, (changes, reason) in cases.items():
+            with self.subTest(label):
+                target = Path(self._tmp.name) / f"comparison-{label.replace(' ', '_')}.zip"
+                repack_package(Path(package["result"]["output"]), target,
+                               {"data/restatement_comparisons.csv": mutate_csv(data, row, changes)})
+                with self.assertRaisesRegex(PackageVerificationError, reason):
+                    verify_package(target)

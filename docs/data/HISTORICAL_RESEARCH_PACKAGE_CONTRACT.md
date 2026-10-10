@@ -75,7 +75,8 @@ Everything inside a strict ZIP is model-facing and describes only what was publi
 
 The reviewer-only sidecar `<package>.audit.json` holds the modern verification metadata: generation time, cutoff and
 parameters, archive-wide exclusion counts (including conference documents), the row-level summary review (decision
-per summary row) and raw-evidence retrieval provenance. It is bound to the ZIP by `package_sha256` and is **not a
+per summary row) and raw-evidence retrieval provenance. It is bound to the ZIP by `package_sha256`, `content_digest` and `package_file` (the two files form one release and are
+published together through a journaled, recoverable step) and is **not a
 research input**.
 
 ### Strict verification (fails closed)
@@ -90,9 +91,15 @@ The builder runs the full verifier before writing anything. `verify_package.py` 
 6. every fact is point-in-time eligible before the cutoff; a withheld artifact has no identity fields, a
    `restatement_disclosure` reference that resolves to an included notice published no later than the stated
    availability, and equal observation and effective times; a verified artifact is an included filing version;
-7. every summary row is an `official_disclosed_observation` with no workbook reference, a side-consistent disclosure,
-   an ended report period and a resolvable disclosure;
-8. restatement comparisons resolve to included notices disclosed before the cutoff;
+7. every summary row is an `official_disclosed_observation` with no workbook reference and an ended report period,
+   and is **re-derived from the included raw notice** rather than trusted from producer flags: the verifier parses the
+   MOPS notice itself (its own 序號/發言日期/發言時間, its subject's 個體/合併 scope, and the 重編前/重編後 tables in
+   仟元 with ROC-year columns) and requires the row's metric (fixed label table), fiscal year, period/role structure,
+   accounting framework, scope, unit (TWD thousand, normalized TWD), amount, `pit_evidence_ref`/`_url`/`_label`, the
+   exact restatement side(s) stating the amount, and the side a report of that period must carry to agree, plus a
+   matching `restatement_comparisons` row; an unparseable notice fails closed;
+8. every restatement comparison is re-read from its included notice: announcement identity and time, scope, unit and
+   both pre/post amounts must equal what the notice states;
 9. timeline events are public before the cutoff and link only included filing versions;
 10. `financial_facts.csv` equals `financial_facts.json`, and manifest counts equal row counts.
 

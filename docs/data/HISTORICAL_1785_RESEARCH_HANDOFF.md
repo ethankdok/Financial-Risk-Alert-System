@@ -21,7 +21,7 @@ Both are in `fintrust_backend/data/historical_audit/packages/` (local, not in gi
 | | Full (retrospective) | Strict (point-in-time) |
 |---|---|---|
 | File | `fintrust_1785_2011_2016_full.zip` | `fintrust_1785_asof_2016-11-14.zip` |
-| SHA-256 | `693e867155de00ebded16ffece99f6b32179d306e369028eee4045f6dfbaa826` | `e665e3f5e97faf317f063e141f281f0a8bddad6689078e3708f69acbd8ec5954` |
+| SHA-256 | `693e867155de00ebded16ffece99f6b32179d306e369028eee4045f6dfbaa826` | `304934a4a2e05dc16439155b267554a99a731ff6c07fa95e1cd05f25504f2bcf` |
 | `manifest.mode` | `retrospective` | `strict_point_in_time` |
 | Schema | 1.1 (unchanged, preserved) | 1.2 |
 | Cutoff | none | end of 2016-11-14, Asia/Taipei (exclusive `2016-11-15T00:00:00+08:00`) |

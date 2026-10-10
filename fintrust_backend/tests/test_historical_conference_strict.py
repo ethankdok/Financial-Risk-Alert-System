@@ -341,6 +341,48 @@ class StrictPointInTimeTests(ConferenceTestCase):
             with self.subTest(label), self.assertRaises(PackageVerificationError):
                 verify_package(tampered)
 
+    def test_summary_rows_are_rederived_from_the_raw_notice(self) -> None:
+        from tests.historical_evidence_fixtures import mutate_csv, repack_package
+
+        path, _ = self.strict()
+        verify_package(path)
+        summaries = self.read(path, "data/historical_summaries.csv")
+        row = {"report_period": "2013FY", "source_metric_code": "tpex_operating_revenue"}
+        cases = {
+            "side": ({"pit_evidence_side": "pre"}, "pit_evidence_side 'pre' but the notice states the value on pre\\+post"),
+            "value": ({"value": "1000001", "normalized_value": "1000001000"}, "value 1000001 is not stated"),
+            "scope": ({"statement_scope": "individual"}, "statement scope individual disagrees"),
+            "year": ({"report_period": "2014FY", "fiscal_year": "2014", "period": "2014FY"}, "is not stated for 2014"),
+            "unit": ({"normalized_unit": "TWD_thousand"}, "unit or normalized value disagrees"),
+            "reference": ({"pit_evidence_ref": "mops:20161113:212622:4"}, "is not the included notice"),
+        }
+        for label, (changes, reason) in cases.items():
+            with self.subTest(label):
+                target = repack_package(path, self.root / f"f1-{label}.zip",
+                                        {"data/historical_summaries.csv": mutate_csv(summaries, row, changes)})
+                with self.assertRaisesRegex(PackageVerificationError, reason):
+                    verify_package(target)
+
+    def test_notice_parser_fails_closed(self) -> None:
+        from app.services.historical_audit.package_verify import parse_restatement_notice
+        from tests.historical_evidence_fixtures import COMPARISON_EXPLANATION, mops_detail
+
+        parsed = parse_restatement_notice(mops_detail("20161113", "212622", "3", "本公司重編合併財務報告說明",
+                                                      COMPARISON_EXPLANATION))
+        self.assertEqual((parsed["event_key"], parsed["scope"]), ("mops:20161113:212622:3", "consolidated"))
+        self.assertEqual(parsed["values"][("pre", "income", "營業收入", 2013)], 1000000)
+        self.assertEqual(parsed["values"][("post", "income", "營業成本", 2014)], -900000)
+        for label, data in {
+            "not a notice": b"<html><body>no disclosure here</body></html>",
+            "missing time": mops_detail("20161113", "212622", "3", "x", "y").replace("發言時間".encode(), b"time"),
+            "unit not TWD thousand": mops_detail("20161113", "212622", "3", "本公司重編合併財務報告說明",
+                                                 COMPARISON_EXPLANATION.replace("單位:仟元", "單位:元")),
+        }.items():
+            with self.subTest(label), self.assertRaises(PackageVerificationError):
+                parse_restatement_notice(data)
+        unknown = parse_restatement_notice(mops_detail("20161113", "212622", "3", "財務報告說明", "說明"))
+        self.assertEqual((unknown["scope"], unknown["values"]), ("unknown", {}))  # matches no row -> rows fail closed
+
     def test_cutoff_matrix_fixture(self) -> None:
         previous = None
         for index, cutoff in enumerate(("2016-05-12", "2016-05-13T00:00:00+08:00", "2016-11-13T21:26:21+08:00",

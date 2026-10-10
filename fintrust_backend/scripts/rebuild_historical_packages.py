@@ -17,7 +17,17 @@ Steps (any failure leaves the current packages untouched):
  5. run the shipped verifier with ``python -I`` from outside the repository;
  6. safe extraction outside the repository and verification of the folder;
  7. strict point-in-time and modern-metadata checks; conference provenance (full);
- 8. atomic replacement (ZIP, then its audit sidecar).
+ 8. journaled publication of the strict ZIP + audit sidecar pair (see ``publish_release``),
+    followed by a fail-closed check of the published pair.
+
+Release pair: a strict ZIP is only a valid release together with its sidecar
+``<zip>.audit.json`` whose ``package_sha256``/``content_digest``/``package_file``
+bind that exact ZIP. Both artifacts are fully staged before anything is
+published; a journal (``<zip>.release.json``) recorded before the first rename
+lets ``recover_release`` finish (roll forward) or undo (roll back, using the
+journal's staged files or the hash-qualified backups) an interrupted
+publication. Every run first recovers/validates the existing pair and refuses to
+continue on an unrecoverable mismatch. ``--check-release`` only validates.
 """
 
 from __future__ import annotations
@@ -118,6 +128,111 @@ def _audit_name(path: Path) -> Path:
     return path.with_name(path.name.removesuffix(".zip") + ".audit.json")
 
 
+# --------------------------------------------------------------------------- release pair
+class ReleaseError(RuntimeError):
+    """The strict ZIP and its audit sidecar do not form a valid release (fail closed)."""
+
+
+def _journal_name(target: Path) -> Path:
+    return target.with_name(target.name.removesuffix(".zip") + ".release.json")
+
+
+def _write_atomic(path: Path, payload: dict) -> None:
+    staging = path.with_name(path.name + ".tmp")
+    staging.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    os.replace(staging, path)
+
+
+def verify_release_pair(target: Path, audit_path: Path | None = None) -> dict:
+    """Fail-closed check that ``target`` and its sidecar form one release; returns the binding."""
+    audit_path = audit_path or _audit_name(target)
+    if not target.exists() or not audit_path.exists():
+        raise ReleaseError(f"incomplete release pair: {target.name} / {audit_path.name}")
+    if _journal_name(target).exists():
+        raise ReleaseError(f"publication of {target.name} is in progress or was interrupted (journal present)")
+    try:
+        audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        raise ReleaseError(f"unreadable audit sidecar {audit_path.name}: {exc}") from exc
+    digest = _sha(target)
+    manifest = json.loads(_members(target)["manifest.json"])
+    if audit.get("package_sha256") != digest:
+        raise ReleaseError(f"audit sidecar binds {str(audit.get('package_sha256'))[:12]}… but {target.name} is {digest[:12]}…")
+    if audit.get("package_file") != target.name or audit.get("content_digest") != manifest.get("content_digest"):
+        raise ReleaseError("audit sidecar package_file/content_digest do not match the ZIP")
+    verify_package(target)
+    return {"package": target.name, "package_sha256": digest, "audit": audit_path.name, "audit_sha256": _sha(audit_path)}
+
+
+def stage_audit(temp_audit: Path, target: Path) -> Path:
+    """Rewrite the builder's sidecar for the final file name before anything is published."""
+    audit = json.loads(temp_audit.read_text(encoding="utf-8"))
+    audit["package_file"] = target.name
+    _write_atomic(temp_audit, audit)
+    return temp_audit
+
+
+def publish_release(staged_zip: Path, staged_audit: Path, target: Path, backups: dict[str, str] | None = None) -> dict:
+    """Journaled two-step publication of a fully staged (ZIP, sidecar) pair."""
+    audit_target = _audit_name(target)
+    journal = _journal_name(target)
+    if journal.exists():
+        raise ReleaseError(f"refusing to publish over an unrecovered journal {journal.name}")
+    staged_binding = json.loads(staged_audit.read_text(encoding="utf-8"))
+    if staged_binding.get("package_sha256") != _sha(staged_zip) or staged_binding.get("package_file") != target.name:
+        raise ReleaseError("staged audit sidecar does not bind the staged ZIP")
+    _write_atomic(journal, {
+        "target": target.name, "audit": audit_target.name,
+        "staged_zip": staged_zip.name, "staged_audit": staged_audit.name,
+        "new_zip_sha256": _sha(staged_zip), "new_audit_sha256": _sha(staged_audit),
+        "old_zip_sha256": _sha(target) if target.exists() else None,
+        "old_audit_sha256": _sha(audit_target) if audit_target.exists() else None,
+        "backups": backups or {},
+    })
+    os.replace(staged_zip, target)          # step 1
+    os.replace(staged_audit, audit_target)  # step 2 (a crash between 1 and 2 is recoverable from the journal)
+    journal.unlink()
+    return verify_release_pair(target)
+
+
+def recover_release(target: Path) -> dict:
+    """Finish or undo an interrupted ``publish_release``; then validate the pair (fail closed)."""
+    journal_path = _journal_name(target)
+    if not journal_path.exists():
+        return {"action": "none", **(verify_release_pair(target) if target.exists() else {})}
+    journal = json.loads(journal_path.read_text(encoding="utf-8"))
+    directory = target.parent
+    audit_target = directory / journal["audit"]
+    staged_zip, staged_audit = directory / journal["staged_zip"], directory / journal["staged_audit"]
+    current = _sha(target) if target.exists() else None
+    current_audit = _sha(audit_target) if audit_target.exists() else None
+    if current == journal["new_zip_sha256"] and (
+            current_audit == journal["new_audit_sha256"]
+            or (staged_audit.exists() and _sha(staged_audit) == journal["new_audit_sha256"])):
+        if current_audit != journal["new_audit_sha256"]:
+            os.replace(staged_audit, audit_target)
+        action = "rolled_forward"
+    elif current == journal["old_zip_sha256"] and current_audit == journal["old_audit_sha256"]:
+        action = "rolled_back"  # nothing was published; the old pair is intact
+    else:
+        backups = journal.get("backups", {})
+        zip_backup, audit_backup = backups.get("zip"), backups.get("audit")
+        if not (zip_backup and audit_backup and Path(zip_backup).exists() and Path(audit_backup).exists()
+                and _sha(Path(zip_backup)) == journal["old_zip_sha256"]
+                and _sha(Path(audit_backup)) == journal["old_audit_sha256"]):
+            raise ReleaseError(f"cannot recover {target.name}: state matches neither the old nor the new release "
+                               "and no verified hash-qualified backup is recorded")
+        shutil.copy2(zip_backup, target.with_name(target.name + ".restore"))
+        shutil.copy2(audit_backup, audit_target.with_name(audit_target.name + ".restore"))
+        os.replace(target.with_name(target.name + ".restore"), target)
+        os.replace(audit_target.with_name(audit_target.name + ".restore"), audit_target)
+        action = "restored_from_backup"
+    for leftover in (staged_zip, staged_audit):
+        leftover.unlink(missing_ok=True)
+    journal_path.unlink()
+    return {"action": action, **verify_release_pair(target)}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--ticker", default="1785")
@@ -130,6 +245,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--archive", type=Path, default=Path("data/historical_audit/raw"))
     parser.add_argument("--conference-root", type=Path, default=Path("data/historical-conference-pdfs"))
     parser.add_argument("--packages", type=Path, default=Path("data/historical_audit/packages"))
+    parser.add_argument("--check-release", action="store_true",
+                        help="only recover/validate the strict ZIP + audit sidecar pair, then exit")
     args = parser.parse_args(argv)
 
     stem = f"fintrust_{args.ticker}"
@@ -140,6 +257,18 @@ def main(argv: list[str] | None = None) -> int:
     started = datetime.now(timezone.utc)
     report: dict = {"started_at": started.isoformat(), "rebuild": list(selected),
                     "targets": {k: str(v) for k, v in targets.items()}}
+
+    # The existing strict release must be a valid pair (or recoverable) before anything else happens.
+    try:
+        report["existing_release"] = recover_release(all_targets["strict"]) if all_targets["strict"].exists() \
+            or _journal_name(all_targets["strict"]).exists() else {"action": "none", "status": "no_existing_release"}
+    except (ReleaseError, Exception) as exc:  # noqa: BLE001 - any doubt about the pair fails closed
+        print(json.dumps({**report, "status": "failed_existing_release_invalid", "error": f"{type(exc).__name__}: {exc}"},
+                         ensure_ascii=False, indent=2, default=str))
+        return 1
+    if args.check_release:
+        print(json.dumps({**report, "status": "release_pair_valid"}, ensure_ascii=False, indent=2, default=str))
+        return 0
 
     untouched = {name: path for name, path in all_targets.items() if name not in targets and path.exists()}
     report["untouched"] = {name: {"path": str(path), "sha256": _sha(path), "bytes": path.stat().st_size}
@@ -163,6 +292,11 @@ def main(argv: list[str] | None = None) -> int:
             if _sha(backup) != digest:
                 raise SystemExit(f"backup {backup} does not match {source}")
             report["previous"][source.name] = {"path": str(backup), "sha256": digest, "bytes": backup.stat().st_size}
+    strict_backups = {}
+    if "strict" in targets:
+        for kind, source in (("zip", targets["strict"]), ("audit", _audit_name(targets["strict"]))):
+            if source.name in report["previous"]:
+                strict_backups[kind] = report["previous"][source.name]["path"]
 
     builder = ResearchPackageBuilder(HistoricalAuditRepository(str(args.database)), RawEvidenceArchive(args.archive),
                                      conference_repository=FileConferencePdfArchiveRepository(args.conference_root),
@@ -196,6 +330,7 @@ def main(argv: list[str] | None = None) -> int:
                     report["standalone" if label == "zip" else "extracted"][name] = json.loads(completed.stdout)
         if "strict" in temporary:
             report["strict_checks"] = check_strict(temporary["strict"], args.as_of, temp_audit)
+            stage_audit(temp_audit, targets["strict"])  # fully staged pair before any publication
         if "full" in temporary:
             report["conference_provenance"] = check_conference(temporary["full"], args.conference_root, args.ticker)
         for name, path in untouched.items():  # the package not being rebuilt must not have changed meanwhile
@@ -208,14 +343,20 @@ def main(argv: list[str] | None = None) -> int:
         report["error"] = f"{type(exc).__name__}: {exc}"
         print(json.dumps(report, ensure_ascii=False, indent=2, default=str))
         return 1
-    for name, path in temporary.items():
-        os.replace(path, targets[name])
-    if temp_audit is not None:
-        audit = json.loads(temp_audit.read_text(encoding="utf-8"))
-        audit["package_file"] = targets["strict"].name
-        _audit_name(targets["strict"]).write_text(json.dumps(audit, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-                                                   encoding="utf-8")
-        temp_audit.unlink()
+    if "full" in temporary:
+        os.replace(temporary["full"], targets["full"])  # single artifact: one atomic rename
+    if "strict" in temporary:
+        try:
+            report["release_pair"] = publish_release(temporary["strict"], temp_audit, targets["strict"], strict_backups)
+        except Exception as exc:  # noqa: BLE001
+            try:
+                report["recovery"] = recover_release(targets["strict"])
+            except Exception as recovery_error:  # noqa: BLE001
+                report["recovery_error"] = f"{type(recovery_error).__name__}: {recovery_error}"
+            report["status"] = "failed_publication"
+            report["error"] = f"{type(exc).__name__}: {exc}"
+            print(json.dumps(report, ensure_ascii=False, indent=2, default=str))
+            return 1
     report["final"] = {name: {"path": str(target.resolve()), "sha256": _sha(target), "bytes": target.stat().st_size}
                        for name, target in all_targets.items() if target.exists()}
     report["status"] = "replaced"

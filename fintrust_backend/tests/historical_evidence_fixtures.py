@@ -138,3 +138,41 @@ class FakeBook:
 
 def fake_open_workbook(*, file_contents: bytes, **_: Any) -> FakeBook:
     return FakeBook(file_contents)
+
+
+def repack_package(source, target, replace: dict[str, bytes]):
+    """Rewrite a research ZIP with ``replace`` applied and every checksum/manifest hash recomputed, so that only
+    the semantic verifier can reject it (used by the independent-verification negative tests)."""
+    import hashlib
+    import zipfile
+
+    root = "fintrust_historical_research_dataset/"
+    with zipfile.ZipFile(source) as archive:
+        files = {name[len(root):]: archive.read(name) for name in archive.namelist()}
+    files.update(replace)
+    listed = {n: d for n, d in files.items() if n not in {"manifest.json", "validation/checksums.sha256"}}
+    checksums = "".join(f"{hashlib.sha256(d).hexdigest()}  {n}\n" for n, d in sorted(listed.items())).encode()
+    manifest = json.loads(files["manifest.json"])
+    manifest["checksums_sha256"] = manifest["content_digest"] = hashlib.sha256(checksums).hexdigest()
+    manifest["files"] = [{**entry, "sha256": hashlib.sha256(files[entry["path"]]).hexdigest(),
+                          "bytes": len(files[entry["path"]])} for entry in manifest["files"]]
+    files["validation/checksums.sha256"], files["manifest.json"] = checksums, json.dumps(manifest).encode()
+    with zipfile.ZipFile(target, "w") as archive:
+        for name, data in sorted(files.items()):
+            archive.writestr(root + name, data)
+    return target
+
+
+def mutate_csv(data: bytes, match: dict[str, str], changes: dict[str, str]) -> bytes:
+    """Change ``changes`` in the first CSV row whose fields equal ``match``; the header order is kept."""
+    import csv
+    import io
+
+    rows = list(csv.DictReader(io.StringIO(data.decode("utf-8"))))
+    target = next(row for row in rows if all(row[k] == v for k, v in match.items()))
+    target.update(changes)
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, list(rows[0]), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+    return buffer.getvalue().encode("utf-8")

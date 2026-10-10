@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import html
 import io
 import json
 import re
@@ -172,6 +173,65 @@ def _ts(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+# ---------------------------------------------------------------- independent disclosure parsing
+# The strict verifier re-reads the official MOPS restatement notices itself (no producer code): the notice's own
+# 序號/發言日期/發言時間, its subject (個體 vs 合併), and the 重編前/重編後 tables in 仟元 with ROC-year columns.
+_ROC_COLUMN = re.compile(r"(\d{3})(?:年|\.12\.31)")
+_AMOUNT = re.compile(r"\(?-?[\d,]+\)?")
+_DATA_LINE = re.compile(r"^\s*([^\s\d()\-][^\t ]*)\s+((?:\(?-?[\d,]+\)?\s*)+)$")
+# Independent label table: the notice lines that can state each summary metric.
+SUMMARY_METRIC_LABELS = {
+    "tpex_operating_revenue": ("revenue", ("營業收入淨額", "營業收入")),
+    "tpex_operating_income": ("operating_income", ("營業淨利", "營業利益")),
+}
+
+
+def _amount(text: str) -> int:
+    value = int(text.strip("()").replace(",", ""))
+    return -value if text.startswith("(") else value
+
+
+def parse_restatement_notice(data: bytes) -> dict:
+    """Parse a MOPS material-information detail page carrying 重編前/重編後 summary tables."""
+    text = html.unescape(re.sub(r"<[^>]+>", "\n", data.decode("utf-8", "replace")))
+    seq = re.search(r"序號\s*(\d+)", text)
+    day = re.search(r"發言日期\s*(\d{2,3})/(\d{2})/(\d{2})", text)
+    clock = re.search(r"發言時間\s*(\d{2}):(\d{2}):(\d{2})", text)
+    subject = re.search(r"主旨\s*\n\s*([^\n]+)", text)
+    if not (seq and day and clock and subject):
+        raise PackageVerificationError("disclosure is not a parseable MOPS material-information notice")
+    year, month, mday = int(day.group(1)) + 1911, int(day.group(2)), int(day.group(3))
+    published = datetime(year, month, mday, *(int(clock.group(i)) for i in (1, 2, 3)), tzinfo=_TAIPEI)
+    subject_text = subject.group(1)
+    scope = "consolidated" if "合併" in subject_text else "individual" if "個體" in subject_text else "unknown"
+    values: dict[tuple[str, str, str, int], int] = {}
+    side = section = None
+    years: list[int] = []
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith(("重編前", "重編後")):
+            if "仟元" not in stripped:
+                raise PackageVerificationError("restatement table without a 仟元 (TWD thousand) unit")
+            side = "pre" if stripped.startswith("重編前") else "post"
+            section = "income" if "損益" in stripped else "balance" if "資產負債" in stripped else "other"
+            years = []
+            continue
+        if side is None:
+            continue
+        columns = _ROC_COLUMN.findall(line)
+        if columns and not _ROC_COLUMN.sub("", line).strip():
+            years = [int(c) + 1911 for c in columns]
+            continue
+        match = _DATA_LINE.match(line)
+        if match and years:
+            amounts = _AMOUNT.findall(match.group(2))
+            if len(amounts) == len(years):
+                for fiscal_year, amount in zip(years, amounts):
+                    values[(side, section, match.group(1), fiscal_year)] = _amount(amount)
+    return {"event_key": f"mops:{published:%Y%m%d}:{published:%H%M%S}:{int(seq.group(1))}", "published_at": published,
+            "scope": scope, "values": values}
+
+
 def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
     """Independent semantic re-check of a strict point-in-time package (fails closed)."""
     def fail(message: str) -> None:
@@ -266,23 +326,101 @@ def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
         else:
             fail(f"{what}: unknown artifact_reference_status {row['artifact_reference_status']!r}")
 
-    # 3. Summary observations: contemporaneous disclosure, workbook withheld, report period ended, side consistent.
+    notices: dict[str, dict] = {}
+
+    def notice(digest: str, what: str) -> dict:
+        if digest not in notices:
+            if digest not in raw_hashes:
+                fail(f"{what}: disclosure {digest[:12]}… is not included evidence")
+            try:
+                notices[digest] = parse_restatement_notice(files[raw_hashes[digest]])
+            except PackageVerificationError as exc:
+                fail(f"{what}: {exc}")
+        return notices[digest]
+
+    # 8. Restatement comparisons: re-read every row from the included official notice.
+    comparisons = _csv(files, "data/restatement_comparisons.csv")
+    for row in comparisons:
+        what = f"comparison {row['period']}/{row['statement_scope']}/{row['pre_label']}"
+        effective = _ts(row["disclosed_at"])
+        if effective >= cutoff:
+            fail("restatement comparison disclosed after the cutoff")
+        resolve_disclosure(row["content_hash"], effective, what)
+        parsed = notice(row["content_hash"], what)
+        if parsed["event_key"] != row["announcement_key"] or parsed["published_at"] != effective:
+            fail(f"{what}: announcement identity/time disagrees with the notice itself")
+        if parsed["scope"] != row["statement_scope"] or row["published_unit"] != "TWD_thousand":
+            fail(f"{what}: scope or unit disagrees with the notice")
+        section = {"income_statement": "income", "balance_sheet": "balance"}.get(row["statement_type"], "other")
+        year = int(row["fiscal_year"])
+        for side, label, column in (("pre", row["pre_label"], "pre_restatement_value"),
+                                    ("post", row["post_label"] or row["pre_label"], "post_restatement_value")):
+            stated = parsed["values"].get((side, section, label, year))
+            if row[column] and (stated is None or stated != int(row[column])):
+                fail(f"{what}: {column} {row[column]} is not what the notice states ({stated})")
+
+    # 3. Summary observations, verified independently of the producer's side_consistency flag:
+    #    metric/unit/period structure, framework, evidence identity, the notice's own scope, the amount and the
+    #    restatement side(s) that actually state it, the side a report of that period must carry, and the
+    #    matching comparison row.
     for row in _csv(files, "data/historical_summaries.csv"):
         what = f"summary {row['report_period']}/{row['fiscal_year']}/{row['source_metric_code']}"
         if row["evidence_type"] != "official_disclosed_observation" or row["source_url"] or row["content_hash"]:
             fail(f"{what}: later workbook reference not withheld")
-        if row["side_consistency"] != "consistent" or row["pit_evidence_kind"] != "restatement_disclosure":
-            fail(f"{what}: no consistent contemporaneous disclosure")
+        if row["pit_evidence_kind"] != "restatement_disclosure":
+            fail(f"{what}: no contemporaneous disclosure")
+        metric = SUMMARY_METRIC_LABELS.get(row["source_metric_code"])
+        if metric is None or metric[0] != row["canonical_metric"]:
+            fail(f"{what}: metric {row['source_metric_code']}->{row['canonical_metric']} has no independent mapping")
+        try:
+            fiscal_year, report_year, value = int(row["fiscal_year"]), int(row["report_period"][:4]), int(row["value"])
+        except ValueError:
+            fail(f"{what}: malformed period or value")
+        if row["period"] != f"{fiscal_year}FY" or not row["report_period"].endswith("FY"):
+            fail(f"{what}: period fields disagree")
+        if fiscal_year != report_year - {"current_period": 0, "prior_year_comparative": 1}.get(row["observation_role"], -99):
+            fail(f"{what}: fiscal year does not fit observation role {row['observation_role']}")
+        if (row["published_unit"], row["normalized_unit"]) != ("TWD_thousand", "TWD") \
+                or row["normalized_value"] != str(value * 1000):
+            fail(f"{what}: unit or normalized value disagrees (TWD thousand -> TWD)")
+        if row["accounting_framework"] != ("TW_GAAP" if fiscal_year <= 2012 else "TIFRS"):
+            fail(f"{what}: accounting framework does not fit fiscal year {fiscal_year}")
         effective = _ts(row["effective_available_at"])
-        if effective >= cutoff or datetime(int(row["report_period"][:4]) + 1, 1, 1, tzinfo=_TAIPEI) > cutoff:
+        report_end = datetime(report_year + 1, 1, 1, tzinfo=_TAIPEI)
+        if effective >= cutoff or report_end > cutoff:
             fail(f"{what}: not available before the cutoff")
         resolve_disclosure(row["pit_evidence_hash"], effective, what)
-
-    for row in _csv(files, "data/restatement_comparisons.csv"):
-        effective = _ts(row["disclosed_at"])
-        if effective >= cutoff:
-            fail("restatement comparison disclosed after the cutoff")
-        resolve_disclosure(row["content_hash"], effective, f"comparison {row['period']}/{row['canonical_metric']}")
+        document = documents[row["pit_evidence_hash"]]
+        if row["pit_evidence_url"] != document["source_url"]:
+            fail(f"{what}: evidence URL disagrees with the included notice")
+        parsed = notice(row["pit_evidence_hash"], what)
+        if parsed["event_key"] != row["pit_evidence_ref"]:
+            fail(f"{what}: evidence reference {row['pit_evidence_ref']} is not the included notice {parsed['event_key']}")
+        if parsed["published_at"] != effective or _ts(document["document_available_at"]) != effective:
+            fail(f"{what}: effective availability is not the notice's own publication time")
+        if parsed["scope"] != row["statement_scope"]:
+            fail(f"{what}: statement scope {row['statement_scope']} disagrees with the notice ({parsed['scope']})")
+        stated = {(side, label): amount for (side, section, label, year), amount in parsed["values"].items()
+                  if section == "income" and year == fiscal_year and label in metric[1]}
+        sides = [side for side in ("pre", "post") if any(a == value for (s, _), a in stated.items() if s == side)]
+        if not sides:
+            fail(f"{what}: value {value} is not stated for {fiscal_year} {metric[0]} in the notice")
+        if row["pit_evidence_side"] != "+".join(sides):
+            fail(f"{what}: pit_evidence_side {row['pit_evidence_side']!r} but the notice states the value on {'+'.join(sides)}")
+        labels = {label for (side, label), amount in stated.items() if amount == value}
+        if row["pit_evidence_label"] not in labels:
+            fail(f"{what}: pit_evidence_label {row['pit_evidence_label']!r} is not the notice line stating the value")
+        expected = "pre" if report_end <= parsed["published_at"] else "post"
+        if expected not in sides or row["side_consistency"] != "consistent":
+            fail(f"{what}: a {row['report_period']} report must carry the {expected} side; the notice states "
+                 f"{'+'.join(sides)} (side_consistency={row['side_consistency']!r})")
+        if not any(c["announcement_key"] == row["pit_evidence_ref"] and c["content_hash"] == row["pit_evidence_hash"]
+                   and c["period"] == row["period"] and c["statement_scope"] == row["statement_scope"]
+                   and c["accounting_framework"] == row["accounting_framework"]
+                   and c["canonical_metric"] == row["canonical_metric"] and c["published_unit"] == row["published_unit"]
+                   and str(value) in (c["pre_restatement_value"] if s == "pre" else c["post_restatement_value"] for s in sides)
+                   for c in comparisons):
+            fail(f"{what}: no matching restatement_comparisons row")
 
     for row in _csv(files, "data/publication_timeline.csv"):  # 6. events
         if _ts(row["available_from"]) >= cutoff:
