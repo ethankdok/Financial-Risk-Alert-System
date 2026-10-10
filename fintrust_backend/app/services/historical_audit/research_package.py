@@ -1,10 +1,17 @@
 """Portable, deterministic research dataset package (ZIP) for one historical case.
 
-The package needs no database, FinTrust code or cloud credentials: CSV/JSON
-datasets, SHA-256-verified original evidence, explicit missing-evidence rows,
-contracts and a standard-library verifier. Given unchanged inputs and the same
-``generated_at``, the ZIP is byte-identical; across different ``generated_at``
-values ``content_digest`` stays identical (logical reproducibility).
+Two explicit modes (package schema 1.1):
+
+- ``retrospective``: everything currently recovered, including later
+  restatements, later disclosures and current archival copies. Not suitable as
+  input to a historical predictive backtest.
+- ``strict_point_in_time`` (requires ``as_of``): only evidence verifiably public
+  before the cutoff, in every dataset, raw file, contract and metadata field; see
+  ``strict_package``. The build fails closed if any post-cutoff date remains.
+
+The package needs no database, FinTrust code or cloud credentials. Given
+unchanged inputs and the same ``generated_at`` the ZIP is byte-identical;
+``content_digest`` is independent of ``generated_at``.
 """
 
 from __future__ import annotations
@@ -15,12 +22,14 @@ import io
 import json
 import zipfile
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 from app.services.historical_audit.archive import RawEvidenceArchive
 from app.services.historical_audit.case_registry import get_case
+from app.services.historical_audit.conference_coverage import latest_coverage
+from app.services.historical_audit.conference_package import build_conference_datasets
 from app.services.historical_audit.evidence_export import (
     COMPARISON_FIELDS,
     COVERAGE_FIELDS,
@@ -34,26 +43,25 @@ from app.services.historical_audit.evidence_export import (
     source_inventory,
 )
 from app.services.historical_audit.export import CONTRACT_VERSION, EXPORT_FIELDS, build_export_records
-from app.services.historical_audit.models import VersionPolicy, iso, utc_now
-from app.services.historical_audit.package_verify import (
-    CHECKSUMS,
-    MANIFEST,
-    PACKAGE_ROOT,
-    safe_relative_path,
-)
+from app.services.historical_audit.models import VersionPolicy, as_of_cutoff, iso, utc_now
+from app.services.historical_audit.package_verify import CHECKSUMS, MANIFEST, PACKAGE_ROOT, safe_relative_path
 from app.services.historical_audit.quality import eps_unit_investigation, quality_report, unmapped_concept_report
 from app.services.historical_audit.repository import HistoricalAuditRepository
+from app.services.historical_audit.strict_package import build_strict, leakage_check
 
 
-PACKAGE_SCHEMA_VERSION = "1.0"
+PACKAGE_SCHEMA_VERSION = "1.1"
+MODES = ("retrospective", "strict_point_in_time")
 DOCS_ROOT = Path(__file__).resolve().parents[4] / "docs" / "data"
-CONTRACT_DOCS = (
+RETROSPECTIVE_CONTRACTS = (
     "HISTORICAL_FINANCIAL_FACTS_CONTRACT.md",
     "HISTORICAL_RESEARCH_PACKAGE_CONTRACT.md",
     "HISTORICAL_SOURCE_EVIDENCE_INVENTORY.md",
     "HISTORICAL_PUBLICATION_TIMELINE.md",
 )
-CONFERENCE_CONTRACT = "JSD_INPUT_CONTRACT.md"
+# Case narrative documents describe later events, so strict packages ship only generic contracts.
+STRICT_CONTRACTS = ("HISTORICAL_RESEARCH_PACKAGE_CONTRACT.md",)
+CONFERENCE_CONTRACTS = ("JSD_INPUT_CONTRACT.md", "HISTORICAL_1785_CONFERENCE_COVERAGE.md")
 FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 VERSION_FIELDS = (
     "filing_version_id", "ticker", "period", "fiscal_year", "statement_scope", "statement_scope_evidence",
@@ -63,12 +71,22 @@ VERSION_FIELDS = (
     "raw_evidence_included",
 )
 MISSING_FIELDS = ("fiscal_year", "evidence_kind", "status", "detail")
-CONFERENCE_INDEX_FIELDS = (
-    "ticker", "announcement_year", "filename", "period", "document_type", "language", "sha256",
-    "jsd_ready", "readiness_issues", "package_raw_path", "raw_evidence_included",
-)
-_EXTENSION_BY_FORMAT = {"xbrl_instance": "xml", "inline_xbrl": "html", "zip": "zip", "pdf": "pdf",
-                        "xls": "xls", "html": "html"}
+STRICT_FIELD_DEFINITIONS = """# Strict point-in-time field definitions
+
+This package contains only evidence verifiably public before `manifest.parameters.as_of`
+(a date means the end of that day, Asia/Taipei). Unknown availability is excluded.
+
+- `data/financial_facts.*`: facts contract fields. `effective_available_at` is the earliest verified time:
+  `filing_available_at` (the filing artifact itself) or `observation_available_at` (an official disclosure stating
+  the identical value). With `artifact_reference_status = withheld_not_public_at_cutoff` the later filing artifact's
+  identity is withheld; `availability_evidence_*` names the disclosure that dates the value.
+- `data/filing_versions.csv`: only artifacts whose own availability is verified before the cutoff.
+- `data/source_inventory.csv`: only single-publication official notices published before the cutoff.
+- `data/restatement_comparisons.csv`, `data/historical_summaries.csv`: rows public before the cutoff.
+- `data/publication_timeline.csv`: events public before the cutoff (`available_from`).
+- `validation/provenance.csv`: retrieval metadata of included raw evidence (retrieval happened after the cutoff).
+- No conference documents are included unless their public availability is verified before the cutoff.
+"""
 
 
 class ResearchPackageError(RuntimeError):
@@ -84,7 +102,18 @@ class PackageParameters:
     version_policy: VersionPolicy = "all"
     include_raw_evidence: bool = True
     include_conference: bool = False
-    conference_years: list[int] | None = None
+    include_context_years: bool = False
+    mode: str | None = None
+
+    def resolved_mode(self) -> str:
+        mode = self.mode or ("strict_point_in_time" if self.as_of else "retrospective")
+        if mode not in MODES:
+            raise ResearchPackageError(f"Unknown package mode {mode}")
+        if mode == "strict_point_in_time" and not self.as_of:
+            raise ResearchPackageError("strict_point_in_time packages require as_of")
+        if mode == "retrospective" and self.as_of:
+            raise ResearchPackageError("as_of filtering is only offered in strict_point_in_time mode")
+        return mode
 
 
 @dataclass
@@ -116,7 +145,8 @@ def _json_bytes(payload: Any) -> bytes:
 
 
 def _evidence_folder(category: str) -> str:
-    if category in {"official_original_filing", "official_restated_filing", "official_filing_unknown_revision"}:
+    if category in {"official_original_filing", "official_restated_filing", "official_filing_unknown_revision",
+                    "official_filing_pdf"}:
         return "financial_filings"
     if category == "official_historical_summary":
         return "official_summaries"
@@ -131,39 +161,77 @@ class ResearchPackageBuilder:
         self.conference_repository = conference_repository
         self.conference_root = Path(conference_root) if conference_root else None
 
-    # ------------------------------------------------------------- build
     def build(self, parameters: PackageParameters, output_zip: str | Path, *,
               generated_at: datetime | None = None) -> dict[str, Any]:
+        mode = parameters.resolved_mode()
         case = self.repository.get_case(parameters.ticker) or get_case(parameters.ticker)
         builder = _Builder()
-        missing: list[dict[str, Any]] = []
-        warnings: list[str] = []
-        p = parameters
+        if mode == "strict_point_in_time":
+            counts, completeness, extra = self._strict(builder, parameters)
+        else:
+            counts, completeness, extra = self._retrospective(builder, parameters)
+        builder.add("validation/verify_package.py", Path(__file__).with_name("package_verify.py").read_bytes(), "validation")
+        readme = self._readme(case, parameters, mode, counts, completeness)
+        builder.add("README.md", readme.encode("utf-8"), "readme")
 
-        facts = build_export_records(self.repository, p.ticker, p.start_year, p.end_year,
-                                     as_of=p.as_of, version_policy=p.version_policy)
+        checksums = "".join(f"{hashlib.sha256(builder.files[p]).hexdigest()}  {p}\n" for p in sorted(builder.files)).encode("utf-8")
+        content_digest = hashlib.sha256(checksums).hexdigest()
+        manifest = {
+            "package": PACKAGE_ROOT,
+            "package_schema_version": PACKAGE_SCHEMA_VERSION,
+            "mode": mode,
+            "suitable_for_historical_backtest": mode == "strict_point_in_time",
+            "cutoff_utc": iso(as_of_cutoff(parameters.as_of)) if mode == "strict_point_in_time" else None,
+            "generator": "fintrust_backend/app/services/historical_audit/research_package.py",
+            "generated_at": iso(generated_at or utc_now()),
+            "parameters": {
+                "ticker": parameters.ticker, "start_year": parameters.start_year, "end_year": parameters.end_year,
+                "as_of": parameters.as_of, "version_policy": parameters.version_policy,
+                "include_raw_evidence": parameters.include_raw_evidence,
+                "include_conference": parameters.include_conference,
+                "include_context_years": parameters.include_context_years,
+            },
+            "case": {"ticker": case.ticker, "company": case.company_name, "market": case.market},
+            "contracts": {"historical_financial_facts": CONTRACT_VERSION, "research_package": PACKAGE_SCHEMA_VERSION},
+            "counts": counts,
+            "completeness": completeness,
+            **extra,
+            "integrity": {"raw_evidence_sha256_verified_at_build": True},
+            "checksums_sha256": content_digest,
+            "content_digest": content_digest,
+            "files": [{"path": p, "sha256": hashlib.sha256(builder.files[p]).hexdigest(), "bytes": len(builder.files[p]),
+                       "category": builder.categories[p]} for p in sorted(builder.files)],
+        }
+        builder.files[CHECKSUMS] = checksums
+        builder.files[MANIFEST] = _json_bytes(manifest)
+        self._write_zip(builder.files, Path(output_zip))
+        return {"output": str(output_zip), "mode": mode, "content_digest": content_digest, "files": len(builder.files),
+                "counts": counts, "completeness": completeness, **extra}
+
+    # ------------------------------------------------------ retrospective
+    def _retrospective(self, builder: _Builder, p: PackageParameters):
+        missing: list[dict[str, Any]] = []
+        facts = build_export_records(self.repository, p.ticker, p.start_year, p.end_year, version_policy=p.version_policy)
         builder.add("data/financial_facts.csv", _csv_bytes(facts, EXPORT_FIELDS), "dataset")
         builder.add("data/financial_facts.json", _json_bytes({
             "contract": "fintrust.historical_financial_facts", "contract_version": CONTRACT_VERSION,
-            "fields": list(EXPORT_FIELDS), "record_count": len(facts), "records": facts}), "dataset")
+            "mode": "retrospective", "fields": list(EXPORT_FIELDS), "record_count": len(facts), "records": facts}), "dataset")
 
         versions = self.repository.list_filing_versions(p.ticker, p.start_year, p.end_year)
         version_rows = []
         for version in versions:
             row = {name: version.get(name) for name in VERSION_FIELDS}
-            raw_path = self._include_raw(builder, version["raw_storage_path"], version["content_hash"],
-                                         "financial_filings", version["period"], p, missing, version["fiscal_year"],
+            raw_path = self._include_raw(builder, version["raw_storage_path"], version["content_hash"], "financial_filings",
+                                         version["period"], p, missing, version["fiscal_year"],
                                          f"{version['source_kind']} {version['filing_version_type']} {version['statement_scope']}")
             row["package_raw_path"] = raw_path
             row["raw_evidence_included"] = raw_path is not None
             version_rows.append(row)
         builder.add("data/filing_versions.csv", _csv_bytes(version_rows, VERSION_FIELDS), "dataset")
 
-        summaries = [r for r in list_summary_observations(self.repository, p.ticker, as_of=p.as_of)
-                     if p.start_year <= r["fiscal_year"] <= p.end_year]
+        summaries = [r for r in list_summary_observations(self.repository, p.ticker) if p.start_year <= r["fiscal_year"] <= p.end_year]
         builder.add("data/historical_summaries.csv", _csv_bytes(summaries, SUMMARY_FIELDS), "dataset")
-        comparisons = [r for r in list_restatement_comparisons(self.repository, p.ticker, as_of=p.as_of)
-                       if p.start_year <= r["fiscal_year"] <= p.end_year]
+        comparisons = [r for r in list_restatement_comparisons(self.repository, p.ticker) if p.start_year <= r["fiscal_year"] <= p.end_year]
         builder.add("data/restatement_comparisons.csv", _csv_bytes(comparisons, COMPARISON_FIELDS), "dataset")
         timeline = list_publication_timeline(self.repository, p.ticker)
         builder.add("data/publication_timeline.csv", _csv_bytes(timeline, TIMELINE_FIELDS), "dataset")
@@ -174,100 +242,112 @@ class ResearchPackageBuilder:
 
         with self.repository.connect() as connection:
             documents = [dict(row) for row in connection.execute(
-                "SELECT * FROM historical_source_documents WHERE ticker = ? ORDER BY source_key, content_hash",
-                (p.ticker,)).fetchall()]
+                "SELECT * FROM historical_source_documents WHERE ticker = ? ORDER BY source_key, content_hash", (p.ticker,)).fetchall()]
             attempts = [dict(row) for row in connection.execute(
                 """SELECT fiscal_year, status, source_url, error FROM historical_acquisition_attempts
                 WHERE ticker = ? AND fiscal_year BETWEEN ? AND ? AND status != 'available'
-                GROUP BY fiscal_year, status, source_url ORDER BY fiscal_year""",
-                (p.ticker, p.start_year, p.end_year)).fetchall()]
+                GROUP BY fiscal_year, status, source_url ORDER BY fiscal_year""", (p.ticker, p.start_year, p.end_year)).fetchall()]
         version_hashes = {v["content_hash"] for v in versions}
         for document in documents:
             if document["content_hash"] in version_hashes:
-                continue  # already included as a filing artifact
+                continue
             self._include_raw(builder, document["raw_storage_path"], document["content_hash"],
-                              _evidence_folder(document["source_category"]), document["source_key"], p, missing,
-                              None, document["source_key"])
+                              _evidence_folder(document["source_category"]), document["source_key"], p, missing, None,
+                              document["source_key"])
         for attempt in attempts:
-            missing.append({"fiscal_year": attempt["fiscal_year"], "evidence_kind": "acquisition_attempt",
-                            "status": attempt["status"],
+            missing.append({"fiscal_year": attempt["fiscal_year"], "evidence_kind": "acquisition_attempt", "status": attempt["status"],
                             "detail": f"{attempt['source_url'] or '(offline archive reprocess)'}: {attempt['error'] or ''}".strip()})
         for row in coverage:
             for gap in filter(None, (row["remaining_gaps"] or "").split("; ")):
-                missing.append({"fiscal_year": row["fiscal_year"], "evidence_kind": "coverage_gap",
-                                "status": "unresolved", "detail": gap})
+                missing.append({"fiscal_year": row["fiscal_year"], "evidence_kind": "coverage_gap", "status": "unresolved", "detail": gap})
 
-        conference = self._conference(builder, p, missing, warnings)
-
+        conference = self._conference(builder, p, missing)
         report = quality_report(self.repository, self.archive, p.ticker, p.start_year, p.end_year)
         report["eps_unit_investigation"] = eps_unit_investigation(self.repository, self.archive, p.ticker)
         report["unmapped_concepts"] = unmapped_concept_report(self.repository, p.ticker, p.start_year, p.end_year)
+        report["conference"] = conference
         builder.add("validation/quality_report.json", _json_bytes(report), "validation")
         builder.add("data/missing_evidence.csv", _csv_bytes(
-            sorted(missing, key=lambda m: (m["fiscal_year"] or 0, m["evidence_kind"], m["detail"])), MISSING_FIELDS),
-            "dataset")
-
-        verifier = Path(__file__).with_name("package_verify.py").read_bytes()
-        builder.add("validation/verify_package.py", verifier, "validation")
-        for name in CONTRACT_DOCS + ((CONFERENCE_CONTRACT,) if conference["included"] else ()):
-            path = DOCS_ROOT / name
-            if path.is_file():
-                builder.add(f"contracts/{name}", path.read_bytes(), "contract")
-            else:
-                warnings.append(f"contract document not found: {name}")
-
+            sorted(missing, key=lambda m: (m["fiscal_year"] or 0, m["evidence_kind"], m["detail"] or "")), MISSING_FIELDS), "dataset")
+        notes = self._contracts(builder, RETROSPECTIVE_CONTRACTS + (CONFERENCE_CONTRACTS if conference["status"] == "included" else ()))
         counts = {
             "financial_facts": len(facts),
             "financial_facts_point_in_time_eligible": sum(1 for f in facts if f["point_in_time_eligible"]),
             "filing_versions": len(version_rows),
             "filing_versions_raw_included": sum(1 for r in version_rows if r["raw_evidence_included"]),
-            "historical_summaries": len(summaries),
-            "restatement_comparisons": len(comparisons),
-            "publication_events": len(timeline),
-            "source_inventory": len(inventory),
+            "historical_summaries": len(summaries), "restatement_comparisons": len(comparisons),
+            "publication_events": len(timeline), "source_inventory": len(inventory),
             "missing_evidence_rows": len(missing),
-            "conference_documents": conference["documents"],
+            "raw_evidence_files": sum(1 for path in builder.files if path.startswith("raw_evidence/")),
         }
-        readme = self._readme(case, p, counts, conference, warnings)
-        builder.add("README.md", readme.encode("utf-8"), "readme")
+        completeness = {"status": "partial" if missing else "complete", "conference_evidence": conference["status"], "notes": notes}
+        return counts, completeness, {"conference": conference}
 
-        checksum_lines = "".join(
-            f"{hashlib.sha256(builder.files[path]).hexdigest()}  {path}\n" for path in sorted(builder.files))
-        checksums = checksum_lines.encode("utf-8")
-        content_digest = hashlib.sha256(checksums).hexdigest()
-        manifest = {
-            "package": PACKAGE_ROOT,
-            "package_schema_version": PACKAGE_SCHEMA_VERSION,
-            "generator": "fintrust_backend/app/services/historical_audit/research_package.py",
-            "generated_at": iso(generated_at or utc_now()),
-            "parameters": {
-                "ticker": p.ticker, "start_year": p.start_year, "end_year": p.end_year, "as_of": p.as_of,
-                "version_policy": p.version_policy, "include_raw_evidence": p.include_raw_evidence,
-                "include_conference": p.include_conference,
-            },
-            "case": {"ticker": case.ticker, "company": case.company_name, "market": case.market},
-            "contracts": {"historical_financial_facts": CONTRACT_VERSION, "research_package": PACKAGE_SCHEMA_VERSION},
-            "counts": counts,
-            "completeness": {
-                "status": "partial" if missing else "complete",
-                "conference_evidence": conference["status"],
-                "notes": warnings,
-            },
-            "checksums_sha256": content_digest,
-            "content_digest": content_digest,
-            "files": [
-                {"path": path, "sha256": hashlib.sha256(builder.files[path]).hexdigest(),
-                 "bytes": len(builder.files[path]), "category": builder.categories[path]}
-                for path in sorted(builder.files)
-            ],
+    def _conference(self, builder: _Builder, p: PackageParameters, missing: list[dict[str, Any]]) -> dict[str, Any]:
+        if not p.include_conference:
+            return {"status": "not_requested"}
+        if self.conference_repository is None:
+            missing.append({"fiscal_year": None, "evidence_kind": "conference_pdf", "status": "unavailable",
+                            "detail": "no conference PDF archive configured"})
+            return {"status": "unavailable_no_archive_configured"}
+        stats = build_conference_datasets(
+            add=builder.add, csv_bytes=_csv_bytes, repository=self.conference_repository, root=self.conference_root,
+            ticker=p.ticker, start_year=p.start_year, end_year=p.end_year, include_context=p.include_context_years,
+            include_raw=p.include_raw_evidence, coverage_rows=latest_coverage(self.repository, p.ticker),
+            archive=self.archive, missing=missing)
+        if stats["documents"] == 0:
+            missing.append({"fiscal_year": None, "evidence_kind": "conference_pdf", "status": "unavailable",
+                            "detail": f"no archived official conference documents for {p.ticker} in the requested years"})
+        return stats
+
+    # -------------------------------------------------------------- strict
+    def _strict(self, builder: _Builder, p: PackageParameters):
+        cutoff = as_of_cutoff(p.as_of)
+        result = build_strict(add=builder.add, csv_bytes=_csv_bytes, json_bytes=_json_bytes, repository=self.repository,
+                              archive=self.archive, params=p, cutoff=cutoff, include_raw=p.include_raw_evidence)
+        conference_excluded = 0
+        if p.include_conference and self.conference_repository is not None:
+            for year in self.conference_repository.available_years(p.ticker):
+                conference_excluded += len((self.conference_repository.latest_manifest(p.ticker, year) or {}).get("documents", []))
+        builder.add("contracts/STRICT_FIELD_DEFINITIONS.md", STRICT_FIELD_DEFINITIONS.encode("utf-8"), "contract")
+        self._contracts(builder, STRICT_CONTRACTS)
+        problems = leakage_check(builder.files, cutoff)
+        if problems:
+            raise ResearchPackageError(f"Strict package would leak post-cutoff information: {problems[:5]}")
+        counts = {
+            "financial_facts": len(result["facts"]),
+            "financial_facts_point_in_time_eligible": len(result["facts"]),
+            "facts_with_withheld_later_artifact": result["withheld_artifact_facts"],
+            "filing_versions": len(result["versions"]),
+            "historical_summaries": len(result["summaries"]),
+            "restatement_comparisons": len(result["comparisons"]),
+            "publication_events": len(result["timeline"]),
+            "source_inventory": len(result["inventory"]),
+            "raw_evidence_files": sum(1 for path in builder.files if path.startswith("raw_evidence/")),
+            "conference_documents": 0,
         }
-        builder.files[CHECKSUMS] = checksums
-        builder.files[MANIFEST] = _json_bytes(manifest)
-        self._write_zip(builder.files, Path(output_zip))
-        return {"output": str(output_zip), "content_digest": content_digest, "files": len(builder.files),
-                "counts": counts, "completeness": manifest["completeness"]}
+        excluded = {**result["excluded"], "conference_documents": conference_excluded}
+        builder.add("validation/quality_report.json", _json_bytes({
+            "mode": "strict_point_in_time", "cutoff_utc": iso(cutoff), "leakage_check": "passed",
+            "counts": counts, "excluded_by_cutoff_or_unverified_availability": excluded,
+            "raw_evidence_policy": "verified-public filing artifacts and single-publication notices only",
+        }), "validation")
+        completeness = {"status": "point_in_time_subset",
+                        "conference_evidence": "excluded_unverified_availability" if conference_excluded else "none_available",
+                        "notes": []}
+        return counts, completeness, {"excluded_by_cutoff": excluded, "leakage_check": "passed"}
 
-    # ---------------------------------------------------------- helpers
+    # ------------------------------------------------------------ helpers
+    def _contracts(self, builder: _Builder, names: tuple[str, ...]) -> list[str]:
+        notes = []
+        for name in names:
+            path = DOCS_ROOT / name
+            if path.is_file():
+                builder.add(f"contracts/{name}", path.read_bytes(), "contract")
+            else:
+                notes.append(f"contract document not found: {name}")
+        return notes
+
     def _include_raw(self, builder: _Builder, raw_path: str, content_hash: str, folder: str, group: str,
                      p: PackageParameters, missing: list[dict[str, Any]], fiscal_year: int | None, label: str) -> str | None:
         if not p.include_raw_evidence:
@@ -291,106 +371,50 @@ class ResearchPackageBuilder:
         builder.add(package_path, data, "raw_evidence")
         return package_path
 
-    def _conference(self, builder: _Builder, p: PackageParameters, missing: list[dict[str, Any]],
-                    warnings: list[str]) -> dict[str, Any]:
-        result = {"included": False, "status": "not_requested", "documents": 0}
-        if not p.include_conference:
-            return result
-        if self.conference_repository is None:
-            result["status"] = "unavailable_no_archive_configured"
-            missing.append({"fiscal_year": None, "evidence_kind": "conference_pdf", "status": "unavailable",
-                            "detail": "no conference PDF archive configured"})
-            return result
-        from app.services.conference_jsd_corpus_adapter import CORPUS_FIELDS, build_records, to_corpus_rows
-
-        years = p.conference_years or self.conference_repository.available_years(p.ticker)
-        if not years:
-            result["status"] = "unavailable_for_ticker"
-            missing.append({"fiscal_year": None, "evidence_kind": "conference_pdf", "status": "unavailable",
-                            "detail": f"no archived MOPS conference PDFs for {p.ticker}"})
-            return result
-        records = build_records(self.conference_repository, p.ticker, years)
-        index_rows = []
-        for record in records:
-            year = record.provenance["announcement_year"]
-            filename = record.provenance["filename"]
-            raw_path = None
-            source = (self.conference_root / p.ticker / str(year) / filename) if self.conference_root else None
-            if p.include_raw_evidence and source is not None and source.is_file():
-                data = source.read_bytes()
-                if hashlib.sha256(data).hexdigest() == record.record["sha256"]:
-                    raw_path = f"raw_evidence/conference_pdfs/{p.ticker}/{year}/{record.record['sha256']}.pdf"
-                    builder.add(raw_path, data, "conference_raw_evidence")
-                else:
-                    missing.append({"fiscal_year": year, "evidence_kind": "conference_pdf", "status": "failed_integrity",
-                                    "detail": filename})
-            elif p.include_raw_evidence:
-                missing.append({"fiscal_year": year, "evidence_kind": "conference_pdf", "status": "missing_locally",
-                                "detail": filename})
-            index_rows.append({
-                "ticker": p.ticker, "announcement_year": year, "filename": filename,
-                "period": record.record["period"], "document_type": record.record["document_type"],
-                "language": record.record["language"], "sha256": record.record["sha256"],
-                "jsd_ready": record.jsd_ready, "readiness_issues": ";".join(record.readiness_issues),
-                "package_raw_path": raw_path, "raw_evidence_included": raw_path is not None,
-            })
-        index_rows.sort(key=lambda row: (row["announcement_year"], row["filename"]))
-        builder.add("conference/conference_documents.csv", _csv_bytes(index_rows, CONFERENCE_INDEX_FIELDS), "conference")
-        corpus = sorted(to_corpus_rows(records), key=lambda row: (row["period"] or "", row["sha256"]))
-        builder.add("conference/conference_corpus.csv", _csv_bytes(corpus, tuple(CORPUS_FIELDS)), "conference")
-        warnings.append("conference/ holds text evidence for JSD research; it is not financial-statement data")
-        result.update(included=True, status="included", documents=len(index_rows))
-        return result
-
     @staticmethod
-    def _readme(case, p: PackageParameters, counts: dict[str, int], conference: dict[str, Any],
-                warnings: list[str]) -> str:
+    def _readme(case, p: PackageParameters, mode: str, counts: dict[str, Any], completeness: dict[str, Any]) -> str:
+        if mode == "strict_point_in_time":
+            return "\n".join([
+                f"# FinTrust historical research dataset — {case.ticker} {case.company_name} ({case.market}) — STRICT POINT-IN-TIME",
+                "",
+                f"Cutoff: {p.as_of} (end of day, Asia/Taipei). Fiscal years {p.start_year}–{p.end_year}. Version policy: {p.version_policy}.",
+                "",
+                "Only evidence verifiably public before the cutoff is included, in every file. Evidence with unknown or later",
+                "availability (later filings, later notices, summary workbooks, conference presentations) is excluded.",
+                "Field semantics: `contracts/STRICT_FIELD_DEFINITIONS.md`.",
+                "",
+                f"Financial observations: {counts['financial_facts']} ({counts['facts_with_withheld_later_artifact']} dated by an official "
+                "disclosure whose later filing artifact is withheld). "
+                f"Restatement comparison rows: {counts['restatement_comparisons']}. Filing artifacts: {counts['filing_versions']}.",
+                "",
+                "Verify: `python validation/verify_package.py <zip or folder>` (also re-checks the cutoff).",
+                "",
+            ])
         lines = [
-            f"# FinTrust historical research dataset — {case.ticker} {case.company_name} ({case.market})",
+            f"# FinTrust historical research dataset — {case.ticker} {case.company_name} ({case.market}) — RETROSPECTIVE",
             "",
-            f"Fiscal years {p.start_year}–{p.end_year}; as_of: {p.as_of or 'none (all versions, eligibility flagged)'}; "
-            f"version policy: {p.version_policy}. Package schema {PACKAGE_SCHEMA_VERSION}.",
+            f"Fiscal years {p.start_year}–{p.end_year}; version policy {p.version_policy}. Package schema {PACKAGE_SCHEMA_VERSION}.",
+            "",
+            "**Retrospective package: it contains later restatements, later disclosures and current archival copies. Do not",
+            "use it as the input of a historical predictive backtest; use a strict point-in-time package instead.**",
             "",
             "Verify first: `python validation/verify_package.py <this zip or extracted folder>` (standard library only).",
             "",
-            "## Contents",
-            "",
             "| Path | Content |",
             "|---|---|",
-            f"| `data/financial_facts.csv/json` | {counts['financial_facts']} filing-derived facts "
-            f"({counts['financial_facts_point_in_time_eligible']} point-in-time eligible); contract `contracts/HISTORICAL_FINANCIAL_FACTS_CONTRACT.md` |",
-            f"| `data/filing_versions.csv` | {counts['filing_versions']} filing artifacts with original/restated/unknown status and artifact-level availability |",
-            f"| `data/historical_summaries.csv` | {counts['historical_summaries']} TPEx summary observations (summary values only, not filings) |",
-            f"| `data/restatement_comparisons.csv` | {counts['restatement_comparisons']} 重編前/重編後 rows from official notices |",
+            f"| `data/financial_facts.csv/json` | {counts['financial_facts']} filing facts ({counts['financial_facts_point_in_time_eligible']} with verified availability) |",
+            f"| `data/filing_versions.csv` | {counts['filing_versions']} filing artifacts (original / restated / unknown) |",
+            f"| `data/historical_summaries.csv` | {counts['historical_summaries']} TPEx summary observations (not filings) |",
+            f"| `data/restatement_comparisons.csv` | {counts['restatement_comparisons']} 重編前/重編後 rows |",
             f"| `data/publication_timeline.csv` | {counts['publication_events']} official publication events |",
-            "| `data/source_inventory.csv` | every archived source with category and SHA-256 |",
-            "| `data/coverage_matrix.csv` | per-year evidence coverage and remaining gaps |",
-            f"| `data/missing_evidence.csv` | {counts['missing_evidence_rows']} explicitly missing / unverified items (never filled with invented data) |",
-            "| `raw_evidence/financial_filings/` | original official XBRL/PDF filings, named by SHA-256 |",
-            "| `raw_evidence/regulatory_disclosures/` | TPEx / MOPS / TWSE notices and listings |",
-            "| `raw_evidence/official_summaries/` | TPEx 上櫃公司季報 workbooks |",
-            "| `validation/` | quality report, checksums, verifier |",
+            "| `data/source_inventory.csv`, `data/coverage_matrix.csv`, `data/missing_evidence.csv` | inventory, coverage, explicit gaps |",
+            "| `data/conference_*.csv`, `conference/` | official investor-conference documents, page text and coverage (text evidence, not financial data) |",
+            "| `raw_evidence/` | original official files named by SHA-256 |",
+            "| `validation/`, `contracts/` | quality report, checksums, verifier, data contracts |",
             "",
-            "## For case research (Yu-Jing)",
-            "",
-            "`filing_versions.csv` (original vs restated artifacts), `restatement_comparisons.csv`, "
-            "`publication_timeline.csv`, `coverage_matrix.csv`, `missing_evidence.csv` and the original documents in `raw_evidence/`.",
-            "",
-            "## For quantitative research (Ethan)",
-            "",
-            "`financial_facts.*` with `point_in_time_eligible`, `effective_available_at` and "
-            "`availability_evidence_*`; filter with the documented cutoffs. Pre-event (before 2016-05-13) "
-            "strict queries currently have no verified inputs.",
+            f"Conference evidence: {completeness['conference_evidence']}.",
             "",
         ]
-        if conference["included"]:
-            lines += ["## Conference text (JSD research)", "",
-                      f"`conference/` holds {conference['documents']} conference documents (text corpus and index) under "
-                      "`contracts/JSD_INPUT_CONTRACT.md`. Text evidence is not interchangeable with financial observations.", ""]
-        else:
-            lines += [f"Conference PDFs: {conference['status']}.", ""]
-        if warnings:
-            lines += ["## Notes", ""] + [f"- {item}" for item in warnings] + [""]
         return "\n".join(lines)
 
     @staticmethod
@@ -401,7 +425,7 @@ class ResearchPackageBuilder:
             for path in sorted(files):
                 info = zipfile.ZipInfo(f"{PACKAGE_ROOT}/{path}", date_time=FIXED_ZIP_TIME)
                 info.compress_type = zipfile.ZIP_DEFLATED
-                info.external_attr = 0o100644 << 16  # regular file, rw-r--r--
+                info.external_attr = 0o100644 << 16
                 info.create_system = 3
                 archive.writestr(info, files[path], compresslevel=6)
         temporary.replace(output)

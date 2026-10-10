@@ -15,12 +15,15 @@ unlisted files, and that content-addressed raw evidence names equal their hash.
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 import json
 import re
 import stat
 import sys
 import zipfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 
 PACKAGE_ROOT = "fintrust_historical_research_dataset"
@@ -133,12 +136,49 @@ def _verify_files(files: dict[str, bytes]) -> dict:
         entry = listed.get(name)
         if entry is None or entry.get("sha256") != digest or entry.get("bytes") != len(files[name]):
             raise PackageVerificationError(f"Manifest file entry disagrees with package: {name}")
+    if manifest.get("mode") == "strict_point_in_time":
+        _verify_strict(files, manifest)
     return {
         "status": "verified",
+        "mode": manifest.get("mode", "retrospective"),
         "package_schema_version": manifest.get("package_schema_version"),
         "content_digest": manifest.get("content_digest"),
         "files_verified": len(expected),
     }
+
+
+_ISO = re.compile(r"\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)?")
+_TAIPEI = timezone(timedelta(hours=8))
+
+
+def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
+    """Re-check the cutoff independently: no post-cutoff date in data/, no unlisted or later raw evidence."""
+    cutoff = datetime.fromisoformat(str(manifest["cutoff_utc"]).replace("Z", "+00:00"))
+    cutoff_day = (cutoff - timedelta(microseconds=1)).astimezone(_TAIPEI).date()
+    for name, data in files.items():
+        if not name.startswith("data/"):
+            continue
+        for match in _ISO.finditer(data.decode("utf-8", "replace")):
+            text = match.group(0)
+            if len(text) == 10:
+                late = datetime.fromisoformat(text).date() > cutoff_day
+            else:
+                stamp = datetime.fromisoformat(text.replace("Z", "+00:00").replace(" ", "T"))
+                late = stamp.date() > cutoff_day if stamp.tzinfo is None else stamp >= cutoff
+            if late:
+                raise PackageVerificationError(f"Post-cutoff date {text} in {name}")
+    allowed: set[str] = set()
+    for name, column in (("data/filing_versions.csv", "filing_available_at"), ("data/source_inventory.csv", "document_available_at")):
+        for row in csv.DictReader(io.StringIO(files.get(name, b"").decode("utf-8"))):
+            if row.get("package_raw_path") and row.get(column):
+                if datetime.fromisoformat(row[column]) >= cutoff:
+                    raise PackageVerificationError(f"{name} lists evidence available after the cutoff")
+                allowed.add(row["package_raw_path"])
+    extra = sorted(name for name in files if name.startswith("raw_evidence/") and name not in allowed)
+    if extra:
+        raise PackageVerificationError(f"Raw evidence without verified pre-cutoff availability: {extra[:3]}")
+    if any(name.startswith(("conference/",)) for name in files):
+        raise PackageVerificationError("Strict package contains conference documents without verified availability")
 
 
 def safe_extract(zip_path: str | Path, destination: str | Path) -> Path:

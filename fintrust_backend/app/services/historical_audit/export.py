@@ -15,13 +15,13 @@ from pathlib import Path
 from typing import Any
 
 from app.services.historical_audit.case_registry import get_case
-from app.services.historical_audit.models import CORE_FIELDS, VersionPolicy, iso, utc_now
+from app.services.historical_audit.models import CORE_FIELDS, VersionPolicy, iso, parse_timestamp, utc_now
 from app.services.historical_audit.reader import list_historical_facts
 from app.services.historical_audit.repository import HistoricalAuditRepository
 
 
 CONTRACT_NAME = "fintrust.historical_financial_facts"
-CONTRACT_VERSION = "1.2"
+CONTRACT_VERSION = "1.3"
 EXPORT_FIELDS: tuple[str, ...] = (
     "ticker",
     "company",
@@ -58,6 +58,10 @@ EXPORT_FIELDS: tuple[str, ...] = (
     "availability_evidence_ref",
     "availability_evidence_url",
     "availability_evidence_hash",
+    # v1.3 (Phase 1C follow-up, appended): the three availability times kept apart.
+    "observation_available_at",
+    "filing_available_at",
+    "artifact_reference_status",
 )
 
 
@@ -112,6 +116,13 @@ def build_export_records(
             "availability_evidence_ref": row["availability_evidence_ref"],
             "availability_evidence_url": row["availability_evidence_url"],
             "availability_evidence_hash": row["availability_evidence_hash"],
+            "observation_available_at": (parse_timestamp(row["observation_available_at"]).isoformat()
+                                         if row.get("observation_available_at") else None),
+            "filing_available_at": (parse_timestamp(row["available_at"]).isoformat()
+                                    if row["availability_status"] == "verified" and row["available_at"] else None),
+            # Retrospective exports reference the archived artifact whatever its historical availability;
+            # strict point-in-time packages rewrite this per row (see research_package).
+            "artifact_reference_status": "retrospective_reference",
         }
         for row in rows
     ]

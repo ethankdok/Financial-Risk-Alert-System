@@ -36,14 +36,14 @@ class FakeConferenceRepository:
 
     backend_name = "file"
 
-    def __init__(self, root: Path, ticker: str, pdf: bytes) -> None:
-        self.ticker, self.pdf = ticker, pdf
-        directory = root / ticker / "2016"
+    def __init__(self, root: Path, ticker: str, pdf: bytes, year: int = 2013) -> None:
+        self.ticker, self.pdf, self.year = ticker, pdf, year
+        directory = root / ticker / str(year)
         directory.mkdir(parents=True)
         (directory / "conf_2016Q3.pdf").write_bytes(pdf)
 
     def available_years(self, ticker):
-        return [2016] if ticker == self.ticker else []
+        return [self.year] if ticker == self.ticker else []
 
     def latest_manifest(self, ticker, year):
         return {"listing_url": "https://mopsov.twse.com.tw/mops/web/t100sb07_1", "retrieved_at": "2026-10-01T00:00:00+00:00",
@@ -100,10 +100,12 @@ class Port01To03Tests(PackageTestCase):
     def test_port02_manifest_checksums_and_reproducibility(self) -> None:
         path, result = self.build("a.zip")
         manifest = json.loads(self.read(path, "manifest.json"))
-        self.assertEqual(manifest["package_schema_version"], "1.0")
+        self.assertEqual(manifest["package_schema_version"], "1.1")
+        self.assertEqual(manifest["mode"], "retrospective")
+        self.assertFalse(manifest["suitable_for_historical_backtest"])
         self.assertEqual(manifest["parameters"], {"ticker": "1785", "start_year": 2013, "end_year": 2014, "as_of": None,
                                                   "version_policy": "all", "include_raw_evidence": True,
-                                                  "include_conference": False})
+                                                  "include_conference": False, "include_context_years": False})
         self.assertEqual(manifest["checksums_sha256"], hashlib.sha256(self.read(path, "validation/checksums.sha256")).hexdigest())
         self.assertEqual(verify_package(path)["status"], "verified")
         again, _ = self.build("b.zip")
@@ -156,8 +158,9 @@ class Port04To06Tests(PackageTestCase):
                                          conference_root=conference_root)
         path, result = self.build("conf.zip", PackageParameters("1785", 2013, 2014, include_conference=True), builder)
         self.assertEqual(result["completeness"]["conference_evidence"], "included")
-        index = self.csv_rows(path, "conference/conference_documents.csv")
+        index = self.csv_rows(path, "data/conference_documents.csv")
         self.assertEqual([(r["period"], r["raw_evidence_included"]) for r in index], [("2016Q3", "true")])
+        self.assertEqual(len(self.csv_rows(path, "data/conference_jsd_corpus.csv")), 1)  # verified period → JSD-ready
         self.assertEqual(self.read(path, index[0]["package_raw_path"]), pdf)
         self.assertTrue(self.read(path, "contracts/JSD_INPUT_CONTRACT.md"))
         facts = self.csv_rows(path, "data/financial_facts.csv")
@@ -166,17 +169,20 @@ class Port04To06Tests(PackageTestCase):
         self.assertEqual(verify_package(path)["status"], "verified")
 
     def test_port06_versions_and_pit_metadata_preserved(self) -> None:
+        retro, _ = self.build("retro.zip")
+        self.assertEqual({r["filing_version_type"] for r in self.csv_rows(retro, "data/filing_versions.csv")},
+                         {"original", "restated"})
         path, _ = self.build("pit.zip", PackageParameters("1785", 2013, 2014, as_of="2016-11-14", version_policy="latest_available"))
         facts = self.csv_rows(path, "data/financial_facts.csv")
         reader = list_historical_facts(self.repository, "1785", 2013, 2014, as_of="2016-11-14",
                                        version_policy="latest_available", include_test_fixtures=False)
-        self.assertEqual([(r["filing_version_id"], r["metric_code"]) for r in facts],
-                         [(f["filing_version_id"], f["metric_code"]) for f in reader])
-        self.assertTrue(all(r["point_in_time_eligible"] == "true" and r["availability_evidence_kind"] for r in facts))
-        versions = self.csv_rows(path, "data/filing_versions.csv")
-        self.assertEqual({r["filing_version_type"] for r in versions}, {"original", "restated"})
+        self.assertEqual([(r["period"], r["metric_code"], r["value"]) for r in facts],
+                         [(f["period"], f["metric_code"], f["value_text"]) for f in reader])
+        # The later XBRL artifact is withheld; the 2016-11-13 disclosure establishes eligibility.
+        self.assertTrue(all(r["artifact_reference_status"] == "withheld_not_public_at_cutoff" and not r["filing_version_id"]
+                            and r["availability_evidence_kind"] == "restatement_disclosure" for r in facts))
         manifest = json.loads(self.read(path, "manifest.json"))
-        self.assertEqual(manifest["parameters"]["as_of"], "2016-11-14")
+        self.assertEqual((manifest["mode"], manifest["parameters"]["as_of"]), ("strict_point_in_time", "2016-11-14"))
 
 
 class PackageFailureInjectionTests(PackageTestCase):

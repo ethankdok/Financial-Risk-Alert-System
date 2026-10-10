@@ -187,3 +187,83 @@ class RealArchiveMockCloudContract(unittest.TestCase):
                                  local.list_summary_observations("1785", as_of=as_of))
             self.assertEqual(cloud.list_filing_versions("1785", 2011, 2016), local.list_filing_versions("1785", 2011, 2016))
             self.assertEqual(len(local.list_facts("1785", 2011, 2016, as_of="2016-11-14")), 27)
+
+
+CONFERENCE_ROOT = Path(__file__).resolve().parents[1] / "data" / "historical-conference-pdfs"
+REAL_2011 = {"178520110325M001.pdf": "b97553ff849f7100931267bab29f7f452a3a9f07a013ddaa9fd1a90af957cea6",
+             "178520110325E001.pdf": "c69c9dd3a6df1506b2343ce20e1442ad9aeb97540baaf5e0e18f0318df77ebdb"}
+
+
+@unittest.skipUnless(_has_phase1b_evidence() and (CONFERENCE_ROOT / "1785" / "2011" / "manifest.json").exists(),
+                     "real 1785 evidence / conference archive not present locally")
+class RealConferenceAndStrictPackage(unittest.TestCase):
+    """REAL tier: the recovered 2011 official conference PDFs and the strict 2016-11-14 package."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        import zipfile
+
+        from app.services.historical_audit.archive import RawEvidenceArchive
+        from app.services.historical_audit.research_package import PackageParameters, ResearchPackageBuilder
+        from app.services.mops_conference_pdf_repository import FileConferencePdfArchiveRepository
+
+        cls._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        copy = Path(cls._tmp.name) / "copy.sqlite3"
+        shutil.copyfile(REAL_DB, copy)
+        builder = ResearchPackageBuilder(HistoricalAuditRepository(str(copy)), RawEvidenceArchive(REAL_DB.parent / "raw"),
+                                         conference_repository=FileConferencePdfArchiveRepository(CONFERENCE_ROOT),
+                                         conference_root=CONFERENCE_ROOT)
+        cls.full = Path(cls._tmp.name) / "full.zip"
+        cls.strict = Path(cls._tmp.name) / "strict.zip"
+        builder.build(PackageParameters("1785", 2011, 2016, include_conference=True), cls.full)
+        builder.build(PackageParameters("1785", 2011, 2016, as_of="2016-11-14", version_policy="latest_available",
+                                        include_conference=True), cls.strict)
+        cls.zipfile = zipfile
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def members(self, path: Path) -> dict[str, bytes]:
+        with self.zipfile.ZipFile(path) as archive:
+            return {n.split("/", 1)[1]: archive.read(n) for n in archive.namelist()}
+
+    def test_2011_official_conference_pdfs(self) -> None:
+        import hashlib
+        import json as _json
+
+        manifest = _json.loads((CONFERENCE_ROOT / "1785" / "2011" / "manifest.json").read_text(encoding="utf-8"))
+        documents = {d["filename"]: d for d in manifest["documents"]}
+        self.assertEqual(set(documents), set(REAL_2011))
+        for name, digest in REAL_2011.items():
+            self.assertEqual(hashlib.sha256((CONFERENCE_ROOT / "1785" / "2011" / name).read_bytes()).hexdigest(), digest)
+            self.assertEqual(documents[name]["page_count"], 47)
+            self.assertEqual(documents[name]["conference_dates"], ["100/03/25"])
+            self.assertNotEqual(documents[name]["document_type"], "full_earnings_transcript")
+        files = self.members(self.full)
+        for name, digest in REAL_2011.items():
+            self.assertEqual(hashlib.sha256(files[f"raw_evidence/conference_pdfs/1785/2011/{digest}.pdf"]).hexdigest(), digest)
+
+    def test_strict_package_has_no_future_information(self) -> None:
+        import csv as _csv
+        import io as _io
+        from datetime import datetime as _dt
+
+        from app.services.historical_audit.package_verify import verify_package
+
+        files = self.members(self.strict)
+        rows = lambda name: list(_csv.DictReader(_io.StringIO(files[name].decode("utf-8"))))
+        cutoff = _dt.fromisoformat("2016-11-15T00:00:00+08:00")
+        versions = rows("data/filing_versions.csv")
+        self.assertEqual({(v["source_kind"], v["filing_version_type"]) for v in versions}, {("official_pdf", "original")})
+        self.assertNotIn("2016FY", {v["period"] for v in versions})
+        self.assertFalse([n for n in files if n.endswith((".xml", ".xls")) or "listing" in n or n.startswith("conference")])
+        self.assertTrue(all(_dt.fromisoformat(e["available_from"]) < cutoff for e in rows("data/publication_timeline.csv")))
+        raw = [n for n in files if n.startswith("raw_evidence/")]
+        self.assertEqual(len(raw), 11)  # 7 original report PDFs + 4 notices published before the cutoff
+        self.assertEqual(len(rows("data/financial_facts.csv")), 27)
+        self.assertEqual(len(rows("data/restatement_comparisons.csv")), 158)
+        text = b"".join(data for name, data in files.items() if not name.startswith("raw_evidence/")).decode("utf-8", "replace")
+        for marker in ("2017-", "106年", "105/12", "2016-12-"):
+            self.assertNotIn(marker, text)
+        self.assertEqual(verify_package(self.strict)["mode"], "strict_point_in_time")

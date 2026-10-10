@@ -178,7 +178,8 @@ def command_research_package(args: argparse.Namespace) -> None:
                                      conference_repository=conference_repository, conference_root=args.conference_root)
     result = builder.build(PackageParameters(
         ticker=ticker, start_year=start, end_year=end, as_of=args.as_of, version_policy=args.version_policy,
-        include_raw_evidence=not args.no_raw_evidence, include_conference=args.include_conference), args.output)
+        include_raw_evidence=not args.no_raw_evidence, include_conference=args.include_conference,
+        include_context_years=args.include_context_years), args.output)
     result["verification"] = verify_package(args.output)
     _emit(result)
 
@@ -205,6 +206,17 @@ def command_cloud_sync(args: argparse.Namespace) -> None:
         config=config)
     report = sync.sync(args.ticker, execute=args.action == "run" and args.execute)
     _emit(vars(report))
+
+
+def command_conference_coverage(args: argparse.Namespace) -> None:
+    """Record year-by-year official MOPS conference coverage (reuses the conference pipeline's archive and parser)."""
+    from app.services.historical_audit.conference_coverage import ConferenceCoverageRecorder
+
+    case = get_case(args.ticker)
+    recorder = ConferenceCoverageRecorder(_repository(args), RawEvidenceArchive(args.archive), args.conference_root)
+    years = list(range(args.from_year, args.to_year + 1))
+    _emit(recorder.record(case.ticker, years, market=args.market, start_year=case.default_start_year,
+                          end_year=case.default_end_year))
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -298,11 +310,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     build.add_argument("--version-policy", choices=VERSION_POLICIES, default="all")
     build.add_argument("--no-raw-evidence", action="store_true")
     build.add_argument("--include-conference", action="store_true")
+    build.add_argument("--include-context-years", action="store_true",
+                       help="Also include conference documents outside the case range (marked by research_role).")
     build.add_argument("--conference-root", type=Path)
     build.set_defaults(func=command_research_package)
     verify = package_sub.add_parser("verify")
     verify.add_argument("path", type=Path)
     verify.set_defaults(func=command_research_package)
+
+    coverage = sub.add_parser("conference-coverage", help="Record official MOPS conference listing coverage per year.")
+    common(coverage, years=False)
+    coverage.add_argument("--ticker", required=True)
+    coverage.add_argument("--from-year", type=int, required=True)
+    coverage.add_argument("--to-year", type=int, required=True)
+    coverage.add_argument("--market", choices=("sii", "otc", "rotc", "pub"), required=True)
+    coverage.add_argument("--conference-root", type=Path, default=Path("data/historical-conference-pdfs"))
+    coverage.set_defaults(func=command_conference_coverage)
 
     cloud = sub.add_parser("cloud-sync", help="Optional GCS/Firestore sync (disabled unless HISTORICAL_CLOUD_SYNC_ENABLED=true).")
     common(cloud, years=False)

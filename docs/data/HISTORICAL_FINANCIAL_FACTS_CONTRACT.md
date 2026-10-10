@@ -1,4 +1,4 @@
-# Historical Financial Facts → Downstream Research (contract v1.2)
+# Historical Financial Facts → Downstream Research (contract v1.3)
 
 Producer: `app/services/historical_audit/export.py`
 (`python -m scripts.historical_audit_case export …`).
@@ -61,7 +61,7 @@ field absent from a filing has **no row**; the JSON `coverage` section lists
 ```json
 {
   "contract": "fintrust.historical_financial_facts",
-  "contract_version": "1.2",
+  "contract_version": "1.3",
   "generated_at": "…",
   "filters": {"ticker": "1785", "start_year": 2011, "end_year": 2016,
               "as_of": null, "version_policy": "all", "include_test_fixtures": false},
@@ -82,6 +82,21 @@ field absent from a filing has **no row**; the JSON `coverage` section lists
   evidence. `original`: only with manifest verification evidence.
   `unknown_revision`: anything else — including the current MOPS document when
   nothing proves its status.
+
+## v1.3 changes (Phase 1C follow-up, additive)
+
+Three fields are appended after `availability_evidence_hash`:
+
+| Field | Meaning |
+|---|---|
+| `observation_available_at` | earliest verified disclosure of this exact value (null if none) |
+| `filing_available_at` | the filing artifact's own verified availability (null if unverified) |
+| `artifact_reference_status` | `retrospective_reference` (retrospective exports), `verified_public_artifact` or `withheld_not_public_at_cutoff` (strict packages) |
+
+`effective_available_at` remains the earlier of the two. In strict packages a
+withheld artifact's identity fields (`filing_version_id`, `content_hash`,
+`source_url`, `taxonomy_concept`, `document_dated_at`, …) are empty, and
+`evidence_type = official_disclosed_observation`.
 
 ## v1.2 changes (pre-Phase 1C review, additive)
 
