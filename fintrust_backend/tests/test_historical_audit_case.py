@@ -503,14 +503,23 @@ class Case10SnapshotIsolationTests(HistoricalAuditTestCase):
         self.assertEqual(self.dump(shared), before)
 
     def test_package_has_no_production_writer_imports(self) -> None:
-        forbidden = re.compile(
-            r"ingestion_pipeline|analysis_repository|firestore|gemini|anthropic|llm|frontend_presenter|"
+        # Production writers/LLM/scheduler are forbidden everywhere (including lazy, indented imports).
+        production = re.compile(
+            r"ingestion_pipeline|analysis_repository|fact_repository|gemini|anthropic|llm|frontend_presenter|"
             r"ai_financial_analysis|refresh_company|save_pipeline_result|scheduler"
         )
+        # Phase 1C: Google Cloud clients only in the isolated, opt-in cloud adapter modules (+ CLI wiring).
+        cloud_modules = {"cloud_config.py", "cloud_sync.py", "firestore_repository.py", "object_storage.py",
+                         "research_access.py", "historical_audit_case.py"}
+        cloud = re.compile(r"firestore|google\.cloud|cloud_sync|cloud_config|object_storage|research_access")
         for path in [*PACKAGE_DIR.glob("*.py"), BACKEND_ROOT / "scripts" / "historical_audit_case.py"]:
-            imports = [line for line in path.read_text(encoding="utf-8").splitlines() if line.startswith(("import ", "from "))]
+            imports = [line.strip() for line in path.read_text(encoding="utf-8").splitlines()
+                       if line.strip().startswith(("import ", "from "))]
             for line in imports:
-                self.assertIsNone(forbidden.search(line), f"{path.name}: {line}")
+                self.assertIsNone(production.search(line), f"{path.name}: {line}")
+                if path.name not in cloud_modules:
+                    # The local ingestion / research / packaging path never touches cloud code.
+                    self.assertIsNone(cloud.search(line), f"{path.name}: {line}")
 
 
 class Case11ApiCompatibilityTests(unittest.TestCase):

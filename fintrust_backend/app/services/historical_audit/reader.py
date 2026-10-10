@@ -157,7 +157,24 @@ def list_historical_facts(
     with repository.connect() as connection:
         rows = [dict(row) for row in connection.execute(query, params).fetchall()]
         evidence = _observation_evidence(connection, [row["fact_id"] for row in rows])
+    return finalize_fact_rows(rows, evidence, as_of=as_of, version_policy=version_policy)
 
+
+def finalize_fact_rows(
+    rows: list[dict[str, Any]],
+    evidence: dict[str, dict[str, Any]],
+    *,
+    as_of: date | datetime | str | None = None,
+    version_policy: VersionPolicy = "all",
+) -> list[dict[str, Any]]:
+    """Backend-independent eligibility, cutoff and version-policy rules.
+
+    ``rows`` carry the joined fact/version columns (JSON columns still encoded) and
+    ``observation_available_at``; ``evidence`` maps fact_id → earliest corroborating
+    disclosure. Local SQLite and the cloud research backend both call this.
+    """
+    if version_policy not in VERSION_POLICIES:
+        raise ValueError(f"Unsupported version_policy: {version_policy}")
     for row in rows:
         row["quality_notes"] = json.loads(row.pop("quality_notes_json") or "[]")
         row["version_type_evidence"] = json.loads(row.pop("version_type_evidence_json") or "[]")

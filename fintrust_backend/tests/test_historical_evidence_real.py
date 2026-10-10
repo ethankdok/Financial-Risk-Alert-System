@@ -150,3 +150,40 @@ class RealResearchCutoffs(unittest.TestCase):
             connection.close()
         self.assertTrue(details)
         self.assertTrue(all("(post side" in d for d in details), details)
+
+
+@unittest.skipUnless(_has_phase1b_evidence(), "real 1785 evidence archive not present locally")
+class RealArchiveMockCloudContract(unittest.TestCase):
+    """MOCK cloud tier on the REAL archive: sync a DB copy to in-memory GCS/Firestore and compare reads."""
+
+    def test_real_archive_local_and_cloud_reads_agree(self) -> None:
+        from app.services.historical_audit.archive import RawEvidenceArchive
+        from app.services.historical_audit.cloud_config import HistoricalCloudConfig
+        from app.services.historical_audit.cloud_sync import HistoricalCloudSync
+        from app.services.historical_audit.firestore_repository import FirestoreHistoricalResearchRepository
+        from app.services.historical_audit.object_storage import GcsObjectStore
+        from app.services.historical_audit.research_access import FirestoreResearchBackend, LocalResearchBackend
+        from tests.historical_cloud_fakes import FakeFirestoreClient, FakeGcsClient
+
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            copy = Path(directory) / "copy.sqlite3"
+            shutil.copyfile(REAL_DB, copy)
+            repository = HistoricalAuditRepository(str(copy))
+            config = HistoricalCloudConfig.from_env({
+                "HISTORICAL_CLOUD_SYNC_ENABLED": "true", "HISTORICAL_CLOUD_ENVIRONMENT": "isolated-test",
+                "HISTORICAL_CLOUD_PROJECT": "fintrust-research-test", "HISTORICAL_CLOUD_BUCKET": "fintrust-historical-test"})
+            firestore = FirestoreHistoricalResearchRepository(FakeFirestoreClient())
+            sync = HistoricalCloudSync(repository=repository, archive=RawEvidenceArchive(REAL_DB.parent / "raw"),
+                                       object_store=GcsObjectStore(FakeGcsClient(), config.bucket, sleep=lambda _: None),
+                                       firestore=firestore, config=config)
+            report = sync.sync("1785", execute=True)
+            self.assertEqual(report.status, "complete", report.errors[:5])
+            local, cloud = LocalResearchBackend(repository), FirestoreResearchBackend(firestore)
+            for as_of in (None, "2016-05-12", "2016-11-14", "2017-12-31"):
+                self.assertEqual(cloud.list_facts("1785", 2011, 2016, as_of=as_of), local.list_facts("1785", 2011, 2016, as_of=as_of))
+                self.assertEqual(cloud.list_restatement_comparisons("1785", as_of=as_of),
+                                 local.list_restatement_comparisons("1785", as_of=as_of))
+                self.assertEqual(cloud.list_summary_observations("1785", as_of=as_of),
+                                 local.list_summary_observations("1785", as_of=as_of))
+            self.assertEqual(cloud.list_filing_versions("1785", 2011, 2016), local.list_filing_versions("1785", 2011, 2016))
+            self.assertEqual(len(local.list_facts("1785", 2011, 2016, as_of="2016-11-14")), 27)

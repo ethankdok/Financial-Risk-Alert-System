@@ -161,6 +161,52 @@ def command_concept_coverage(args: argparse.Namespace) -> None:
     _emit(unmapped_concept_report(_repository(args), ticker, start, end), args.output)
 
 
+def command_research_package(args: argparse.Namespace) -> None:
+    from app.services.historical_audit.package_verify import verify_package
+    from app.services.historical_audit.research_package import PackageParameters, ResearchPackageBuilder
+
+    if args.action == "verify":
+        _emit(verify_package(args.path))
+        return
+    ticker, start, end = _years(args)
+    conference_repository = None
+    if args.include_conference and args.conference_root:
+        from app.services.mops_conference_pdf_repository import FileConferencePdfArchiveRepository
+
+        conference_repository = FileConferencePdfArchiveRepository(args.conference_root)
+    builder = ResearchPackageBuilder(_repository(args), RawEvidenceArchive(args.archive),
+                                     conference_repository=conference_repository, conference_root=args.conference_root)
+    result = builder.build(PackageParameters(
+        ticker=ticker, start_year=start, end_year=end, as_of=args.as_of, version_policy=args.version_policy,
+        include_raw_evidence=not args.no_raw_evidence, include_conference=args.include_conference), args.output)
+    result["verification"] = verify_package(args.output)
+    _emit(result)
+
+
+def command_cloud_sync(args: argparse.Namespace) -> None:
+    """Disabled by default; see cloud_config.py for the fail-closed environment rules."""
+    from app.services.historical_audit.cloud_config import HistoricalCloudConfig, build_clients
+    from app.services.historical_audit.cloud_sync import HistoricalCloudSync
+    from app.services.historical_audit.firestore_repository import FirestoreHistoricalResearchRepository
+    from app.services.historical_audit.object_storage import GcsObjectStore
+
+    config = HistoricalCloudConfig.from_env(allow_production=False)
+    repository = _repository(args)
+    if args.action == "status":
+        sync = HistoricalCloudSync(repository=repository, archive=RawEvidenceArchive(args.archive),
+                                   object_store=None, firestore=None, config=config)
+        _emit(sync.status(args.ticker))
+        return
+    storage_client, firestore_client = build_clients(config)
+    sync = HistoricalCloudSync(
+        repository=repository, archive=RawEvidenceArchive(args.archive),
+        object_store=GcsObjectStore(storage_client, config.bucket),
+        firestore=FirestoreHistoricalResearchRepository(firestore_client, prefix=config.collection_prefix),
+        config=config)
+    report = sync.sync(args.ticker, execute=args.action == "run" and args.execute)
+    _emit(vars(report))
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Historical audit-case ingestion (isolated SQLite).")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -242,6 +288,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     common(concepts)
     concepts.add_argument("--output", type=Path)
     concepts.set_defaults(func=command_concept_coverage)
+
+    package = sub.add_parser("research-package", help="Build or verify a portable research ZIP.")
+    package_sub = package.add_subparsers(dest="action", required=True)
+    build = package_sub.add_parser("build")
+    common(build)
+    build.add_argument("--output", type=Path, required=True)
+    build.add_argument("--as-of")
+    build.add_argument("--version-policy", choices=VERSION_POLICIES, default="all")
+    build.add_argument("--no-raw-evidence", action="store_true")
+    build.add_argument("--include-conference", action="store_true")
+    build.add_argument("--conference-root", type=Path)
+    build.set_defaults(func=command_research_package)
+    verify = package_sub.add_parser("verify")
+    verify.add_argument("path", type=Path)
+    verify.set_defaults(func=command_research_package)
+
+    cloud = sub.add_parser("cloud-sync", help="Optional GCS/Firestore sync (disabled unless HISTORICAL_CLOUD_SYNC_ENABLED=true).")
+    common(cloud, years=False)
+    cloud.add_argument("action", choices=("plan", "run", "status"))
+    cloud.add_argument("--ticker", required=True)
+    cloud.add_argument("--execute", action="store_true", help="Required with 'run'; otherwise run is a dry-run plan.")
+    cloud.set_defaults(func=command_cloud_sync)
     return parser.parse_args(argv)
 
 

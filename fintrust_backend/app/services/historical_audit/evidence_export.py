@@ -64,7 +64,6 @@ def _cutoff(as_of: date | datetime | str | None) -> datetime | None:
 def list_restatement_comparisons(
     repository: HistoricalAuditRepository, ticker: str, *, as_of: date | datetime | str | None = None
 ) -> list[dict[str, Any]]:
-    cutoff = _cutoff(as_of)
     with repository.connect() as connection:
         rows = [dict(row) for row in connection.execute(
             """SELECT c.*, d.source_url, d.content_hash, e.event_key FROM restatement_comparisons c
@@ -73,6 +72,15 @@ def list_restatement_comparisons(
             WHERE c.ticker = ? ORDER BY c.fiscal_year, c.statement_scope, c.statement_type, COALESCE(c.pre_label, c.post_label)""",
             (ticker,),
         ).fetchall()]
+    return finalize_comparisons(rows, ticker, as_of=as_of)
+
+
+def finalize_comparisons(rows: list[dict[str, Any]], ticker: str, *,
+                         as_of: date | datetime | str | None = None) -> list[dict[str, Any]]:
+    """Backend-independent; ``rows`` are comparison rows joined with source_url, content_hash, event_key."""
+    cutoff = _cutoff(as_of)
+    rows = sorted(rows, key=lambda r: (r["fiscal_year"], r["statement_scope"], r["statement_type"],
+                                       r["pre_label"] or r["post_label"] or ""))
     result = []
     for row in rows:
         disclosed = parse_timestamp(row["disclosed_at"])
@@ -96,7 +104,6 @@ def list_restatement_comparisons(
 def list_summary_observations(
     repository: HistoricalAuditRepository, ticker: str, *, as_of: date | datetime | str | None = None
 ) -> list[dict[str, Any]]:
-    cutoff = _cutoff(as_of)
     with repository.connect() as connection:
         rows = [dict(row) for row in connection.execute(
             """SELECT o.*, d.source_url, d.content_hash, d.retrieved_at, oa.observation_available_at
@@ -107,6 +114,14 @@ def list_summary_observations(
             ORDER BY o.fiscal_year, o.report_period, o.observation_role, o.source_metric_code""",
             (ticker,),
         ).fetchall()]
+    return finalize_summaries(rows, ticker, as_of=as_of)
+
+
+def finalize_summaries(rows: list[dict[str, Any]], ticker: str, *,
+                       as_of: date | datetime | str | None = None) -> list[dict[str, Any]]:
+    """Backend-independent; ``rows`` are summary rows joined with document fields and observation_available_at."""
+    cutoff = _cutoff(as_of)
+    rows = sorted(rows, key=lambda r: (r["fiscal_year"], r["report_period"], r["observation_role"], r["source_metric_code"]))
     result = []
     for row in rows:
         effective = parse_timestamp(row["available_at"]) if row["availability_status"] == "verified" else None

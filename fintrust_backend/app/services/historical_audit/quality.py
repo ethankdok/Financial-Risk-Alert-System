@@ -147,7 +147,12 @@ def eps_unit_investigation(repository: HistoricalAuditRepository, archive: RawEv
             "SELECT title FROM historical_publication_events WHERE ticker = ? AND event_type = 'restated_figure_cited' "
             "AND verification_status = 'verified_official_quote'", (ticker,))]
     for fact in facts:
-        document = parse_xbrl_document(archive.read(fact["raw_storage_path"]))
+        try:
+            document = parse_xbrl_document(archive.read(fact["raw_storage_path"]))
+        except Exception as exc:  # missing or corrupted artifact: report it, never abort the audit
+            results.append({"period": fact["period"], "filing_version_type": fact["filing_version_type"],
+                            "value": fact["value_text"], "error": f"artifact unavailable for inspection: {type(exc).__name__}"})
+            continue
         eps_facts = [f for f in document.numeric_facts if f.local_name == "BasicEarningsLossPerShare"
                      and (c := document.contexts.get(f.context_ref)) is not None and not c.dimensional
                      and c.end is not None and c.end.year == fact["fiscal_year"] and c.start is not None]
