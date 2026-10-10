@@ -267,3 +267,108 @@ class RealConferenceAndStrictPackage(unittest.TestCase):
         for marker in ("2017-", "106年", "105/12", "2016-12-"):
             self.assertNotIn(marker, text)
         self.assertEqual(verify_package(self.strict)["mode"], "strict_point_in_time")
+
+
+@unittest.skipUnless(_has_phase1b_evidence(), "real 1785 evidence archive not present locally")
+class RealStrictCutoffMatrix(unittest.TestCase):
+    """REAL tier: strict packages at the six review cutoffs; expectations come from DB relationships."""
+
+    CUTOFFS = ("2016-05-12", "2016-05-13T00:00:00+08:00", "2016-11-13T21:26:21+08:00", "2016-11-13T21:26:22+08:00",
+               "2016-11-14", "2017-12-31")
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        import csv as _csv
+        import io as _io
+        import sqlite3
+        import zipfile
+
+        from app.services.historical_audit.archive import RawEvidenceArchive
+        from app.services.historical_audit.package_verify import verify_package
+        from app.services.historical_audit.research_package import PackageParameters, ResearchPackageBuilder
+
+        cls._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        copy = Path(cls._tmp.name) / "copy.sqlite3"
+        shutil.copyfile(REAL_DB, copy)
+        builder = ResearchPackageBuilder(HistoricalAuditRepository(str(copy)), RawEvidenceArchive(REAL_DB.parent / "raw"))
+        cls.packages = {}
+        for index, cutoff in enumerate(cls.CUTOFFS):
+            path = Path(cls._tmp.name) / f"strict{index}.zip"
+            result = builder.build(PackageParameters("1785", 2011, 2016, as_of=cutoff, version_policy="latest_available"), path)
+            verified = verify_package(path)
+            with zipfile.ZipFile(path) as archive:
+                files = {n.split("/", 1)[1]: archive.read(n) for n in archive.namelist()}
+            rows = {name: list(_csv.DictReader(_io.StringIO(data.decode("utf-8"))))
+                    for name, data in files.items() if name.startswith("data/") and name.endswith(".csv")}
+            cls.packages[cutoff] = {"result": result, "verified": verified, "files": files, "rows": rows}
+        connection = sqlite3.connect(f"file:{copy.as_posix()}?mode=ro", uri=True)
+        try:
+            cls.comparison_times = {scope: {t for (t,) in connection.execute(
+                "SELECT DISTINCT disclosed_at FROM restatement_comparisons WHERE ticker='1785' AND statement_scope=?", (scope,))}
+                for scope in ("individual", "consolidated")}
+        finally:
+            connection.close()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def test_every_cutoff_verifies_and_grows_monotonically(self) -> None:
+        previous = None
+        for cutoff in self.CUTOFFS:
+            package = self.packages[cutoff]
+            self.assertEqual(package["verified"]["status"], "verified", cutoff)
+            counts = package["result"]["counts"]
+            if previous:
+                self.assertTrue(all(counts[k] >= previous[k] for k in counts), cutoff)
+            previous = counts
+
+    def test_pre_revelation_cutoffs_have_no_financial_inputs(self) -> None:
+        for cutoff in self.CUTOFFS[:2]:
+            rows = self.packages[cutoff]["rows"]
+            for name in ("data/financial_facts.csv", "data/filing_versions.csv", "data/historical_summaries.csv",
+                         "data/restatement_comparisons.csv", "data/source_inventory.csv"):
+                self.assertEqual(rows[name], [], (cutoff, name))
+            self.assertFalse([n for n in self.packages[cutoff]["files"] if n.startswith("raw_evidence/")])
+        # Date-only TPEx notices of 2016-05-13 become public at the next Taipei midnight, so midnight adds nothing.
+        self.assertEqual(self.packages[self.CUTOFFS[0]]["rows"]["data/publication_timeline.csv"],
+                         self.packages[self.CUTOFFS[1]]["rows"]["data/publication_timeline.csv"])
+
+    def test_one_second_before_and_at_the_consolidated_notice(self) -> None:
+        from datetime import datetime as _dt
+
+        (individual,), (consolidated,) = self.comparison_times["individual"], self.comparison_times["consolidated"]
+        self.assertLess(_dt.fromisoformat(individual), _dt.fromisoformat(consolidated))
+        before, at = self.packages[self.CUTOFFS[2]]["rows"], self.packages[self.CUTOFFS[3]]["rows"]
+        self.assertEqual({r["disclosed_at"] for r in before["data/restatement_comparisons.csv"]}, {individual})
+        self.assertEqual({r["disclosed_at"] for r in at["data/restatement_comparisons.csv"]}, {individual, consolidated})
+        self.assertEqual(before["data/financial_facts.csv"], [])  # facts are consolidated, dated by the 21:26:22 notice
+        self.assertTrue(at["data/financial_facts.csv"])
+        self.assertEqual({r["effective_available_at"] for r in at["data/financial_facts.csv"]}, {consolidated})
+        for row in before["data/historical_summaries.csv"]:
+            self.assertEqual(row["statement_scope"], "individual")
+
+    def test_after_cutoffs_keep_artifacts_withheld_unless_verified_public(self) -> None:
+        at_notice = self.packages[self.CUTOFFS[3]]["rows"]["data/financial_facts.csv"]
+        self.assertEqual(self.packages["2016-11-14"]["rows"]["data/financial_facts.csv"], at_notice)
+        late = self.packages["2017-12-31"]["rows"]
+        self.assertIn(("2016FY", "official_pdf"), {(v["period"], v["source_kind"]) for v in late["data/filing_versions.csv"]})
+        self.assertNotIn("2016FY", {v["period"] for v in self.packages["2016-11-14"]["rows"]["data/filing_versions.csv"]})
+        # The XBRL behind the facts never had verified public availability: identity stays withheld in 2017.
+        self.assertEqual({r["artifact_reference_status"] for r in late["data/financial_facts.csv"]}, {"withheld_not_public_at_cutoff"})
+        self.assertIn("2016FY", {r["report_period"] for r in late["data/historical_summaries.csv"]})
+        self.assertNotIn("2016FY", {r["report_period"] for r in self.packages["2016-11-14"]["rows"]["data/historical_summaries.csv"]})
+
+    def test_no_modern_metadata_in_any_model_facing_file(self) -> None:
+        import json as _json
+
+        for cutoff in self.CUTOFFS:
+            package = self.packages[cutoff]
+            manifest = _json.loads(package["files"]["manifest.json"])
+            self.assertIsNone(manifest["generated_at"])
+            self.assertNotIn("excluded_by_cutoff", manifest)
+            self.assertNotIn("validation/provenance.csv", package["files"])
+            text = b"".join(d for n, d in package["files"].items() if not n.startswith("raw_evidence/")
+                            and n != "validation/verify_package.py").decode("utf-8", "replace")
+            self.assertNotIn("2026-", text)
+            self.assertTrue(Path(package["result"]["audit_path"]).exists())

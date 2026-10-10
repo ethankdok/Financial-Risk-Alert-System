@@ -1,4 +1,4 @@
-# Historical Research Package Contract (package schema 1.1)
+# Historical Research Package Contract (package schema 1.2)
 
 A portable ZIP for one historical case. It needs no database, no FinTrust code
 and no cloud credentials. Producer: `app/services/historical_audit/research_package.py`
@@ -37,9 +37,12 @@ fintrust_historical_research_dataset/
     regulatory_disclosures/<ticker>/<source_key>/<sha256>.<ext>
     official_summaries/<ticker>/<source_key>/<sha256>.xls          (retrospective only)
     conference_pdfs/<ticker>/<year>/<sha256>.pdf                    (retrospective only)
-  validation/quality_report.json, checksums.sha256, verify_package.py, provenance.csv (strict)
+  validation/quality_report.json, checksums.sha256, verify_package.py
   contracts/
 ```
+
+A strict package is accompanied by a reviewer-only sidecar `<package>.audit.json` written next to the ZIP
+(never inside it). See *Model-facing vs reviewer-only metadata* below.
 
 ## Strict point-in-time rules
 
@@ -48,15 +51,50 @@ fintrust_historical_research_dataset/
 - **Facts** are included when their `effective_available_at` is before the cutoff. If the filing artifact is not itself public before the cutoff, its identity is withheld (`artifact_reference_status = withheld_not_public_at_cutoff`) and `availability_evidence_*` names the disclosure that dates the value. `observation_available_at`, `filing_available_at` and `effective_available_at` are separate fields.
 - **Timeline events** are included only when public before the cutoff (`available_from`). Their links reference included artifacts only.
 - **Conference documents** are excluded unless their public availability is verified. A cover date or MOPS meeting date is not publication evidence.
-- **Coverage, missing-evidence and quality files** are recomputed from the strict subset. Exclusions are reported as aggregate counts only (`manifest.excluded_by_cutoff`).
-- **Retrieval timestamps** are written to `validation/provenance.csv`; `data/` contains no post-cutoff date.
+- **Summary observations** (TPEx summary values) are kept only when (a) the report's fiscal year ended before the
+  cutoff and (b) a contemporaneous official disclosure published before the cutoff states the identical value for the
+  same metric, fiscal year, statement scope, accounting framework and restatement side (a report whose fiscal year
+  ended before the disclosure must match the *as previously reported* side; a later report must match the restated
+  side). Kept rows become `evidence_type = official_disclosed_observation`, `completeness = disclosed_value_only`;
+  the workbook reference (`source_url`, `content_hash`, `retrieved_at`) is withheld
+  (`source_reference_status = workbook_withheld_not_public_at_cutoff`) and `pit_evidence_*` names the disclosure.
+- **Coverage and quality files** are recomputed from the strict subset. `data/missing_evidence.csv` is header-only:
+  exclusion counts describe the *current* archive and are reviewer-only metadata.
 - **Contracts** are generic only (`STRICT_FIELD_DEFINITIONS.md`, this contract). Case narrative documents are excluded.
 
-The builder refuses to write a strict ZIP if any post-cutoff date remains in
-`data/`. For strict packages, `verify_package.py` independently re-checks:
-- no ISO date or timestamp at or after the cutoff in `data/`;
-- every `raw_evidence/` file is a `package_raw_path` with pre-cutoff availability;
-- no `conference/` content.
+### Model-facing vs reviewer-only metadata (schema 1.2)
+
+Everything inside a strict ZIP is model-facing and describes only what was public before the cutoff:
+
+- `manifest.generated_at` is `null`; the manifest has no exclusion counts (only the allow-listed keys);
+- there is no retrieval provenance file and no archive-wide exclusion count anywhere in the ZIP;
+- every model-facing timestamp is expressed in Asia/Taipei (`+08:00`); `manifest.cutoff_taipei` and
+  `manifest.cutoff_utc` state the same exclusive cutoff;
+- filing (`filing_available_at`), observation (`observation_available_at`), disclosure (`disclosed_at`,
+  `document_available_at`), effective (`effective_available_at`) and event (`available_from`) times are separate fields.
+
+The reviewer-only sidecar `<package>.audit.json` holds the modern verification metadata: generation time, cutoff and
+parameters, archive-wide exclusion counts (including conference documents), the row-level summary review (decision
+per summary row) and raw-evidence retrieval provenance. It is bound to the ZIP by `package_sha256` and is **not a
+research input**.
+
+### Strict verification (fails closed)
+
+The builder runs the full verifier before writing anything. `verify_package.py` independently re-checks a strict package:
+
+1. the manifest carries only allow-listed keys and no generation time;
+2. no ISO date or timestamp at or after the cutoff, and no non-Taipei timestamp, in any model-facing file;
+3. every filing version and source-inventory document is verifiably public before the cutoff;
+4. every `raw_evidence/` file is the `package_raw_path` of an admissible artifact or notice; no conference content;
+5. every SHA-256 referenced by a model-facing file resolves to included evidence;
+6. every fact is point-in-time eligible before the cutoff; a withheld artifact has no identity fields, a
+   `restatement_disclosure` reference that resolves to an included notice published no later than the stated
+   availability, and equal observation and effective times; a verified artifact is an included filing version;
+7. every summary row is an `official_disclosed_observation` with no workbook reference, a side-consistent disclosure,
+   an ended report period and a resolvable disclosure;
+8. restatement comparisons resolve to included notices disclosed before the cutoff;
+9. timeline events are public before the cutoff and link only included filing versions;
+10. `financial_facts.csv` equals `financial_facts.json`, and manifest counts equal row counts.
 
 ## Integrity and reproducibility (both modes)
 
@@ -74,4 +112,14 @@ python validation/verify_package.py fintrust_historical_research_dataset.zip
 python validation/verify_package.py ./fintrust_historical_research_dataset
 ```
 
-Output: `{"status": "verified", "mode": "...", "package_schema_version": "1.1", "content_digest": "...", "files_verified": N}`.
+Output: `{"status": "verified", "mode": "...", "package_schema_version": "1.2", "content_digest": "...", "files_verified": N}`.
+
+## Schema history
+
+- 1.0: initial portable package.
+- 1.1: strict point-in-time mode; facts contract v1.3 (`observation_available_at`, `filing_available_at`, `artifact_reference_status`).
+- 1.2 (additive): summary contract 1.1 (`observation_origin`, `scope_inference_basis`, `pit_evidence_*`,
+  `side_consistency`, `source_reference_status`; `statement_scope_basis` states that a row's scope was inferred from
+  the report row's revenue); strict reclassification of summaries; `manifest.cutoff_taipei`; reviewer-only audit
+  sidecar; no modern metadata in strict ZIPs; semantic strict verifier. Retrospective packages are unchanged apart
+  from the additive summary fields.

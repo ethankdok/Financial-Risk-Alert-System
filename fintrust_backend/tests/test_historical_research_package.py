@@ -100,7 +100,7 @@ class Port01To03Tests(PackageTestCase):
     def test_port02_manifest_checksums_and_reproducibility(self) -> None:
         path, result = self.build("a.zip")
         manifest = json.loads(self.read(path, "manifest.json"))
-        self.assertEqual(manifest["package_schema_version"], "1.1")
+        self.assertEqual(manifest["package_schema_version"], "1.2")
         self.assertEqual(manifest["mode"], "retrospective")
         self.assertFalse(manifest["suitable_for_historical_backtest"])
         self.assertEqual(manifest["parameters"], {"ticker": "1785", "start_year": 2013, "end_year": 2014, "as_of": None,

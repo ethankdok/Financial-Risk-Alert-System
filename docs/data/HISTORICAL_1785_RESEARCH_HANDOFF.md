@@ -1,0 +1,250 @@
+# 1785 光洋科 historical research handoff (FY2011–2016)
+
+Audience: Yu-Jing (financial-statement research) and Ethan (conference-text / JSD research).
+Everything below can be used with **only the ZIP files and Python's standard library**. No Firestore, GCS,
+SQLite, FinTrust code or credentials are needed.
+
+## 1. Purpose
+
+1785 光洋科 is a known case of misstated financial statements. The former chairman and CFO admitted improper
+accounting in a TPEx announcement dated 2016-05-13, and the company published 重編前/重編後 (before/after) restatement
+tables on MOPS on 2016-11-13. The two packages let you study the case with an explicit statement of **what was public
+when**:
+
+- **Retrospective research**: what the case looks like with everything recovered today.
+- **Point-in-time research**: what an analyst could have known at a cutoff, with no later information.
+
+## 2. The two packages
+
+Both are in `fintrust_backend/data/historical_audit/packages/` (local, not in git).
+
+| | Full (retrospective) | Strict (point-in-time) |
+|---|---|---|
+| File | `fintrust_1785_2011_2016_full.zip` | `fintrust_1785_asof_2016-11-14.zip` |
+| SHA-256 | `693e867155de00ebded16ffece99f6b32179d306e369028eee4045f6dfbaa826` | `e665e3f5e97faf317f063e141f281f0a8bddad6689078e3708f69acbd8ec5954` |
+| `manifest.mode` | `retrospective` | `strict_point_in_time` |
+| Schema | 1.1 (unchanged, preserved) | 1.2 |
+| Cutoff | none | end of 2016-11-14, Asia/Taipei (exclusive `2016-11-15T00:00:00+08:00`) |
+| `suitable_for_historical_backtest` | `false` | `true` |
+| Contents | everything recovered: later XBRL, all notices, TPEx summary workbooks, 2011 conference PDFs | only evidence verifiably public before the cutoff |
+| Financial facts | 72 rows (27 point-in-time eligible) | 27 rows |
+| Restatement comparisons | 158 | 158 |
+| Summary observations | 79 | 11 |
+| Filing versions | 17 | 7 |
+| Timeline events | 359 | 249 |
+| Conference documents | 2 (2011, bilingual) | 0 |
+
+Next to the strict ZIP is `fintrust_1785_asof_2016-11-14.audit.json`. This is a **reviewer-only** sidecar, not a
+research input. It holds:
+
+- generation time;
+- archive-wide exclusion counts;
+- the row-level summary decisions;
+- raw-evidence retrieval provenance.
+
+It is bound to the ZIP by `package_sha256`. Do not feed it to a model.
+
+**Which one to use**
+
+- Any claim of the form "could have been detected at time T" must use the strict package, or a strict package
+  rebuilt for that cutoff.
+- The full package is for description, labelling and exploratory work.
+
+## 3. Folder structure
+
+```
+fintrust_historical_research_dataset/
+  README.md
+  manifest.json                  mode, cutoff, counts, per-file SHA-256
+  data/
+    financial_facts.csv|.json    canonical financial facts (facts contract v1.3)
+    filing_versions.csv          each archived filing artifact (original / restated / unknown_revision)
+    restatement_comparisons.csv  重編前/重編後 rows from the MOPS 2016-11-13 notices
+    historical_summaries.csv     TPEx 上櫃公司季報 summary values (summary contract 1.1)
+    publication_timeline.csv     announcements, notices and e-book uploads with their public time
+    source_inventory.csv         archived source documents
+    coverage_matrix.csv          fiscal-year evidence coverage
+    missing_evidence.csv         known gaps (header-only in the strict package)
+    conference_*.csv             full package only (see section 9)
+  conference/pages|text/         full package only
+  raw_evidence/                  original bytes, named by SHA-256
+  validation/                    quality_report.json, checksums.sha256, verify_package.py
+  contracts/                     field contracts
+```
+
+## 4. Verification (do this first)
+
+```bash
+python -I validation/verify_package.py fintrust_1785_asof_2016-11-14.zip
+# {"status": "verified", "mode": "strict_point_in_time", "package_schema_version": "1.2", ...}
+```
+
+The verifier is standard-library only. It checks the checksums and safe paths. For strict packages it also runs the
+semantic point-in-time checks, which fail closed:
+
+- no date after the cutoff;
+- no modern metadata;
+- every evidence reference resolves;
+- every timestamp is in Asia/Taipei.
+
+To extract safely, run the verifier on the ZIP first and then unzip. Alternatively, use `safe_extract` in
+`package_verify.py`, which verifies the package before writing any file.
+
+## 5. Field dictionary and units
+
+**`financial_facts.csv`** (one row per fact)
+
+| Field | Meaning |
+|---|---|
+| `fiscal_year`, `period` | fiscal year of the *figures* (e.g. `2013`, `2013FY`). **Not** a publication time. |
+| `metric_code` | canonical metric (`revenue`, `cost_of_goods_sold`, `gross_profit`, `net_income`, `total_assets`, …) |
+| `value`, `unit` | value in **TWD** (whole New Taiwan dollars). EPS, where present, is in TWD per share. |
+| `statement_scope` | `consolidated` or `individual` (parent-only) |
+| `accounting_framework` | `TW_GAAP` (FY2011–2012) or `TIFRS` (FY2013+) |
+| `filing_version_type` | `original`, `restated` or `unknown_revision` (section 6) |
+| `point_in_time_eligible` | `true` only when a verified public time exists |
+| `effective_available_at` | earliest verified public time of this value (Asia/Taipei) |
+| `observation_available_at` | time of the official disclosure that states this exact value |
+| `filing_available_at` | verified public time of the filing artifact itself |
+| `availability_evidence_*` | the disclosure that dates the value (ref, URL, SHA-256 of the included notice) |
+| `artifact_reference_status` | strict only: `withheld_not_public_at_cutoff` means the value is dated by a notice and the later XBRL file's identity is withheld |
+
+**`restatement_comparisons.csv`**
+
+- `pre_restatement_value` / `post_restatement_value` / `difference` are in **TWD thousand** (`published_unit`), as
+  disclosed.
+- Deductions are negative. `sign_factor` gives the canonical sign.
+- `pre_restatement_value` means *as previously reported according to the 2016-11-13 notice*. It is not necessarily
+  the first-published figure.
+- `disclosed_at`: 21:25:31 for the individual table, 21:26:22 for the consolidated table, 2016-11-13 Taipei.
+
+**`historical_summaries.csv`**
+
+- `value` is in **TWD thousand**; `normalized_value` is in TWD.
+- `report_period` is the summary report that printed the value. `fiscal_year` is the year the value belongs to:
+  a `prior_year_comparative` row prints the previous year inside a later report.
+- `statement_scope_basis`: the scope of the whole report row, inferred from that row's revenue.
+- `pit_evidence_*` and `side_consistency` are described in `contracts/` (summary contract 1.1).
+- In the strict package, `evidence_type = official_disclosed_observation`. Each value there is dated by the MOPS
+  notice that states it, and the TPEx workbook reference is withheld, because the workbook's own availability is
+  unverified.
+
+**Times.** All are ISO-8601 with an offset (strict package: always `+08:00`). They are separate, and none of them
+is a retrieval or generation time:
+
+- `filing_available_at`
+- `observation_available_at`
+- `disclosed_at` / `document_available_at`
+- `effective_available_at`
+- `available_from` (events)
+
+## 6. Original vs restated
+
+- **original**: the report as first filed. For FY2011–2015 the originals are scanned TWSE e-book PDFs. They have
+  no machine-readable values, and their verified upload time (2016-08-25) is a conservative upper bound: they may
+  have been public earlier.
+- **restated**: figures after the 2016 restatement. These are the XBRL facts for FY2013–2015 and the 重編後
+  columns.
+- **unknown_revision**: FY2016 XBRL. No evidence says whether it was ever revised.
+- Within each period and metric, never mix originals and restatements unless you deliberately compare them. Group by
+  `filing_version_type` (facts) or use the pre/post columns (comparisons).
+
+## 7. Fiscal year vs publication time
+
+A fiscal year is **not** a publication date. FY2013 figures were first published in 2014, but the restated FY2013
+values used here became public only on **2016-11-13 21:26:22**. When you align features to a prediction date, use
+`effective_available_at` (or `disclosed_at`), never `fiscal_year` or `document_dated_at`.
+
+## 8. What each researcher should use
+
+**Yu-Jing (financial-statement features)**
+
+- Point-in-time work:
+  - strict `data/financial_facts.csv` (27 restated consolidated FY2013–2015 facts, 9 metrics);
+  - `data/restatement_comparisons.csv` (before/after for FY2011–2015, both consolidated and individual;
+    TW-GAAP for FY2011–2012, TIFRS for FY2013–2015);
+  - `data/historical_summaries.csv` (11 disclosure-dated summary values).
+- Descriptive work: the full `financial_facts.csv` filtered by `filing_version_type`, plus `coverage_matrix.csv`
+  and `missing_evidence.csv` to see what is absent.
+- Do not treat the TPEx summary workbooks (full package, `raw_evidence/official_summaries/`) as pre-cutoff
+  information.
+
+**Ethan (conference text, numeric context)**
+
+- Text: in the full package, `data/conference_text_corpus.csv`, `conference/text/<sha256>.txt` and
+  `data/conference_page_index.csv`. These are the archival page text of the two 2011-03-25 decks.
+- Numeric context: `restatement_comparisons.csv` and `historical_summaries.csv`, keeping the units noted above.
+- `data/conference_jsd_corpus.csv` is header-only by design (section 9). Do not lower JSD readiness rules to fill it.
+
+## 9. Conference documents
+
+**The two 2011 decks are one meeting.** `178520110325M001.pdf` (Chinese) and `178520110325E001.pdf` (English) share
+the same MOPS row and meeting date 100/03/25 (2011-03-25), and both have 47 pages. They are two language versions
+of the same presentation, so count them as **one** observation, not two.
+
+They are not quarterly JSD-ready:
+
+- the JSD adapter requires a confirmed reporting period, and neither deck states one that could be validated
+  (`readiness_issues = period_unconfirmed`);
+- they are investor presentations, not earnings-call transcripts, and must not be relabelled as transcripts;
+- MOPS gives only the meeting date, so first public availability is unverified, and the decks are excluded from
+  strict packages.
+
+**Missing 2012–2016.** The official MOPS conference listing (t100sb02_1) returns 「查無資料」 for 2012–2016
+(`conference_coverage.csv`: `no_official_record_found`). That shows absence from MOPS, not proof that no
+conference took place. Third-party indexes were used only as leads and are never evidence.
+
+## 10. Limitations
+
+- **No pre-revelation inputs.** Before 2016-05-13 there are no verified financial inputs: 0 facts, 0 comparisons,
+  0 summaries and 0 filing artifacts. The original reports' first-publication times are not recovered.
+- **Restated values only, from 2016-11-13.** The strict facts are restated values dated by the 2016-11-13 notice.
+  Original FY2012–2015 machine-readable values are not available (scanned PDFs only).
+- **Partial summary coverage.** Summary values enter strict packages only where a contemporaneous notice states the
+  identical value, which gives 11 of 79 rows.
+- **Known cosmetic issues in the preserved full package.**
+  - Its `statement_scope_basis` text repeats the *revenue* wording on operating-income rows (the scope and every
+    value are correct).
+  - One `missing_evidence.csv` FY2016 detail is split into two rows at a parenthesis.
+  - Both are wording issues, not value defects, so the full ZIP was intentionally left unchanged.
+- **Single company, single event.** This is one case study. It is not a sample.
+
+## 11. Reporting findings without overstating them
+
+- Say "point-in-time as of <cutoff>, Asia/Taipei" and name the package SHA-256.
+- Do not claim the strict data shows that the misstatement was detectable **before May 2016**. There are no
+  verified inputs before 2016-05-13.
+- Do not report accuracy, AUC or similar for "prediction" on this case. With one positive company, results are
+  illustrative only.
+- Report the 2011 decks as one meeting, and say the 2012–2016 conference record is absent from MOPS.
+- Distinguish *as previously reported (per the 2016 notice)* from *first published*.
+- Keep units explicit: facts are in TWD; comparisons and summaries are in TWD thousand.
+
+## 12. Standard-library example
+
+```python
+import csv
+import io
+import zipfile
+
+PACKAGE = "fintrust_1785_asof_2016-11-14.zip"
+ROOT = "fintrust_historical_research_dataset/"
+
+def rows(archive: zipfile.ZipFile, name: str) -> list[dict]:
+    return list(csv.DictReader(io.StringIO(archive.read(ROOT + name).decode("utf-8"))))
+
+with zipfile.ZipFile(PACKAGE) as archive:
+    facts = rows(archive, "data/financial_facts.csv")
+    comparisons = rows(archive, "data/restatement_comparisons.csv")
+
+# Restated consolidated revenue (TWD) and when it became public.
+for fact in facts:
+    if fact["metric_code"] == "revenue":
+        print(fact["period"], int(fact["value"]), fact["filing_version_type"], fact["effective_available_at"])
+
+# Before/after revenue lines (TWD thousand) from the 2016-11-13 notices.
+for row in comparisons:
+    if row["canonical_metric"] == "revenue":
+        print(row["period"], row["statement_scope"], row["pre_restatement_value"], row["post_restatement_value"],
+              row["disclosed_at"])
+```

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from app.services.historical_audit.evidence_import import availability_instant
-from app.services.historical_audit.models import as_of_cutoff, iso, parse_timestamp, utc_now
+from app.services.historical_audit.models import TAIPEI, as_of_cutoff, iso, parse_timestamp, utc_now
 from app.services.historical_audit.reader import list_historical_facts
 from app.services.historical_audit.repository import HistoricalAuditRepository
 
@@ -28,7 +28,11 @@ SUMMARY_FIELDS = (
     "value", "published_unit", "normalized_value", "normalized_unit", "statement_scope", "statement_scope_basis",
     "availability_status", "effective_available_at", "point_in_time_eligible", "source_url", "content_hash",
     "retrieved_at", "quality_notes",
+    # summary contract 1.1 (appended): metric-specific point-in-time evidence and source semantics.
+    "observation_origin", "scope_inference_basis", "pit_evidence_kind", "pit_evidence_ref", "pit_evidence_url",
+    "pit_evidence_hash", "pit_evidence_side", "pit_evidence_label", "side_consistency", "source_reference_status",
 )
+SUMMARY_CONTRACT_VERSION = "1.1"
 COMPARISON_FIELDS = (
     "ticker", "evidence_type", "period", "fiscal_year", "statement_scope", "accounting_framework", "statement_type",
     "pre_label", "post_label", "canonical_metric", "sign_factor", "pre_restatement_value", "post_restatement_value",
@@ -106,27 +110,80 @@ def list_summary_observations(
 ) -> list[dict[str, Any]]:
     with repository.connect() as connection:
         rows = [dict(row) for row in connection.execute(
-            """SELECT o.*, d.source_url, d.content_hash, d.retrieved_at, oa.observation_available_at
+            """SELECT o.*, d.source_url, d.content_hash, d.retrieved_at
             FROM official_summary_observations o JOIN historical_source_documents d USING (source_document_id)
-            LEFT JOIN (SELECT observation_id, MIN(available_at) AS observation_available_at FROM observation_availability
-                       WHERE observation_kind = 'summary_observation' GROUP BY observation_id) oa USING (observation_id)
             WHERE o.ticker = ?
             ORDER BY o.fiscal_year, o.report_period, o.observation_role, o.source_metric_code""",
             (ticker,),
         ).fetchall()]
-    return finalize_summaries(rows, ticker, as_of=as_of)
+        availability = [dict(r) for r in connection.execute(
+            "SELECT * FROM observation_availability WHERE observation_kind = 'summary_observation'")]
+        comparisons = {r["comparison_id"]: dict(r) for r in connection.execute(
+            "SELECT * FROM restatement_comparisons WHERE ticker = ?", (ticker,))}
+        documents = {r["source_document_id"]: dict(r) for r in connection.execute(
+            "SELECT source_document_id, source_url, content_hash FROM historical_source_documents WHERE ticker = ?", (ticker,))}
+        events = {r["event_id"]: dict(r) for r in connection.execute(
+            "SELECT event_id, event_key FROM historical_publication_events WHERE ticker = ?", (ticker,))}
+    return finalize_summaries(rows, ticker, as_of=as_of,
+                              evidence=summary_evidence_map(availability, comparisons, documents, events))
 
 
-def finalize_summaries(rows: list[dict[str, Any]], ticker: str, *,
-                       as_of: date | datetime | str | None = None) -> list[dict[str, Any]]:
-    """Backend-independent; ``rows`` are summary rows joined with document fields and observation_available_at."""
+def expected_side(report_period: str, disclosed_at: str) -> str:
+    """A report whose fiscal year ended before a restatement disclosure carries 'as previously reported' (pre)
+    values; a report for a later fiscal year can only carry post-restatement figures."""
+    report_end = datetime(int(report_period[:4]) + 1, 1, 1, tzinfo=TAIPEI)
+    return "pre" if report_end <= parse_timestamp(disclosed_at) else "post"
+
+
+def summary_evidence_map(availability: list[dict[str, Any]], comparisons: dict[str, dict[str, Any]],
+                         documents: dict[str, dict[str, Any]], events: dict[str, dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """observation_id -> candidate disclosure evidence (backend-independent)."""
+    result: dict[str, list[dict[str, Any]]] = {}
+    for item in availability:
+        comparison = comparisons.get(item["corroborating_id"])
+        if comparison is None:
+            continue
+        sides = item["match_detail"].split("(", 1)[1].split(" side", 1)[0].split("+")
+        document = documents.get(comparison["source_document_id"], {})
+        result.setdefault(item["observation_id"], []).append({
+            "available_at": item["available_at"], "sides": sides, "comparison_id": comparison["comparison_id"],
+            "label": comparison["pre_label"] if sides == ["pre"] else (comparison["post_label"] or comparison["pre_label"]),
+            "event_key": events.get(comparison["event_id"], {}).get("event_key"),
+            "source_url": document.get("source_url"), "content_hash": document.get("content_hash"),
+            "statement_scope": comparison["statement_scope"], "canonical_metric": comparison["canonical_metric"],
+            "fiscal_year": comparison["fiscal_year"], "accounting_framework": comparison["accounting_framework"],
+        })
+    return result
+
+
+def admissible_summary_evidence(row: dict[str, Any], candidates: list[dict[str, Any]]) -> tuple[dict[str, Any] | None, str]:
+    """Earliest disclosure matching metric, period, scope, framework and the expected restatement side."""
+    admissible, inconsistent = [], False
+    for item in candidates:
+        key = (item["canonical_metric"], item["fiscal_year"], item["statement_scope"], item["accounting_framework"])
+        if key != (row["canonical_metric"], row["fiscal_year"], row["statement_scope"], row["accounting_framework"]):
+            continue
+        if expected_side(row["report_period"], item["available_at"]) in item["sides"]:
+            admissible.append(item)
+        else:
+            inconsistent = True
+    if admissible:
+        return min(admissible, key=lambda i: (parse_timestamp(i["available_at"]), i["comparison_id"])), "consistent"
+    return None, ("inconsistent_side" if inconsistent else "no_disclosure_match")
+
+
+def finalize_summaries(rows: list[dict[str, Any]], ticker: str, *, as_of: date | datetime | str | None = None,
+                       evidence: dict[str, list[dict[str, Any]]] | None = None) -> list[dict[str, Any]]:
+    """Backend-independent; ``rows`` are summary rows joined with their workbook document fields."""
     cutoff = _cutoff(as_of)
+    evidence = evidence or {}
     rows = sorted(rows, key=lambda r: (r["fiscal_year"], r["report_period"], r["observation_role"], r["source_metric_code"]))
     result = []
     for row in rows:
+        pit, consistency = admissible_summary_evidence(row, evidence.get(row["observation_id"], []))
         effective = parse_timestamp(row["available_at"]) if row["availability_status"] == "verified" else None
-        if row["observation_available_at"]:
-            observed = parse_timestamp(row["observation_available_at"])
+        if pit is not None:
+            observed = parse_timestamp(pit["available_at"])
             effective = observed if effective is None else min(effective, observed)
         if cutoff is not None and (effective is None or not effective < cutoff):
             continue
@@ -138,12 +195,28 @@ def finalize_summaries(rows: list[dict[str, Any]], ticker: str, *,
             "canonical_metric": row["canonical_metric"], "mapping_status": row["mapping_status"],
             "value": row["value_text"], "published_unit": row["published_unit"],
             "normalized_value": row["normalized_value_text"], "normalized_unit": row["normalized_unit"],
-            "statement_scope": row["statement_scope"], "statement_scope_basis": row["statement_scope_basis"],
-            "availability_status": "verified_by_corroboration" if row["observation_available_at"] else row["availability_status"],
+            # The archived basis text records the *revenue* match that fixed the scope of the whole report row;
+            # contract 1.1 states that explicitly so non-revenue rows are not read as revenue matches.
+            "statement_scope": row["statement_scope"],
+            "statement_scope_basis": (
+                f"scope of the whole {row['report_period']} report row, inferred from that row's revenue "
+                f"(not from this {row['canonical_metric'] or row['source_metric_code']} value): {row['statement_scope_basis']}"
+                if row["statement_scope"] != "unknown" else row["statement_scope_basis"]),
+            "availability_status": "verified_by_corroboration" if pit else row["availability_status"],
             "effective_available_at": effective.isoformat() if effective else None,
             "point_in_time_eligible": effective is not None, "source_url": row["source_url"],
             "content_hash": row["content_hash"], "retrieved_at": row["retrieved_at"],
             "quality_notes": "; ".join(json.loads(row["quality_notes_json"])),
+            "observation_origin": "tpex_quarterly_summary_value",
+            "scope_inference_basis": "report_row_revenue_match" if row["statement_scope"] != "unknown" else "not_inferred",
+            "pit_evidence_kind": "restatement_disclosure" if pit else None,
+            "pit_evidence_ref": pit["event_key"] if pit else None,
+            "pit_evidence_url": pit["source_url"] if pit else None,
+            "pit_evidence_hash": pit["content_hash"] if pit else None,
+            "pit_evidence_side": "+".join(pit["sides"]) if pit else None,
+            "pit_evidence_label": pit["label"] if pit else None,
+            "side_consistency": consistency,
+            "source_reference_status": "retrospective_workbook_reference",
         })
     return result
 
@@ -283,7 +356,7 @@ def coverage_matrix(repository: HistoricalAuditRepository, ticker: str, start_ye
             gaps.append("original filing only as scanned PDF (no machine-readable original values)")
             gaps.append("original first-publication time unverified (archive re-upload time used as conservative bound)")
         if not originals and not any(v["filing_version_type"] == "restated" for v in year_versions):
-            gaps.append("revision status unknown (no restatement evidence; original status unproven)")
+            gaps.append("revision status unknown (no restatement evidence, original status unproven)")
         if any(v["filing_version_type"] == "restated" and v["availability_status"] != "verified" for v in year_versions):
             gaps.append("restated artifact bytes not linked to a verified upload time")
         if any(v["source_kind"] != "official_pdf" and v["availability_status"] != "verified" for v in year_versions):
@@ -317,7 +390,8 @@ def _render(rows: list[dict[str, Any]], fields: tuple[str, ...], output_format: 
         return buffer.getvalue()
     if output_format == "json":
         return json.dumps({
-            "contract": f"fintrust.historical_{name}", "contract_version": EVIDENCE_CONTRACT_VERSION,
+            "contract": f"fintrust.historical_{name}",
+            "contract_version": SUMMARY_CONTRACT_VERSION if name == "summary_observations" else EVIDENCE_CONTRACT_VERSION,
             "generated_at": iso(generated_at or utc_now()), "filters": filters, "fields": list(fields),
             "record_count": len(rows), "records": [{f: row[f] for f in fields} for row in rows],
         }, ensure_ascii=False, indent=2)

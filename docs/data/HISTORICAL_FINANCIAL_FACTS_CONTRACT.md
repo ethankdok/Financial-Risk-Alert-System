@@ -120,11 +120,45 @@ and original filing facts only by 重編前 (pre) values.
 |---|---|---|
 | Pre-event detection | before the 2016-05-13 public revelation | **no verified inputs**: 0 facts, 0 comparisons, 0 summaries, 0 artifacts |
 | Restatement analysis | from 2016-11-13 21:26:22 | 27 restated facts (observation level) + 158 before/after rows |
-| Retrospective | e.g. 2017-12-31 | same 27 facts + 8 artifact-verified PDFs |
+| Restatement analysis, one second earlier | 2016-11-13 21:26:21 | 0 facts; 79 individual before/after rows (21:25:31 notice); 6 individual summary rows |
+| Restatement analysis | from 2016-11-13 21:26:22 | 27 restated facts (observation level) + 158 before/after rows + 11 summary rows |
+| Retrospective | e.g. 2017-12-31 | same 27 facts (XBRL identity still withheld) + 8 artifact-verified PDFs (incl. the FY2016 PDF) + 12 summary rows |
 
 Pre-event detection requires verified first-publication evidence for the
 original 2012–2016 reports, which is not yet available. TPEx summary values
-exist but their availability is unverified.
+exist but their workbook availability is unverified; a summary value enters a
+strict package only when a contemporaneous official disclosure states the same
+value (summary contract 1.1, below). The counts above were measured on the real
+archive by `tests/test_historical_evidence_real.py::RealStrictCutoffMatrix`, whose
+assertions are derived from database relationships, not from these numbers.
+
+## Summary observation contract 1.1 (additive)
+
+Ten fields are appended to `historical_summaries` / `summary_observations`; the 1.0 columns keep their order.
+
+| Field | Meaning |
+|---|---|
+| `observation_origin` | `tpex_quarterly_summary_value` (the value comes from a TPEx 上櫃公司季報 summary row) |
+| `scope_inference_basis` | `report_row_revenue_match`: the statement scope of the *whole report row* was inferred from that row's revenue; `not_inferred` otherwise |
+| `pit_evidence_kind` | `restatement_disclosure` when a contemporaneous official disclosure states this exact value; empty otherwise |
+| `pit_evidence_ref` / `_url` / `_hash` | event key, URL and SHA-256 of that disclosure |
+| `pit_evidence_side` | `pre`, `post` or `pre+post`: which side(s) of the disclosure's 重編前/重編後 table carry the value |
+| `pit_evidence_label` | the disclosure's own line label (e.g. 營業淨利 for operating income) |
+| `side_consistency` | `consistent` (matches the expected side), `inconsistent_side`, or `no_disclosure_match` |
+| `source_reference_status` | `retrospective_workbook_reference` (retrospective) or `workbook_withheld_not_public_at_cutoff` (strict) |
+
+Matching is metric-specific: canonical metric, fiscal year, statement scope, accounting framework and the expected
+restatement side. A report whose fiscal year ended (Asia/Taipei, 1 January of the next year) no later than the
+disclosure must match the *as previously reported* (pre) side; a report for a later fiscal year must match the
+restated (post) side. `effective_available_at` is the earliest admissible disclosure time.
+
+`statement_scope_basis` now says explicitly that the scope belongs to the whole report row and was inferred from that
+row's revenue (not from the row's own metric). Earlier exports, including the preserved retrospective ZIP, repeat the
+revenue wording on operating-income rows; the scope itself and every value are unchanged.
+
+In strict packages a summary row is retained only if the disclosure is side-consistent, published before the cutoff,
+and the report's fiscal year ended before the cutoff; it becomes `evidence_type = official_disclosed_observation`,
+`completeness = disclosed_value_only`, and the workbook's `source_url`, `content_hash` and `retrieved_at` are withheld.
 
 ## v1.1 changes (Phase 1B, additive)
 

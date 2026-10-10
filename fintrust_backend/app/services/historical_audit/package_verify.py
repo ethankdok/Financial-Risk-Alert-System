@@ -151,34 +151,161 @@ _ISO = re.compile(r"\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]
 _TAIPEI = timezone(timedelta(hours=8))
 
 
+STRICT_MANIFEST_KEYS = {
+    "package", "package_schema_version", "mode", "suitable_for_historical_backtest", "cutoff_utc", "cutoff_taipei", "generator",
+    "generated_at", "parameters", "case", "contracts", "counts", "completeness", "leakage_check", "integrity",
+    "checksums_sha256", "content_digest", "files",
+}
+_MODEL_FACING_EXEMPT = ("raw_evidence/", "validation/verify_package.py", "validation/checksums.sha256", "manifest.json")
+_HEX64 = re.compile(r"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])")
+WITHHELD_ARTIFACT_FIELDS = ("filing_version_id", "content_hash", "source_url", "taxonomy_concept", "document_dated_at",
+                            "retrieved_at", "available_at", "filing_available_at")
+
+
+def _csv(files: dict[str, bytes], name: str) -> list[dict]:
+    if name not in files:
+        raise PackageVerificationError(f"Strict package is missing {name}")
+    return list(csv.DictReader(io.StringIO(files[name].decode("utf-8"))))
+
+
+def _ts(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
-    """Re-check the cutoff independently: no post-cutoff date in data/, no unlisted or later raw evidence."""
-    cutoff = datetime.fromisoformat(str(manifest["cutoff_utc"]).replace("Z", "+00:00"))
+    """Independent semantic re-check of a strict point-in-time package (fails closed)."""
+    def fail(message: str) -> None:
+        raise PackageVerificationError(message)
+
+    cutoff = _ts(str(manifest["cutoff_utc"]))
+    if "cutoff_taipei" in manifest and _ts(str(manifest["cutoff_taipei"])) != cutoff:
+        fail("Manifest cutoff_taipei and cutoff_utc disagree")
     cutoff_day = (cutoff - timedelta(microseconds=1)).astimezone(_TAIPEI).date()
+
+    # 1. Model-facing metadata: no modern or archive-derived fields in the manifest.
+    unexpected = sorted(set(manifest) - STRICT_MANIFEST_KEYS)
+    if unexpected or manifest.get("generated_at") is not None:
+        fail(f"Strict manifest carries modern/retrospective metadata: {unexpected or 'generated_at'}")
+
+    # 2. No post-cutoff date in any model-facing file.
     for name, data in files.items():
-        if not name.startswith("data/"):
+        if name.startswith(_MODEL_FACING_EXEMPT):
             continue
         for match in _ISO.finditer(data.decode("utf-8", "replace")):
             text = match.group(0)
             if len(text) == 10:
                 late = datetime.fromisoformat(text).date() > cutoff_day
             else:
-                stamp = datetime.fromisoformat(text.replace("Z", "+00:00").replace(" ", "T"))
+                stamp = _ts(text.replace(" ", "T"))
+                if stamp.tzinfo is not None and stamp.utcoffset() != timedelta(hours=8):
+                    fail(f"Model-facing timestamp {text} in {name} is not expressed in Asia/Taipei")
                 late = stamp.date() > cutoff_day if stamp.tzinfo is None else stamp >= cutoff
             if late:
-                raise PackageVerificationError(f"Post-cutoff date {text} in {name}")
-    allowed: set[str] = set()
-    for name, column in (("data/filing_versions.csv", "filing_available_at"), ("data/source_inventory.csv", "document_available_at")):
-        for row in csv.DictReader(io.StringIO(files.get(name, b"").decode("utf-8"))):
-            if row.get("package_raw_path") and row.get(column):
-                if datetime.fromisoformat(row[column]) >= cutoff:
-                    raise PackageVerificationError(f"{name} lists evidence available after the cutoff")
-                allowed.add(row["package_raw_path"])
-    extra = sorted(name for name in files if name.startswith("raw_evidence/") and name not in allowed)
+                fail(f"Post-cutoff date {text} in {name}")
+
+    versions = _csv(files, "data/filing_versions.csv")
+    inventory = _csv(files, "data/source_inventory.csv")
+    raw_hashes = {name.rsplit("/", 1)[1].split(".")[0]: name for name in files if name.startswith("raw_evidence/")}
+    documents = {}
+    allowed_raw: set[str] = set()
+    for row in versions:  # 5. filing artifacts: own verified availability before the cutoff
+        if not row.get("filing_available_at") or _ts(row["filing_available_at"]) >= cutoff:
+            fail(f"Filing version {row['filing_version_id']} is not verifiably public before the cutoff")
+        if row.get("package_raw_path"):
+            allowed_raw.add(row["package_raw_path"])
+    for row in inventory:  # single-publication notices only
+        if not row.get("document_available_at") or _ts(row["document_available_at"]) >= cutoff:
+            fail(f"Source document {row['source_key']} is not verifiably public before the cutoff")
+        documents[row["content_hash"]] = row
+        if row.get("package_raw_path"):
+            allowed_raw.add(row["package_raw_path"])
+
+    # 4. Raw evidence only when admissible.
+    extra = sorted(name for name in files if name.startswith("raw_evidence/") and name not in allowed_raw)
     if extra:
-        raise PackageVerificationError(f"Raw evidence without verified pre-cutoff availability: {extra[:3]}")
-    if any(name.startswith(("conference/",)) for name in files):
-        raise PackageVerificationError("Strict package contains conference documents without verified availability")
+        fail(f"Raw evidence without verified pre-cutoff availability: {extra[:3]}")
+    if any(name.startswith(("conference/", "data/conference")) for name in files):  # 9.
+        fail("Strict package contains conference material without verified availability")
+
+    # 7. Every SHA-256 reference in model-facing files resolves to included evidence.
+    for name, data in files.items():
+        if name.startswith(_MODEL_FACING_EXEMPT):
+            continue
+        for digest in _HEX64.findall(data.decode("utf-8", "replace")):
+            if digest not in raw_hashes:
+                fail(f"{name} references {digest[:12]}… which is not included evidence")
+
+    def resolve_disclosure(digest: str, effective: datetime, what: str) -> None:
+        document = documents.get(digest)
+        if document is None or digest not in raw_hashes:
+            fail(f"{what}: eligibility evidence {digest[:12]}… does not resolve to an included disclosure")
+        if _ts(document["document_available_at"]) > effective:
+            fail(f"{what}: eligibility evidence published after the stated availability")
+
+    # 1 + 2. Facts: eligibility evidence and timestamps.
+    facts = _csv(files, "data/financial_facts.csv")
+    version_ids = {row["filing_version_id"] for row in versions}
+    for row in facts:
+        what = f"fact {row['period']}/{row['metric_code']}"
+        if row["point_in_time_eligible"] != "true" or not row["effective_available_at"]:
+            fail(f"{what}: not point-in-time eligible")
+        effective = _ts(row["effective_available_at"])
+        if effective >= cutoff:
+            fail(f"{what}: effective availability after the cutoff")
+        if row["artifact_reference_status"] == "withheld_not_public_at_cutoff":
+            if any(row.get(field) for field in WITHHELD_ARTIFACT_FIELDS):
+                fail(f"{what}: withheld artifact identity is present")
+            if row["availability_evidence_kind"] != "restatement_disclosure" or not row["observation_available_at"]:
+                fail(f"{what}: withheld artifact without a disclosure reference")
+            if _ts(row["observation_available_at"]) != effective:
+                fail(f"{what}: observation and effective availability disagree")
+            resolve_disclosure(row["availability_evidence_hash"], effective, what)
+        elif row["artifact_reference_status"] == "verified_public_artifact":
+            if row["filing_version_id"] not in version_ids:
+                fail(f"{what}: references a filing artifact that is not included")
+        else:
+            fail(f"{what}: unknown artifact_reference_status {row['artifact_reference_status']!r}")
+
+    # 3. Summary observations: contemporaneous disclosure, workbook withheld, report period ended, side consistent.
+    for row in _csv(files, "data/historical_summaries.csv"):
+        what = f"summary {row['report_period']}/{row['fiscal_year']}/{row['source_metric_code']}"
+        if row["evidence_type"] != "official_disclosed_observation" or row["source_url"] or row["content_hash"]:
+            fail(f"{what}: later workbook reference not withheld")
+        if row["side_consistency"] != "consistent" or row["pit_evidence_kind"] != "restatement_disclosure":
+            fail(f"{what}: no consistent contemporaneous disclosure")
+        effective = _ts(row["effective_available_at"])
+        if effective >= cutoff or datetime(int(row["report_period"][:4]) + 1, 1, 1, tzinfo=_TAIPEI) > cutoff:
+            fail(f"{what}: not available before the cutoff")
+        resolve_disclosure(row["pit_evidence_hash"], effective, what)
+
+    for row in _csv(files, "data/restatement_comparisons.csv"):
+        effective = _ts(row["disclosed_at"])
+        if effective >= cutoff:
+            fail("restatement comparison disclosed after the cutoff")
+        resolve_disclosure(row["content_hash"], effective, f"comparison {row['period']}/{row['canonical_metric']}")
+
+    for row in _csv(files, "data/publication_timeline.csv"):  # 6. events
+        if _ts(row["available_from"]) >= cutoff:
+            fail(f"event {row['event_key']} public after the cutoff")
+        for link in filter(None, (row.get("linked_filing_versions") or "").split(";")):
+            if link.split(":")[1] not in version_ids:
+                fail(f"event {row['event_key']} links an excluded filing version")
+
+    # 10. CSV / JSON / manifest consistency.
+    records = json.loads(files["data/financial_facts.json"].decode("utf-8"))["records"]
+    def as_text(value):
+        return "" if value is None else ("true" if value is True else "false" if value is False else str(value))
+    if [{k: as_text(v) for k, v in r.items()} for r in records] != facts:
+        fail("financial_facts.csv and financial_facts.json disagree")
+    counts = manifest.get("counts", {})
+    for key, name in (("financial_facts", "data/financial_facts.csv"), ("filing_versions", "data/filing_versions.csv"),
+                      ("historical_summaries", "data/historical_summaries.csv"),
+                      ("restatement_comparisons", "data/restatement_comparisons.csv"),
+                      ("publication_events", "data/publication_timeline.csv"), ("source_inventory", "data/source_inventory.csv")):
+        if counts.get(key) != len(_csv(files, name)):
+            fail(f"manifest count {key} disagrees with {name}")
+    if counts.get("raw_evidence_files") != len(raw_hashes):
+        fail("manifest raw evidence count disagrees with the package")
 
 
 def safe_extract(zip_path: str | Path, destination: str | Path) -> Path:

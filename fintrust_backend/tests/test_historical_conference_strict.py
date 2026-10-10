@@ -110,6 +110,14 @@ class ConferenceTestCase(EvidenceTestCase):
 
 
 class ConferenceDatasetTests(ConferenceTestCase):
+    def test_conference_packaging_refuses_a_cloud_datastore(self) -> None:
+        from unittest import mock
+
+        with mock.patch.dict("os.environ", {"DATASTORE_BACKEND": "firestore"}):
+            with self.assertRaises(ResearchPackageError):
+                self.build("cloud.zip")
+        self.assertFalse((self.root / "cloud.zip").exists())
+
     def test_conf04_05_06_original_pdf_pages_and_identity(self) -> None:
         path, result = self.build("full.zip")
         documents = self.rows(path, "data/conference_documents.csv")
@@ -189,6 +197,28 @@ class StrictPointInTimeTests(ConferenceTestCase):
     def strict(self, name="strict.zip", **params) -> tuple[Path, dict]:
         return self.build(name, as_of=self.CUTOFF, **params)
 
+    def tamper(self, path: Path, member: str | None, payload: bytes | None = None, *, extra: dict | None = None,
+               manifest_update: dict | None = None) -> Path:
+        """Rewrite a package consistently (checksums + manifest) so only the semantic verifier can catch it."""
+        out = self.root / f"tampered-{len(list(self.root.glob('tampered-*')))}.zip"
+        with zipfile.ZipFile(path) as source:
+            files = {n[len(PACKAGE_ROOT) + 1:]: source.read(n) for n in source.namelist()}
+        if member is not None:
+            files[member] = payload
+        files.update(extra or {})
+        listed = {n: d for n, d in files.items() if n not in {MANIFEST, CHECKSUMS}}
+        checksums = "".join(f"{hashlib.sha256(d).hexdigest()}  {n}\n" for n, d in sorted(listed.items())).encode()
+        manifest_data = json.loads(files[MANIFEST])
+        manifest_data.update(manifest_update or {})
+        manifest_data["checksums_sha256"] = hashlib.sha256(checksums).hexdigest()
+        manifest_data["files"] = [{"path": n, "sha256": hashlib.sha256(d).hexdigest(), "bytes": len(d)}
+                                  for n, d in sorted(listed.items())]
+        files[CHECKSUMS], files[MANIFEST] = checksums, json.dumps(manifest_data).encode()
+        with zipfile.ZipFile(out, "w") as target:
+            for name, data in files.items():
+                target.writestr(f"{PACKAGE_ROOT}/{name}", data)
+        return out
+
     def test_mode_validation(self) -> None:
         with self.assertRaises(ResearchPackageError):
             self.build("x.zip", as_of=self.CUTOFF, mode="retrospective")
@@ -233,23 +263,7 @@ class StrictPointInTimeTests(ConferenceTestCase):
         self.assertEqual((manifest["leakage_check"], report["leakage_check"]), ("passed", "passed"))
         self.assertTrue(manifest["suitable_for_historical_backtest"])
 
-        def tamper(member: str, payload: bytes, *, extra: dict | None = None) -> Path:
-            out = self.root / f"tampered-{member.replace('/', '_')}.zip"
-            with zipfile.ZipFile(path) as source:
-                files = {n[len(PACKAGE_ROOT) + 1:]: source.read(n) for n in source.namelist()}
-            files[member] = payload
-            files.update(extra or {})
-            listed = {n: d for n, d in files.items() if n not in {MANIFEST, CHECKSUMS}}
-            checksums = "".join(f"{hashlib.sha256(d).hexdigest()}  {n}\n" for n, d in sorted(listed.items())).encode()
-            manifest_data = json.loads(files[MANIFEST])
-            manifest_data["checksums_sha256"] = hashlib.sha256(checksums).hexdigest()
-            manifest_data["files"] = [{"path": n, "sha256": hashlib.sha256(d).hexdigest(), "bytes": len(d)}
-                                      for n, d in sorted(listed.items())]
-            files[CHECKSUMS], files[MANIFEST] = checksums, json.dumps(manifest_data).encode()
-            with zipfile.ZipFile(out, "w") as target:
-                for name, data in files.items():
-                    target.writestr(f"{PACKAGE_ROOT}/{name}", data)
-            return out
+        tamper = lambda member, payload, **kw: self.tamper(path, member, payload, **kw)  # noqa: E731
 
         timeline = self.read(path, "data/publication_timeline.csv") + b"1785,x,late,t,,2016-12-05T17:43:16+08:00,second,2016-12-05T17:43:16+08:00,,,,,,,false,,\n"
         with self.assertRaises(PackageVerificationError):
@@ -257,6 +271,89 @@ class StrictPointInTimeTests(ConferenceTestCase):
         with self.assertRaises(PackageVerificationError):
             verify_package(tamper("data/financial_facts.csv", self.read(path, "data/financial_facts.csv"),
                                   extra={"raw_evidence/financial_filings/1785/2016FY/" + "a" * 64 + ".pdf": b"%PDF-later"}))
+
+    def test_modern_metadata_lives_only_in_the_reviewer_sidecar(self) -> None:
+        path, result = self.strict()
+        names = self.names(path)
+        manifest = json.loads(self.read(path, MANIFEST))
+        self.assertIsNone(manifest["generated_at"])
+        self.assertNotIn("excluded_by_cutoff", manifest)
+        self.assertEqual(manifest["cutoff_taipei"], "2016-11-15T00:00:00+08:00")
+        self.assertNotIn("validation/provenance.csv", names)
+        self.assertEqual(self.rows(path, "data/missing_evidence.csv"), [])
+        report = json.loads(self.read(path, "validation/quality_report.json"))
+        self.assertNotIn("excluded_by_cutoff_or_unverified_availability", report)
+        model_facing = b"".join(self.read(path, n) for n in names
+                                if not n.startswith("raw_evidence/") and n != "validation/verify_package.py")
+        self.assertNotIn(b"2026-", model_facing)
+        audit = json.loads(Path(result["audit_path"]).read_text(encoding="utf-8"))
+        self.assertEqual(audit["package_sha256"], hashlib.sha256(path.read_bytes()).hexdigest())
+        self.assertEqual(audit["generated_at"], "2026-10-10T00:00:00+00:00")
+        self.assertEqual(audit["excluded_by_cutoff"]["conference_documents"], 2)
+        self.assertTrue(audit["raw_evidence_provenance"])
+        self.assertNotIn(Path(result["audit_path"]).name, names)
+        # Every model-facing timestamp is Asia/Taipei.
+        for row in self.rows(path, "data/financial_facts.csv") + self.rows(path, "data/restatement_comparisons.csv"):
+            for key in ("effective_available_at", "observation_available_at", "disclosed_at"):
+                if row.get(key):
+                    self.assertTrue(row[key].endswith("+08:00"), (key, row[key]))
+
+    def test_summaries_are_reclassified_with_metric_specific_disclosures(self) -> None:
+        path, result = self.strict()
+        audit = json.loads(Path(result["audit_path"]).read_text(encoding="utf-8"))
+        decisions = audit["summary_observation_review"]
+        retained = [d for d in decisions if d["decision"].startswith("retained")]
+        summaries = self.rows(path, "data/historical_summaries.csv")
+        self.assertTrue(summaries)
+        self.assertEqual(len(summaries), len(retained))
+        for row in summaries:
+            self.assertEqual(row["evidence_type"], "official_disclosed_observation")
+            self.assertEqual((row["source_url"], row["content_hash"], row["retrieved_at"]), ("", "", ""))
+            self.assertEqual(row["source_reference_status"], "workbook_withheld_not_public_at_cutoff")
+            self.assertEqual(row["side_consistency"], "consistent")
+            self.assertEqual(row["pit_evidence_kind"], "restatement_disclosure")
+            self.assertEqual(row["scope_inference_basis"], "report_row_revenue_match")
+            self.assertIn("inferred from that row's revenue", row["statement_scope_basis"])
+            if row["canonical_metric"] != "revenue":
+                self.assertIn(f"not from this {row['canonical_metric']} value", row["statement_scope_basis"])
+        for decision in decisions:
+            if not decision["decision"].startswith("retained"):
+                self.assertTrue(decision["decision"].startswith("excluded: "))
+
+    def test_semantic_verifier_fails_closed(self) -> None:
+        path, _ = self.strict()
+        verify_package(path)
+        facts = self.read(path, "data/financial_facts.csv").decode("utf-8")
+        evidence_hash = self.rows(path, "data/financial_facts.csv")[0]["availability_evidence_hash"]
+        cases = {
+            "modern manifest key": self.tamper(path, None, manifest_update={"excluded_by_cutoff": {"versions": 3}}),
+            "generated_at": self.tamper(path, None, manifest_update={"generated_at": "2016-11-14T00:00:00+00:00"}),
+            "reference to excluded evidence": self.tamper(
+                path, "data/missing_evidence.csv", b"fiscal_year,evidence_kind,status,detail\n,x,y," + b"b" * 64 + b"\n"),
+            "unresolved disclosure": self.tamper(path, "data/financial_facts.csv", facts.replace(evidence_hash, "", 1).encode()),
+            "non-Taipei timestamp": self.tamper(
+                path, "data/restatement_comparisons.csv",
+                self.read(path, "data/restatement_comparisons.csv").replace(b"+08:00", b"+00:00", 1)),
+            "conference material": self.tamper(path, None, extra={"conference/x.pdf": b"%PDF"}),
+            "count mismatch": self.tamper(path, None, manifest_update={"counts": {"financial_facts": 0}}),
+        }
+        for label, tampered in cases.items():
+            with self.subTest(label), self.assertRaises(PackageVerificationError):
+                verify_package(tampered)
+
+    def test_cutoff_matrix_fixture(self) -> None:
+        previous = None
+        for index, cutoff in enumerate(("2016-05-12", "2016-05-13T00:00:00+08:00", "2016-11-13T21:26:21+08:00",
+                                        "2016-11-13T21:26:22+08:00", "2016-11-14", "2017-12-31")):
+            path, result = self.build(f"cut{index}.zip", as_of=cutoff)
+            self.assertEqual(verify_package(path)["status"], "verified", cutoff)
+            if previous:
+                self.assertTrue(all(result["counts"][k] >= previous[k] for k in result["counts"]), cutoff)
+            previous = result["counts"]
+            if index == 2:
+                self.assertEqual(self.rows(path, "data/financial_facts.csv"), [])
+            if index == 3:
+                self.assertTrue(self.rows(path, "data/financial_facts.csv"))
 
     def test_strict_requirement_10_verifies_after_clean_extraction(self) -> None:
         path, _ = self.strict()

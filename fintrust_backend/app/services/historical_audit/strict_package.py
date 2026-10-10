@@ -14,8 +14,14 @@ public before the cutoff:
 - timeline events only when public before the cutoff, with snapshot-derived
   attributes removed;
 - conference documents are excluded unless their availability is verified;
-- retrieval timestamps (post-cutoff by nature) live in ``validation/provenance.csv``,
-  never in ``data/``. ``leakage_check`` rejects any post-cutoff date in ``data/``.
+- TPEx summary values are kept only when their report's fiscal year ended before
+  the cutoff and a contemporaneous official disclosure states the identical value
+  for the same metric, period, scope, framework and restatement side; they become
+  ``official_disclosed_observation`` rows and the later workbook reference is withheld;
+- modern verification metadata (generation time, retrieval times, exclusion counts
+  derived from the current archive, row-level exclusion reasons) never enters the
+  ZIP: it is returned as a reviewer-only ``audit`` sidecar bound to the ZIP's SHA-256.
+  ``leakage_check`` rejects any post-cutoff date in model-facing files.
 """
 
 from __future__ import annotations
@@ -83,12 +89,15 @@ def document_availability(repository, ticker: str) -> dict[str, tuple[datetime |
     return result
 
 
+MODEL_FACING_EXEMPT = ("raw_evidence/", "validation/verify_package.py", "validation/checksums.sha256", "manifest.json")
+
+
 def leakage_check(files: dict[str, bytes], cutoff: datetime) -> list[str]:
-    """Every ISO date/timestamp in data/ must be before the cutoff (dates: on or before the cutoff day)."""
+    """Every ISO date/timestamp in model-facing files must be before the cutoff (dates: on or before the cutoff day)."""
     cutoff_day = (cutoff - timedelta(microseconds=1)).astimezone(TAIPEI).date()
     problems = []
     for path, data in sorted(files.items()):
-        if not path.startswith("data/"):
+        if path.startswith(MODEL_FACING_EXEMPT):
             continue
         for match in _ISO.finditer(data.decode("utf-8", "replace")):
             text = match.group(0)
@@ -116,14 +125,31 @@ def strict_facts(repository, params, cutoff: datetime, version_public: set[str])
             row["artifact_reference_status"] = "withheld_not_public_at_cutoff"
             row["evidence_type"] = "official_disclosed_observation"
             row["completeness"] = "disclosed_value_only"
-        row["retrieved_at"] = None  # retrieval metadata lives in validation/provenance.csv
+        row["retrieved_at"] = None  # retrieval metadata lives only in the reviewer-only audit sidecar
         result.append(row)
     return result
+
+
+_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)$")
+
+
+def to_taipei(value: Any) -> Any:
+    """Model-facing timestamps are expressed in Asia/Taipei (same instant; dates and naive values untouched)."""
+    if isinstance(value, str) and _TIMESTAMP.match(value):
+        return parse_timestamp(value).astimezone(TAIPEI).isoformat()
+    if isinstance(value, dict):
+        return {key: to_taipei(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [to_taipei(item) for item in value]
+    return value
 
 
 def build_strict(*, add, csv_bytes, json_bytes, repository, archive, params, cutoff: datetime,
                  include_raw: bool) -> dict[str, Any]:
     ticker = params.ticker
+    _csv_bytes, _json_bytes = csv_bytes, json_bytes
+    csv_bytes = lambda rows, fields: _csv_bytes(to_taipei(list(rows)), fields)  # noqa: E731
+    json_bytes = lambda payload: _json_bytes(to_taipei(payload))  # noqa: E731
     provenance: list[dict[str, Any]] = []
     excluded: dict[str, int] = {}
 
@@ -185,12 +211,32 @@ def build_strict(*, add, csv_bytes, json_bytes, repository, archive, params, cut
                    if params.start_year <= r["fiscal_year"] <= params.end_year]
     excluded["restatement_comparisons"] = len(list_restatement_comparisons(repository, ticker)) - len(comparisons)
     add("data/restatement_comparisons.csv", csv_bytes(comparisons, COMPARISON_FIELDS), "dataset")
-    summaries = [r for r in list_summary_observations(repository, ticker, as_of=params.as_of)
-                 if params.start_year <= r["fiscal_year"] <= params.end_year]
-    for row in summaries:
-        row["retrieved_at"] = None
-        row["content_hash"] = None  # the summary file's current bytes are a later snapshot; the value is dated by the notice
-    excluded["summary_observations"] = len(list_summary_observations(repository, ticker)) - len(summaries)
+    summaries, summary_review = [], []
+    for row in list_summary_observations(repository, ticker):
+        if not params.start_year <= row["fiscal_year"] <= params.end_year:
+            continue
+        report_end = datetime(int(row["report_period"][:4]) + 1, 1, 1, tzinfo=TAIPEI)
+        effective = parse_timestamp(row["effective_available_at"]) if row["effective_available_at"] else None
+        if row["pit_evidence_kind"] != "restatement_disclosure" or effective is None:
+            decision = "excluded: no contemporaneous official disclosure of this value (workbook availability unverified)"
+        elif row["side_consistency"] != "consistent":
+            decision = f"excluded: disclosure side inconsistent with the report ({row['side_consistency']})"
+        elif not effective < cutoff:
+            decision = "excluded: disclosure published after the cutoff"
+        elif not report_end <= cutoff:
+            decision = f"excluded: the {row['report_period']} report period had not ended at the cutoff"
+        else:
+            decision = "retained as official_disclosed_observation"
+        summary_review.append({key: row[key] for key in (
+            "report_period", "fiscal_year", "observation_role", "source_metric_code", "canonical_metric", "value",
+            "statement_scope", "accounting_framework", "source_url", "pit_evidence_ref", "pit_evidence_side",
+            "pit_evidence_label", "side_consistency", "effective_available_at")} | {"decision": decision})
+        if not decision.startswith("retained"):
+            continue
+        summaries.append({**row, "evidence_type": "official_disclosed_observation",
+                          "completeness": "disclosed_value_only", "source_url": None, "content_hash": None,
+                          "retrieved_at": None, "source_reference_status": "workbook_withheld_not_public_at_cutoff"})
+    excluded["summary_observations"] = sum(1 for r in summary_review if not r["decision"].startswith("retained"))
     add("data/historical_summaries.csv", csv_bytes(summaries, SUMMARY_FIELDS), "dataset")
 
     hash_documents = {d["content_hash"]: d["source_document_id"] for d in documents}
@@ -219,13 +265,11 @@ def build_strict(*, add, csv_bytes, json_bytes, repository, archive, params, cut
         coverage.append({"fiscal_year": year, **counts,
                          "status": "evidence_available" if any(counts.values()) else "no_verified_public_evidence"})
     add("data/coverage_matrix.csv", csv_bytes(coverage, STRICT_COVERAGE_FIELDS), "dataset")
-    add("data/missing_evidence.csv", csv_bytes(
-        [{"fiscal_year": None, "evidence_kind": kind, "status": "excluded_by_cutoff_or_unverified_availability",
-          "detail": f"{count} item(s) withheld"} for kind, count in sorted(excluded.items()) if count],
-        ("fiscal_year", "evidence_kind", "status", "detail")), "dataset")
-    add("validation/provenance.csv", csv_bytes(sorted(provenance, key=lambda r: r["package_path"]), PROVENANCE_FIELDS),
-        "validation")
+    # Exclusion counts describe the *current* archive; they belong to the reviewer-only audit sidecar.
+    add("data/missing_evidence.csv", csv_bytes([], ("fiscal_year", "evidence_kind", "status", "detail")), "dataset")
     return {
+        "provenance": sorted(provenance, key=lambda r: r["package_path"]),
+        "summary_review": summary_review,
         "facts": facts, "versions": version_rows, "summaries": summaries, "comparisons": comparisons,
         "timeline": timeline, "inventory": inventory, "excluded": excluded,
         "withheld_artifact_facts": sum(1 for r in facts if r["artifact_reference_status"] == "withheld_not_public_at_cutoff"),

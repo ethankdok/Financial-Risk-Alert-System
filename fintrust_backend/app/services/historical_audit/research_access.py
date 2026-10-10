@@ -21,6 +21,7 @@ from app.services.historical_audit.evidence_export import (
     finalize_summaries,
     list_restatement_comparisons,
     list_summary_observations,
+    summary_evidence_map,
 )
 from app.services.historical_audit.firestore_repository import FirestoreHistoricalResearchRepository, strip_internal
 from app.services.historical_audit.models import VersionPolicy, parse_timestamp
@@ -136,19 +137,17 @@ class FirestoreResearchBackend:
         return finalize_comparisons(rows, ticker, as_of=as_of)
 
     def list_summary_observations(self, ticker, *, as_of=None):
-        documents = self._documents(ticker)
-        availability: dict[str, list[str]] = {}
-        for row in self._rows("observation_availability", ticker):
-            if row["observation_kind"] == "summary_observation":
-                availability.setdefault(row["observation_id"], []).append(row["available_at"])
+        documents, events = self._documents(ticker), self._events(ticker)
+        comparisons = {c["comparison_id"]: c for c in self._rows("comparisons", ticker)}
+        availability = [row for row in self._rows("observation_availability", ticker)
+                        if row["observation_kind"] == "summary_observation"]
         rows = []
         for summary in self._rows("summary_observations", ticker):
             document = documents[summary["source_document_id"]]
-            times = availability.get(summary["observation_id"])
             rows.append({**summary, "source_url": document["source_url"], "content_hash": document["content_hash"],
-                         "retrieved_at": document["retrieved_at"],
-                         "observation_available_at": min(times, key=parse_timestamp) if times else None})
-        return finalize_summaries(rows, ticker, as_of=as_of)
+                         "retrieved_at": document["retrieved_at"]})
+        return finalize_summaries(rows, ticker, as_of=as_of,
+                                  evidence=summary_evidence_map(availability, comparisons, documents, events))
 
 
 _VERSION_PUBLIC_FIELDS = (

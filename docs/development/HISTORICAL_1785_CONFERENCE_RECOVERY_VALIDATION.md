@@ -1,5 +1,7 @@
 # 1785 Conference Recovery, Strict PIT Packaging Fix & Research ZIP Rebuild — Validation
 
+> **Superseded in part (Phase 1C final hardening).** The strict package described here (schema 1.1, `validation/provenance.csv`, `manifest.excluded_by_cutoff`, workbook-referenced summaries) was replaced by schema 1.2; see `HISTORICAL_PHASE1C_FINAL_HARDENING_VALIDATION.md`. The retrospective ZIP described here is unchanged.
+
 Date: 2026-10-10 · Branch `feature/historical-research-portability-cloud` · starting commit `e5f13e5`
 (clean tree; `265b9ed` in history; no upstream).
 

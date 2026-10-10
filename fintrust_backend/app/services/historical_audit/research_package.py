@@ -1,6 +1,6 @@
 """Portable, deterministic research dataset package (ZIP) for one historical case.
 
-Two explicit modes (package schema 1.1):
+Two explicit modes (package schema 1.2):
 
 - ``retrospective``: everything currently recovered, including later
   restatements, later disclosures and current archival copies. Not suitable as
@@ -11,7 +11,9 @@ Two explicit modes (package schema 1.1):
 
 The package needs no database, FinTrust code or cloud credentials. Given
 unchanged inputs and the same ``generated_at`` the ZIP is byte-identical;
-``content_digest`` is independent of ``generated_at``.
+``content_digest`` is independent of ``generated_at``. A strict ZIP carries no
+generation time at all (byte-identical for unchanged inputs); modern verification
+metadata goes to the reviewer-only ``<package>.audit.json`` sidecar.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ import csv
 import hashlib
 import io
 import json
+import os
 import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -34,6 +37,7 @@ from app.services.historical_audit.evidence_export import (
     COMPARISON_FIELDS,
     COVERAGE_FIELDS,
     INVENTORY_FIELDS,
+    SUMMARY_CONTRACT_VERSION,
     SUMMARY_FIELDS,
     TIMELINE_FIELDS,
     coverage_matrix,
@@ -43,14 +47,14 @@ from app.services.historical_audit.evidence_export import (
     source_inventory,
 )
 from app.services.historical_audit.export import CONTRACT_VERSION, EXPORT_FIELDS, build_export_records
-from app.services.historical_audit.models import VersionPolicy, as_of_cutoff, iso, utc_now
-from app.services.historical_audit.package_verify import CHECKSUMS, MANIFEST, PACKAGE_ROOT, safe_relative_path
+from app.services.historical_audit.models import TAIPEI, VersionPolicy, as_of_cutoff, iso, utc_now
+from app.services.historical_audit.package_verify import CHECKSUMS, MANIFEST, PACKAGE_ROOT, _verify_files, safe_relative_path
 from app.services.historical_audit.quality import eps_unit_investigation, quality_report, unmapped_concept_report
 from app.services.historical_audit.repository import HistoricalAuditRepository
 from app.services.historical_audit.strict_package import build_strict, leakage_check
 
 
-PACKAGE_SCHEMA_VERSION = "1.1"
+PACKAGE_SCHEMA_VERSION = "1.2"
 MODES = ("retrospective", "strict_point_in_time")
 DOCS_ROOT = Path(__file__).resolve().parents[4] / "docs" / "data"
 RETROSPECTIVE_CONTRACTS = (
@@ -82,10 +86,16 @@ This package contains only evidence verifiably public before `manifest.parameter
   identity is withheld; `availability_evidence_*` names the disclosure that dates the value.
 - `data/filing_versions.csv`: only artifacts whose own availability is verified before the cutoff.
 - `data/source_inventory.csv`: only single-publication official notices published before the cutoff.
-- `data/restatement_comparisons.csv`, `data/historical_summaries.csv`: rows public before the cutoff.
+- `data/restatement_comparisons.csv`: rows disclosed before the cutoff.
+- Every timestamp is expressed in Asia/Taipei (`+08:00`). Filing, observation, disclosure, effective and event
+  times are separate fields; none of them is a retrieval or generation time.
 - `data/publication_timeline.csv`: events public before the cutoff (`available_from`).
-- `validation/provenance.csv`: retrieval metadata of included raw evidence (retrieval happened after the cutoff).
-- No conference documents are included unless their public availability is verified before the cutoff.
+- `data/historical_summaries.csv`: TPEx summary values whose report period ended before the cutoff and whose exact
+  value was stated by a contemporaneous official disclosure (`pit_evidence_*`); `evidence_type =
+  official_disclosed_observation`, the later workbook reference is withheld.
+- Modern verification metadata (generation and retrieval times, archive-wide exclusion counts) is kept outside the
+  package in a reviewer-only audit report bound to the package SHA-256; it is not research input.
+- Documents whose public availability before the cutoff is not verified are not included.
 """
 
 
@@ -162,12 +172,14 @@ class ResearchPackageBuilder:
         self.conference_root = Path(conference_root) if conference_root else None
 
     def build(self, parameters: PackageParameters, output_zip: str | Path, *,
-              generated_at: datetime | None = None) -> dict[str, Any]:
+              generated_at: datetime | None = None, audit_path: str | Path | None = None) -> dict[str, Any]:
         mode = parameters.resolved_mode()
+        strict = mode == "strict_point_in_time"
         case = self.repository.get_case(parameters.ticker) or get_case(parameters.ticker)
         builder = _Builder()
-        if mode == "strict_point_in_time":
-            counts, completeness, extra = self._strict(builder, parameters)
+        audit: dict[str, Any] | None = None
+        if strict:
+            counts, completeness, extra, audit = self._strict(builder, parameters)
         else:
             counts, completeness, extra = self._retrospective(builder, parameters)
         builder.add("validation/verify_package.py", Path(__file__).with_name("package_verify.py").read_bytes(), "validation")
@@ -181,9 +193,12 @@ class ResearchPackageBuilder:
             "package_schema_version": PACKAGE_SCHEMA_VERSION,
             "mode": mode,
             "suitable_for_historical_backtest": mode == "strict_point_in_time",
-            "cutoff_utc": iso(as_of_cutoff(parameters.as_of)) if mode == "strict_point_in_time" else None,
+            "cutoff_utc": iso(as_of_cutoff(parameters.as_of)) if strict else None,
+            # Exclusive cutoff expressed in Asia/Taipei, the time zone of every model-facing timestamp (schema 1.2).
+            "cutoff_taipei": as_of_cutoff(parameters.as_of).astimezone(TAIPEI).isoformat() if strict else None,
             "generator": "fintrust_backend/app/services/historical_audit/research_package.py",
-            "generated_at": iso(generated_at or utc_now()),
+            # Strict packages carry no modern timestamp; it lives in the reviewer-only audit report.
+            "generated_at": None if strict else iso(generated_at or utc_now()),
             "parameters": {
                 "ticker": parameters.ticker, "start_year": parameters.start_year, "end_year": parameters.end_year,
                 "as_of": parameters.as_of, "version_policy": parameters.version_policy,
@@ -192,7 +207,8 @@ class ResearchPackageBuilder:
                 "include_context_years": parameters.include_context_years,
             },
             "case": {"ticker": case.ticker, "company": case.company_name, "market": case.market},
-            "contracts": {"historical_financial_facts": CONTRACT_VERSION, "research_package": PACKAGE_SCHEMA_VERSION},
+            "contracts": {"historical_financial_facts": CONTRACT_VERSION, "historical_summaries": SUMMARY_CONTRACT_VERSION,
+                          "research_package": PACKAGE_SCHEMA_VERSION},
             "counts": counts,
             "completeness": completeness,
             **extra,
@@ -204,9 +220,22 @@ class ResearchPackageBuilder:
         }
         builder.files[CHECKSUMS] = checksums
         builder.files[MANIFEST] = _json_bytes(manifest)
-        self._write_zip(builder.files, Path(output_zip))
-        return {"output": str(output_zip), "mode": mode, "content_digest": content_digest, "files": len(builder.files),
-                "counts": counts, "completeness": completeness, **extra}
+        _verify_files(dict(builder.files))  # full semantic verification before anything is written (fail closed)
+        output = Path(output_zip)
+        self._write_zip(builder.files, output)
+        result = {"output": str(output_zip), "mode": mode, "content_digest": content_digest, "files": len(builder.files),
+                  "counts": counts, "completeness": completeness, **extra}
+        if audit is not None:
+            audit.update({
+                "audit_report": "reviewer-only modern verification metadata; NOT a research input",
+                "package_file": output.name, "package_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+                "content_digest": content_digest, "generated_at": iso(generated_at or utc_now()),
+            })
+            target = Path(audit_path) if audit_path else output.with_name(output.name.removesuffix(".zip") + ".audit.json")
+            target.write_text(json.dumps(audit, ensure_ascii=False, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
+            result["audit_path"] = str(target)
+            result["excluded_by_cutoff"] = audit["excluded_by_cutoff"]
+        return result
 
     # ------------------------------------------------------ retrospective
     def _retrospective(self, builder: _Builder, p: PackageParameters):
@@ -290,6 +319,11 @@ class ResearchPackageBuilder:
             missing.append({"fiscal_year": None, "evidence_kind": "conference_pdf", "status": "unavailable",
                             "detail": "no conference PDF archive configured"})
             return {"status": "unavailable_no_archive_configured"}
+        # The JSD corpus adapter resolves company profiles through company_registry, which falls back to the
+        # production company master when DATASTORE_BACKEND=firestore. Research packaging must stay local.
+        backend = os.getenv("DATASTORE_BACKEND", "sqlite").strip().lower()
+        if backend != "sqlite":
+            raise ResearchPackageError(f"Conference packaging requires DATASTORE_BACKEND=sqlite (got {backend!r})")
         stats = build_conference_datasets(
             add=builder.add, csv_bytes=_csv_bytes, repository=self.conference_repository, root=self.conference_root,
             ticker=p.ticker, start_year=p.start_year, end_year=p.end_year, include_context=p.include_context_years,
@@ -311,9 +345,6 @@ class ResearchPackageBuilder:
                 conference_excluded += len((self.conference_repository.latest_manifest(p.ticker, year) or {}).get("documents", []))
         builder.add("contracts/STRICT_FIELD_DEFINITIONS.md", STRICT_FIELD_DEFINITIONS.encode("utf-8"), "contract")
         self._contracts(builder, STRICT_CONTRACTS)
-        problems = leakage_check(builder.files, cutoff)
-        if problems:
-            raise ResearchPackageError(f"Strict package would leak post-cutoff information: {problems[:5]}")
         counts = {
             "financial_facts": len(result["facts"]),
             "financial_facts_point_in_time_eligible": len(result["facts"]),
@@ -324,18 +355,24 @@ class ResearchPackageBuilder:
             "publication_events": len(result["timeline"]),
             "source_inventory": len(result["inventory"]),
             "raw_evidence_files": sum(1 for path in builder.files if path.startswith("raw_evidence/")),
-            "conference_documents": 0,
         }
-        excluded = {**result["excluded"], "conference_documents": conference_excluded}
         builder.add("validation/quality_report.json", _json_bytes({
-            "mode": "strict_point_in_time", "cutoff_utc": iso(cutoff), "leakage_check": "passed",
-            "counts": counts, "excluded_by_cutoff_or_unverified_availability": excluded,
+            "mode": "strict_point_in_time", "leakage_check": "passed",
+            "semantic_verification": "passed", "counts": counts,
             "raw_evidence_policy": "verified-public filing artifacts and single-publication notices only",
         }), "validation")
-        completeness = {"status": "point_in_time_subset",
-                        "conference_evidence": "excluded_unverified_availability" if conference_excluded else "none_available",
-                        "notes": []}
-        return counts, completeness, {"excluded_by_cutoff": excluded, "leakage_check": "passed"}
+        problems = leakage_check(builder.files, cutoff)
+        if problems:
+            raise ResearchPackageError(f"Strict package would leak post-cutoff information: {problems[:5]}")
+        completeness = {"status": "point_in_time_subset"}
+        audit = {
+            "cutoff_utc": iso(cutoff), "parameters": {"ticker": p.ticker, "as_of": p.as_of,
+                                                      "start_year": p.start_year, "end_year": p.end_year},
+            "excluded_by_cutoff": {**result["excluded"], "conference_documents": conference_excluded},
+            "summary_observation_review": result["summary_review"],
+            "raw_evidence_provenance": result["provenance"],
+        }
+        return counts, completeness, {"leakage_check": "passed"}, audit
 
     # ------------------------------------------------------------ helpers
     def _contracts(self, builder: _Builder, names: tuple[str, ...]) -> list[str]:
@@ -379,12 +416,12 @@ class ResearchPackageBuilder:
                 "",
                 f"Cutoff: {p.as_of} (end of day, Asia/Taipei). Fiscal years {p.start_year}–{p.end_year}. Version policy: {p.version_policy}.",
                 "",
-                "Only evidence verifiably public before the cutoff is included, in every file. Evidence with unknown or later",
-                "availability (later filings, later notices, summary workbooks, conference presentations) is excluded.",
-                "Field semantics: `contracts/STRICT_FIELD_DEFINITIONS.md`.",
+                "Only evidence verifiably public before the cutoff is included, in every file. Evidence whose public",
+                "availability before the cutoff cannot be verified is not included. Field semantics: `contracts/STRICT_FIELD_DEFINITIONS.md`.",
                 "",
                 f"Financial observations: {counts['financial_facts']} ({counts['facts_with_withheld_later_artifact']} dated by an official "
-                "disclosure whose later filing artifact is withheld). "
+                "disclosure; filing-artifact identity not included). "
+                f"Summary observations: {counts['historical_summaries']}. "
                 f"Restatement comparison rows: {counts['restatement_comparisons']}. Filing artifacts: {counts['filing_versions']}.",
                 "",
                 "Verify: `python validation/verify_package.py <zip or folder>` (also re-checks the cutoff).",
