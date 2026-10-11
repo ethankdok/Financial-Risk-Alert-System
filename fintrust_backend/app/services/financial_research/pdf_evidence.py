@@ -34,26 +34,30 @@ def _extractor() -> tuple[Any, str]:
     return pypdf, f"pypdf {pypdf.__version__}"
 
 
+def parse_balance_sheet_page(text: str) -> dict[str, Any] | None:
+    """Totals of one page's text if it is the consolidated balance sheet; ``None`` otherwise (pure)."""
+    compact = re.sub(r"\s+", "", text)
+    if _TITLE not in compact or "1XXX" not in text:
+        return None
+    totals: dict[str, Any] = {}
+    for line in text.splitlines():
+        match = _LINE.match(line)
+        if match and ACCOUNT_CODES[match["code"]] not in totals:
+            totals[ACCOUNT_CODES[match["code"]]] = {
+                "account_code": match["code"], "label": match["label"],
+                "value_thousand_twd": dm.text(dm.parse_decimal(match["amount"])), "line": line.strip()}
+    printed = re.search(r"-\s*(\d+)\s*-", text)
+    return {"printed_page_label": printed.group(1) if printed else None,
+            "unit": "TWD_thousand" if any(unit in compact for unit in _UNITS) else "unverified", "totals": totals}
+
+
 def balance_sheet_totals(content: bytes) -> dict[str, Any]:
     pypdf, extractor = _extractor()
     reader = pypdf.PdfReader(io.BytesIO(content))
     for number, page in enumerate(reader.pages, start=1):
-        text = page.extract_text() or ""
-        compact = re.sub(r"\s+", "", text)
-        if _TITLE not in compact or "1XXX" not in text:
-            continue
-        unit_ok = any(unit in compact for unit in _UNITS)
-        totals: dict[str, Any] = {}
-        for line in text.splitlines():
-            match = _LINE.match(line)
-            if match and ACCOUNT_CODES[match["code"]] not in totals:
-                totals[ACCOUNT_CODES[match["code"]]] = {
-                    "account_code": match["code"], "label": match["label"],
-                    "value_thousand_twd": dm.text(dm.parse_decimal(match["amount"])), "line": line.strip()}
-        printed = re.search(r"-\s*(\d+)\s*-", text)
-        return {"extractor_version": EXTRACTOR_VERSION, "extractor": extractor, "pdf_page_index": number,
-                "printed_page_label": printed.group(1) if printed else None,
-                "unit": "TWD_thousand" if unit_ok else "unverified", "totals": totals}
+        parsed = parse_balance_sheet_page(page.extract_text() or "")
+        if parsed is not None:
+            return {"extractor_version": EXTRACTOR_VERSION, "extractor": extractor, "pdf_page_index": number, **parsed}
     raise PdfEvidenceUnavailable("consolidated balance sheet page not found")
 
 

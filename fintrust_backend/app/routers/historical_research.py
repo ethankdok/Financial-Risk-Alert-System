@@ -166,3 +166,15 @@ def get_run(run_id: str = Path(..., pattern=_RUN_ID.pattern)) -> dict[str, Any]:
     if run is None:
         raise HTTPException(status_code=404, detail={"error_code": "run_not_found", "message": "No persisted run with this id."})
     return run
+
+
+@router.get("/runs/{run_id}/verify")
+def verify_run(run_id: str = Path(..., pattern=_RUN_ID.pattern),
+               service: ResearchService = Depends(get_research_service)) -> dict[str, Any]:
+    """Recompute a persisted run from the current archive and compare input/output digests (read-only)."""
+    from pathlib import Path as FilePath
+
+    run = get_result_store().get_run(run_id) if FilePath(results_path()).is_file() else None
+    if run is None:
+        raise HTTPException(status_code=404, detail={"error_code": "run_not_found", "message": "No persisted run with this id."})
+    return _call(service.verify_run, run)

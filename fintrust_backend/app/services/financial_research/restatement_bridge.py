@@ -231,7 +231,8 @@ def build_bridge(snapshot: InputSnapshot, *, scope: str = "all") -> dict[str, An
         "identity_failures": sum(b["accounting_identity_gross_profit"][s] == "does_not_hold"
                                  for b in bridges for s in ("pre", "post")),
     }
-    inconsistent = integrity["difference_inconsistent"] or integrity["regime_inconsistent"] or integrity["baseline_check"] == "mismatch"
+    inconsistent = (integrity["difference_inconsistent"] or integrity["regime_inconsistent"]
+                    or integrity["identity_failures"] or integrity["baseline_check"] == "mismatch")
     if not rows:
         status = "insufficient_point_in_time_evidence" if context.mode is AnalysisMode.STRICT_AS_OF else "not_computable"
     else:

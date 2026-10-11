@@ -297,3 +297,21 @@ class ResearchService:
         return build_run(result_kind=result_kind, method_version="+".join(method_ids), method_ids=method_ids,
                          approval_status=APPROVAL_STATUS, snapshot=snapshot.describe(), parameters=parameters,
                          output=output, supersedes_run_id=supersedes_run_id, git_commit=git_commit)
+
+    def verify_run(self, stored: dict[str, Any]) -> dict[str, Any]:
+        """Recompute a persisted run from its recorded snapshot identity and compare digests (read-only)."""
+        from app.services.financial_research.modes import build_context
+
+        snapshot = stored["snapshot"]
+        context = build_context(snapshot["analysis_mode"], snapshot.get("cutoff_at"))
+        rebuilt = self.build_run(stored["result_kind"], stored["ticker"], context, start_year=snapshot["start_year"],
+                                 end_year=snapshot["end_year"], version_policy=snapshot["version_policy"],
+                                 scope=stored["parameters"].get("scope", "all"),
+                                 supersedes_run_id=stored.get("supersedes_run_id"))
+        same_input = rebuilt["input_digest"] == stored["input_digest"]
+        same_output = rebuilt["output_digest"] == stored["output_digest"]
+        return {"run_id": stored["run_id"], "recomputed_run_id": rebuilt["run_id"],
+                "input_digest_matches": same_input, "output_digest_matches": same_output,
+                "status": "reproducible" if same_input and same_output else
+                          "inputs_changed_since_run" if not same_input else "output_differs_for_same_input",
+                "stored_input_digest": stored["input_digest"], "current_input_digest": rebuilt["input_digest"]}

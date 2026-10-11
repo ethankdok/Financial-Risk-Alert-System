@@ -47,6 +47,12 @@ _VERSION_COLUMNS = (
 )
 
 
+def event_order(row: dict[str, Any]) -> tuple:
+    """Total order for timeline rows (a listing row and its verified notice can share time and event_key)."""
+    return (row["available_from"], row["event_key"], row["event_type"], row["verification_status"],
+            row["content_hash"], row["title"])
+
+
 class ResearchBackend(Protocol):
     backend_name: str
 
@@ -82,7 +88,7 @@ class LocalResearchBackend:
         return list_disclosed_financial_values(self.repository, ticker, as_of=as_of)
 
     def list_publication_events(self, ticker):
-        return list_publication_timeline(self.repository, ticker)
+        return sorted(list_publication_timeline(self.repository, ticker), key=event_order)
 
 
 class FirestoreResearchBackend:
@@ -217,7 +223,7 @@ class FirestoreResearchBackend:
                 "content_hash": document["content_hash"], "verification_status": event["verification_status"],
                 "linked_filing_versions": ";".join(links.get(event["event_id"], [])),
             })
-        return sorted(result, key=lambda row: (row["available_from"], row["event_key"]))
+        return sorted(result, key=event_order)
 
 
 _VERSION_PUBLIC_FIELDS = (
