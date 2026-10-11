@@ -8,9 +8,11 @@
   "default_start_year": 2011,
   "default_end_year": 2016,
   "priority_period": "2011FY-2016FY",
+  "coverage_start_year": 2011,
+  "coverage_end_year": 2025,
   "registration_basis": "Research-team case brief (Phase 1). Market and names are case metadata for research only; they are not a Company Master record and do not enter the production semiconductor universe.",
   "notes": [
-    "Future extension: 2017FY-2025FY annual filings, then 2026 interim statements.",
+    "Priority event period 2011FY-2016FY (CLI defaults); archived research coverage 2011FY-2025FY (Phases 2A-2C, approved baseline 506b64c).",
     "Historical case only: never eligible for refresh_all(), validate_refresh_tickers() or latest snapshot promotion."
   ]
 }

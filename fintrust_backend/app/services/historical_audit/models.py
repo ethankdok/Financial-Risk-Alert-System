@@ -184,6 +184,17 @@ class HistoricalAuditCase(BaseModel):
     priority_period: str | None = None
     registration_basis: str
     notes: list[str] = Field(default_factory=list)
+    # Archived research coverage (may extend beyond the priority event period that the CLI defaults use).
+    coverage_start_year: int | None = None
+    coverage_end_year: int | None = None
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.coverage_start_year is None:
+            self.coverage_start_year = self.default_start_year
+        if self.coverage_end_year is None:
+            self.coverage_end_year = self.default_end_year
+        if not self.coverage_start_year <= self.default_start_year <= self.default_end_year <= self.coverage_end_year:
+            raise ValueError("the priority event period must lie within the research coverage")
 
 
 class ManifestDocument(BaseModel):

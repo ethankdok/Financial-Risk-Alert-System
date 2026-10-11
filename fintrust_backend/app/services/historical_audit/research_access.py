@@ -7,24 +7,30 @@ implementations feed the same backend-independent rules
 status, scope, dates and point-in-time eligibility agree by construction; the
 contract tests compare them field by field.
 
-This is also the read contract for a future API (Phase 4/5). No FastAPI route
-is registered in Phase 1C.
+This is also the read contract of the Phase 4 research API
+(``app/routers/historical_research.py``), which reads through it only.
+Phase 3 added ``list_disclosed_values`` and ``list_publication_events``
+(additive; both backends, parity-tested).
 """
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 from typing import Any, Protocol
 
 from app.services.historical_audit.evidence_export import (
     finalize_comparisons,
+    list_disclosed_financial_values,
+    list_publication_timeline,
     finalize_summaries,
     list_restatement_comparisons,
     list_summary_observations,
     summary_evidence_map,
 )
 from app.services.historical_audit.firestore_repository import FirestoreHistoricalResearchRepository, strip_internal
-from app.services.historical_audit.models import VersionPolicy, parse_timestamp
+from app.services.historical_audit.evidence_import import availability_instant
+from app.services.historical_audit.models import VersionPolicy, as_of_cutoff, parse_timestamp
 from app.services.historical_audit.reader import finalize_fact_rows, list_historical_facts
 from app.services.historical_audit.repository import HistoricalAuditRepository
 
@@ -49,6 +55,8 @@ class ResearchBackend(Protocol):
     def list_filing_versions(self, ticker: str, start_year: int, end_year: int) -> list[dict[str, Any]]: ...
     def list_restatement_comparisons(self, ticker: str, *, as_of: AsOf = None) -> list[dict[str, Any]]: ...
     def list_summary_observations(self, ticker: str, *, as_of: AsOf = None) -> list[dict[str, Any]]: ...
+    def list_disclosed_values(self, ticker: str, *, as_of: AsOf = None) -> list[dict[str, Any]]: ...
+    def list_publication_events(self, ticker: str) -> list[dict[str, Any]]: ...
 
 
 class LocalResearchBackend:
@@ -69,6 +77,12 @@ class LocalResearchBackend:
 
     def list_summary_observations(self, ticker, *, as_of=None):
         return list_summary_observations(self.repository, ticker, as_of=as_of)
+
+    def list_disclosed_values(self, ticker, *, as_of=None):
+        return list_disclosed_financial_values(self.repository, ticker, as_of=as_of)
+
+    def list_publication_events(self, ticker):
+        return list_publication_timeline(self.repository, ticker)
 
 
 class FirestoreResearchBackend:
@@ -151,6 +165,59 @@ class FirestoreResearchBackend:
                          "retrieved_at": document["retrieved_at"]})
         return finalize_summaries(rows, ticker, as_of=as_of,
                                   evidence=summary_evidence_map(availability, comparisons, documents, events))
+
+    def list_disclosed_values(self, ticker, *, as_of=None):
+        """Same rows and order as ``evidence_export.list_disclosed_financial_values`` (parity-tested)."""
+        cutoff = as_of_cutoff(as_of) if as_of is not None else None
+        documents, events = self._documents(ticker), self._events(ticker)
+        dated: dict[str, int] = {}
+        for row in self._rows("observation_availability", ticker):
+            if row.get("corroborating_kind") == "financial_report_disclosure":
+                dated[row["corroborating_id"]] = dated.get(row["corroborating_id"], 0) + 1
+        values = sorted(self._rows("disclosed_values", ticker),
+                        key=lambda v: (v["fiscal_year"], v["statement_scope"], v["disclosed_at"], v["source_label"]))
+        result = []
+        for row in values:
+            if cutoff is not None and not parse_timestamp(row["disclosed_at"]) < cutoff:
+                continue
+            document = documents[row["source_document_id"]]
+            result.append({
+                "ticker": ticker, "evidence_type": "official_disclosed_value", "disclosure_kind": row["disclosure_kind"],
+                "period": row["period"], "fiscal_year": row["fiscal_year"], "statement_scope": row["statement_scope"],
+                "accounting_framework": row["accounting_framework"], "source_label": row["source_label"],
+                "canonical_metric": row["canonical_metric"], "value": row["value_text"],
+                "published_unit": row["published_unit"], "normalized_value": row["normalized_value_text"],
+                "normalized_unit": row["normalized_unit"], "disclosed_at": row["disclosed_at"],
+                "availability_status": row["availability_status"],
+                "point_in_time_eligible": row["availability_status"] == "verified",
+                "dated_facts": dated.get(row["disclosed_value_id"], 0), "source_url": document["source_url"],
+                "announcement_key": events[row["event_id"]]["event_key"], "content_hash": document["content_hash"],
+            })
+        return result
+
+    def list_publication_events(self, ticker):
+        """Same rows and order as ``evidence_export.list_publication_timeline`` (parity-tested)."""
+        documents = self._documents(ticker)
+        links: dict[str, list[str]] = {}
+        for row in sorted(self._rows("evidence_links", ticker), key=lambda r: (r["period"], r.get("target_id") or "")):
+            links.setdefault(row["event_id"], []).append(f"{row['period']}:{row['target_id']}:{row['link_status']}")
+        result = []
+        for event in self._rows("publication_events", ticker):
+            document = documents[event["source_document_id"]]
+            available_from = availability_instant(event["publication_at"], event["publication_precision"])
+            result.append({
+                "ticker": ticker, "event_key": event["event_key"], "event_type": event["event_type"],
+                "title": event["title"], "announcement_id": event["announcement_id"],
+                "publication_at": event["publication_at"], "publication_precision": event["publication_precision"],
+                "available_from": available_from.isoformat(), "event_date": event["event_date"],
+                "event_date_basis": event["event_date_basis"],
+                "affected_periods": ",".join(json.loads(event["affected_periods_json"])),
+                "affected_scopes": ",".join(json.loads(event["affected_scopes_json"])),
+                "issuer": document["issuer"], "source_url": document["source_url"],
+                "content_hash": document["content_hash"], "verification_status": event["verification_status"],
+                "linked_filing_versions": ";".join(links.get(event["event_id"], [])),
+            })
+        return sorted(result, key=lambda row: (row["available_from"], row["event_key"]))
 
 
 _VERSION_PUBLIC_FIELDS = (

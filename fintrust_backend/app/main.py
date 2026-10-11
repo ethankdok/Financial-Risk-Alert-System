@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.conference_pdfs import router as conference_pdfs_router
 from app.routers.financial import router as financial_router
+from app.routers.historical_research import router as historical_research_router
 from app.routers.official_events import router as official_events_router
 from app.routers.text_mining import router as text_mining_router
 
@@ -47,6 +48,7 @@ app.include_router(financial_router)
 app.include_router(conference_pdfs_router)
 app.include_router(official_events_router)
 app.include_router(text_mining_router)
+app.include_router(historical_research_router)
 
 
 @app.get("/")
