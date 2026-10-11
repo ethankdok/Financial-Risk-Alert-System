@@ -1,4 +1,4 @@
-# 1785 光洋科 — Official Investor-Conference Coverage (2010–2019)
+# 1785 光洋科 — Official Investor-Conference Coverage (2010–2022)
 
 Source: MOPS 法人說明會 listing `ajax_t100sb02_1` (market `otc`) and the official
 `FileDownLoad` form, acquired with the existing conference pipeline
@@ -25,8 +25,11 @@ recomputed from the package range; the role stored when the listing was recorded
 | 2015 | core | no_official_record_found | 0 | — | 0 / 0 | 0 | `87e52938f7b40c03…` |
 | 2016 | core | no_official_record_found | 0 | — | 0 / 0 | 0 | `87e52938f7b40c03…` |
 | 2017 | core in FY2011–2019 packages | conference_found | 1 | 106/04/14 | 2 / 2 | 0 | `4f17dee1733f5299…` |
-| 2018 | core in FY2011–2019 packages | **document_missing** | 5 | 107/02/07, 107/05/03, 107/05/04, 107/05/08 | 10 / 0 | 0 | `07504e990ec9d892…` |
-| 2019 | core in FY2011–2019 packages | **document_missing** | 2 | 108/05/23, 108/08/14 | 4 / 0 | 0 | `31d699e63696e299…` |
+| 2018 | core in FY2011–2019+ packages | conference_found (Phase 2B; `document_missing` in Phase 2A) | 5 | 107/02/07, 107/05/03, 107/05/04, 107/05/08 | 10 / 10 | 0 | `45ed41dfb23c0f14…` |
+| 2019 | core in FY2011–2019+ packages | conference_found (Phase 2B; `document_missing` in Phase 2A) | 2 | 108/05/23, 108/08/14 | 4 / 4 | 0 | `a01dc7cc9618eb95…` |
+| 2020 | core in FY2011–2022 packages | conference_found | 1 | 109/09/10 | 2 / 2 | 0 | `8d0d34f107721bff…` |
+| 2021 | core in FY2011–2022 packages | conference_found | 2 | 110/10/22, 110/11/19 | 4 / 4 | 0 | `b65609904106fb6b…` |
+| 2022 | core in FY2011–2022 packages | conference_found | 5 | 111/04/13, 111/04/27, 111/09/22–29, 111/11/22, 111/12/01–02 | 8 / 8 | 0 | `de99c94d090ee716…` |
 
 The 2018 and 2019 listings were recorded in Phase 2A (2026-10-11 UTC). Their documents are listed by MOPS but were
 **not downloaded**: conference acquisition is outside the scope of Phase 2A. Before a recorder fix in Phase 2A,
@@ -77,3 +80,36 @@ point-in-time packages**; a cover date such as 2011.03.25 is not publication evi
 - Official confirmation of conferences in 2012–2016 outside MOPS, for example company IR archives or TPEx invitations.
 - Publication timestamps of the presentations.
 - Verified quarterly periods (none exist; these are annual decks).
+
+## Phase 2B recovery (2018–2022)
+
+All 28 listed documents were downloaded and hash-verified. The recovery used the existing pipeline through
+`scripts/recover_historical_conference_pdfs.py`:
+
+- bounded and resumable, with 2 s pacing, one backoff retry, and a stop on HTTP 403/429 or 3 consecutive failures;
+- 33 requests in total (11 for 2018, 5 for 2019, 17 for 2020–2022), none of which failed;
+- text-only: no OCR and no LLM.
+
+The 2018 and 2019 rows from Phase 2A are kept as history. The listing bytes differ between fetches, so the new
+status rows have a new listing hash.
+
+| Year | Files | Distinct documents | Language pairs | Pages (text) | Notes |
+|---|---|---|---|---|---|
+| 2018 | 10 | **4** | 2 presentations × zh/en | 240 (240) | The 02/07 deck is listed twice per language (E001≡E003, M001≡M003). The May deck is one file per language listed for **three** meeting dates (05/03, 05/04, 05/08) |
+| 2019 | 4 | 4 | 2 × zh/en | 55 (55) | 05/23 and 08/14 |
+| 2020 | 2 | 2 | 1 × zh/en | 20 (20) | 09/10 |
+| 2021 | 4 | 4 | 2 × zh/en | 26 (26) | 10/22 and 11/19 |
+| 2022 | 8 | 8 | 4 × zh/en | 225 (207) | 18 pages are low-text/image pages; a deck may cover several meeting dates |
+
+Research semantics:
+
+- **Duplicate content.** `content_duplicate_of` in `conference_documents.csv` names the first file with identical
+  bytes. Such a row is not a separate document.
+- **Language pairs.** `language_pair_key` groups the M (Chinese) and E (English) versions of one listing entry.
+  They are one presentation, not two observations.
+- **Meeting dates.** A meeting date is not a publication time. All documents keep
+  `publication_availability_status = unverified` and stay excluded from strict packages.
+- **Pipeline status.** The pipeline reports `failed` for these years only because every page is flagged
+  `visual_review_required`: semantic visual analysis is deliberately off. Acquisition and text extraction are
+  complete.
+- **JSD readiness** is decided by the unchanged adapter and reported in the package and the validation report.

@@ -1,8 +1,8 @@
-# 1785 光洋科 — Historical Publication Timeline (Phase 1B, extended in Phase 2A)
+# 1785 光洋科 — Historical Publication Timeline (Phase 1B, extended in Phases 2A and 2B)
 
 All times are Asia/Taipei (UTC+8). Each entry comes from an archived official
 document (SHA-256 in [`HISTORICAL_SOURCE_EVIDENCE_INVENTORY.md`](HISTORICAL_SOURCE_EVIDENCE_INVENTORY.md)).
-The machine-readable timeline (548 events: 359 from Phase 1B, plus 189 for 2017–2020 added in Phase 2A) is exported with
+The machine-readable timeline (856 events: 359 Phase 1B, 189 Phase 2A, 308 Phase 2B) is exported with
 `evidence-export --dataset publication_timeline`.
 
 ## Timestamp semantics
@@ -74,3 +74,19 @@ period. Links are typed `verified_linkage`, `period_level_only`,
 - **Not a publication time:** the fiscal-year end and the audit-report dates (2018-03-21, 2019-03-26, 2020-02-12)
   are lower bounds only, never publication times.
 
+### FY2020–FY2022 (Phase 2B)
+
+| Time (Taipei) | Source | Event | Periods / scope | Linkage |
+|---|---|---|---|---|
+| **2021-03-05 17:38:20** | MOPS 重大訊息 seq 1 | FY2020 consolidated report approved by the board; **key figures stated** | 2020FY consolidated | 7 facts dated at the observation level (`financial_report_disclosure`) |
+| **2021-03-08 17:32:17 / 17:34:10** | TWSE e-document archive | FY2020 consolidated and individual PDFs uploaded (更(補)正 無) | 2020FY | **verified_linkage** (PDFs) |
+| 2021-04-27 14:55:46 | MOPS 重大訊息 seq 1 | FY2017 notes corrected (impairment classification); re-uploaded | 2017FY both scopes | `unverified_linkage` to the FY2017 XBRL and PDFs |
+| **2022-03-16 17:59:38** | MOPS 重大訊息 seq 2 | FY2021 consolidated report approved by the board; key figures stated | 2021FY consolidated | 7 facts dated at the observation level |
+| **2022-03-18 15:30:14 / 15:30:54** | TWSE e-document archive | FY2021 PDFs uploaded (更(補)正 無) | 2021FY | **verified_linkage** |
+| 2022-06-02 13:47:47 | MOPS 重大訊息 seq 3 | 2020/2021 Q1–Q3 interim reports corrected; FY2020 annual result unaffected | interim periods | none (annual artifacts) |
+| **2023-03-02 22:38:39** | MOPS 重大訊息 seq 3 | FY2022 consolidated report approved by the board; key figures stated | 2022FY consolidated | 7 facts dated at the observation level |
+| 2023-03-22 17:38:26 / 17:38:38 | TWSE e-document archive | FY2022 PDFs uploaded; 更(補)正 **blank** | 2022FY | `period_level_only` |
+| 2023-04-11 17:17:42 | MOPS 重大訊息 seq 3 | FY2022 related-party note corrected; re-uploaded | 2022FY both scopes | `unverified_linkage` to the FY2022 XBRL and PDFs |
+
+The board-approval notice precedes the PDF upload in each year. It dates only the values it states; the PDF and
+XBRL artifacts are dated (or not) by their own evidence.

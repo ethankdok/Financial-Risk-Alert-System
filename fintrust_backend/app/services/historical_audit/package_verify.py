@@ -25,6 +25,7 @@ import stat
 import sys
 import zipfile
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path, PurePosixPath
 
 PACKAGE_ROOT = "fintrust_historical_research_dataset"
@@ -232,6 +233,47 @@ def parse_restatement_notice(data: bytes) -> dict:
             "scope": scope, "values": values}
 
 
+# Independent label table for MOPS annual financial-report board-approval notices (「…財務報告業經董事會決議通過」):
+# the only lines that may date a canonical fact. Equity attributable to owners of the parent is deliberately absent.
+BOARD_NOTICE_LINES = {
+    "revenue": "營業收入", "gross_profit": "營業毛利(毛損)", "operating_income": "營業利益(損失)",
+    "net_income": "本期淨利(淨損)", "eps": "基本每股盈餘(損失)", "total_assets": "期末總資產",
+    "total_liabilities": "期末總負債",
+}
+_BOARD_VALUE = re.compile(r"^\d{1,2}\.(?:1月1日累計至本期止)?(.+?)\((仟元|元)\)[:：](\(?-?[\d,]+(?:\.\d+)?\)?)$")
+_BOARD_RANGE = re.compile(r"(\d{2,3})/(\d{2})/(\d{2})~(\d{2,3})/(\d{2})/(\d{2})")
+
+
+def parse_board_report_notice(data: bytes) -> dict:
+    """Parse a MOPS financial-report board-approval notice: identity, scope, reporting period and stated values."""
+    text = html.unescape(re.sub(r"<[^>]+>", "\n", data.decode("utf-8", "replace")))
+    seq = re.search(r"序號\s*(\d+)", text)
+    day = re.search(r"發言日期\s*(\d{2,3})/(\d{2})/(\d{2})", text)
+    clock = re.search(r"發言時間\s*(\d{2}):(\d{2}):(\d{2})", text)
+    subject = re.search(r"主旨\s*\n\s*([^\n]+)", text)
+    span = _BOARD_RANGE.search(re.sub(r"\s+", "", text))
+    if not (seq and day and clock and subject and span):
+        raise PackageVerificationError("disclosure is not a parseable MOPS financial-report board-approval notice")
+    subject_text = subject.group(1)
+    if "財務報告" not in subject_text or "董事會" not in subject_text:
+        raise PackageVerificationError("disclosure subject is not a financial-report board approval")
+    published = datetime(int(day.group(1)) + 1911, int(day.group(2)), int(day.group(3)),
+                         *(int(clock.group(i)) for i in (1, 2, 3)), tzinfo=_TAIPEI)
+    start_y, start_m, start_d, end_y, end_m, end_d = (int(x) for x in span.groups())
+    annual = (start_m, start_d, end_m, end_d) == (1, 1, 12, 31) and start_y == end_y
+    values: dict[str, tuple[str, str]] = {}
+    for raw in text.split("\n"):
+        match = _BOARD_VALUE.match(re.sub(r"\s+", "", raw))
+        if match:
+            label, unit, amount = match.groups()
+            if label in values:
+                raise PackageVerificationError(f"board-approval notice repeats line {label}")
+            values[label] = (unit, amount)
+    return {"event_key": f"mops:{published:%Y%m%d}:{published:%H%M%S}:{int(seq.group(1))}", "published_at": published,
+            "scope": "consolidated" if "合併" in subject_text else "individual" if "個體" in subject_text else "unknown",
+            "fiscal_year": start_y + 1911 if annual else None, "values": values}
+
+
 def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
     """Independent semantic re-check of a strict point-in-time package (fails closed)."""
     def fail(message: str) -> None:
@@ -302,6 +344,32 @@ def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
         if _ts(document["document_available_at"]) > effective:
             fail(f"{what}: eligibility evidence published after the stated availability")
 
+    def verify_board_fact(row: dict, effective: datetime, what: str) -> None:
+        """Re-derive a fact dated by a board-approval notice from the included raw notice (no producer code)."""
+        try:
+            notice = parse_board_report_notice(files[raw_hashes[row["availability_evidence_hash"]]])
+        except PackageVerificationError as exc:
+            fail(f"{what}: {exc}")
+        if notice["event_key"] != row["availability_evidence_ref"] or notice["published_at"] != effective:
+            fail(f"{what}: evidence identity/time disagrees with the notice itself ({notice['event_key']})")
+        if notice["scope"] != row["statement_scope"]:
+            fail(f"{what}: statement scope {row['statement_scope']} disagrees with the notice ({notice['scope']})")
+        if notice["fiscal_year"] is None or str(notice["fiscal_year"]) != row["fiscal_year"] or row["period"] != f"{row['fiscal_year']}FY":
+            fail(f"{what}: the notice does not report fiscal year {row['fiscal_year']}")
+        if row["accounting_framework"] != ("TIFRS" if int(row["fiscal_year"]) >= 2013 else "TW_GAAP"):
+            fail(f"{what}: accounting framework does not fit fiscal year {row['fiscal_year']}")
+        label = BOARD_NOTICE_LINES.get(row["metric_code"])
+        if label is None or label not in notice["values"]:
+            fail(f"{what}: metric {row['metric_code']} is not stated by a board-approval notice line")
+        unit, amount = notice["values"][label]
+        stated = Decimal(amount.strip("()").lstrip("-").replace(",", ""))
+        stated = -stated if amount.startswith(("(", "-")) else stated
+        expected_unit, scale = ("TWD/share", 1) if unit == "元" else ("TWD", 1000)
+        if (row["metric_code"] == "eps") != (unit == "元") or row["unit"] != expected_unit:
+            fail(f"{what}: unit {row['unit']} disagrees with the notice unit {unit}")
+        if Decimal(row["value"]) != stated * scale:
+            fail(f"{what}: value {row['value']} is not what the notice states ({amount} {unit})")
+
     # 1 + 2. Facts: eligibility evidence and timestamps.
     facts = _csv(files, "data/financial_facts.csv")
     version_ids = {row["filing_version_id"] for row in versions}
@@ -315,11 +383,14 @@ def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
         if row["artifact_reference_status"] == "withheld_not_public_at_cutoff":
             if any(row.get(field) for field in WITHHELD_ARTIFACT_FIELDS):
                 fail(f"{what}: withheld artifact identity is present")
-            if row["availability_evidence_kind"] != "restatement_disclosure" or not row["observation_available_at"]:
+            kind = row["availability_evidence_kind"]
+            if kind not in ("restatement_disclosure", "financial_report_disclosure") or not row["observation_available_at"]:
                 fail(f"{what}: withheld artifact without a disclosure reference")
             if _ts(row["observation_available_at"]) != effective:
                 fail(f"{what}: observation and effective availability disagree")
             resolve_disclosure(row["availability_evidence_hash"], effective, what)
+            if kind == "financial_report_disclosure":
+                verify_board_fact(row, effective, what)
         elif row["artifact_reference_status"] == "verified_public_artifact":
             if row["filing_version_id"] not in version_ids:
                 fail(f"{what}: references a filing artifact that is not included")

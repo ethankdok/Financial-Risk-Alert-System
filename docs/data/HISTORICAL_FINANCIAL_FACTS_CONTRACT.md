@@ -1,4 +1,4 @@
-# Historical Financial Facts → Downstream Research (contract v1.3)
+# Historical Financial Facts → Downstream Research (contract v1.4)
 
 Producer: `app/services/historical_audit/export.py`
 (`python -m scripts.historical_audit_case export …`).
@@ -104,7 +104,7 @@ Four fields are appended after `effective_available_at`:
 
 | Field | Meaning |
 |---|---|
-| `availability_evidence_kind` | `filing_artifact` (the filing's own verified time) \| `restatement_disclosure` (an official notice stating this exact value) \| empty |
+| `availability_evidence_kind` | `filing_artifact` (the filing's own verified time) \| `restatement_disclosure` (an official restatement notice stating this exact value) \| `financial_report_disclosure` (v1.4: an official MOPS financial-report board-approval notice stating this exact value) \| empty |
 | `availability_evidence_ref` | `filing_version_id`, or the notice key (e.g. `mops:20161113:212622:3`) |
 | `availability_evidence_url` | URL of the evidence document |
 | `availability_evidence_hash` | SHA-256 of the evidence document |
@@ -113,6 +113,48 @@ When `availability_evidence_kind = restatement_disclosure`, the filing artifact
 (`content_hash`, `source_url`, `available_at`) is **not** dated by that notice:
 only the value is. Restated filing facts are dated only by 重編後 (post) values
 and original filing facts only by 重編前 (pre) values.
+
+## v1.4 changes (Phase 2B, additive)
+
+`availability_evidence_kind` has one new value, `financial_report_disclosure`. It applies to a fact whose value
+is stated by an official MOPS 「…年度合併財務報告業經董事會決議通過」 notice, which is published with a
+second-precision 發言日期/發言時間.
+
+**Match rules.** A fact is dated by such a notice only when every one of these matches exactly:
+
+- fiscal year, with the notice's reporting period covering the full year (`起訖日期` 01/01–12/31);
+- canonical metric, through a fixed label table:
+
+  | Notice line | Canonical metric |
+  |---|---|
+  | 營業收入 | `revenue` |
+  | 營業毛利(毛損) | `gross_profit` |
+  | 營業利益(損失) | `operating_income` |
+  | 本期淨利(淨損) | `net_income` |
+  | 基本每股盈餘(損失) | `eps` |
+  | 期末總資產 | `total_assets` |
+  | 期末總負債 | `total_liabilities` |
+
+- statement scope stated in the subject (合併 / 個體);
+- accounting framework;
+- normalized unit and value (仟元 × 1000 = TWD; EPS in TWD/share, unscaled).
+
+**Exclusions:**
+
+- The version must not be `restated`, and no restatement evidence may exist for the period.
+- The lines 稅前淨利, 歸屬於母公司業主淨利 and 期末歸屬於母公司業主之權益 have **no** canonical metric. In particular,
+  equity attributable to owners of the parent is never matched to total `equity`.
+- Interim-period notices never date an annual fact.
+
+**Artifact availability unchanged.** As with restatement disclosures, the filing artifact (`content_hash`,
+`source_url`, `available_at`) is **not** dated by the notice. The XBRL artifact keeps
+`availability_status = unverified`.
+
+**Strict verification.** The strict verifier re-derives every such fact from the included raw notice itself and
+fails closed on any mismatch or unsupported notice format.
+
+**Evidence dataset.** The notice values are also exported as the evidence dataset `disclosed_financial_values`
+(below).
 
 ## Research cutoffs (what the archive can support)
 
@@ -123,6 +165,7 @@ and original filing facts only by 重編前 (pre) values.
 | Restatement analysis, one second earlier | 2016-11-13 21:26:21 | 0 facts; 79 individual before/after rows (21:25:31 notice); 6 individual summary rows |
 | Restatement analysis | from 2016-11-13 21:26:22 | 27 restated facts (observation level) + 158 before/after rows + 11 summary rows |
 | Retrospective | e.g. 2017-12-31 | same 27 facts (XBRL identity still withheld) + 8 artifact-verified PDFs (incl. the FY2016 PDF) + 12 summary rows |
+| FY2011–FY2022 strict (Phase 2B) | 2023-12-31 | 27 FY2013–2015 restated facts + **21 FY2020–FY2022 facts** dated by board-approval notices (7 per year: revenue, gross profit, operating income, net income, EPS, total assets, total liabilities; public from 2021-03-05 17:38:20, 2022-03-16 17:59:38 and 2023-03-02 22:38:39); 0 FY2016–FY2019 facts |
 | FY2011–FY2019 strict (Phase 2A) | 2020-12-31 | same 27 facts; **0** FY2017–FY2019 facts (no verified XBRL publication time and no disclosure stating the values); 10 artifact-verified PDFs (adds FY2019 consolidated/individual, public from 2020-02-14 14:58:52 / 14:59:25); 12 summary rows |
 
 Pre-event detection requires verified first-publication evidence for the
@@ -183,7 +226,8 @@ never merged into the facts file.
 | `restatement_comparisons` | 重編前/重編後 rows from MOPS restatement notices | yes | `pre_restatement_value` = *as previously reported per the notice* (not necessarily first-published); NT$ thousand as disclosed (deductions negative, `sign_factor` gives the canonical sign); eligible from `disclosed_at` |
 | `publication_timeline` | TPEx announcements, MOPS material information, TWSE e-book uploads, quoted claims | no | `available_from` = second-precision time, or next Taipei midnight for date-only notices; `linked_filing_versions` lists link statuses |
 | `source_inventory` | every archived source artifact with category, hash, parser status, missing evidence | no | categories in `HISTORICAL_SOURCE_EVIDENCE_INVENTORY.md` |
-| `coverage_matrix` | FY-by-FY original/restated/summary/comparison evidence, verified availability, PIT readiness, remaining gaps | no | for case research triage |
+| `coverage_matrix` | FY-by-FY original/restated/summary/comparison evidence, verified availability, PIT readiness, remaining gaps | no | for case research triage; pass `--start-year/--end-year` (default case range 2011–2016) |
+| `disclosed_financial_values` (Phase 2B) | key figures stated by MOPS financial-report board-approval notices | yes | `value` as published (仟元, or 元 for EPS), `normalized_value` (TWD, TWD/share); `canonical_metric` empty where no exact canonical metric exists; `dated_facts` = filing facts dated by this value; eligible from `disclosed_at` |
 
 ## Point-in-time semantics
 

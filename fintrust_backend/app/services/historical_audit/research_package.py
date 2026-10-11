@@ -35,6 +35,7 @@ from app.services.historical_audit.conference_coverage import latest_coverage
 from app.services.historical_audit.conference_package import build_conference_datasets
 from app.services.historical_audit.evidence_export import (
     COMPARISON_FIELDS,
+    DISCLOSED_VALUE_FIELDS,
     COVERAGE_FIELDS,
     INVENTORY_FIELDS,
     SUMMARY_CONTRACT_VERSION,
@@ -42,6 +43,7 @@ from app.services.historical_audit.evidence_export import (
     TIMELINE_FIELDS,
     coverage_matrix,
     list_publication_timeline,
+    list_disclosed_financial_values,
     list_restatement_comparisons,
     list_summary_observations,
     source_inventory,
@@ -83,7 +85,8 @@ This package contains only evidence verifiably public before `manifest.parameter
 - `data/financial_facts.*`: facts contract fields. `effective_available_at` is the earliest verified time:
   `filing_available_at` (the filing artifact itself) or `observation_available_at` (an official disclosure stating
   the identical value). With `artifact_reference_status = withheld_not_public_at_cutoff` the later filing artifact's
-  identity is withheld; `availability_evidence_*` names the disclosure that dates the value.
+  identity is withheld; `availability_evidence_*` names the disclosure that dates the value: a restatement notice
+  (`restatement_disclosure`) or an annual financial-report board-approval notice (`financial_report_disclosure`).
 - `data/filing_versions.csv`: only artifacts whose own availability is verified before the cutoff.
 - `data/source_inventory.csv`: only single-publication official notices published before the cutoff.
 - `data/restatement_comparisons.csv`: rows disclosed before the cutoff.
@@ -262,6 +265,9 @@ class ResearchPackageBuilder:
         builder.add("data/historical_summaries.csv", _csv_bytes(summaries, SUMMARY_FIELDS), "dataset")
         comparisons = [r for r in list_restatement_comparisons(self.repository, p.ticker) if p.start_year <= r["fiscal_year"] <= p.end_year]
         builder.add("data/restatement_comparisons.csv", _csv_bytes(comparisons, COMPARISON_FIELDS), "dataset")
+        disclosed = [r for r in list_disclosed_financial_values(self.repository, p.ticker)
+                     if p.start_year <= r["fiscal_year"] <= p.end_year]
+        builder.add("data/disclosed_financial_values.csv", _csv_bytes(disclosed, DISCLOSED_VALUE_FIELDS), "dataset")
         timeline = list_publication_timeline(self.repository, p.ticker)
         builder.add("data/publication_timeline.csv", _csv_bytes(timeline, TIMELINE_FIELDS), "dataset")
         inventory = source_inventory(self.repository, p.ticker)
@@ -305,6 +311,7 @@ class ResearchPackageBuilder:
             "filing_versions": len(version_rows),
             "filing_versions_raw_included": sum(1 for r in version_rows if r["raw_evidence_included"]),
             "historical_summaries": len(summaries), "restatement_comparisons": len(comparisons),
+            "disclosed_financial_values": len(disclosed),
             "publication_events": len(timeline), "source_inventory": len(inventory),
             "missing_evidence_rows": len(missing),
             "raw_evidence_files": sum(1 for path in builder.files if path.startswith("raw_evidence/")),
@@ -443,6 +450,7 @@ class ResearchPackageBuilder:
             f"| `data/filing_versions.csv` | {counts['filing_versions']} filing artifacts (original / restated / unknown) |",
             f"| `data/historical_summaries.csv` | {counts['historical_summaries']} TPEx summary observations (not filings) |",
             f"| `data/restatement_comparisons.csv` | {counts['restatement_comparisons']} 重編前/重編後 rows |",
+            "| `data/disclosed_financial_values.csv` | key figures stated by official financial-report board-approval notices (value-level evidence) |",
             f"| `data/publication_timeline.csv` | {counts['publication_events']} official publication events |",
             "| `data/source_inventory.csv`, `data/coverage_matrix.csv`, `data/missing_evidence.csv` | inventory, coverage, explicit gaps |",
             "| `data/conference_*.csv`, `conference/` | official investor-conference documents, page text and coverage (text evidence, not financial data) |",

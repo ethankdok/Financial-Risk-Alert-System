@@ -130,6 +130,29 @@ CREATE TABLE IF NOT EXISTS restatement_comparisons (
     verification_status TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS disclosed_financial_values (
+    disclosed_value_id TEXT PRIMARY KEY,
+    source_document_id TEXT NOT NULL REFERENCES historical_source_documents (source_document_id),
+    event_id TEXT NOT NULL REFERENCES historical_publication_events (event_id),
+    ticker TEXT NOT NULL,
+    period TEXT NOT NULL,
+    fiscal_year INTEGER NOT NULL,
+    statement_scope TEXT NOT NULL,
+    accounting_framework TEXT NOT NULL,
+    disclosure_kind TEXT NOT NULL,
+    source_label TEXT NOT NULL,
+    canonical_metric TEXT,
+    value_text TEXT NOT NULL,
+    published_unit TEXT NOT NULL,
+    normalized_value_text TEXT NOT NULL,
+    normalized_unit TEXT NOT NULL,
+    disclosed_at TEXT NOT NULL,
+    availability_status TEXT NOT NULL,
+    availability_basis TEXT NOT NULL,
+    verification_status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (source_document_id, source_label)
+);
 CREATE TABLE IF NOT EXISTS observation_availability (
     availability_id TEXT PRIMARY KEY,
     observation_kind TEXT NOT NULL,
@@ -177,5 +200,6 @@ EVIDENCE_TABLES = (
     "publication_evidence_links",
     "official_summary_observations",
     "restatement_comparisons",
+    "disclosed_financial_values",
     "observation_availability",
 )

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Callable
 
@@ -32,7 +33,19 @@ CONFERENCE_DOCUMENT_FIELDS = (
     "page_count", "text_pages", "low_text_pages", "image_or_scanned_pages", "sha256", "source_page", "source_pdf",
     "download_method", "publication_availability_status", "availability_note", "jsd_ready", "readiness_issues",
     "package_raw_path", "raw_evidence_included",
+    # appended (additive): identical files listed more than once are one document, and the M/E files of one
+    # listing entry are language versions of one presentation, not independent observations.
+    "content_duplicate_of", "language_pair_key",
 )
+_PAIR_RE = re.compile(r"^(\d{4,6}\d{8})[ME](\d{3})\.pdf$")
+
+
+def language_pair_key(filename: str) -> str | None:
+    """Official MOPS file names are <ticker><yyyymmdd><M|E><seq>.pdf; M/E with the same seq are one presentation."""
+    match = _PAIR_RE.match(filename)
+    return f"{match.group(1)}_{match.group(2)}" if match else None
+
+
 CONFERENCE_TEXT_FIELDS = (
     "ticker", "research_role", "filename", "meeting_dates", "document_language", "document_type", "period",
     "sha256", "page_count", "text_length", "archival_only", "jsd_ready", "text",
@@ -97,6 +110,8 @@ def build_conference_datasets(
         for y in available if y not in in_scope)
     records = build_records(repository, ticker, in_scope) if in_scope else []
     doc_rows, text_rows, page_rows, quality_rows = [], [], [], []
+    first_by_sha: dict[str, str] = {}
+    raw_by_sha: dict[str, str] = {}
     for record in sorted(records, key=lambda r: (r.provenance["announcement_year"], r.provenance["filename"])):
         year, filename = record.provenance["announcement_year"], record.provenance["filename"]
         manifest_doc = next((d for d in (repository.latest_manifest(ticker, year) or {}).get("documents", [])
@@ -109,19 +124,24 @@ def build_conference_datasets(
         if include_raw and source is not None and source.is_file():
             data = source.read_bytes()
             if hashlib.sha256(data).hexdigest() == sha:
-                raw_path = f"raw_evidence/conference_pdfs/{ticker}/{year}/{sha}.pdf"
-                add(raw_path, data, "conference_raw_evidence")
+                raw_path = raw_by_sha.get(sha)
+                if raw_path is None:
+                    raw_path = raw_by_sha[sha] = f"raw_evidence/conference_pdfs/{ticker}/{year}/{sha}.pdf"
+                    add(raw_path, data, "conference_raw_evidence")
             else:
                 missing.append({"fiscal_year": year, "evidence_kind": "conference_pdf", "status": "failed_integrity",
                                 "detail": filename})
         elif include_raw:
             missing.append({"fiscal_year": year, "evidence_kind": "conference_pdf", "status": "missing_locally",
                             "detail": filename})
-        add(f"conference/pages/{sha}.pages.json",
-            (json.dumps(_sanitized_pages(pages), ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"),
-            "conference_derived")
         text = document_text(pages)
-        add(f"conference/text/{sha}.txt", text.encode("utf-8"), "conference_derived")
+        # Content-addressed outputs are written once per SHA-256, from the first listed file with these bytes
+        # (``content_duplicate_of`` names it); a re-listed identical file only adds its own index rows.
+        if sha not in first_by_sha:
+            add(f"conference/pages/{sha}.pages.json",
+                (json.dumps(_sanitized_pages(pages), ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"),
+                "conference_derived")
+            add(f"conference/text/{sha}.txt", text.encode("utf-8"), "conference_derived")
         role = _role(year, start_year, end_year)
         identity_pending = record.provenance.get("period_validation_status") != "verified"
         doc_rows.append({
@@ -138,7 +158,9 @@ def build_conference_datasets(
             "publication_availability_status": "unverified", "availability_note": AVAILABILITY_NOTE,
             "jsd_ready": record.jsd_ready, "readiness_issues": ";".join(record.readiness_issues),
             "package_raw_path": raw_path, "raw_evidence_included": raw_path is not None,
+            "content_duplicate_of": first_by_sha.get(sha), "language_pair_key": language_pair_key(filename),
         })
+        first_by_sha.setdefault(sha, filename)
         text_rows.append({
             "ticker": ticker, "research_role": role, "filename": filename,
             "meeting_dates": ";".join(record.provenance.get("conference_dates") or []),
@@ -166,6 +188,7 @@ def build_conference_datasets(
             "quarantined": bool(record.provenance.get("quarantined")),
         })
         stats["documents"] += 1
+        stats["distinct_documents"] = len(first_by_sha)
         stats["pages"] += len(pages)
         stats["text_pages"] += statuses.count("text_extracted")
         stats["jsd_ready"] += int(record.jsd_ready)

@@ -91,6 +91,7 @@ class FirestoreResearchBackend:
     def list_facts(self, ticker, start_year, end_year, *, as_of=None, version_policy="all"):
         versions = {v["filing_version_id"]: v for v in self._rows("filing_versions", ticker)}
         comparisons = {c["comparison_id"]: c for c in self._rows("comparisons", ticker)}
+        disclosed = {d["disclosed_value_id"]: d for d in self._rows("disclosed_values", ticker)}
         documents, events = self._documents(ticker), self._events(ticker)
         availability: dict[str, list[dict[str, Any]]] = {}
         for row in self._rows("observation_availability", ticker):
@@ -110,12 +111,14 @@ class FirestoreResearchBackend:
             row["observation_basis"] = " | ".join(i["basis"] for i in items) if items else None
             if items:
                 best = min(items, key=lambda i: (parse_timestamp(i["available_at"]), i["corroborating_id"]))
-                comparison = comparisons.get(best["corroborating_id"], {})
+                comparison = (comparisons if best.get("corroborating_kind", "restatement_comparison") == "restatement_comparison"
+                              else disclosed).get(best["corroborating_id"], {})
                 document = documents.get(comparison.get("source_document_id"), {})
                 event = events.get(comparison.get("event_id"), {})
                 evidence[fact["fact_id"]] = {
                     "observation_id": fact["fact_id"], "available_at": best["available_at"],
                     "corroborating_id": best["corroborating_id"], "match_detail": best["match_detail"],
+                    "corroborating_kind": best.get("corroborating_kind", "restatement_comparison"),
                     "source_url": document.get("source_url"), "content_hash": document.get("content_hash"),
                     "event_key": event.get("event_key"),
                 }

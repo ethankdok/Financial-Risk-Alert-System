@@ -486,3 +486,75 @@ def parse_tpex_summary_xls(content: bytes, *, ticker: str) -> TpexSummaryRow:
                 ))
             return result
     raise EvidenceParseError(f"Ticker {ticker} not found in TPEx summary workbook.")
+
+
+# ------------------------------------------------------------------ MOPS annual board-approval notice
+# 「本公司民國XXX年度合併財務報告業經董事會決議通過」 (MOPS clause 31): numbered lines stating key figures of the
+# approved report, each 「<label>(仟元|元):<amount>」. The label table is fixed; ``canonical`` is None where the
+# line has no exact canonical metric (e.g. equity attributable to owners of the parent is not total ``equity``).
+BOARD_REPORT_LABELS: dict[str, str | None] = {
+    "營業收入": "revenue",
+    "營業毛利(毛損)": "gross_profit",
+    "營業利益(損失)": "operating_income",
+    "稅前淨利(淨損)": None,
+    "本期淨利(淨損)": "net_income",
+    "歸屬於母公司業主淨利(損)": None,
+    "基本每股盈餘(損失)": "eps",
+    "期末總資產": "total_assets",
+    "期末總負債": "total_liabilities",
+    "期末歸屬於母公司業主之權益": None,
+}
+_BOARD_LINE = re.compile(r"^\d{1,2}\.(?:1月1日累計至本期止)?(.+?)\((仟元|元)\)[:：](\(?-?[\d,]+(?:\.\d+)?\)?)$")
+_BOARD_PERIOD = re.compile(r"(\d{2,3})/(\d{2})/(\d{2})\s*~\s*(\d{2,3})/(\d{2})/(\d{2})")
+
+
+@dataclass(frozen=True)
+class BoardReportItem:
+    label: str
+    canonical_metric: str | None
+    value: Decimal
+    published_unit: str  # TWD_thousand | TWD/share
+
+
+@dataclass(frozen=True)
+class BoardReport:
+    period_start: date
+    period_end: date
+    items: tuple[BoardReportItem, ...]
+
+    @property
+    def annual_fiscal_year(self) -> int | None:
+        if (self.period_start.month, self.period_start.day, self.period_end.month, self.period_end.day) == (1, 1, 12, 31) \
+                and self.period_start.year == self.period_end.year:
+            return self.period_start.year
+        return None
+
+
+def parse_board_financial_report(body: str) -> BoardReport:
+    """Key figures of a MOPS annual/interim financial-report board-approval notice (fails closed)."""
+    text = body.replace("：", ":")
+    period = _BOARD_PERIOD.search(re.sub(r"\s+", "", text))
+    if not period:
+        raise EvidenceParseError("Board-approval notice states no reporting period (起訖日期).")
+    numbers = [int(part) for part in period.groups()]
+    start = date(numbers[0] + 1911, numbers[1], numbers[2])
+    end = date(numbers[3] + 1911, numbers[4], numbers[5])
+    items: list[BoardReportItem] = []
+    for raw in text.splitlines():
+        line = re.sub(r"\s+", "", raw)
+        match = _BOARD_LINE.match(line)
+        if not match:
+            continue
+        label, unit, amount = match.groups()
+        if label not in BOARD_REPORT_LABELS:
+            raise EvidenceParseError(f"Unsupported board-approval line label {label!r}.")
+        if unit == "仟元" and BOARD_REPORT_LABELS[label] == "eps" or unit == "元" and BOARD_REPORT_LABELS[label] != "eps":
+            raise EvidenceParseError(f"Unexpected unit {unit} for {label}.")
+        negative = amount.startswith("(") or amount.startswith("-")
+        value = Decimal(amount.strip("()").lstrip("-").replace(",", ""))
+        items.append(BoardReportItem(label, BOARD_REPORT_LABELS[label], -value if negative else value,
+                                     "TWD/share" if unit == "元" else "TWD_thousand"))
+    labels = [item.label for item in items]
+    if len(labels) != len(set(labels)) or not {"營業收入", "期末總資產"} <= set(labels):
+        raise EvidenceParseError("Board-approval notice lacks the expected key-figure lines or repeats one.")
+    return BoardReport(start, end, tuple(items))

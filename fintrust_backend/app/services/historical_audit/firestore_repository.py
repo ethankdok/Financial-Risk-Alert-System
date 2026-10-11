@@ -21,13 +21,14 @@ from typing import Any, Iterable
 RECORD_KINDS = (
     "cases", "filing_versions", "facts", "source_documents", "publication_events", "evidence_links",
     "comparisons", "summary_observations", "observation_availability", "objects", "packages", "sync_runs",
+    "disclosed_values",
 )
 ID_FIELDS = {
     "cases": "ticker", "filing_versions": "filing_version_id", "facts": "fact_id",
     "source_documents": "source_document_id", "publication_events": "event_id", "evidence_links": "link_id",
     "comparisons": "comparison_id", "summary_observations": "observation_id",
     "observation_availability": "availability_id", "objects": "object_id", "packages": "content_digest",
-    "sync_runs": "run_id",
+    "sync_runs": "run_id", "disclosed_values": "disclosed_value_id",
 }
 # field → values that may be replaced (by a non-empty value) when a later import learns more.
 FILLABLE: dict[str, dict[str, tuple[Any, ...]]] = {

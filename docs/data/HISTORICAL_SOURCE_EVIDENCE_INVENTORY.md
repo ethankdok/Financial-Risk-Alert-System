@@ -1,4 +1,4 @@
-# 1785 光洋科 — Historical Source Evidence Inventory (FY2011–FY2019)
+# 1785 光洋科 — Historical Source Evidence Inventory (FY2011–FY2022)
 
 Machine-readable form: `evidence-export --dataset source_inventory` (45 rows:
 41 Phase 1B source documents + 4 Phase 1 XBRL instances). Reviewed request plan:
@@ -164,3 +164,70 @@ because they are translations.
 | Whether the FY2018 MOPS XBRL/PDF bytes are the 2019-05-29 re-upload | Unresolved (the correction is note-only according to the notice) |
 | Investor-conference documents 2018 (10 listed) and 2019 (4 listed) | Listed by MOPS, not downloaded in Phase 2A (`document_missing`) |
 
+## Phase 2B — FY2020–FY2022 (retrieved 2026-10-11 UTC)
+
+Phase 2B added 30 official sources:
+
+- 3 MOPS inline-XBRL filings;
+- 11 discovery documents: TWSE e-book listings ROC 109–111, MOPS material listings ROC 110–114, and TPEx
+  `O_2020Q4`–`O_2022Q4`;
+- 6 annual PDFs;
+- 7 notice details.
+
+The request log is in `docs/development/HISTORICAL_PHASE2B_FY2020_2022_VALIDATION.md`.
+
+### Complete filings
+
+| FY | Artifact | Scope | Format / entry point | Revision | Availability | SHA-256 (prefix) |
+|---|---|---|---|---|---|---|
+| 2020 | MOPS `t164sb01` inline XBRL | consolidated | iXBRL, `tifrs-ci-cr-2020-06-30` | unknown_revision | **unverified** (artifact) | `43afc3f3` |
+| 2020 | TWSE `202004_1785_AI1.pdf` / `AI3.pdf` | consolidated / individual | PDF (text layer) | unknown_revision | **verified 2021-03-08 17:32:17 / 17:34:10** (更(補)正 無, size match) | `b561ff61` / `0ac777fd` |
+| 2021 | MOPS inline XBRL | consolidated | iXBRL, `tifrs-ci-cr-2020-06-30` | unknown_revision | **unverified** | `c82f57f4` |
+| 2021 | TWSE `202104_1785_AI1.pdf` / `AI3.pdf` | consolidated / individual | PDF (text layer) | unknown_revision | **verified 2022-03-18 15:30:14 / 15:30:54** | `f2292ead` / `5311b320` |
+| 2022 | MOPS inline XBRL | consolidated | iXBRL, `tifrs-ci-cr-2020-06-30` | unknown_revision | **unverified**; FY2022 notes correction linked | `7f4b5fa9` |
+| 2022 | TWSE `202204_1785_AI1.pdf` / `AI3.pdf` | consolidated / individual | PDF | unknown_revision | **unverified**: listed 2023-03-22, but the 更(補)正 column is blank; correction linked | `db9eda1d` / `e748d289` |
+
+All three XBRL filings parse to 18 facts, with core coverage 17/17 and status `validated`. EPS is declared per
+share. Every metric maps to a primary concept, except the documented capex alias.
+
+### Value-level disclosures (new evidence kind)
+
+Annual consolidated financial-report board-approval notices (MOPS clause 31) state key figures in 仟元:
+
+| Notice | Published (Taipei) | FY | SHA-256 (prefix) | Dates facts |
+|---|---|---|---|---|
+| `mops:20210305:173820:1` 「本公司民國109年度合併財務報告業經董事會決議通過」 | 2021-03-05 17:38:20 | 2020 | `682aebfd` | 7 |
+| `mops:20220316:175938:2` (110年度) | 2022-03-16 17:59:38 | 2021 | `bf4620bb` | 7 |
+| `mops:20230302:223839:3` (111年度) | 2023-03-02 22:38:39 | 2022 | `d66622fc` | 7 |
+
+**Matched:** revenue, gross profit, operating income, net income, EPS, total assets and total liabilities, all
+exact.
+
+**Not matched (no canonical metric):**
+
+- 稅前淨利 (pre-tax profit);
+- 歸屬於母公司業主淨利 (profit attributable to owners of the parent);
+- 期末歸屬於母公司業主之權益 (equity attributable to owners of the parent). This differs from total equity: for
+  FY2020, 8,220,267 against 8,506,283 thousand.
+
+No equivalent notice exists for FY2016–FY2019. In ROC 106–109 the board notices about the annual meeting carry no
+figures (e.g. 2020-02-12).
+
+### Corrections (search window: MOPS ROC 106–114, i.e. 2017–2025)
+
+| Notice | Affects | Content | Effect on values |
+|---|---|---|---|
+| `mops:20210427:145546:1` | FY2017 individual and consolidated | note 6 investment-property accumulated impairment re-classified (土地 vs 房屋及建築); reports re-uploaded | "並不影響損益". No canonical metric changes |
+| `mops:20220602:134747:3` | 2020 Q1–Q3 and 2021 Q1–Q3 interim | disposal gain re-timed from Q4 to Q1 2020 | "對109年度之損益無影響" (annual figures unaffected) |
+| `mops:20230411:171742:3` | FY2022 individual and consolidated | related-party note: 9,650 元 corrected to 9,650 千元 | "對損益金額並無影響" |
+
+The 2023-08, 2024 and 2025 corrections concern FY2023+ periods or monthly data and are out of scope. No restatement
+(重編) of FY2017–FY2022 was found.
+
+### Unavailable / unresolved (FY2020–FY2022)
+
+| Item | Status |
+|---|---|
+| XBRL artifact publication times | Unresolved (no upload record). Values are dated at the observation level by the board notices only |
+| FY2022 PDF availability | Unverified (blank 更(補)正; corrected 2023-04-11) |
+| 11 of 18 facts per year | Not stated by any timestamped official disclosure, so they are not PIT-eligible |

@@ -147,11 +147,19 @@ class RealResearchCutoffs(unittest.TestCase):
         connection = sqlite3.connect(self.repository.database_path)
         try:
             details = {row[0] for row in connection.execute(
-                "SELECT o.match_detail FROM observation_availability o JOIN versioned_financial_facts f ON f.fact_id = o.observation_id")}
+                "SELECT o.match_detail FROM observation_availability o JOIN versioned_financial_facts f ON f.fact_id = o.observation_id "
+                "WHERE o.corroborating_kind = 'restatement_comparison'")}
+            # Board-approval notices (Phase 2B) never date a restated version.
+            board_version_types = {row[0] for row in connection.execute(
+                """SELECT v.filing_version_type FROM observation_availability o
+                JOIN versioned_financial_facts f ON f.fact_id = o.observation_id
+                JOIN financial_filing_versions v ON v.filing_version_id = f.filing_version_id
+                WHERE o.corroborating_kind = 'financial_report_disclosure'""")}
         finally:
             connection.close()
         self.assertTrue(details)
         self.assertTrue(all("(post side" in d for d in details), details)
+        self.assertNotIn("restated", board_version_types)
 
 
 @unittest.skipUnless(_has_phase1b_evidence(), "real 1785 evidence archive not present locally")
@@ -189,6 +197,14 @@ class RealArchiveMockCloudContract(unittest.TestCase):
                                  local.list_summary_observations("1785", as_of=as_of))
             self.assertEqual(cloud.list_filing_versions("1785", 2011, 2016), local.list_filing_versions("1785", 2011, 2016))
             self.assertEqual(len(local.list_facts("1785", 2011, 2016, as_of="2016-11-14")), 27)
+            # Phase 2B: FY2011-2022, including facts dated by board-approval notices (financial_report_disclosure).
+            for as_of in (None, "2021-03-05T17:38:19+08:00", "2021-03-05T17:38:20+08:00", "2023-12-31"):
+                local_facts = local.list_facts("1785", 2011, 2022, as_of=as_of)
+                self.assertEqual(cloud.list_facts("1785", 2011, 2022, as_of=as_of), local_facts, as_of)
+            self.assertEqual(cloud.list_filing_versions("1785", 2011, 2022), local.list_filing_versions("1785", 2011, 2022))
+            if _has_phase2b_evidence():
+                kinds = {r["availability_evidence_kind"] for r in local.list_facts("1785", 2011, 2022, as_of="2023-12-31")}
+                self.assertEqual(kinds, {"restatement_disclosure", "financial_report_disclosure"})
 
 
 CONFERENCE_ROOT = Path(__file__).resolve().parents[1] / "data" / "historical-conference-pdfs"
@@ -508,3 +524,147 @@ class RealPhase2aFy2017To2019(unittest.TestCase):
                 JOIN financial_filing_versions v ON v.filing_version_id = l.target_id
                 WHERE e.event_key = 'mops:20190529:141818:1' AND l.link_status = 'unverified_linkage'""")}
         self.assertEqual(linked, {"mops_xbrl_instance:consolidated", "official_pdf:consolidated", "official_pdf:individual"})
+
+
+def _has_phase2b_evidence() -> bool:
+    if not _has_phase1b_evidence():
+        return False
+    import sqlite3
+
+    connection = sqlite3.connect(f"file:{REAL_DB.as_posix()}?mode=ro", uri=True)
+    try:
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        return "disclosed_financial_values" in tables and connection.execute(
+            "SELECT COUNT(*) FROM financial_filing_versions WHERE fiscal_year = 2022").fetchone()[0] > 0
+    finally:
+        connection.close()
+
+
+def _typed(value: str):
+    return None if value == "" else True if value == "true" else False if value == "false" else value
+
+
+@unittest.skipUnless(_has_phase2b_evidence(), "real 1785 FY2020-2022 evidence not present locally")
+class RealPhase2bFy2020To2022(unittest.TestCase):
+    """REAL tier, Phase 2B: FY2020-2022 versions and value-level PIT from annual board-approval notices."""
+
+    NOTICES = {2020: ("mops:20210305:173820:1", "2021-03-05T17:38:20+08:00"),
+               2021: ("mops:20220316:175938:2", "2022-03-16T17:59:38+08:00"),
+               2022: ("mops:20230302:223839:3", "2023-03-02T22:38:39+08:00")}
+    STATED = {"revenue", "gross_profit", "operating_income", "net_income", "eps", "total_assets", "total_liabilities"}
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        copy = Path(cls._tmp.name) / "copy.sqlite3"
+        shutil.copyfile(REAL_DB, copy)
+        cls.repository = HistoricalAuditRepository(str(copy))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def test_one_inline_xbrl_per_year_with_exact_identities(self) -> None:
+        from decimal import Decimal
+
+        facts = list_historical_facts(self.repository, "1785", 2020, 2022, include_test_fixtures=False)
+        for year in (2020, 2021, 2022):
+            xbrl = [v for v in self.repository.list_filing_versions("1785", year, year) if v["source_kind"].startswith("mops_")]
+            self.assertEqual([(v["source_kind"], v["statement_scope"], v["filing_version_type"], v["availability_status"])
+                              for v in xbrl], [("mops_inline_xbrl", "consolidated", "unknown_revision", "unverified")])
+            values = {f["metric_code"]: Decimal(f["value_text"]) for f in facts if f["fiscal_year"] == year}
+            self.assertEqual(len(values), 18)
+            self.assertEqual(values["revenue"] - values["cost_of_goods_sold"], values["gross_profit"])
+            self.assertEqual(values["total_liabilities"] + values["equity"], values["total_assets"])
+        self.assertFalse([f for f in facts if "E" in f["value_text"].upper()])
+
+    def test_board_notice_dates_exactly_the_stated_metrics(self) -> None:
+        from datetime import datetime as _dt, timezone as _tz
+
+        facts = [f for f in list_historical_facts(self.repository, "1785", 2020, 2022) if f["point_in_time_eligible"]]
+        self.assertEqual(len(facts), 21)
+        for fact in facts:
+            key, at = self.NOTICES[fact["fiscal_year"]]
+            self.assertIn(fact["metric_code"], self.STATED)
+            self.assertEqual((fact["availability_evidence_kind"], fact["availability_evidence_ref"], fact["availability_scope"]),
+                             ("financial_report_disclosure", key, "observation"))
+            self.assertEqual(fact["effective_available_at"], _dt.fromisoformat(at).astimezone(_tz.utc).isoformat())
+            self.assertEqual((fact["available_at"], fact["availability_status"]), (None, "unverified"))  # artifact unchanged
+        # The notice states equity attributable to owners of the parent, not total equity: never matched.
+        self.assertNotIn("equity", {f["metric_code"] for f in facts})
+
+    def test_exact_cutoff_boundaries(self) -> None:
+        def count(as_of):
+            return len(list_historical_facts(self.repository, "1785", 2020, 2022, as_of=as_of))
+        self.assertEqual(count("2021-03-05T17:38:19+08:00"), 0)
+        self.assertEqual(count("2021-03-05T17:38:20+08:00"), 7)
+        self.assertEqual(count("2023-03-02T22:38:38+08:00"), 14)
+        self.assertEqual(count("2023-03-02T22:38:39+08:00"), 21)
+        self.assertEqual(len(list_historical_facts(self.repository, "1785", 2017, 2019, as_of="2026-10-11")), 0)
+
+    def test_pdf_availability_and_corrections(self) -> None:
+        def pdfs(year):
+            return {v["statement_scope"]: v["availability_status"] for v in self.repository.list_filing_versions("1785", year, year)
+                    if v["source_kind"] == "official_pdf"}
+        self.assertEqual(pdfs(2020), {"consolidated": "verified", "individual": "verified"})
+        self.assertEqual(pdfs(2021), {"consolidated": "verified", "individual": "verified"})
+        self.assertEqual(pdfs(2022), {"consolidated": "unverified", "individual": "unverified"})  # blank 更(補)正
+        with self.repository.connect() as connection:
+            linked = {(row[0], row[1]) for row in connection.execute(
+                """SELECT e.event_key, v.period FROM publication_evidence_links l JOIN historical_publication_events e USING (event_id)
+                JOIN financial_filing_versions v ON v.filing_version_id = l.target_id
+                WHERE e.event_type = 'financial_report_correction' AND v.fiscal_year >= 2017""")}
+        self.assertLessEqual({("mops:20210427:145546:1", "2017FY"), ("mops:20230411:171742:3", "2022FY")}, linked)
+
+    def test_strict_verifier_rederives_board_dated_facts(self) -> None:
+        import csv as _csv
+        import io as _io
+        import json as _json
+        import zipfile
+
+        from app.services.historical_audit.archive import RawEvidenceArchive
+        from app.services.historical_audit.package_verify import PackageVerificationError, verify_package
+        from app.services.historical_audit.research_package import PackageParameters, ResearchPackageBuilder
+        from tests.historical_evidence_fixtures import mutate_csv, repack_package
+
+        path = Path(self._tmp.name) / "strict2022.zip"
+        ResearchPackageBuilder(self.repository, RawEvidenceArchive(REAL_DB.parent / "raw")).build(
+            PackageParameters("1785", 2020, 2022, as_of="2023-12-31", version_policy="latest_available"), path)
+        self.assertEqual(verify_package(path)["status"], "verified")
+        root = "fintrust_historical_research_dataset/"
+        with zipfile.ZipFile(path) as archive:
+            data = archive.read(root + "data/financial_facts.csv")
+            envelope = _json.loads(archive.read(root + "data/financial_facts.json"))
+        rows = list(_csv.DictReader(_io.StringIO(data.decode("utf-8"))))
+        self.assertEqual(len(rows), 21)
+        revenue = {"period": "2020FY", "metric_code": "revenue"}
+        other_ref = next(r for r in rows if r["period"] == "2021FY")["availability_evidence_ref"]
+        cases = {
+            "value": ({"value": "26665368000"}, "is not what the notice states"),
+            "unit": ({"unit": "TWD/share"}, "disagrees with the notice unit"),
+            "metric": ({"metric_code": "cost_of_goods_sold"}, "is not stated by a board-approval notice line"),
+            "scope": ({"statement_scope": "individual"}, "statement scope individual disagrees"),
+            "period": ({"period": "2019FY", "fiscal_year": "2019"}, "does not report fiscal year 2019"),
+            "evidence identity": ({"availability_evidence_ref": other_ref}, "evidence identity/time disagrees"),
+            "evidence kind": ({"availability_evidence_kind": "filing_artifact"}, "without a disclosure reference"),
+        }
+        for label, (changes, reason) in cases.items():
+            with self.subTest(label):
+                csv_bytes = mutate_csv(data, revenue, changes)
+                mutated = list(_csv.DictReader(_io.StringIO(csv_bytes.decode("utf-8"))))
+                records = [{k: _typed(v) for k, v in r.items()} for r in mutated]
+                payload = {**envelope, "records": records}
+                target = repack_package(path, Path(self._tmp.name) / f"board-{label.replace(' ', '_')}.zip",
+                                        {"data/financial_facts.csv": csv_bytes,
+                                         "data/financial_facts.json": _json.dumps(payload, ensure_ascii=False).encode("utf-8")})
+                with self.assertRaisesRegex(PackageVerificationError, reason):
+                    verify_package(target)
+
+    def test_coverage_matrix_covers_board_dated_years(self) -> None:
+        from app.services.historical_audit.evidence_export import coverage_matrix
+
+        rows = {r["fiscal_year"]: r for r in coverage_matrix(self.repository, "1785", 2011, 2022)}
+        for year in (2020, 2021, 2022):
+            self.assertEqual(rows[year]["pit_ready_facts"], 7)
+            self.assertIn("official financial-report disclosure", rows[year]["pit_ready"])
+        self.assertEqual((rows[2019]["pit_ready_facts"], rows[2019]["pit_ready"]), (0, "no"))

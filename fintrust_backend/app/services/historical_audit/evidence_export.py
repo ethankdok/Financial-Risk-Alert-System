@@ -39,6 +39,12 @@ COMPARISON_FIELDS = (
     "difference", "published_unit", "disclosed_at", "availability_status", "point_in_time_eligible",
     "pre_value_semantics", "source_url", "announcement_key", "content_hash",
 )
+DISCLOSED_VALUE_FIELDS = (
+    "ticker", "evidence_type", "disclosure_kind", "period", "fiscal_year", "statement_scope", "accounting_framework",
+    "source_label", "canonical_metric", "value", "published_unit", "normalized_value", "normalized_unit",
+    "disclosed_at", "availability_status", "point_in_time_eligible", "dated_facts", "source_url",
+    "announcement_key", "content_hash",
+)
 TIMELINE_FIELDS = (
     "ticker", "event_key", "event_type", "title", "announcement_id", "publication_at", "publication_precision",
     "available_from", "event_date", "event_date_basis", "affected_periods", "affected_scopes", "issuer",
@@ -63,6 +69,42 @@ PRE_VALUE_SEMANTICS = (
 
 def _cutoff(as_of: date | datetime | str | None) -> datetime | None:
     return as_of_cutoff(as_of) if as_of is not None else None
+
+
+def list_disclosed_financial_values(
+    repository: HistoricalAuditRepository, ticker: str, *, as_of: date | datetime | str | None = None
+) -> list[dict[str, Any]]:
+    """Key figures stated by official financial-report board-approval notices (Phase 2B; value-level evidence).
+
+    ``canonical_metric`` is empty for lines with no exact canonical metric (e.g. equity attributable to owners of
+    the parent). ``dated_facts`` counts the filing facts this value dates by exact match.
+    """
+    cutoff = _cutoff(as_of)
+    with repository.connect() as connection:
+        rows = [dict(row) for row in connection.execute(
+            """SELECT v.*, d.source_url, d.content_hash, e.event_key,
+                      (SELECT COUNT(*) FROM observation_availability o
+                       WHERE o.corroborating_id = v.disclosed_value_id AND o.corroborating_kind = 'financial_report_disclosure') AS dated
+            FROM disclosed_financial_values v
+            JOIN historical_source_documents d USING (source_document_id)
+            JOIN historical_publication_events e ON e.event_id = v.event_id
+            WHERE v.ticker = ? ORDER BY v.fiscal_year, v.statement_scope, v.disclosed_at, v.source_label""", (ticker,)).fetchall()]
+    result = []
+    for row in rows:
+        disclosed = parse_timestamp(row["disclosed_at"])
+        if cutoff is not None and not disclosed < cutoff:
+            continue
+        result.append({
+            "ticker": ticker, "evidence_type": "official_disclosed_value", "disclosure_kind": row["disclosure_kind"],
+            "period": row["period"], "fiscal_year": row["fiscal_year"], "statement_scope": row["statement_scope"],
+            "accounting_framework": row["accounting_framework"], "source_label": row["source_label"],
+            "canonical_metric": row["canonical_metric"], "value": row["value_text"], "published_unit": row["published_unit"],
+            "normalized_value": row["normalized_value_text"], "normalized_unit": row["normalized_unit"],
+            "disclosed_at": row["disclosed_at"], "availability_status": row["availability_status"],
+            "point_in_time_eligible": row["availability_status"] == "verified", "dated_facts": row["dated"],
+            "source_url": row["source_url"], "announcement_key": row["event_key"], "content_hash": row["content_hash"],
+        })
+    return result
 
 
 def list_restatement_comparisons(
@@ -371,6 +413,11 @@ def coverage_matrix(repository: HistoricalAuditRepository, ticker: str, start_ye
             "pit_ready_facts": len(pit_facts),
             "pit_ready": (
                 f"partial: {len(pit_facts)} filing facts (observation-level) + before/after disclosure from {first_disclosure[year]}"
+                if pit_facts and year in first_disclosure else
+                # Phase 2B: facts dated by a MOPS financial-report board-approval notice (no before/after table that year).
+                f"partial: {len(pit_facts)} of {sum(1 for f in facts if f['fiscal_year'] == year)} filing facts (observation-level) "
+                f"dated by an official financial-report disclosure from "
+                f"{min(f['effective_available_at'] for f in pit_facts)}; artifact availability unverified"
                 if pit_facts else
                 f"disclosure-only: before/after values from {first_disclosure[year]}; no filing facts" if year in first_disclosure else "no"),
             "remaining_gaps": "; ".join(gaps),
@@ -401,6 +448,7 @@ def _render(rows: list[dict[str, Any]], fields: tuple[str, ...], output_format: 
 DATASETS = {
     "summary_observations": (list_summary_observations, SUMMARY_FIELDS, True),
     "restatement_comparisons": (list_restatement_comparisons, COMPARISON_FIELDS, True),
+    "disclosed_financial_values": (list_disclosed_financial_values, DISCLOSED_VALUE_FIELDS, True),
     "publication_timeline": (list_publication_timeline, TIMELINE_FIELDS, False),
     "source_inventory": (source_inventory, INVENTORY_FIELDS, False),
 }

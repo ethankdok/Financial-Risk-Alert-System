@@ -146,9 +146,16 @@ class ConferenceCoverageRecorder:
             "missing_documents": len((manifest.get("integrity") or {}).get("missing_pdfs") or []),
             "errors_json": to_json(errors), "recorded_at": iso(utc_now()),
         }
+        # Same official listing bytes re-recorded after documents were archived: only the acquisition status columns
+        # change (the listing identity, URL and role are kept); a different listing hash is a new row.
+        mutable = ("status", "conference_rows", "meeting_dates_json", "expected_documents", "downloaded_documents",
+                   "non_pdf_attachments", "missing_documents", "errors_json", "recorded_at")
         with self.repository.connect() as connection:
             connection.execute(
-                f"INSERT OR IGNORE INTO historical_conference_coverage ({', '.join(row)}) VALUES ({', '.join('?' * len(row))})",
+                f"INSERT INTO historical_conference_coverage ({', '.join(row)}) VALUES ({', '.join('?' * len(row))}) "
+                f"ON CONFLICT (ticker, year, listing_sha256) DO UPDATE SET "
+                + ", ".join(f"{column} = excluded.{column}" for column in mutable)
+                + " WHERE " + " OR ".join(f"{column} IS NOT excluded.{column}" for column in mutable if column != "recorded_at"),
                 tuple(row.values()))
         return row
 

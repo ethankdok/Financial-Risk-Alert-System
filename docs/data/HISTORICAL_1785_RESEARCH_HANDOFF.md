@@ -278,3 +278,55 @@ What is new for FY2017–FY2019:
   with net income unchanged. Treat it as a retrospectively adjusted comparative; the reason is not established.
 - **Conference documents.** MOPS lists conference documents for 2018 (10) and 2019 (4); they are not yet archived
   (`document_missing`). The 2017 decks (2017-04-14) are included and are core in this package.
+
+## 14. Phase 2B addendum — FY2011–FY2022 packages (2026-10-11)
+
+The FY2011–2016 and FY2011–2019 packages are unchanged. The new files are listed below.
+
+| | Full (retrospective) | Strict (point-in-time) |
+|---|---|---|
+| File | `fintrust_1785_2011_2022_full.zip` | `fintrust_1785_2011_2022_asof_2023-12-31.zip` (+ `.audit.json`, reviewer-only) |
+| SHA-256 | `3d4cba560cfd8e46cf521291604583724b7ca2eb520384f35157caa2ee66221b` | `61042b7f17834077b67c77037be2202802a074cbefe39b7771be2d9aed1f4d56` |
+| Cutoff | none | end of 2023-12-31, Asia/Taipei (exclusive 2024-01-01 00:00) |
+| Financial facts | 180 (FY2013–FY2022, 18 per year) | **48** = 27 FY2013–2015 restated facts + **21 FY2020–2022 facts** |
+| Filing versions | 35 | 14 |
+| Conference documents | 32 files (26 distinct), 712 pages | none (meeting dates are not publication times) |
+
+**What is new for Yu-Jing (financial features)**
+
+- **Columns to read.** `data/financial_facts.csv` uses the same columns as before. Its new evidence value is
+  `availability_evidence_kind = financial_report_disclosure`, which means the value is stated by the MOPS annual
+  board-approval notice. For FY2020–2022 that covers 7 metrics per year: revenue, gross profit, operating income,
+  net income, EPS, total assets and total liabilities. Each has an exact `effective_available_at`:
+  - FY2020: 2021-03-05 17:38:20;
+  - FY2021: 2022-03-16 17:59:38;
+  - FY2022: 2023-03-02 22:38:39.
+
+  The other 11 metrics per year (COGS, receivables, inventory, cash flows, total equity, …) are **not**
+  point-in-time eligible: no timestamped official disclosure states them.
+- **Value-level, not file-level.** The XBRL file itself is still `unverified`. Only the values the notice states
+  are dated.
+- **Board-notice figures.** `data/disclosed_financial_values.csv` (full package) holds every line of the three
+  notices, including lines with no canonical metric. Use `normalized_value` (TWD; EPS in TWD/share). Its
+  "equity attributable to owners of the parent" line is **not** total `equity`.
+- **FY2017–FY2019.** Still 0 PIT facts. No equivalent notice exists, and the FY2019 PDF has no text layer.
+- **FY2016 EPS.** The comparative EPS discrepancy (−1.23 against −1.39) is unchanged and unresolved; no new source
+  explains it.
+
+**What is new for Ethan (conference text)**
+
+- **Coverage.** All official MOPS conference documents for 2018–2022 are archived: 28 files, every one
+  hash-verified. Together with 2011 and 2017, the full package has 32 files. They sit in
+  `data/conference_documents.csv`, `data/conference_text_corpus.csv`, `conference/text/<sha256>.txt` and
+  `data/conference_page_index.csv`.
+- **Use only distinct, paired documents.**
+  - Drop rows whose `content_duplicate_of` is non-empty; for example, the 2018 May deck was listed for three
+    meeting dates.
+  - Group by `language_pair_key`: M (Chinese) and E (English) are one presentation.
+  - That leaves 26 distinct files, about 13 presentations.
+- **JSD readiness.** `data/conference_jsd_corpus.csv` has **0** rows, because every document has
+  `period_unconfirmed` under the unchanged JSD contract. The archival text is complete: 693 of 712 pages carry a
+  text layer. Do not assign a fiscal quarter from a meeting date.
+
+**Reporting.** These packages support retrospective description and point-in-time feature construction at the
+stated cutoffs. They do not show that the 2016 misstatement, or any later outcome, was predictable.

@@ -28,13 +28,14 @@ from app.services.historical_audit.evidence_parsers import (
     decode_html,
     parse_mops_material_detail,
     parse_mops_material_listing,
+    parse_board_financial_report,
     parse_restatement_comparison,
     parse_tpex_announcement,
     parse_tpex_summary_xls,
     parse_twse_ebook_listing,
 )
 from app.services.historical_audit.evidence_store import evidence_id, insert_ignore, to_json
-from app.services.historical_audit.models import TAIPEI, filing_version_id, iso, utc_now
+from app.services.historical_audit.models import TAIPEI, decimal_text, filing_version_id, iso, utc_now
 from app.services.historical_audit.repository import FilingVersionRecord, HistoricalAuditRepository
 from app.services.historical_audit.sources import OfficialSourceFetcher, ensure_official_url
 
@@ -251,6 +252,7 @@ class HistoricalEvidenceService:
         with self.repository.connect() as connection:
             self._link(connection, ticker, plan, report)
             self._corroborate(connection, ticker, report)
+            self._corroborate_disclosed_values(connection, ticker, report)
         return report
 
     @staticmethod
@@ -319,6 +321,8 @@ class HistoricalEvidenceService:
                            publication_at=detail.published_at.isoformat(), precision="second",
                            default_event_date=detail.fact_date.isoformat() if detail.fact_date else None,
                            default_basis="事實發生日")
+        if source.get("board_report_scope"):
+            self._import_board_report(connection, ticker, source, document, detail, report)
         scope = source.get("comparison_scope")
         if not scope:
             return
@@ -349,6 +353,46 @@ class HistoricalEvidenceService:
                 "difference_text": str(row.difference) if row.difference is not None else None,
                 "published_unit": row.unit, "disclosed_at": detail.published_at.isoformat(),
                 "availability_status": "verified",
+                "availability_basis": "MOPS material-information 發言日期/發言時間 of the disclosing notice",
+                "verification_status": "verified_official_disclosure", "created_at": iso(utc_now()),
+            }))
+
+    def _verified_event(self, connection, document) -> str:
+        verified_events = [
+            row[0] for row in connection.execute(
+                "SELECT event_id FROM historical_publication_events WHERE source_document_id = ? "
+                "AND verification_status = 'verified_official_quote' ORDER BY event_id",
+                (document["source_document_id"],),
+            )
+        ]
+        if not verified_events:
+            raise EvidenceParseError("Disclosure notice has no verified claim; its values are not imported.")
+        return verified_events[0]
+
+    def _import_board_report(self, connection, ticker, source, document, detail, report) -> None:
+        """Key figures of an annual financial-report board-approval notice (reviewed plan opt-in only)."""
+        scope = source["board_report_scope"]
+        expected = "合併" if scope == "consolidated" else "個體"
+        if expected not in detail.subject or "財務報告" not in detail.subject:
+            raise EvidenceParseError(f"Board-report scope {scope} not stated in subject {detail.subject!r}.")
+        parsed = parse_board_financial_report(detail.body)
+        fiscal_year = parsed.annual_fiscal_year
+        if fiscal_year is None:
+            raise EvidenceParseError(f"Board-approval notice period {parsed.period_start}~{parsed.period_end} is not a fiscal year.")
+        event_id = self._verified_event(connection, document)
+        for item in parsed.items:
+            amount = item.published_unit == "TWD_thousand"
+            report.add("disclosed_values_inserted", insert_ignore(connection, "disclosed_financial_values", {
+                "disclosed_value_id": evidence_id("hdv1", document["source_document_id"], item.label),
+                "source_document_id": document["source_document_id"], "event_id": event_id, "ticker": ticker,
+                "period": f"{fiscal_year}FY", "fiscal_year": fiscal_year, "statement_scope": scope,
+                "accounting_framework": "TIFRS" if fiscal_year >= 2013 else "TW_GAAP",
+                "disclosure_kind": "annual_financial_report_board_approval", "source_label": item.label,
+                "canonical_metric": item.canonical_metric, "value_text": decimal_text(item.value),
+                "published_unit": item.published_unit,
+                "normalized_value_text": decimal_text(item.value * 1000 if amount else item.value),
+                "normalized_unit": "TWD" if amount else "TWD/share",
+                "disclosed_at": detail.published_at.isoformat(), "availability_status": "verified",
                 "availability_basis": "MOPS material-information 發言日期/發言時間 of the disclosing notice",
                 "verification_status": "verified_official_disclosure", "created_at": iso(utc_now()),
             }))
@@ -618,6 +662,64 @@ class HistoricalEvidenceService:
                 added += insert_ignore(connection, "observation_availability", row)
         report.add("corroborations_added", added)
         report.add("corroborations_removed", len(stale))
+
+    def _corroborate_disclosed_values(self, connection: sqlite3.Connection, ticker: str, report: ImportReport) -> None:
+        """Value-level availability from annual board-approval notices (derived; rebuilt deterministically).
+
+        A fact is dated by such a notice only on an exact match of fiscal year, canonical metric, statement scope,
+        accounting framework, normalized unit and value, for a version not known to be restated, in a period with no
+        restatement evidence. The filing artifact's own availability is never changed.
+        """
+        disclosed = [dict(row) for row in connection.execute(
+            "SELECT * FROM disclosed_financial_values WHERE ticker = ? AND canonical_metric IS NOT NULL "
+            "AND verification_status = 'verified_official_disclosure'", (ticker,)).fetchall()]
+        facts = [dict(row) for row in connection.execute(
+            """SELECT f.fact_id, f.fiscal_year, f.period, f.metric_code, f.statement_scope, f.unit, f.value_text,
+                      v.statement_scope_evidence, v.filing_version_type
+            FROM versioned_financial_facts f JOIN financial_filing_versions v USING (filing_version_id)
+            WHERE f.ticker = ?""", (ticker,)).fetchall()]
+        restated_periods = {
+            period for (periods,) in connection.execute(
+                "SELECT affected_periods_json FROM historical_publication_events WHERE ticker = ? AND event_type IN ({})".format(
+                    ",".join("?" * len(PERIOD_LEVEL_EVENTS | {"restatement_required"}))),
+                (ticker, *sorted(PERIOD_LEVEL_EVENTS | {"restatement_required"})))
+            for period in json.loads(periods or "[]")
+        }
+        rows: dict[str, dict[str, Any]] = {}
+        for value in disclosed:
+            for fact in facts:
+                framework = "TIFRS" if "tifrs" in (fact["statement_scope_evidence"] or "") else "unknown"
+                if (fact["fiscal_year"], fact["metric_code"], fact["statement_scope"], framework, fact["unit"]) != (
+                        value["fiscal_year"], value["canonical_metric"], value["statement_scope"],
+                        value["accounting_framework"], value["normalized_unit"]):
+                    continue
+                if fact["filing_version_type"] not in ("unknown_revision", "original") or fact["period"] in restated_periods:
+                    continue
+                if Decimal(fact["value_text"]) != Decimal(value["normalized_value_text"]):
+                    continue
+                availability_id = evidence_id("hoa3", "versioned_fact", fact["fact_id"], value["disclosed_value_id"])
+                rows[availability_id] = {
+                    "availability_id": availability_id, "observation_kind": "versioned_fact", "observation_id": fact["fact_id"],
+                    "available_at": value["disclosed_at"],
+                    "basis": (f"value stated as {value['source_label']} ({value['value_text']} {value['published_unit']}) in the "
+                              f"MOPS annual financial-report board-approval notice published {value['disclosed_at']}"),
+                    "corroborating_kind": "financial_report_disclosure", "corroborating_id": value["disclosed_value_id"],
+                    "match_detail": (f"exact value match ({value['published_unit']} -> {value['normalized_unit']}); "
+                                     f"scope {value['statement_scope']}, framework {value['accounting_framework']}"),
+                    "created_at": iso(utc_now()),
+                }
+        existing = {row[0] for row in connection.execute(
+            "SELECT o.availability_id FROM observation_availability o JOIN versioned_financial_facts f ON f.fact_id = o.observation_id "
+            "WHERE o.corroborating_kind = 'financial_report_disclosure' AND f.ticker = ?", (ticker,))}
+        stale = existing - set(rows)
+        if stale:
+            connection.executemany("DELETE FROM observation_availability WHERE availability_id = ?", [(i,) for i in sorted(stale)])
+        added = 0
+        for availability_id, row in sorted(rows.items()):
+            if availability_id not in existing:
+                added += insert_ignore(connection, "observation_availability", row)
+        report.add("disclosure_corroborations_added", added)
+        report.add("disclosure_corroborations_removed", len(stale))
 
     @staticmethod
     def _availability_row(rows, kind, observation_id, comparison, sides) -> None:

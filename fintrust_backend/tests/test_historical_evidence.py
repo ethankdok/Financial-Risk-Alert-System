@@ -453,3 +453,59 @@ class Evid14SafetyTests(EvidenceTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+BOARD_BODY = """1.財務報告提報董事會或經董事會決議日期:110/03/05
+2.審計委員會通過財務報告日期:110/03/05
+3.財務報告報導期間起訖日期(XXX/XX/XX~XXX/XX/XX):109/01/01~109/12/31
+4.1月1日累計至本期止營業收入(仟元):1,000,000
+5.1月1日累計至本期止營業毛利(毛損) (仟元):(20,000)
+6.1月1日累計至本期止營業利益(損失) (仟元):-5,000
+8.1月1日累計至本期止本期淨利(淨損) (仟元):3,000
+10.1月1日累計至本期止基本每股盈餘(損失) (元):0.12
+11.期末總資產(仟元):9,000,000
+13.期末歸屬於母公司業主之權益(仟元):4,000,000
+14.其他應敘明事項:無"""
+
+
+class BoardApprovalNoticeParserTests(unittest.TestCase):
+    """Phase 2B: annual financial-report board-approval notices (producer parser and independent verifier parser)."""
+
+    def test_producer_parser_reads_fixed_labels_and_signs(self) -> None:
+        from decimal import Decimal
+
+        from app.services.historical_audit.evidence_parsers import parse_board_financial_report
+
+        report = parse_board_financial_report(BOARD_BODY)
+        self.assertEqual(report.annual_fiscal_year, 2020)
+        items = {i.label: (i.canonical_metric, i.value, i.published_unit) for i in report.items}
+        self.assertEqual(items["營業毛利(毛損)"], ("gross_profit", Decimal("-20000"), "TWD_thousand"))
+        self.assertEqual(items["營業利益(損失)"], ("operating_income", Decimal("-5000"), "TWD_thousand"))
+        self.assertEqual(items["基本每股盈餘(損失)"], ("eps", Decimal("0.12"), "TWD/share"))
+        self.assertIsNone(items["期末歸屬於母公司業主之權益"][0])  # never mapped to total equity
+
+    def test_producer_parser_fails_closed(self) -> None:
+        from app.services.historical_audit.evidence_parsers import EvidenceParseError, parse_board_financial_report
+
+        for label, body in {
+            "no period": BOARD_BODY.replace("109/01/01~109/12/31", "見附件"),
+            "unknown line": BOARD_BODY.replace("營業收入(仟元)", "營業收入淨額(仟元)"),
+            "EPS in thousand": BOARD_BODY.replace("基本每股盈餘(損失) (元)", "基本每股盈餘(損失) (仟元)"),
+            "repeated line": BOARD_BODY + "\n4.1月1日累計至本期止營業收入(仟元):1,000,001",
+        }.items():
+            with self.subTest(label), self.assertRaises(EvidenceParseError):
+                parse_board_financial_report(body)
+        interim = parse_board_financial_report(BOARD_BODY.replace("109/12/31", "109/09/30"))
+        self.assertIsNone(interim.annual_fiscal_year)  # an interim notice never dates an annual fact
+
+    def test_verifier_parser_is_independent_and_fails_closed(self) -> None:
+        from app.services.historical_audit.package_verify import PackageVerificationError, parse_board_report_notice
+
+        page = mops_detail("20210305", "173820", "1", "本公司民國109年度合併財務報告業經董事會決議通過", BOARD_BODY)
+        parsed = parse_board_report_notice(page)
+        self.assertEqual((parsed["event_key"], parsed["scope"], parsed["fiscal_year"]), ("mops:20210305:173820:1", "consolidated", 2020))
+        self.assertEqual(parsed["values"]["營業收入"], ("仟元", "1,000,000"))
+        with self.assertRaises(PackageVerificationError):
+            parse_board_report_notice(mops_detail("20210305", "173820", "1", "公告本公司董事會決議股利分派", BOARD_BODY))
+        with self.assertRaises(PackageVerificationError):
+            parse_board_report_notice(b"<html>not a notice</html>")

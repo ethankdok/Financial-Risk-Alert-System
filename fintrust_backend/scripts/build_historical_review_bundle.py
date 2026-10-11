@@ -24,6 +24,7 @@ INCLUDE_PREFIXES = (
     "fintrust_backend/scripts/historical_audit_case.py",
     "fintrust_backend/scripts/build_historical_review_bundle.py",
     "fintrust_backend/scripts/rebuild_historical_packages.py",
+    "fintrust_backend/scripts/recover_historical_conference_pdfs.py",
     "fintrust_backend/requirements-historical-audit.txt",
     "fintrust_backend/tests/test_historical_",
     "fintrust_backend/tests/historical_",

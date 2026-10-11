@@ -57,13 +57,26 @@ def effective_availability(row: dict[str, Any]) -> tuple[datetime | None, str | 
 
 
 _OBSERVATION_EVIDENCE = """
-SELECT o.observation_id, o.available_at, o.corroborating_id, o.match_detail, d.source_url, d.content_hash, e.event_key
+SELECT o.observation_id, o.available_at, o.corroborating_id, o.corroborating_kind, o.match_detail,
+       d.source_url, d.content_hash, e.event_key
 FROM observation_availability o
-JOIN restatement_comparisons c ON c.comparison_id = o.corroborating_id
+JOIN restatement_comparisons c ON c.comparison_id = o.corroborating_id AND o.corroborating_kind = 'restatement_comparison'
 JOIN historical_source_documents d ON d.source_document_id = c.source_document_id
 JOIN historical_publication_events e ON e.event_id = c.event_id
 WHERE o.observation_kind = 'versioned_fact' AND o.observation_id IN ({placeholders})
+UNION ALL
+SELECT o.observation_id, o.available_at, o.corroborating_id, o.corroborating_kind, o.match_detail,
+       d.source_url, d.content_hash, e.event_key
+FROM observation_availability o
+JOIN disclosed_financial_values v ON v.disclosed_value_id = o.corroborating_id
+     AND o.corroborating_kind = 'financial_report_disclosure'
+JOIN historical_source_documents d ON d.source_document_id = v.source_document_id
+JOIN historical_publication_events e ON e.event_id = v.event_id
+WHERE o.observation_kind = 'versioned_fact' AND o.observation_id IN ({placeholders})
 """
+# corroborating_kind -> availability_evidence_kind exposed in exports (facts contract v1.4).
+EVIDENCE_KINDS = {"restatement_comparison": "restatement_disclosure",
+                  "financial_report_disclosure": "financial_report_disclosure"}
 
 
 def _observation_evidence(connection, fact_ids: list[str]) -> dict[str, dict[str, Any]]:
@@ -71,7 +84,7 @@ def _observation_evidence(connection, fact_ids: list[str]) -> dict[str, dict[str
     best: dict[str, dict[str, Any]] = {}
     for start in range(0, len(fact_ids), 500):
         chunk = fact_ids[start:start + 500]
-        for row in connection.execute(_OBSERVATION_EVIDENCE.format(placeholders=",".join("?" * len(chunk))), chunk):
+        for row in connection.execute(_OBSERVATION_EVIDENCE.format(placeholders=",".join("?" * len(chunk))), chunk + chunk):
             item = dict(row)
             current = best.get(item["observation_id"])
             key = (parse_timestamp(item["available_at"]), item["corroborating_id"])
@@ -91,7 +104,8 @@ def availability_evidence(row: dict[str, Any], scope: str | None) -> dict[str, A
                 "availability_evidence_url": row["source_url"], "availability_evidence_hash": row["content_hash"]}
     evidence = row.get("_observation_evidence")
     if scope == "observation" and evidence:
-        return {"availability_evidence_kind": "restatement_disclosure", "availability_evidence_ref": evidence["event_key"],
+        kind = EVIDENCE_KINDS[evidence.get("corroborating_kind") or "restatement_comparison"]
+        return {"availability_evidence_kind": kind, "availability_evidence_ref": evidence["event_key"],
                 "availability_evidence_url": evidence["source_url"], "availability_evidence_hash": evidence["content_hash"]}
     return {"availability_evidence_kind": None, "availability_evidence_ref": None,
             "availability_evidence_url": None, "availability_evidence_hash": None}

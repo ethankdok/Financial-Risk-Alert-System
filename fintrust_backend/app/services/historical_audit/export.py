@@ -21,7 +21,7 @@ from app.services.historical_audit.repository import HistoricalAuditRepository
 
 
 CONTRACT_NAME = "fintrust.historical_financial_facts"
-CONTRACT_VERSION = "1.3"
+CONTRACT_VERSION = "1.4"
 EXPORT_FIELDS: tuple[str, ...] = (
     "ticker",
     "company",

@@ -68,6 +68,7 @@ RECORD_TABLES = {
     "publication_events": "historical_publication_events",
     "comparisons": "restatement_comparisons",
     "summary_observations": "official_summary_observations",
+    "disclosed_values": "disclosed_financial_values",
 }
 _CONTENT_TYPES = {"xml": "application/xml", "html": "text/html", "pdf": "application/pdf",
                   "xls": "application/vnd.ms-excel", "zip": "application/zip", "bin": "application/octet-stream"}
@@ -267,7 +268,7 @@ class HistoricalCloudSync:
         }
         records["objects"] = [objects[name] for name in sorted(objects)]
         for kind in ("cases", "objects", "source_documents", "filing_versions", "facts", "publication_events",
-                     "evidence_links", "comparisons", "summary_observations", "observation_availability"):
+                     "evidence_links", "comparisons", "summary_observations", "disclosed_values", "observation_availability"):
             for row in records.get(kind, []):
                 try:
                     report.bump(report.records, f"{kind}:{self.firestore.write(kind, row)}")
@@ -307,16 +308,18 @@ class HistoricalCloudSync:
         versions = {r["filing_version_id"] for r in records["filing_versions"]}
         documents = {r["source_document_id"] for r in records["source_documents"]}
         records["facts"] = [r for r in records["facts"] if r["filing_version_id"] in versions]
-        for kind in ("publication_events", "comparisons", "summary_observations"):
-            records[kind] = [r for r in records[kind] if r["source_document_id"] in documents]
+        for kind in ("publication_events", "comparisons", "summary_observations", "disclosed_values"):
+            records[kind] = [r for r in records.get(kind, []) if r["source_document_id"] in documents]
         events = {r["event_id"] for r in records["publication_events"]}
         records["comparisons"] = [r for r in records["comparisons"] if r["event_id"] in events]
+        records["disclosed_values"] = [r for r in records["disclosed_values"] if r["event_id"] in events]
         records["evidence_links"] = [r for r in records["evidence_links"]
                                      if r["event_id"] in events and r["target_id"] in versions]
         observations = {r["fact_id"] for r in records["facts"]} | {r["observation_id"] for r in records["summary_observations"]}
-        comparisons = {r["comparison_id"] for r in records["comparisons"]}
+        corroborating = {r["comparison_id"] for r in records["comparisons"]} | {
+            r["disclosed_value_id"] for r in records["disclosed_values"]}
         records["observation_availability"] = [r for r in records["observation_availability"]
-                                                if r["observation_id"] in observations and r["corroborating_id"] in comparisons]
+                                                if r["observation_id"] in observations and r["corroborating_id"] in corroborating]
         return records
 
     def _verify_consistency(self, ticker: str, records: dict[str, list[dict[str, Any]]],

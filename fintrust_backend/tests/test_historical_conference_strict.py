@@ -109,6 +109,32 @@ class ConferenceTestCase(EvidenceTestCase):
             return [n[len(PACKAGE_ROOT) + 1:] for n in archive.namelist()]
 
 
+class ConferenceDuplicateTests(ConferenceTestCase):
+    def test_reused_decks_and_language_versions_are_marked(self) -> None:
+        """The same deck listed for several meetings is one document; M/E files are one presentation."""
+        write_conference(self.conference_root, 2013, "178520130325M001.pdf")
+        write_conference(self.conference_root, 2013, "178520130325E002.pdf")
+        directory = self.conference_root / "1785" / "2013"
+        (directory / "178520130325E002.pdf").write_bytes(self.pdf)  # identical bytes to E001, listed again
+        pages = json.loads((directory / "178520130325E002.pages.json").read_text(encoding="utf-8"))
+        pages[0]["analysis_results"] = [{"filename": "178520130325E002.pdf"}]  # per-listing metadata, as in real 2018 data
+        (directory / "178520130325E002.pages.json").write_text(json.dumps(pages, ensure_ascii=False), encoding="utf-8")
+        manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+        for document in manifest["documents"]:
+            if document["filename"] == "178520130325E002.pdf":
+                document["sha256"] = hashlib.sha256(self.pdf).hexdigest()
+        (directory / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+        path, _ = self.build("dup.zip")
+        rows = {r["filename"]: r for r in self.rows(path, "data/conference_documents.csv")}
+        self.assertEqual(rows["178520130325E002.pdf"]["content_duplicate_of"], "178520130325E001.pdf")
+        # One content-addressed raw/pages/text set per SHA-256, shared by both rows (no conflicting duplicate paths).
+        self.assertEqual(rows["178520130325E002.pdf"]["package_raw_path"], rows["178520130325E001.pdf"]["package_raw_path"])
+        self.assertEqual(verify_package(path)["status"], "verified")
+        self.assertEqual(rows["178520130325E001.pdf"]["content_duplicate_of"], "")
+        self.assertEqual(rows["178520130325E001.pdf"]["language_pair_key"], rows["178520130325M001.pdf"]["language_pair_key"])
+        self.assertNotEqual(rows["178520130325E002.pdf"]["language_pair_key"], rows["178520130325E001.pdf"]["language_pair_key"])
+
+
 class ConferenceDatasetTests(ConferenceTestCase):
     def test_conference_packaging_refuses_a_cloud_datastore(self) -> None:
         from unittest import mock
@@ -466,3 +492,53 @@ class StrictPointInTimeTests(ConferenceTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConferenceRecoveryRunnerTests(unittest.TestCase):
+    """Bounded recovery runner: pacing, one backoff retry, and fail-safe stop conditions (no network)."""
+
+    class Inner:
+        def __init__(self, outcomes):
+            self.outcomes = list(outcomes)
+
+        def listing(self, ticker, roc_year, market, page=1):
+            outcome = self.outcomes.pop(0)
+            if isinstance(outcome, Exception):
+                raise outcome
+            return outcome
+
+        def pdf(self, attachment, referer):
+            return self.listing("", 0, "")
+
+    def transport(self, outcomes, cap=3):
+        from scripts.recover_historical_conference_pdfs import PacedTransport
+
+        sleeps = []
+        return PacedTransport(self.Inner(outcomes), delay=2.0, max_consecutive_failures=cap, sleep=sleeps.append), sleeps
+
+    def test_transient_failure_is_retried_once_with_backoff(self) -> None:
+        from app.services.mops_conference_pdf_pipeline import AcquisitionError
+
+        paced, sleeps = self.transport([b"first", AcquisitionError("MOPS request failed: URLError: timed out"), b"ok"])
+        self.assertEqual(paced.listing("1785", 107, "otc"), b"first")
+        self.assertEqual(paced.listing("1785", 107, "otc"), b"ok")
+        self.assertEqual(sleeps, [2.0, 8.0])  # spacing, then backoff for the retry
+
+    def test_access_restriction_stops_immediately(self) -> None:
+        from app.services.mops_conference_pdf_pipeline import AcquisitionError
+        from scripts.recover_historical_conference_pdfs import StopRecovery
+
+        paced, _ = self.transport([AcquisitionError("MOPS request failed: HTTPError: HTTP Error 429: Too Many Requests")])
+        with self.assertRaisesRegex(StopRecovery, "access restricted"):
+            paced.listing("1785", 107, "otc")
+
+    def test_consecutive_failures_stop_the_run(self) -> None:
+        from app.services.mops_conference_pdf_pipeline import AcquisitionError
+        from scripts.recover_historical_conference_pdfs import StopRecovery
+
+        error = AcquisitionError("MOPS request failed: URLError: unreachable")
+        paced, _ = self.transport([error, error, error, error], cap=3)
+        with self.assertRaises(AcquisitionError):
+            paced.listing("1785", 107, "otc")  # 2 failures: retried once, then reported
+        with self.assertRaisesRegex(StopRecovery, "3 consecutive failed requests"):
+            paced.listing("1785", 108, "otc")

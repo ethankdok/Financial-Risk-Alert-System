@@ -89,8 +89,11 @@ The builder runs the full verifier before writing anything. `verify_package.py` 
 4. every `raw_evidence/` file is the `package_raw_path` of an admissible artifact or notice; no conference content;
 5. every SHA-256 referenced by a model-facing file resolves to included evidence;
 6. every fact is point-in-time eligible before the cutoff; a withheld artifact has no identity fields, a
-   `restatement_disclosure` reference that resolves to an included notice published no later than the stated
-   availability, and equal observation and effective times; a verified artifact is an included filing version;
+   `restatement_disclosure` or `financial_report_disclosure` reference that resolves to an included notice
+   published no later than the stated availability, and equal observation and effective times; a verified
+   artifact is an included filing version. A `financial_report_disclosure` fact is **re-derived from the raw
+   board-approval notice**: identity and publication time, subject scope, full-year reporting period,
+   framework, a fixed metric-to-line table, unit, and exact value. Unsupported notice formats fail closed;
 7. every summary row is an `official_disclosed_observation` with no workbook reference and an ended report period,
    and is **re-derived from the included raw notice** rather than trusted from producer flags: the verifier parses the
    MOPS notice itself (its own 序號/發言日期/發言時間, its subject's 個體/合併 scope, and the 重編前/重編後 tables in
@@ -125,6 +128,9 @@ Output: `{"status": "verified", "mode": "...", "package_schema_version": "1.2", 
 
 - 1.0: initial portable package.
 - 1.1: strict point-in-time mode; facts contract v1.3 (`observation_available_at`, `filing_available_at`, `artifact_reference_status`).
+- 1.2, Phase 2B (additive, same schema): facts may be dated by `financial_report_disclosure` (facts contract
+  v1.4), independently re-derived by the strict verifier; the retrospective package adds
+  `data/disclosed_financial_values.csv`; conference documents add `content_duplicate_of` and `language_pair_key`.
 - 1.2 (additive): summary contract 1.1 (`observation_origin`, `scope_inference_basis`, `pit_evidence_*`,
   `side_consistency`, `source_reference_status`; `statement_scope_basis` states that a row's scope was inferred from
   the report row's revenue); strict reclassification of summaries; `manifest.cutoff_taipei`; reviewer-only audit
