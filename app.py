@@ -10,6 +10,7 @@ from typing import Any
 
 from flask import Flask, jsonify, request, session, send_from_directory
 from financial_routes import create_financial_blueprint
+from research_routes import create_research_blueprint
 from fintrust_client import FinTrustClient, FinTrustClientError
 from flask_data_repository import DuplicateRecordError, build_flask_data_repository
 from member_services import MemberAuthService, NotificationService, bool_int, create_email_provider, utc_now_str
@@ -44,6 +45,7 @@ def _financial_admin_required(fn):
 
 app.register_blueprint(create_financial_blueprint(admin_required=_financial_admin_required))
 app.register_blueprint(data_shift_bp)
+app.register_blueprint(create_research_blueprint())
 
 repository = build_flask_data_repository(BASE_DIR)
 repository.initialize()
@@ -315,8 +317,25 @@ def home():
     return send_from_directory(BASE_DIR, "index.html")
 
 
+# The catch-all serves web assets only: never source code, databases, archives or data directories.
+_STATIC_SUFFIXES = {".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp", ".woff", ".woff2"}
+_STATIC_DIRECTORIES = ("static/", "templates/")
+
+
+def _servable(filename: str) -> bool:
+    parts = filename.replace("\\", "/").split("/")
+    if any(part.startswith(".") or part == "" for part in parts):
+        return False
+    if len(parts) > 1 and not filename.startswith(_STATIC_DIRECTORIES):
+        return False
+    suffix = Path(filename).suffix.lower()
+    return suffix in _STATIC_SUFFIXES or (suffix == "" and (BASE_DIR / f"{filename}.html").is_file())
+
+
 @app.route("/<path:filename>")
 def static_files(filename):
+    if not _servable(filename):
+        return jsonify({"error": "not found"}), 404
     requested = BASE_DIR / filename
     if not requested.suffix:
         html_filename = f"{filename}.html"
