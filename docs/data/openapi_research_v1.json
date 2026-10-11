@@ -1,0 +1,849 @@
+{
+  "components": {
+    "schemas": {
+      "ComputeRequest": {
+        "properties": {
+          "analysis_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required; no default",
+            "title": "Analysis Mode"
+          },
+          "cutoff_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff At"
+          },
+          "end_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1990.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Year"
+          },
+          "persist": {
+            "default": false,
+            "title": "Persist",
+            "type": "boolean"
+          },
+          "start_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1990.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Year"
+          },
+          "supersedes_run_id": {
+            "anyOf": [
+              {
+                "pattern": "^rrun1_[0-9a-f]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Run Id"
+          },
+          "ticker": {
+            "pattern": "^\\d{4,6}$",
+            "title": "Ticker",
+            "type": "string"
+          },
+          "version_policy": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "earliest_available",
+                  "original_only"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required; explicit version selection (no default)",
+            "title": "Version Policy"
+          }
+        },
+        "required": [
+          "ticker"
+        ],
+        "title": "ComputeRequest",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "半導體產業官方財報自動抓取、持久化、財務指標計算、子產業版本化規則分析與前端快照 API。本服務不提供投資建議。",
+    "title": "FinTrust Alert Financial Rule Engine API",
+    "version": "0.3.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/research/cases": {
+      "get": {
+        "operationId": "list_cases_api_v1_research_cases_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Cases Api V1 Research Cases Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Cases",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    },
+    "/api/v1/research/cases/{ticker}": {
+      "get": {
+        "operationId": "case_overview_api_v1_research_cases__ticker__get",
+        "parameters": [
+          {
+            "description": "Registered historical research case ticker",
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "description": "Registered historical research case ticker",
+              "pattern": "^\\d{4,6}$",
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Case Overview Api V1 Research Cases  Ticker  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Case Overview",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    },
+    "/api/v1/research/cases/{ticker}/feature-registry": {
+      "get": {
+        "operationId": "feature_registry_api_v1_research_cases__ticker__feature_registry_get",
+        "parameters": [
+          {
+            "description": "Registered historical research case ticker",
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "description": "Registered historical research case ticker",
+              "pattern": "^\\d{4,6}$",
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "RETROSPECTIVE_FORENSIC | STRICT_AS_OF | CURRENT_EVIDENCE_RECONCILIATION (required)",
+            "in": "query",
+            "name": "analysis_mode",
+            "required": true,
+            "schema": {
+              "description": "RETROSPECTIVE_FORENSIC | STRICT_AS_OF | CURRENT_EVIDENCE_RECONCILIATION (required)",
+              "title": "Analysis Mode",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required for STRICT_AS_OF: timezone-aware ISO-8601 instant, exclusive",
+            "in": "query",
+            "name": "cutoff_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Required for STRICT_AS_OF: timezone-aware ISO-8601 instant, exclusive",
+              "title": "Cutoff At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Feature Registry Api V1 Research Cases  Ticker  Feature Registry Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Feature Registry",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    },
+    "/api/v1/research/cases/{ticker}/restatement-bridge": {
+      "get": {
+        "operationId": "restatement_bridge_api_v1_research_cases__ticker__restatement_bridge_get",
+        "parameters": [
+          {
+            "description": "Registered historical research case ticker",
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "description": "Registered historical research case ticker",
+              "pattern": "^\\d{4,6}$",
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "RETROSPECTIVE_FORENSIC | STRICT_AS_OF | CURRENT_EVIDENCE_RECONCILIATION (required)",
+            "in": "query",
+            "name": "analysis_mode",
+            "required": true,
+            "schema": {
+              "description": "RETROSPECTIVE_FORENSIC | STRICT_AS_OF | CURRENT_EVIDENCE_RECONCILIATION (required)",
+              "title": "Analysis Mode",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required for STRICT_AS_OF: timezone-aware ISO-8601 instant, exclusive",
+            "in": "query",
+            "name": "cutoff_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Required for STRICT_AS_OF: timezone-aware ISO-8601 instant, exclusive",
+              "title": "Cutoff At"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "consolidated",
+                "individual"
+              ],
+              "title": "Scope",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Restatement Bridge Api V1 Research Cases  Ticker  Restatement Bridge Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Restatement Bridge",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    },
+    "/api/v1/research/cases/{ticker}/source-discrepancies": {
+      "get": {
+        "operationId": "source_discrepancies_api_v1_research_cases__ticker__source_discrepancies_get",
+        "parameters": [
+          {
+            "description": "Registered historical research case ticker",
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "description": "Registered historical research case ticker",
+              "pattern": "^\\d{4,6}$",
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "RETROSPECTIVE_FORENSIC | STRICT_AS_OF | CURRENT_EVIDENCE_RECONCILIATION (required)",
+            "in": "query",
+            "name": "analysis_mode",
+            "required": true,
+            "schema": {
+              "description": "RETROSPECTIVE_FORENSIC | STRICT_AS_OF | CURRENT_EVIDENCE_RECONCILIATION (required)",
+              "title": "Analysis Mode",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required for STRICT_AS_OF: timezone-aware ISO-8601 instant, exclusive",
+            "in": "query",
+            "name": "cutoff_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Required for STRICT_AS_OF: timezone-aware ISO-8601 instant, exclusive",
+              "title": "Cutoff At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Source Discrepancies Api V1 Research Cases  Ticker  Source Discrepancies Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Source Discrepancies",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    },
+    "/api/v1/research/cases/{ticker}/text-readiness": {
+      "get": {
+        "operationId": "text_readiness_api_v1_research_cases__ticker__text_readiness_get",
+        "parameters": [
+          {
+            "description": "Registered historical research case ticker",
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "description": "Registered historical research case ticker",
+              "pattern": "^\\d{4,6}$",
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "RETROSPECTIVE_FORENSIC | STRICT_AS_OF | CURRENT_EVIDENCE_RECONCILIATION (required)",
+            "in": "query",
+            "name": "analysis_mode",
+            "required": true,
+            "schema": {
+              "description": "RETROSPECTIVE_FORENSIC | STRICT_AS_OF | CURRENT_EVIDENCE_RECONCILIATION (required)",
+              "title": "Analysis Mode",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required for STRICT_AS_OF: timezone-aware ISO-8601 instant, exclusive",
+            "in": "query",
+            "name": "cutoff_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Required for STRICT_AS_OF: timezone-aware ISO-8601 instant, exclusive",
+              "title": "Cutoff At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Text Readiness Api V1 Research Cases  Ticker  Text Readiness Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Text Readiness",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    },
+    "/api/v1/research/cases/{ticker}/timeline": {
+      "get": {
+        "operationId": "case_timeline_api_v1_research_cases__ticker__timeline_get",
+        "parameters": [
+          {
+            "description": "Registered historical research case ticker",
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "description": "Registered historical research case ticker",
+              "pattern": "^\\d{4,6}$",
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "RETROSPECTIVE_FORENSIC | STRICT_AS_OF | CURRENT_EVIDENCE_RECONCILIATION (required)",
+            "in": "query",
+            "name": "analysis_mode",
+            "required": true,
+            "schema": {
+              "description": "RETROSPECTIVE_FORENSIC | STRICT_AS_OF | CURRENT_EVIDENCE_RECONCILIATION (required)",
+              "title": "Analysis Mode",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required for STRICT_AS_OF: timezone-aware ISO-8601 instant, exclusive",
+            "in": "query",
+            "name": "cutoff_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Required for STRICT_AS_OF: timezone-aware ISO-8601 instant, exclusive",
+              "title": "Cutoff At"
+            }
+          },
+          {
+            "in": "query",
+            "name": "evidence_tier",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "E1",
+                    "E2"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Evidence Tier"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Case Timeline Api V1 Research Cases  Ticker  Timeline Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Case Timeline",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    },
+    "/api/v1/research/financial-signals/compute": {
+      "post": {
+        "description": "Explicit-mode feature computation. Dry-run unless ``persist=true`` (requires the ingestion token).",
+        "operationId": "compute_financial_signals_api_v1_research_financial_signals_compute_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Ingestion-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ingestion-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Compute Financial Signals Api V1 Research Financial Signals Compute Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Compute Financial Signals",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    },
+    "/api/v1/research/health": {
+      "get": {
+        "description": "Readiness of the research dataset (separate from the service liveness ``/health``).",
+        "operationId": "research_health_api_v1_research_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Research Health Api V1 Research Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Research Health",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    },
+    "/api/v1/research/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_api_v1_research_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "pattern": "^rrun1_[0-9a-f]{32}$",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Run Api V1 Research Runs  Run Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    },
+    "/api/v1/research/runs/{run_id}/verify": {
+      "get": {
+        "description": "Recompute a persisted run from the current archive and compare input/output digests (read-only).",
+        "operationId": "verify_run_api_v1_research_runs__run_id__verify_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "pattern": "^rrun1_[0-9a-f]{32}$",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Verify Run Api V1 Research Runs  Run Id  Verify Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Run",
+        "tags": [
+          "historical-research"
+        ]
+      }
+    }
+  }
+}
