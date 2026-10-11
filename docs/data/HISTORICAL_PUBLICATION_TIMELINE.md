@@ -1,8 +1,8 @@
-# 1785 光洋科 — Historical Publication Timeline (Phase 1B, extended in Phases 2A and 2B)
+# 1785 光洋科 — Historical Publication Timeline (Phase 1B, extended in Phases 2A–2C)
 
 All times are Asia/Taipei (UTC+8). Each entry comes from an archived official
 document (SHA-256 in [`HISTORICAL_SOURCE_EVIDENCE_INVENTORY.md`](HISTORICAL_SOURCE_EVIDENCE_INVENTORY.md)).
-The machine-readable timeline (856 events: 359 Phase 1B, 189 Phase 2A, 308 Phase 2B) is exported with
+The machine-readable timeline (919 events: 359 Phase 1B, 189 Phase 2A, 308 Phase 2B, 63 Phase 2C) is exported with
 `evidence-export --dataset publication_timeline`.
 
 ## Timestamp semantics
@@ -90,3 +90,16 @@ period. Links are typed `verified_linkage`, `period_level_only`,
 
 The board-approval notice precedes the PDF upload in each year. It dates only the values it states; the PDF and
 XBRL artifacts are dated (or not) by their own evidence.
+
+### FY2023–FY2025 (Phase 2C)
+
+| Time (Taipei) | Source | Event | Periods / scope | Linkage |
+|---|---|---|---|---|
+| **2024-03-06 17:04:11** | MOPS 重大訊息 seq 3 | FY2023 consolidated report approved by the board; key figures stated | 2023FY consolidated | 7 facts dated at the observation level |
+| 2024-03-08 17:37:42 / 17:38:21 | TWSE e-document archive | FY2023 PDFs uploaded; 更(補)正 blank | 2023FY | `period_level_only` |
+| 2024-08-12 03:44:19 / 03:45:00 | MOPS 重大訊息 seq 2/3 | FY2023 related-party notes corrected (consolidated / individual) | 2023FY | `unverified_linkage` to the FY2023 XBRL and PDFs |
+| **2025-03-07 18:08:48** | MOPS 重大訊息 seq 5 | FY2024 board approval; key figures stated | 2024FY consolidated | 7 facts dated at the observation level |
+| **2025-03-12 09:24:17 / 09:24:33** | TWSE e-document archive | FY2024 PDFs uploaded (更(補)正 無) | 2024FY | **verified_linkage** |
+| 2025-08-11 14:34:40 | MOPS 重大訊息 seq 2 | 2025 Q2 interim XBRL correction (no P&L effect) | 2025Q2 | none (interim) |
+| **2026-03-06 18:41:23** | MOPS 重大訊息 seq 3 | FY2025 board approval; key figures stated (total assets/liabilities differ from the filed report) | 2025FY consolidated | 5 facts dated at the observation level |
+| **2026-03-26 13:50:14 / 13:50:56** | TWSE e-document archive | FY2025 PDFs uploaded (更(補)正 無; audit report 2026-03-26) | 2025FY | **verified_linkage** |

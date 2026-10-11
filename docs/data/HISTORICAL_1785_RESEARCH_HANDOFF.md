@@ -330,3 +330,38 @@ The FY2011–2016 and FY2011–2019 packages are unchanged. The new files are li
 
 **Reporting.** These packages support retrospective description and point-in-time feature construction at the
 stated cutoffs. They do not show that the 2016 misstatement, or any later outcome, was predictable.
+
+## 15. Phase 2C addendum — FY2011–FY2025 packages (2026-10-11)
+
+Every earlier package is unchanged. The new files:
+
+| | Full (retrospective) | Strict (point-in-time) |
+|---|---|---|
+| File | `fintrust_1785_2011_2025_full.zip` | `fintrust_1785_2011_2025_asof_2026-10-10.zip` (+ `.audit.json`, reviewer-only) |
+| SHA-256 | `171e3da165a081e7b6acb4183d7c43f8663b3f3c87810fdc89f2ecdc8b4f82eb` | `9f281d50b47a489ebbc1bdae12802384ebbc2b8d33258c51c0cecd40ed0c9e8c` |
+| Cutoff | none | end of 2026-10-10, Asia/Taipei (exclusive 2026-10-11 00:00) |
+| Financial facts | 234 (FY2013–FY2025, 18 per year) | **67** |
+| Filing versions | 44 | 18 |
+| Conference files | 44 (38 distinct), 1,190 pages | none |
+
+The 67 strict facts are:
+
+- 27 FY2013–2015 restated facts (`restatement_disclosure`);
+- 21 FY2020–2022 facts (`financial_report_disclosure`);
+- 19 FY2023–2025 facts (`financial_report_disclosure`): 7, 7 and 5.
+
+**For Yu-Jing**
+
+- **FY2023–2025 values.** The evidence times are 2024-03-06 17:04:11, 2025-03-07 18:08:48 and 2026-03-06 18:41:23.
+- **FY2025 discrepancy.** Total assets and total liabilities are **not** eligible. The board notice states 34,436,171
+  and 19,423,635 thousand, while the filed and audited report states 34,434,450 and 19,421,914. Use the filed
+  values only through the full package, which carries no availability date for them.
+- **Stronger verification.** Every strict restatement-dated fact is now independently re-derived from the raw
+  notice by the shipped verifier: value, sign (e.g. COGS), side, unit, scope, period and identity.
+
+**For Ethan**
+
+- **Coverage.** Conference documents now cover 2011, 2017 and 2018–2025: 44 files, 38 distinct, about 19
+  presentations, 26 listing rows.
+- **JSD.** JSD-ready quarterly observations: **0**, under the unchanged contract (`period_unconfirmed`).
+- **Grouping.** Use `content_duplicate_of` and `language_pair_key` as before.

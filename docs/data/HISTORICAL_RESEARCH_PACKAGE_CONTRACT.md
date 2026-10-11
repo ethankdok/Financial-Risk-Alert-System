@@ -91,9 +91,14 @@ The builder runs the full verifier before writing anything. `verify_package.py` 
 6. every fact is point-in-time eligible before the cutoff; a withheld artifact has no identity fields, a
    `restatement_disclosure` or `financial_report_disclosure` reference that resolves to an included notice
    published no later than the stated availability, and equal observation and effective times; a verified
-   artifact is an included filing version. A `financial_report_disclosure` fact is **re-derived from the raw
-   board-approval notice**: identity and publication time, subject scope, full-year reporting period,
-   framework, a fixed metric-to-line table, unit, and exact value. Unsupported notice formats fail closed;
+   artifact is an included filing version. Disclosure verification is driven by the evidence kind, independently
+   of the artifact status. A `financial_report_disclosure` fact is **re-derived from the raw board-approval
+   notice**: identity and publication time, subject scope, full-year reporting period, framework, a fixed
+   metric-to-line table, unit, and exact value. A `restatement_disclosure` fact is **re-derived from the raw
+   restatement notice and its single comparison row**: identity and time, scope, period, framework, a fixed
+   (framework, metric) → (line, statement section, sign) table, the 重編前/重編後 side implied by the version
+   type, unit, sign and exact value. A `filing_artifact` fact must carry its included version's verified time.
+   Unsupported notice formats and unknown evidence kinds fail closed;
 7. every summary row is an `official_disclosed_observation` with no workbook reference and an ended report period,
    and is **re-derived from the included raw notice** rather than trusted from producer flags: the verifier parses the
    MOPS notice itself (its own 序號/發言日期/發言時間, its subject's 個體/合併 scope, and the 重編前/重編後 tables in

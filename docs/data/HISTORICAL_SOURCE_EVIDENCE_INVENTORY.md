@@ -1,4 +1,4 @@
-# 1785 光洋科 — Historical Source Evidence Inventory (FY2011–FY2022)
+# 1785 光洋科 — Historical Source Evidence Inventory (FY2011–FY2025)
 
 Machine-readable form: `evidence-export --dataset source_inventory`. Reviewed request plan:
 `fintrust_backend/app/services/historical_audit/evidence_plans/1785.json`.
@@ -13,7 +13,8 @@ Source counts per phase and cumulative. Source documents are the notices, listin
 | Phase 1 / 1B (2026-10-09/10) | FY2011–FY2016 | 41 | 4 | 45 | **45** |
 | Phase 2A (2026-10-11) | FY2017–FY2019 | 18 | 3 | 21 | **66** |
 | Phase 2B (2026-10-11) | FY2020–FY2022 | 24 | 3 | 27 | **93** |
-| **Total** | FY2011–FY2022 | **83** | **10** | **93** | |
+| Phase 2C (2026-10-11) | FY2023–FY2025 | 19 | 3 | 22 | **115** |
+| **Total** | FY2011–FY2025 | **102** | **13** | **115** | |
 
 The per-phase figures in the sections below ("Phase 2A added 21 official sources", "Phase 2B added 27 official
 sources") count source documents plus XBRL filings. They equal the "inventory rows added" column; Phase 2B
@@ -246,3 +247,57 @@ The 2023-08, 2024 and 2025 corrections concern FY2023+ periods or monthly data a
 | XBRL artifact publication times | Unresolved (no upload record). Values are dated at the observation level by the board notices only |
 | FY2022 PDF availability | Unverified (blank 更(補)正; corrected 2023-04-11) |
 | 11 of 18 facts per year | Not stated by any timestamped official disclosure, so they are not PIT-eligible |
+
+## Phase 2C — FY2023–FY2025 (retrieved 2026-10-11 UTC)
+
+Phase 2C added 22 official sources: 19 source documents and 3 XBRL filings. The source documents are:
+
+- 7 discovery documents: TWSE e-book listings ROC 112–114, MOPS material listing ROC 115 (2026), and TPEx
+  `O_2023Q4`–`O_2025Q4`;
+- 6 annual PDFs;
+- 6 notice details.
+
+MOPS listings ROC 110–114 were already archived in Phase 2B. The correction search window is ROC 106–115, i.e.
+through the 2026 listing retrieved on 2026-10-11.
+
+### Complete filings
+
+| FY | Artifact | Scope | Format / entry point | Revision | Availability | SHA-256 (prefix) |
+|---|---|---|---|---|---|---|
+| 2023 | MOPS `t164sb01` inline XBRL | consolidated | iXBRL, `tifrs-ci-cr-2020-06-30` | unknown_revision | **unverified**; FY2023 notes corrections linked | `d8c75ca3` |
+| 2023 | TWSE `202304_1785_AI1.pdf` / `AI3.pdf` | consolidated / individual | PDF | unknown_revision | **unverified**: listed 2024-03-08, but the 更(補)正 column is blank; corrections linked | `a0229838` / `500806fb` |
+| 2024 | MOPS inline XBRL | consolidated | iXBRL, `tifrs-ci-cr-2020-06-30` | unknown_revision | **unverified** | `42432af5` |
+| 2024 | TWSE `202404_1785_AI1.pdf` / `AI3.pdf` | consolidated / individual | PDF | unknown_revision | **verified 2025-03-12 09:24:33 / 09:24:17** | `dd878791` / `f42c077c` |
+| 2025 | MOPS inline XBRL | consolidated | iXBRL, `tifrs-ci-cr-2020-06-30` (audit report 2026-03-26) | unknown_revision | **unverified** | `34336a24` |
+| 2025 | TWSE `202504_1785_AI1.pdf` / `AI3.pdf` | consolidated / individual | PDF (text layer) | unknown_revision | **verified 2026-03-26 13:50:14 / 13:50:56** | `fc715140` / `b503c126` |
+
+All three XBRL filings parse to 18 facts, with core coverage 17/17 and status `validated`. The concepts are
+identical to FY2020–FY2022, and the accounting identities hold exactly.
+
+### Value-level disclosures
+
+| Notice | Published (Taipei) | FY | Matched facts | Not matched |
+|---|---|---|---|---|
+| `mops:20240306:170411:3` | 2024-03-06 17:04:11 | 2023 | 7 | — |
+| `mops:20250307:180848:5` | 2025-03-07 18:08:48 | 2024 | 7 | — |
+| `mops:20260306:184123:3` | 2026-03-06 18:41:23 | 2025 | **5** | total assets and total liabilities (see below) |
+
+**FY2025 discrepancy (recorded, not reconciled).**
+
+- The board-approval notice states total assets **34,436,171** and total liabilities **19,423,635** thousand.
+- The filed XBRL and the verified, audited PDF (balance sheet, page 8) state **34,434,450** and **19,421,914**:
+  both 1,721 thousand lower, with total equity identical at 15,012,536.
+- The notice's figures do not appear anywhere in the filed report.
+
+Under the exact-match rule these two facts are not dated by the notice. The other five metrics match exactly.
+
+### Corrections
+
+| Notice | Affects | Content | Effect |
+|---|---|---|---|
+| `mops:20240812:034419:2` | FY2023 (112年第四季) consolidated | related-party note 三五: substantive related parties and commitments added | "更補正對本公司損益並無影響". Note-only; no canonical metric changes |
+| `mops:20240812:034500:3` | FY2023 individual | related-party note 三二 (same additions) | as above |
+| `mops:20250811:143440:2` | 2025 Q2 interim XBRL | auditor-review note amounts for an equity-method investee | "對114年第2季XBRL資訊合併財務損益無影響"; interim, so no annual artifact |
+
+The 2024-08-12 #1 (2023 Q3) and #4 (2024 Q1) corrections are interim; they were identified from the listing titles
+only. No restatement (重編) of FY2023–FY2025 was found.

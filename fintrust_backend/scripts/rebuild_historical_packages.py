@@ -55,8 +55,35 @@ from app.services.mops_conference_pdf_repository import FileConferencePdfArchive
 
 # Literal markers of information that only became public after 2016-11-14 (checked for that cutoff only).
 FUTURE_MARKERS_20161114 = ("2017-", "106年", "105/12", "2016-12-", "2016-11-15", "2016-11-16", "2016-11-17")
-# Markers of modern (generation / retrieval era) metadata that must never reach a strict model input.
+# Year markers of the modern (generation / retrieval) era. They are a sound leakage check only for cutoffs before
+# that era; later cutoffs legitimately contain 2024+ evidence, so the exact retrieval-time scan below applies always.
 MODERN_MARKERS = ("2024-", "2025-", "2026-", "2027-")
+MODERN_ERA_START = "2024-01-01"
+# Columns that must be empty in every model-facing CSV (retrieval / generation metadata).
+MODERN_COLUMNS = ("retrieved_at", "created_at", "recorded_at", "generated_at", "listing_retrieved_at")
+
+
+def retrieval_timestamps(database: Path) -> set[str]:
+    """Every retrieval / creation time the research DB recorded, rendered as UTC and as Asia/Taipei (to seconds)."""
+    import sqlite3
+
+    from app.services.historical_audit.models import TAIPEI, parse_timestamp
+
+    connection = sqlite3.connect(f"file:{Path(database).as_posix()}?mode=ro", uri=True)
+    values: set[str] = set()
+    try:
+        for (table,) in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'"):
+            columns = [row[1] for row in connection.execute(f'PRAGMA table_info("{table}")')
+                       if row[1] in ("retrieved_at", "created_at", "recorded_at", "listing_retrieved_at", "started_at", "completed_at")]
+            for column in columns:
+                for (value,) in connection.execute(f'SELECT DISTINCT "{column}" FROM "{table}" WHERE "{column}" IS NOT NULL'):
+                    stamp = parse_timestamp(str(value)) if "T" in str(value) or " " in str(value) else None
+                    if stamp is not None:
+                        values.add(stamp.astimezone(TAIPEI).strftime("%Y-%m-%dT%H:%M:%S"))
+                        values.add(stamp.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"))
+    finally:
+        connection.close()
+    return values
 MODEL_FACING_EXEMPT = ("raw_evidence/", "validation/verify_package.py", "validation/checksums.sha256", "manifest.json")
 
 
@@ -73,7 +100,7 @@ def _rows(files: dict[str, bytes], name: str) -> list[dict]:
     return list(csv.DictReader(io.StringIO(files[name].decode("utf-8"))))
 
 
-def check_strict(path: Path, as_of: str, audit_path: Path) -> dict:
+def check_strict(path: Path, as_of: str, audit_path: Path, database: Path | None = None) -> dict:
     cutoff = as_of_cutoff(as_of)
     files = _members(path)
     manifest = json.loads(files["manifest.json"])
@@ -82,10 +109,19 @@ def check_strict(path: Path, as_of: str, audit_path: Path) -> dict:
     assert "validation/provenance.csv" not in files, "retrieval provenance inside the strict ZIP"
     model_text = b"".join(data for name, data in files.items()
                           if not name.startswith(MODEL_FACING_EXEMPT)).decode("utf-8", "replace")
-    markers = MODERN_MARKERS + (FUTURE_MARKERS_20161114 if as_of == "2016-11-14" else ())
+    modern_era = cutoff > as_of_cutoff(MODERN_ERA_START)
+    markers = (() if modern_era else MODERN_MARKERS) + (FUTURE_MARKERS_20161114 if as_of == "2016-11-14" else ())
     found = [marker for marker in markers if marker in model_text]
     if found:
         raise AssertionError(f"strict package contains post-cutoff or modern markers {found}")
+    for name, data in files.items():
+        if name.startswith("data/") and name.endswith(".csv"):
+            for row in _rows(files, name):
+                filled = [column for column in MODERN_COLUMNS if row.get(column)]
+                assert not filled, f"{name}: retrieval/generation metadata {filled} in a model input"
+    if database is not None:  # exact retrieval / creation times recorded by this archive must never appear
+        leaked = sorted(stamp for stamp in retrieval_timestamps(database) if stamp in model_text)
+        assert not leaked, f"strict package contains archive retrieval/creation timestamps {leaked[:3]}"
     for name, column in (("data/filing_versions.csv", "filing_available_at"), ("data/source_inventory.csv", "document_available_at"),
                          ("data/publication_timeline.csv", "available_from"), ("data/restatement_comparisons.csv", "disclosed_at"),
                          ("data/financial_facts.csv", "effective_available_at"),
@@ -338,7 +374,7 @@ def main(argv: list[str] | None = None) -> int:
                         raise AssertionError(f"standalone verification failed for {name}/{label}: {completed.stdout}")
                     report["standalone" if label == "zip" else "extracted"][name] = json.loads(completed.stdout)
         if "strict" in temporary:
-            report["strict_checks"] = check_strict(temporary["strict"], args.as_of, temp_audit)
+            report["strict_checks"] = check_strict(temporary["strict"], args.as_of, temp_audit, args.database)
             stage_audit(temp_audit, targets["strict"])  # fully staged pair before any publication
         if "full" in temporary:
             report["conference_provenance"] = check_conference(temporary["full"], args.conference_root, args.ticker)

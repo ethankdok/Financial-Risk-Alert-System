@@ -22,7 +22,12 @@ Per-year outcome (``acquisition_status``, from the listing and the archived file
 or an unexpected error) and ``stopped``. ``review_status`` separately reports pages still awaiting visual/semantic
 review (expected while LLM/OCR analysis is disabled) and never fails the run.
 
-Exit status: 0 = every year complete / no record / nothing listed; 1 = any year partial or failed; 2 = stopped.
+``coverage_status`` reports whether the year's coverage row was persisted and agrees with the acquisition outcome
+(``consistent``), using the recorder's re-hashed archive counts; ``failed`` (storage error) or ``inconsistent`` fail
+the delivery.
+
+Exit status: 0 = every year complete / no record / nothing listed AND its coverage persisted consistently;
+1 = any year partial or failed, or any coverage not persisted / inconsistent; 2 = stopped.
 The pipeline catches per-document exceptions, so a stop condition is tracked on the transport itself and short-
 circuits every later request.
 
@@ -96,16 +101,26 @@ class PacedTransport:
 ACQUISITION_OK = ("complete", "no_official_record", "no_documents_listed")
 
 
+# The exact error the pipeline raises only after verifying an official MOPS 「查無資料」 page (no company table).
+OFFICIAL_NO_DATA = "MOPS reports no data (查無資料)"
+
+
 def classify_year(result: dict) -> tuple[str, str]:
-    """(acquisition_status, review_status) for one pipeline result; review never decides acquisition."""
+    """(acquisition_status, review_status) for one pipeline result; review never decides acquisition.
+
+    ``no_official_record`` requires the pipeline's verified official no-data response and nothing else; a parser
+    failure, timeout, access restriction or incomplete listing is ``failed``. A verified listing with no documents
+    is ``no_documents_listed`` only when no error was recorded.
+    """
     documents = result.get("documents", [])
-    errors = " ".join(str(e) for e in result.get("errors", []) or []) + " " + str(result.get("error") or "")
+    errors = [str(e) for e in result.get("errors", []) or []] + ([str(result["error"])] if result.get("error") else [])
     listed = {d.get("filename") for d in documents if d.get("filename")}
     archived = {d.get("filename") for d in documents if d.get("sha256")}
     if not result.get("listing_pages"):
-        acquisition = "no_official_record" if "查無資料" in errors or result.get("status") == "no_listing" else "failed"
+        official_no_data = bool(errors) and all(OFFICIAL_NO_DATA in error for error in errors)
+        acquisition = "no_official_record" if official_no_data else "failed"
     elif not listed:
-        acquisition = "no_documents_listed"
+        acquisition = "failed" if errors else "no_documents_listed"
     elif archived >= listed:
         acquisition = "complete"
     else:
@@ -115,11 +130,34 @@ def classify_year(result: dict) -> tuple[str, str]:
     return acquisition, review
 
 
+# Coverage row status the recorder must have persisted for each successful acquisition outcome.
+EXPECTED_COVERAGE = {"complete": ("conference_found",), "no_official_record": ("no_official_record_found",),
+                     "no_documents_listed": ("conference_found", "unsupported_attachment")}
+
+
+def coverage_status(acquisition: str, coverage: dict | None, error: str | None) -> str:
+    """Persisted coverage must exist and agree with the acquisition outcome, using the recorder's own counts
+    (archived = file re-hashes to its SHA-256), not the in-memory pipeline result."""
+    if error is not None or coverage is None:
+        return "failed"
+    expected = EXPECTED_COVERAGE.get(acquisition)
+    if expected is None:
+        return "recorded"  # partial / failed / stopped years are already non-zero
+    if coverage.get("status") not in expected or int(coverage.get("missing_documents") or 0) != 0:
+        return "inconsistent"
+    if acquisition == "complete" and int(coverage.get("downloaded_documents") or 0) != int(coverage.get("expected_documents") or 0):
+        return "inconsistent"
+    return "consistent"
+
+
 def exit_code(years: dict) -> int:
     statuses = [summary.get("acquisition_status") for summary in years.values()]
     if "stopped" in statuses or "not_attempted" in statuses:
         return 2
-    return 0 if all(status in ACQUISITION_OK for status in statuses) else 1
+    if not all(status in ACQUISITION_OK for status in statuses):
+        return 1
+    # Acquisition succeeded; the delivery also requires the coverage evidence to be persisted and consistent.
+    return 0 if all(summary.get("coverage_status") == "consistent" for summary in years.values()) else 1
 
 
 def year_summary(result: dict) -> dict:
@@ -190,14 +228,16 @@ def run_recovery(case, years, *, market: str, output: Path, transport: PacedTran
             summary = {"acquisition_status": "failed", "error": f"{type(exc).__name__}: {exc}"}
         if transport.stopped and summary.get("acquisition_status") != "complete":
             summary.update(acquisition_status="stopped", reason=transport.stopped)
+        coverage, coverage_error = None, None
         try:
             coverage = recorder.record(case.ticker, [year], market=market, start_year=case.default_start_year,
                                        end_year=case.default_end_year)[0]
             summary["coverage"] = {key: coverage[key] for key in (
                 "status", "conference_rows", "meeting_dates_json", "expected_documents", "downloaded_documents",
                 "non_pdf_attachments", "missing_documents")}
-        except Exception as exc:  # noqa: BLE001 - coverage recording failure must not hide the acquisition result
-            summary["coverage_error"] = f"{type(exc).__name__}: {exc}"
+        except Exception as exc:  # noqa: BLE001 - kept distinct from acquisition, but it fails the delivery
+            coverage_error = summary["coverage_error"] = f"{type(exc).__name__}: {exc}"
+        summary["coverage_status"] = coverage_status(summary.get("acquisition_status", "failed"), coverage, coverage_error)
         report["years"][year] = summary
     report["requests"] = transport.requests
     report["request_log"] = transport.log

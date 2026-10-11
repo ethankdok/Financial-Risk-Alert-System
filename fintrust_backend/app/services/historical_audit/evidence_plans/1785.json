@@ -1827,6 +1827,476 @@
      "quote": "更正本公司111年年度個體及合併財務報告附註關係人交易部分資訊"
     }
    ]
+  },
+  {
+   "source_key": "twse-ebook-listing-112",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=112&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "twse-ebook-listing-113",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=113&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "twse-ebook-listing-114",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=114&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "mops-material-listing-115",
+   "category": "official_document_index",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information listing (t05st01)",
+   "parser": "mops_material_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01?encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=all&co_id=1785&year=115"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2023Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2023Q4.xls"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2024Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2024Q4.xls"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2025Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2025Q4.xls"
+   }
+  },
+  {
+   "source_key": "twse-ebook-202304_1785_AI1",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-112",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "202304_1785_AI1.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-202304_1785_AI3",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-112",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "202304_1785_AI3.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-202404_1785_AI1",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-113",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "202404_1785_AI1.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-202404_1785_AI3",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-113",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "202404_1785_AI3.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-202504_1785_AI1",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-114",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "202504_1785_AI1.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-202504_1785_AI3",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-114",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "202504_1785_AI3.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "mops-material-detail-20240306-170411-3",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "113",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20240306",
+     "spoke_time": "170411",
+     "seq_no": "3",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20240306:170411:3",
+     "event_type": "annual_financial_report_board_approval",
+     "event_date": null,
+     "affected_periods": [
+      "2023FY"
+     ],
+     "affected_scopes": [
+      "consolidated"
+     ],
+     "quote": "本公司民國112年度合併財務報告業經董事會決議通過"
+    }
+   ],
+   "board_report_scope": "consolidated"
+  },
+  {
+   "source_key": "mops-material-detail-20240812-034419-2",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "113",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20240812",
+     "spoke_time": "034419",
+     "seq_no": "2",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20240812:034419:2",
+     "event_type": "financial_report_correction",
+     "event_date": null,
+     "affected_periods": [
+      "2023FY"
+     ],
+     "affected_scopes": [
+      "consolidated"
+     ],
+     "quote": "更補正本公司112年第四季合併財務報告附註關係人交易資訊"
+    }
+   ]
+  },
+  {
+   "source_key": "mops-material-detail-20240812-034500-3",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "113",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20240812",
+     "spoke_time": "034500",
+     "seq_no": "3",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20240812:034500:3",
+     "event_type": "financial_report_correction",
+     "event_date": null,
+     "affected_periods": [
+      "2023FY"
+     ],
+     "affected_scopes": [
+      "individual"
+     ],
+     "quote": "更補正本公司112年第四季個體財務報告附註關係人交易資訊"
+    }
+   ]
+  },
+  {
+   "source_key": "mops-material-detail-20250307-180848-5",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "114",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20250307",
+     "spoke_time": "180848",
+     "seq_no": "5",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20250307:180848:5",
+     "event_type": "annual_financial_report_board_approval",
+     "event_date": null,
+     "affected_periods": [
+      "2024FY"
+     ],
+     "affected_scopes": [
+      "consolidated"
+     ],
+     "quote": "本公司民國113年度合併財務報告業經董事會決議通過"
+    }
+   ],
+   "board_report_scope": "consolidated"
+  },
+  {
+   "source_key": "mops-material-detail-20250811-143440-2",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "114",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20250811",
+     "spoke_time": "143440",
+     "seq_no": "2",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20250811:143440:2",
+     "event_type": "financial_report_correction",
+     "event_date": null,
+     "affected_periods": [
+      "2025Q2"
+     ],
+     "affected_scopes": [
+      "consolidated"
+     ],
+     "quote": "本次更補正對114年第2季XBRL資訊合併財務損益無影響"
+    }
+   ]
+  },
+  {
+   "source_key": "mops-material-detail-20260306-184123-3",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "115",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20260306",
+     "spoke_time": "184123",
+     "seq_no": "3",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20260306:184123:3",
+     "event_type": "annual_financial_report_board_approval",
+     "event_date": null,
+     "affected_periods": [
+      "2025FY"
+     ],
+     "affected_scopes": [
+      "consolidated"
+     ],
+     "quote": "本公司民國114年度合併財務報告業經董事會決議通過"
+    }
+   ],
+   "board_report_scope": "consolidated"
   }
  ]
 }

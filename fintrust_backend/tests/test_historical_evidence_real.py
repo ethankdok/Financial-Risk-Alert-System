@@ -197,11 +197,11 @@ class RealArchiveMockCloudContract(unittest.TestCase):
                                  local.list_summary_observations("1785", as_of=as_of))
             self.assertEqual(cloud.list_filing_versions("1785", 2011, 2016), local.list_filing_versions("1785", 2011, 2016))
             self.assertEqual(len(local.list_facts("1785", 2011, 2016, as_of="2016-11-14")), 27)
-            # Phase 2B: FY2011-2022, including facts dated by board-approval notices (financial_report_disclosure).
-            for as_of in (None, "2021-03-05T17:38:19+08:00", "2021-03-05T17:38:20+08:00", "2023-12-31"):
-                local_facts = local.list_facts("1785", 2011, 2022, as_of=as_of)
-                self.assertEqual(cloud.list_facts("1785", 2011, 2022, as_of=as_of), local_facts, as_of)
-            self.assertEqual(cloud.list_filing_versions("1785", 2011, 2022), local.list_filing_versions("1785", 2011, 2022))
+            # Phase 2B/2C: FY2011-2025, including facts dated by board-approval notices (financial_report_disclosure).
+            for as_of in (None, "2021-03-05T17:38:19+08:00", "2021-03-05T17:38:20+08:00", "2023-12-31", "2026-10-10"):
+                local_facts = local.list_facts("1785", 2011, 2025, as_of=as_of)
+                self.assertEqual(cloud.list_facts("1785", 2011, 2025, as_of=as_of), local_facts, as_of)
+            self.assertEqual(cloud.list_filing_versions("1785", 2011, 2025), local.list_filing_versions("1785", 2011, 2025))
             if _has_phase2b_evidence():
                 kinds = {r["availability_evidence_kind"] for r in local.list_facts("1785", 2011, 2022, as_of="2023-12-31")}
                 self.assertEqual(kinds, {"restatement_disclosure", "financial_report_disclosure"})
@@ -453,6 +453,48 @@ class RealStrictCutoffMatrix(unittest.TestCase):
                 with self.assertRaisesRegex(PackageVerificationError, reason):
                     verify_package(target)
 
+    def test_a1_restatement_dated_facts_are_independently_rederived(self) -> None:
+        """A1 (Phase 2C carryover): every restatement-dated fact equals its raw-notice cell; mutations of CSV+JSON
+        (checksums recomputed) fail for a named semantic reason, including the reviewer's exact reproduction."""
+        import csv as _csv
+        import io as _io
+        import json as _json
+
+        from app.services.historical_audit.package_verify import PackageVerificationError, verify_package
+        from tests.historical_evidence_fixtures import mutate_csv, repack_package
+
+        package = self.packages["2016-11-14"]
+        source = Path(package["result"]["output"])
+        facts = package["files"]["data/financial_facts.csv"]
+        rows = package["rows"]["data/financial_facts.csv"]
+        self.assertEqual(len(rows), 27)
+        self.assertEqual({r["availability_evidence_kind"] for r in rows}, {"restatement_disclosure"})
+        envelope = _json.loads(package["files"]["data/financial_facts.json"])
+        cogs = {"period": "2013FY", "metric_code": "cost_of_goods_sold"}
+        cases = {
+            "reviewer value 33223945000 -> 33223946000": ({"value": "33223946000"}, "is not the notice's post-restatement 營業成本"),
+            "sign": ({"value": "-33223945000"}, "is not the notice's post-restatement"),
+            "unit": ({"unit": "TWD/share"}, "is not the notice's post-restatement"),
+            "side": ({"filing_version_type": "original"}, "pre-restatement"),
+            "scope": ({"statement_scope": "individual"}, "statement scope individual disagrees"),
+            "period": ({"period": "2014FY", "fiscal_year": "2014"}, "is not the notice's post-restatement"),
+            "metric": ({"metric_code": "operating_income"}, "no independent restatement-notice mapping"),
+            "disclosure identity": ({"availability_evidence_ref": "mops:20161113:212531:2"}, "evidence identity/time disagrees"),
+        }
+
+        def typed(value: str):
+            return None if value == "" else True if value == "true" else False if value == "false" else value
+
+        for label, (changes, reason) in cases.items():
+            with self.subTest(label):
+                mutated = mutate_csv(facts, cogs, changes)
+                records = [{k: typed(v) for k, v in r.items()} for r in _csv.DictReader(_io.StringIO(mutated.decode("utf-8")))]
+                target = repack_package(source, Path(self._tmp.name) / f"a1-{abs(hash(label))}.zip", {
+                    "data/financial_facts.csv": mutated,
+                    "data/financial_facts.json": _json.dumps({**envelope, "records": records}, ensure_ascii=False).encode("utf-8")})
+                with self.assertRaisesRegex(PackageVerificationError, reason):
+                    verify_package(target)
+
 
 def _has_phase2a_evidence() -> bool:
     if not _has_phase1b_evidence():
@@ -675,3 +717,112 @@ class RealPhase2bFy2020To2022(unittest.TestCase):
             self.assertEqual(rows[year]["pit_ready_facts"], 7)
             self.assertIn("official financial-report disclosure", rows[year]["pit_ready"])
         self.assertEqual((rows[2019]["pit_ready_facts"], rows[2019]["pit_ready"]), (0, "no"))
+
+
+def _has_phase2c_evidence() -> bool:
+    if not _has_phase2b_evidence():
+        return False
+    import sqlite3
+
+    connection = sqlite3.connect(f"file:{REAL_DB.as_posix()}?mode=ro", uri=True)
+    try:
+        return connection.execute("SELECT COUNT(*) FROM financial_filing_versions WHERE fiscal_year = 2025").fetchone()[0] > 0
+    finally:
+        connection.close()
+
+
+@unittest.skipUnless(_has_phase2c_evidence(), "real 1785 FY2023-2025 evidence not present locally")
+class RealPhase2cFy2023To2025(unittest.TestCase):
+    """REAL tier, Phase 2C: FY2023-2025 versions, board-notice value matching (incl. a rejected FY2025 mismatch)."""
+
+    NOTICES = {2023: ("mops:20240306:170411:3", "2024-03-06T17:04:11+08:00"),
+               2024: ("mops:20250307:180848:5", "2025-03-07T18:08:48+08:00"),
+               2025: ("mops:20260306:184123:3", "2026-03-06T18:41:23+08:00")}
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        copy = Path(cls._tmp.name) / "copy.sqlite3"
+        shutil.copyfile(REAL_DB, copy)
+        cls.repository = HistoricalAuditRepository(str(copy))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def test_one_inline_xbrl_per_year_with_exact_identities(self) -> None:
+        from decimal import Decimal
+
+        facts = list_historical_facts(self.repository, "1785", 2023, 2025, include_test_fixtures=False)
+        for year in (2023, 2024, 2025):
+            xbrl = [v for v in self.repository.list_filing_versions("1785", year, year) if v["source_kind"].startswith("mops_")]
+            self.assertEqual([(v["source_kind"], v["statement_scope"], v["filing_version_type"], v["availability_status"])
+                              for v in xbrl], [("mops_inline_xbrl", "consolidated", "unknown_revision", "unverified")])
+            values = {f["metric_code"]: Decimal(f["value_text"]) for f in facts if f["fiscal_year"] == year}
+            self.assertEqual(len(values), 18)
+            self.assertEqual(values["revenue"] - values["cost_of_goods_sold"], values["gross_profit"])
+            self.assertEqual(values["total_liabilities"] + values["equity"], values["total_assets"])
+        self.assertFalse([f for f in facts if "E" in f["value_text"].upper()])
+
+    def test_board_notices_date_only_exactly_matching_values(self) -> None:
+        eligible = [f for f in list_historical_facts(self.repository, "1785", 2023, 2025) if f["point_in_time_eligible"]]
+        by_year = {}
+        for fact in eligible:
+            key, at = self.NOTICES[fact["fiscal_year"]]
+            self.assertEqual((fact["availability_evidence_kind"], fact["availability_evidence_ref"]), ("financial_report_disclosure", key))
+            self.assertEqual(fact["effective_available_at"], datetime_utc(at))
+            by_year.setdefault(fact["fiscal_year"], set()).add(fact["metric_code"])
+        seven = {"revenue", "gross_profit", "operating_income", "net_income", "eps", "total_assets", "total_liabilities"}
+        self.assertEqual((by_year[2023], by_year[2024]), (seven, seven))
+        # FY2025: the notice states total assets/liabilities 1,721 thousand higher than the filed (audited) XBRL/PDF;
+        # no exact match, so those two facts stay ineligible.
+        self.assertEqual(by_year[2025], seven - {"total_assets", "total_liabilities"})
+        with self.repository.connect() as connection:
+            stated = {row[0]: row[1] for row in connection.execute(
+                "SELECT canonical_metric, normalized_value_text FROM disclosed_financial_values WHERE fiscal_year = 2025")}
+        self.assertEqual((stated["total_assets"], stated["total_liabilities"]), ("34436171000", "19423635000"))
+
+    def test_exact_cutoff_boundaries(self) -> None:
+        def count(as_of):
+            return len(list_historical_facts(self.repository, "1785", 2023, 2025, as_of=as_of))
+        self.assertEqual(count("2024-03-06T17:04:10+08:00"), 0)
+        self.assertEqual(count("2024-03-06T17:04:11+08:00"), 7)
+        self.assertEqual(count("2026-03-06T18:41:22+08:00"), 14)
+        self.assertEqual(count("2026-03-06T18:41:23+08:00"), 19)
+        self.assertEqual(len(list_historical_facts(self.repository, "1785", 2011, 2025, as_of="2026-10-10")), 27 + 21 + 19)
+
+    def test_pdf_availability_and_fy2023_correction(self) -> None:
+        def pdfs(year):
+            return {v["statement_scope"]: v["availability_status"] for v in self.repository.list_filing_versions("1785", year, year)
+                    if v["source_kind"] == "official_pdf"}
+        self.assertEqual(pdfs(2023), {"consolidated": "unverified", "individual": "unverified"})  # blank 更(補)正
+        self.assertEqual(pdfs(2024), {"consolidated": "verified", "individual": "verified"})
+        self.assertEqual(pdfs(2025), {"consolidated": "verified", "individual": "verified"})
+        with self.repository.connect() as connection:
+            linked = {(row[0], row[1], row[2]) for row in connection.execute(
+                """SELECT e.event_key, v.source_kind, v.statement_scope FROM publication_evidence_links l
+                JOIN historical_publication_events e USING (event_id) JOIN financial_filing_versions v ON v.filing_version_id = l.target_id
+                WHERE v.fiscal_year = 2023 AND e.event_type = 'financial_report_correction'""")}
+        self.assertEqual(linked, {("mops:20240812:034419:2", "mops_inline_xbrl", "consolidated"),
+                                  ("mops:20240812:034419:2", "official_pdf", "consolidated"),
+                                  ("mops:20240812:034500:3", "official_pdf", "individual")})
+
+    def test_coverage_matrix_and_strict_package(self) -> None:
+        from app.services.historical_audit.archive import RawEvidenceArchive
+        from app.services.historical_audit.evidence_export import coverage_matrix
+        from app.services.historical_audit.package_verify import verify_package
+        from app.services.historical_audit.research_package import PackageParameters, ResearchPackageBuilder
+
+        rows = {r["fiscal_year"]: r for r in coverage_matrix(self.repository, "1785", 2023, 2025)}
+        self.assertEqual([rows[y]["pit_ready_facts"] for y in (2023, 2024, 2025)], [7, 7, 5])
+        path = Path(self._tmp.name) / "strict2025.zip"
+        result = ResearchPackageBuilder(self.repository, RawEvidenceArchive(REAL_DB.parent / "raw")).build(
+            PackageParameters("1785", 2011, 2025, as_of="2026-10-10", version_policy="latest_available"), path)
+        self.assertEqual(verify_package(path)["status"], "verified")  # restatement + board facts re-derived
+        self.assertEqual(result["counts"]["financial_facts"], 67)
+
+
+def datetime_utc(text: str) -> str:
+    from datetime import datetime as _dt, timezone as _tz
+
+    return _dt.fromisoformat(text).astimezone(_tz.utc).isoformat()

@@ -516,6 +516,71 @@ class StrictPointInTimeTests(ConferenceTestCase):
         unknown = parse_restatement_notice(mops_detail("20161113", "212622", "3", "財務報告說明", "說明"))
         self.assertEqual((unknown["scope"], unknown["values"]), ("unknown", {}))  # matches no row -> rows fail closed
 
+    def test_a1_restatement_dated_facts_are_rederived_from_the_notice(self) -> None:
+        """A1: a restatement-dated fact must equal the notice's cell (side, unit, sign) and its single comparison row."""
+        from tests.historical_evidence_fixtures import mutate_csv, repack_package
+
+        path, _ = self.strict()
+        verify_package(path)
+        facts = self.read(path, "data/financial_facts.csv")
+        envelope = json.loads(self.read(path, "data/financial_facts.json"))
+        cogs = {"period": "2013FY", "metric_code": "cost_of_goods_sold"}
+        original = next(r for r in self.rows(path, "data/financial_facts.csv") if r["metric_code"] == "cost_of_goods_sold")
+        self.assertEqual(original["value"], "810000000")  # 重編後 (810,000) 仟元 x sign -1
+
+        def typed(value: str):
+            return None if value == "" else True if value == "true" else False if value == "false" else value
+
+        cases = {
+            "value": ({"value": "810001000"}, "is not the notice's post-restatement 營業成本"),
+            "sign": ({"value": "-810000000"}, "is not the notice's post-restatement 營業成本"),
+            "unit": ({"unit": "TWD_thousand"}, "is not the notice's post-restatement"),
+            "side (original)": ({"filing_version_type": "original"}, "is not the notice's pre-restatement 營業成本"),
+            "side (unknown)": ({"filing_version_type": "unknown_revision"}, "cannot be dated by a restatement notice"),
+            "scope": ({"statement_scope": "individual"}, "statement scope individual disagrees"),
+            "period": ({"period": "2014FY", "fiscal_year": "2014"}, "is not the notice's post-restatement"),
+            "metric": ({"metric_code": "inventory"}, "no independent restatement-notice mapping"),
+            "statement type": ({"statement_type": "balance_sheet"}, "statement type balance_sheet does not fit"),
+            "framework": ({"accounting_framework": "TW_GAAP"}, "accounting framework does not fit"),
+            "disclosure identity": ({"availability_evidence_ref": "mops:20161113:212622:9"}, "evidence identity/time disagrees"),
+        }
+        for label, (changes, reason) in cases.items():
+            with self.subTest(label):
+                mutated = mutate_csv(facts, cogs, changes)  # CSV and JSON together: only semantics can catch it
+                records = [{k: typed(v) for k, v in r.items()} for r in csv.DictReader(io.StringIO(mutated.decode("utf-8")))]
+                target = repack_package(path, self.root / f"a1-{label.replace(' ', '_').replace('(', '').replace(')', '')}.zip", {
+                    "data/financial_facts.csv": mutated,
+                    "data/financial_facts.json": json.dumps({**envelope, "records": records}, ensure_ascii=False).encode("utf-8")})
+                with self.assertRaisesRegex(PackageVerificationError, reason):
+                    verify_package(target)
+
+    def test_release_gate_detects_archive_retrieval_timestamps(self) -> None:
+        """Modern-era cutoffs (2024+) cannot rely on year markers; the release gate scans for the archive's own
+        retrieval/creation times and requires retrieval columns to be empty in every model input."""
+        from scripts.rebuild_historical_packages import check_strict
+        from tests.historical_evidence_fixtures import mutate_csv, repack_package
+
+        path, result = self.strict()
+        database = Path(self.repository.database_path)
+        audit = Path(result["audit_path"])
+        check_strict(path, self.CUTOFF, audit, database)  # clean package passes
+        with self.repository.connect() as connection:
+            retrieved = connection.execute("SELECT retrieved_at FROM historical_source_documents LIMIT 1").fetchone()[0]
+        modern, modern_result = self.build("modern.zip", as_of="2026-10-10")  # modern-era cutoff: no year markers
+        check_strict(modern, "2026-10-10", Path(modern_result["audit_path"]), database)
+        for label, package, as_of, gate_audit, changes, reason in (
+                ("retrieval column filled", path, self.CUTOFF, audit,
+                 {"retrieved_at": "2016-01-01T00:00:00+08:00"}, "retrieval/generation metadata"),
+                ("archive retrieval time in a value", modern, "2026-10-10", Path(modern_result["audit_path"]),
+                 {"availability_evidence_ref": retrieved}, "archive retrieval/creation timestamps")):
+            with self.subTest(label):
+                facts = self.read(package, "data/financial_facts.csv")
+                first = self.rows(package, "data/financial_facts.csv")[0]
+                target = repack_package(package, self.root / f"gate-{len(label)}.zip", {"data/financial_facts.csv": mutate_csv(
+                    facts, {"period": first["period"], "metric_code": first["metric_code"]}, changes)})
+                with self.assertRaisesRegex(AssertionError, reason):
+                    check_strict(target, as_of, gate_audit, database)
+
     def test_disclosure_dated_fact_with_a_verified_artifact_is_still_verified(self) -> None:
         """A disclosure-dated fact relabelled as having a public artifact must still resolve its disclosure, and a
         fact dated by its artifact must carry that artifact's verified time (no bypass via artifact status)."""
@@ -648,9 +713,19 @@ class ConferenceRecoveryExitStatusTests(unittest.TestCase):
         ticker, default_start_year, default_end_year = "1785", 2011, 2016
 
     class Recorder:
+        """Coverage rows as the real recorder would persist them (counts from re-hashed archived files)."""
+
+        def __init__(self, rows=None, error=None):
+            self.rows, self.error = rows or {}, error
+
         def record(self, ticker, years, **_):
-            return [{"status": "recorded", "conference_rows": 0, "meeting_dates_json": "[]", "expected_documents": 0,
-                     "downloaded_documents": 0, "non_pdf_attachments": 0, "missing_documents": 0}]
+            if self.error is not None:
+                raise self.error
+            status, expected, downloaded = self.rows.get(years[0], ("conference_found", 2, 2))
+            return [{"status": status, "conference_rows": 1, "meeting_dates_json": "[]", "expected_documents": expected,
+                     "downloaded_documents": downloaded, "non_pdf_attachments": 0, "missing_documents": expected - downloaded}]
+
+    NO_DATA = "MOPS reports no data (查無資料) for this company and year"
 
     @staticmethod
     def result(listed, archived, *, review="needs_review", errors=(), listing=True, status="failed"):
@@ -659,7 +734,7 @@ class ConferenceRecoveryExitStatusTests(unittest.TestCase):
         return {"status": status, "listing_pages": [1] if listing else [], "documents": documents, "errors": list(errors),
                 "expected_pdfs": len(listed), "downloaded_pdfs": len(archived)}
 
-    def run_years(self, outcomes, years=(2018, 2019)):
+    def run_years(self, outcomes, years=(2018, 2019), recorder=None):
         from scripts.recover_historical_conference_pdfs import PacedTransport, run_recovery
 
         calls = []
@@ -676,7 +751,7 @@ class ConferenceRecoveryExitStatusTests(unittest.TestCase):
             return outcome
 
         report, code = run_recovery(self.Case(), list(years), market="otc", output=Path("unused"), transport=transport,
-                                    recorder=self.Recorder(), pipeline=pipeline)
+                                    recorder=recorder or self.Recorder(), pipeline=pipeline)
         return report, code, calls
 
     def test_classify_separates_acquisition_from_review(self) -> None:
@@ -687,7 +762,7 @@ class ConferenceRecoveryExitStatusTests(unittest.TestCase):
         self.assertEqual(classify_year(self.result(pair, pair, review="complete", status="complete")), ("complete", "complete"))
         self.assertEqual(classify_year(self.result(pair, ["a.pdf"])), ("partial", "visual_review_pending"))
         self.assertEqual(classify_year(self.result(pair, [])), ("failed", "not_applicable"))
-        self.assertEqual(classify_year(self.result([], [], listing=False, errors=["MOPS reports no data (查無資料)"])),
+        self.assertEqual(classify_year(self.result([], [], listing=False, errors=[self.NO_DATA])),
                          ("no_official_record", "not_applicable"))
         self.assertEqual(classify_year(self.result([], [], listing=False, errors=["MOPS request failed: URLError"])),
                          ("failed", "not_applicable"))
@@ -696,7 +771,8 @@ class ConferenceRecoveryExitStatusTests(unittest.TestCase):
     def test_complete_years_exit_zero_even_with_review_pending(self) -> None:
         pair = ["a.pdf", "b.pdf"]
         report, code, _ = self.run_years({2018: self.result(pair, pair), 2019: self.result([], [], listing=False,
-                                                                                            errors=["查無資料"])})
+                                                                                            errors=[self.NO_DATA])},
+                                         recorder=self.Recorder({2019: ("no_official_record_found", 0, 0)}))
         self.assertEqual(code, 0)
         self.assertEqual(report["years"][2018]["review_status"], "visual_review_pending")
 
@@ -733,3 +809,55 @@ class ConferenceRecoveryExitStatusTests(unittest.TestCase):
         self.assertEqual(report["years"][2019]["acquisition_status"], "not_attempted")
         self.assertEqual(code, 2)
         self.assertIn("access restricted", report["stopped"])
+
+
+class ConferenceRecoveryPhase2cCarryoverTests(unittest.TestCase):
+    """Phase 2C carryover A2 (coverage persistence decides delivery) and A3 (no unsafe success classifications)."""
+
+    # Reuse the offline helpers only (not the inherited tests).
+    Case = ConferenceRecoveryExitStatusTests.Case
+    Recorder = ConferenceRecoveryExitStatusTests.Recorder
+    NO_DATA = ConferenceRecoveryExitStatusTests.NO_DATA
+    result = staticmethod(ConferenceRecoveryExitStatusTests.result)
+    run_years = ConferenceRecoveryExitStatusTests.run_years
+
+    def test_a2_coverage_storage_failure_fails_the_delivery(self) -> None:
+        pair = ["a.pdf", "b.pdf"]
+        report, code, _ = self.run_years({2018: self.result(pair, pair)}, years=(2018,),
+                                         recorder=self.Recorder(error=OSError("simulated database disk full")))
+        year = report["years"][2018]
+        self.assertEqual((year["acquisition_status"], year["coverage_status"]), ("complete", "failed"))  # kept distinct
+        self.assertIn("simulated database disk full", year["coverage_error"])
+        self.assertEqual(code, 1)
+
+    def test_a2_complete_must_agree_with_hash_verified_coverage(self) -> None:
+        pair = ["a.pdf", "b.pdf"]
+        # The pipeline result claims SHA-256 for both files, but the recorder's re-hashed archive finds only one.
+        report, code, _ = self.run_years({2018: self.result(pair, pair)}, years=(2018,),
+                                         recorder=self.Recorder({2018: ("document_missing", 2, 1)}))
+        self.assertEqual((report["years"][2018]["coverage_status"], code), ("inconsistent", 1))
+        report, code, _ = self.run_years({2018: self.result(pair, pair)}, years=(2018,))
+        self.assertEqual((report["years"][2018]["coverage_status"], code), ("consistent", 0))
+
+    def test_a3_listing_errors_are_never_success(self) -> None:
+        from scripts.recover_historical_conference_pdfs import classify_year
+
+        # Reviewer reproductions: a parse error on a verified listing page, and a timeout reported as "no_listing".
+        self.assertEqual(classify_year({"listing_pages": [1], "documents": [], "errors": ["parse error"], "status": "failed"})[0],
+                         "failed")
+        self.assertEqual(classify_year({"listing_pages": [], "documents": [], "errors": ["service timeout"],
+                                        "status": "no_listing"})[0], "failed")
+        for error in ("HTTP Error 403: Forbidden", "MOPS request failed: URLError: timed out",
+                      "Unexpected MOPS response; the listing could not be verified", "查無資料 maybe? partial page"):
+            with self.subTest(error):
+                self.assertEqual(classify_year({"listing_pages": [], "documents": [], "errors": [error]})[0], "failed")
+        # A genuine official no-data response (and nothing else) is accepted.
+        self.assertEqual(classify_year({"listing_pages": [], "documents": [], "errors": [self.NO_DATA]})[0], "no_official_record")
+        self.assertEqual(classify_year({"listing_pages": [], "documents": [], "errors": [self.NO_DATA, "timeout"]})[0], "failed")
+        self.assertEqual(classify_year({"listing_pages": [], "documents": [], "errors": []})[0], "failed")
+        self.assertEqual(classify_year({"listing_pages": [1], "documents": [], "errors": []})[0], "no_documents_listed")
+
+    def test_a3_no_record_must_be_persisted_as_no_record(self) -> None:
+        report, code, _ = self.run_years({2018: self.result([], [], listing=False, errors=[self.NO_DATA])}, years=(2018,),
+                                         recorder=self.Recorder({2018: ("official_listing_unavailable", 0, 0)}))
+        self.assertEqual((report["years"][2018]["coverage_status"], code), ("inconsistent", 1))

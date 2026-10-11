@@ -236,6 +236,32 @@ def parse_restatement_notice(data: bytes) -> dict:
 # Independent label table for MOPS annual financial-report board-approval notices (「…財務報告業經董事會決議通過」):
 # the only lines that may date a canonical fact. Equity attributable to owners of the parent is deliberately absent.
 DISCLOSURE_EVIDENCE_KINDS = ("restatement_disclosure", "financial_report_disclosure")
+# Independent table for facts dated by a MOPS 重編前/重編後 restatement notice: (framework, canonical metric) ->
+# (notice line labels, table section, sign). The sign converts the notice's presentation (expenses shown in
+# parentheses, i.e. negative) to the canonical positive amount. Any metric not listed here fails closed.
+RESTATEMENT_NOTICE_LINES = {
+    ("TIFRS", "revenue"): (("營業收入",), "income", 1),
+    ("TIFRS", "cost_of_goods_sold"): (("營業成本",), "income", -1),
+    ("TIFRS", "gross_profit"): (("營業毛利淨額", "營業毛利"), "income", 1),
+    ("TIFRS", "net_income"): (("本期淨利",), "income", 1),
+    ("TIFRS", "total_assets"): (("資產總計",), "balance", 1),
+    ("TIFRS", "total_liabilities"): (("負債總計",), "balance", 1),
+    ("TIFRS", "current_assets"): (("流動資產合計",), "balance", 1),
+    ("TIFRS", "current_liabilities"): (("流動負債合計",), "balance", 1),
+    ("TIFRS", "equity"): (("權益總計",), "balance", 1),
+    ("TW_GAAP", "revenue"): (("營業收入淨額",), "income", 1),
+    ("TW_GAAP", "cost_of_goods_sold"): (("營業成本",), "income", -1),
+    ("TW_GAAP", "gross_profit"): (("營業毛利",), "income", 1),
+    ("TW_GAAP", "operating_income"): (("營業淨利",), "income", 1),
+    ("TW_GAAP", "net_income"): (("合併總淨利",), "income", 1),
+    ("TW_GAAP", "total_assets"): (("資產總計",), "balance", 1),
+    ("TW_GAAP", "total_liabilities"): (("負債總計",), "balance", 1),
+    ("TW_GAAP", "current_assets"): (("流動資產合計",), "balance", 1),
+    ("TW_GAAP", "current_liabilities"): (("流動負債合計",), "balance", 1),
+    ("TW_GAAP", "equity"): (("股東權益總計",), "balance", 1),
+}
+_SECTION_OF_STATEMENT = {"income_statement": "income", "balance_sheet": "balance"}
+_SIDE_OF_VERSION = {"restated": "post", "original": "pre"}
 BOARD_NOTICE_LINES = {
     "revenue": "營業收入", "gross_profit": "營業毛利(毛損)", "operating_income": "營業利益(損失)",
     "net_income": "本期淨利(淨損)", "eps": "基本每股盈餘(損失)", "total_assets": "期末總資產",
@@ -371,6 +397,62 @@ def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
         if Decimal(row["value"]) != stated * scale:
             fail(f"{what}: value {row['value']} is not what the notice states ({amount} {unit})")
 
+    comparisons = _csv(files, "data/restatement_comparisons.csv")
+    restatement_notices: dict[str, dict] = {}
+
+    def verify_restatement_fact(row: dict, effective: datetime, what: str) -> None:
+        """Re-derive a fact dated by a restatement notice from the raw notice and its comparison row (no producer
+        code): identity, time, scope, period, framework, metric/statement type, side, unit, sign and exact value."""
+        digest = row["availability_evidence_hash"]
+        if digest not in restatement_notices:
+            try:
+                restatement_notices[digest] = parse_restatement_notice(files[raw_hashes[digest]])
+            except PackageVerificationError as exc:
+                fail(f"{what}: {exc}")
+        notice = restatement_notices[digest]
+        if notice["event_key"] != row["availability_evidence_ref"] or notice["published_at"] != effective:
+            fail(f"{what}: evidence identity/time disagrees with the restatement notice itself ({notice['event_key']})")
+        if notice["scope"] != row["statement_scope"]:
+            fail(f"{what}: statement scope {row['statement_scope']} disagrees with the notice ({notice['scope']})")
+        try:
+            year = int(row["fiscal_year"])
+        except ValueError:
+            fail(f"{what}: malformed fiscal year")
+        if row["period"] != f"{year}FY":
+            fail(f"{what}: period {row['period']} does not fit fiscal year {year}")
+        framework = "TIFRS" if year >= 2013 else "TW_GAAP"
+        if row["accounting_framework"] != framework:
+            fail(f"{what}: accounting framework does not fit fiscal year {year}")
+        mapping = RESTATEMENT_NOTICE_LINES.get((framework, row["metric_code"]))
+        if mapping is None:
+            fail(f"{what}: metric {row['metric_code']} has no independent restatement-notice mapping")
+        labels, section, sign = mapping
+        if _SECTION_OF_STATEMENT.get(row["statement_type"]) != section:
+            fail(f"{what}: statement type {row['statement_type']} does not fit {row['metric_code']}")
+        side = _SIDE_OF_VERSION.get(row["filing_version_type"])
+        if side is None:
+            fail(f"{what}: a {row['filing_version_type']} version cannot be dated by a restatement notice")
+        stated = [(label, notice["values"][(side, section, label, year)]) for label in labels
+                  if (side, section, label, year) in notice["values"]]
+        if len(stated) != 1:
+            fail(f"{what}: the notice states {len(stated)} candidate {side}-restatement lines for {row['metric_code']} {year}")
+        label, amount = stated[0]
+        if row["unit"] != "TWD" or Decimal(row["value"]) != Decimal(amount) * 1000 * sign:
+            fail(f"{what}: value {row['value']} {row['unit']} is not the notice's {side}-restatement {label} "
+                 f"({amount} 仟元, sign {sign})")
+        matching = [c for c in comparisons
+                    if c["announcement_key"] == row["availability_evidence_ref"] and c["content_hash"] == digest
+                    and c["period"] == row["period"] and c["statement_scope"] == row["statement_scope"]
+                    and c["accounting_framework"] == framework and c["canonical_metric"] == row["metric_code"]
+                    and c["statement_type"] == row["statement_type"]]
+        if len(matching) != 1:
+            fail(f"{what}: {len(matching)} matching restatement_comparisons rows (exactly one required)")
+        comparison = matching[0]
+        column = "post_restatement_value" if side == "post" else "pre_restatement_value"
+        if comparison["published_unit"] != "TWD_thousand" or comparison["sign_factor"] != str(sign) \
+                or comparison[column] != str(amount):
+            fail(f"{what}: comparison row unit/sign/{side} value disagrees with the notice")
+
     # 1 + 2. Facts: eligibility evidence and timestamps.
     facts = _csv(files, "data/financial_facts.csv")
     version_ids = {row["filing_version_id"] for row in versions}
@@ -406,6 +488,8 @@ def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
             resolve_disclosure(row["availability_evidence_hash"], effective, what)
             if kind == "financial_report_disclosure":
                 verify_board_fact(row, effective, what)
+            else:
+                verify_restatement_fact(row, effective, what)
         elif kind != "filing_artifact":
             fail(f"{what}: unknown availability_evidence_kind {kind!r}")
 
@@ -422,7 +506,6 @@ def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
         return notices[digest]
 
     # 8. Restatement comparisons: re-read every row from the included official notice.
-    comparisons = _csv(files, "data/restatement_comparisons.csv")
     for row in comparisons:
         what = f"comparison {row['period']}/{row['statement_scope']}/{row['pre_label']}"
         effective = _ts(row["disclosed_at"])

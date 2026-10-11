@@ -153,6 +153,15 @@ second-precision 發言日期/發言時間.
 **Strict verification.** The strict verifier re-derives every such fact from the included raw notice itself and
 fails closed on any mismatch or unsupported notice format.
 
+**Restatement-dated facts (Phase 2C).** Facts dated by `restatement_disclosure` are also re-derived independently.
+The verifier uses its own (framework, metric) → (notice line, statement section, sign) table. The sign converts the
+notice's parenthesised expenses to canonical positive amounts (e.g. 營業成本 × −1). It then requires:
+
+- the side implied by the version type: restated → 重編後, original → 重編前;
+- the notice cell × 1000 × sign to equal the fact value in TWD;
+- exactly one matching comparison row, with the same unit, sign factor and side value;
+- the notice's own identity, publication time, subject scope, period and framework.
+
 **Evidence dataset.** The notice values are also exported as the evidence dataset `disclosed_financial_values`
 (below).
 
@@ -165,6 +174,7 @@ fails closed on any mismatch or unsupported notice format.
 | Restatement analysis, one second earlier | 2016-11-13 21:26:21 | 0 facts; 79 individual before/after rows (21:25:31 notice); 6 individual summary rows |
 | Restatement analysis | from 2016-11-13 21:26:22 | 27 restated facts (observation level) + 158 before/after rows + 11 summary rows |
 | Retrospective | e.g. 2017-12-31 | same 27 facts (XBRL identity still withheld) + 8 artifact-verified PDFs (incl. the FY2016 PDF) + 12 summary rows |
+| FY2011–FY2025 strict (Phase 2C) | 2026-10-10 | **67 facts** = 27 restated FY2013–2015 + 21 FY2020–2022 + **19 FY2023–2025** (7 + 7 + 5; FY2025 total assets/liabilities not matched, see inventory) |
 | FY2011–FY2022 strict (Phase 2B) | 2023-12-31 | 27 FY2013–2015 restated facts + **21 FY2020–FY2022 facts** dated by board-approval notices (7 per year: revenue, gross profit, operating income, net income, EPS, total assets, total liabilities; public from 2021-03-05 17:38:20, 2022-03-16 17:59:38 and 2023-03-02 22:38:39); 0 FY2016–FY2019 facts |
 | FY2011–FY2019 strict (Phase 2A) | 2020-12-31 | same 27 facts; **0** FY2017–FY2019 facts (no verified XBRL publication time and no disclosure stating the values); 10 artifact-verified PDFs (adds FY2019 consolidated/individual, public from 2020-02-14 14:58:52 / 14:59:25); 12 summary rows |
 

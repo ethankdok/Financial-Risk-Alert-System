@@ -1,4 +1,4 @@
-# 1785 光洋科 — Official Investor-Conference Coverage (2010–2022)
+# 1785 光洋科 — Official Investor-Conference Coverage (2010–2025)
 
 Source: MOPS 法人說明會 listing `ajax_t100sb02_1` (market `otc`) and the official
 `FileDownLoad` form, acquired with the existing conference pipeline
@@ -113,3 +113,34 @@ Research semantics:
   `visual_review_required`: semantic visual analysis is deliberately off. Acquisition and text extraction are
   complete.
 - **JSD readiness** is decided by the unchanged adapter and reported in the package and the validation report.
+
+## Phase 2C recovery (2023–2025) and cumulative coverage 2011–2025
+
+For 2023–2025 the runner reported `complete` for every year, with coverage `consistent` (re-hashed archive counts),
+review status `visual_review_pending`, exit 0, and 15 requests, none failed. No OCR or LLM was used.
+
+| Year | Listing | Listing rows (meetings) | Files | Distinct by content | Language-pair keys | Pages (text) |
+|---|---|---|---|---|---|---|
+| 2011 | conference_found | 1 | 2 | 2 | 1 | 94 (93) |
+| 2012–2016 | no_official_record_found (MOPS 「查無資料」) | 0 | 0 | 0 | 0 | 0 |
+| 2017 | conference_found | 1 | 2 | 2 | 1 | 52 (52) |
+| 2018 | conference_found | 5 | 10 | 4 | 5 | 240 (240) |
+| 2019 | conference_found | 2 | 4 | 4 | 2 | 55 (55) |
+| 2020 | conference_found | 1 | 2 | 2 | 1 | 20 (20) |
+| 2021 | conference_found | 2 | 4 | 4 | 2 | 26 (26) |
+| 2022 | conference_found | 5 | 8 | 8 | 4 | 225 (207) |
+| 2023 | conference_found | 6 | 6 | 6 | 3 | 242 (224) |
+| 2024 | conference_found | 2 | 4 | 4 | 2 | 176 (166) |
+| 2025 | conference_found | 1 | 2 | 2 | 1 | 60 (56) |
+| **2011–2025** | | **26** | **44** | **38** | **22** | **1,190 (1,139)** |
+
+2010 (2 files, context only) is outside this range. How to read the columns:
+
+- A **listing row** is one MOPS meeting entry; one deck can serve several rows (2018 May: three dates).
+- **Distinct by content** removes byte-identical re-listings (`content_duplicate_of`).
+- A **language-pair key** groups the M (Chinese) and E (English) files of one listing entry. Re-listed identical
+  decks keep separate keys, so the number of distinct presentations is lower: about 19 for 2011–2025, i.e. the
+  distinct files divided by language.
+- **Quarterly observations** for JSD: **0**. Every document is `period_unconfirmed` under the unchanged JSD
+  contract (re-listings also get `duplicate_document`), and publication times stay unverified. The archival text
+  is complete and kept.
