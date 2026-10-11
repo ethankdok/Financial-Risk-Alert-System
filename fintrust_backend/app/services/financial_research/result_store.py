@@ -297,6 +297,10 @@ class FirestoreResearchResultStore:
             return self.record_run(run)
         return run["run_id"], True
 
+    def existing_digest(self, run_id: str) -> str | None:
+        snapshot = self._collection("runs").document(run_id).get()
+        return (snapshot.to_dict() or {}).get("output_digest") if getattr(snapshot, "exists", False) else None
+
     @staticmethod
     def _create(reference: Any, data: dict[str, Any]) -> None:
         try:
