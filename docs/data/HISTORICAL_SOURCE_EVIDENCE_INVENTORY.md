@@ -1,11 +1,26 @@
 # 1785 光洋科 — Historical Source Evidence Inventory (FY2011–FY2022)
 
-Machine-readable form: `evidence-export --dataset source_inventory` (45 rows:
-41 Phase 1B source documents + 4 Phase 1 XBRL instances). Reviewed request plan:
+Machine-readable form: `evidence-export --dataset source_inventory`. Reviewed request plan:
 `fintrust_backend/app/services/historical_audit/evidence_plans/1785.json`.
-Shareable snapshot: [`../development/evidence/historical_audit_1785_phase1b_evidence.json`](../development/evidence/historical_audit_1785_phase1b_evidence.json).
 Raw bytes are kept only in the gitignored archive `fintrust_backend/data/historical_audit/raw/`.
-All were retrieved 2026-10-09/10 UTC.
+
+Source counts per phase and cumulative. Source documents are the notices, listings, summaries and PDFs in
+`historical_source_documents`. MOPS XBRL filings are filing versions acquired by `backfill`. The
+`source_inventory` export lists both.
+
+| Phase (retrieved, UTC) | Fiscal years | Source documents | MOPS XBRL filings | Inventory rows added | Cumulative inventory rows |
+|---|---|---|---|---|---|
+| Phase 1 / 1B (2026-10-09/10) | FY2011–FY2016 | 41 | 4 | 45 | **45** |
+| Phase 2A (2026-10-11) | FY2017–FY2019 | 18 | 3 | 21 | **66** |
+| Phase 2B (2026-10-11) | FY2020–FY2022 | 24 | 3 | 27 | **93** |
+| **Total** | FY2011–FY2022 | **83** | **10** | **93** | |
+
+The per-phase figures in the sections below ("Phase 2A added 21 official sources", "Phase 2B added 27 official
+sources") count source documents plus XBRL filings. They equal the "inventory rows added" column; Phase 2B
+originally stated 30, an arithmetic error corrected in the carryover review.
+
+The Phase 1 sections immediately below describe only the first 45 rows. Shareable Phase 1B snapshot:
+[`../development/evidence/historical_audit_1785_phase1b_evidence.json`](../development/evidence/historical_audit_1785_phase1b_evidence.json).
 
 ## Source categories
 
@@ -166,7 +181,7 @@ because they are translations.
 
 ## Phase 2B — FY2020–FY2022 (retrieved 2026-10-11 UTC)
 
-Phase 2B added 30 official sources:
+Phase 2B added 27 official sources (24 source documents + 3 XBRL filings):
 
 - 3 MOPS inline-XBRL filings;
 - 11 discovery documents: TWSE e-book listings ROC 109–111, MOPS material listings ROC 110–114, and TPEx

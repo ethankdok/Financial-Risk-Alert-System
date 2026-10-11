@@ -235,6 +235,7 @@ def parse_restatement_notice(data: bytes) -> dict:
 
 # Independent label table for MOPS annual financial-report board-approval notices (「…財務報告業經董事會決議通過」):
 # the only lines that may date a canonical fact. Equity attributable to owners of the parent is deliberately absent.
+DISCLOSURE_EVIDENCE_KINDS = ("restatement_disclosure", "financial_report_disclosure")
 BOARD_NOTICE_LINES = {
     "revenue": "營業收入", "gross_profit": "營業毛利(毛損)", "operating_income": "營業利益(損失)",
     "net_income": "本期淨利(淨損)", "eps": "基本每股盈餘(損失)", "total_assets": "期末總資產",
@@ -373,6 +374,7 @@ def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
     # 1 + 2. Facts: eligibility evidence and timestamps.
     facts = _csv(files, "data/financial_facts.csv")
     version_ids = {row["filing_version_id"] for row in versions}
+    versions_by_id = {row["filing_version_id"]: row for row in versions}
     for row in facts:
         what = f"fact {row['period']}/{row['metric_code']}"
         if row["point_in_time_eligible"] != "true" or not row["effective_available_at"]:
@@ -380,22 +382,32 @@ def _verify_strict(files: dict[str, bytes], manifest: dict) -> None:
         effective = _ts(row["effective_available_at"])
         if effective >= cutoff:
             fail(f"{what}: effective availability after the cutoff")
-        if row["artifact_reference_status"] == "withheld_not_public_at_cutoff":
+        # The artifact status and the evidence that dates the value are checked independently: a disclosure-dated
+        # fact is re-verified against its disclosure whether or not its filing artifact is itself public.
+        kind = row["availability_evidence_kind"]
+        status = row["artifact_reference_status"]
+        if status == "withheld_not_public_at_cutoff":
             if any(row.get(field) for field in WITHHELD_ARTIFACT_FIELDS):
                 fail(f"{what}: withheld artifact identity is present")
-            kind = row["availability_evidence_kind"]
-            if kind not in ("restatement_disclosure", "financial_report_disclosure") or not row["observation_available_at"]:
+            if kind not in DISCLOSURE_EVIDENCE_KINDS:
                 fail(f"{what}: withheld artifact without a disclosure reference")
-            if _ts(row["observation_available_at"]) != effective:
+        elif status == "verified_public_artifact":
+            version = versions_by_id.get(row["filing_version_id"])
+            if version is None:
+                fail(f"{what}: references a filing artifact that is not included")
+            if kind == "filing_artifact" and (not version.get("filing_available_at")
+                                              or _ts(version["filing_available_at"]) != effective):
+                fail(f"{what}: effective availability is not the included artifact's verified time")
+        else:
+            fail(f"{what}: unknown artifact_reference_status {status!r}")
+        if kind in DISCLOSURE_EVIDENCE_KINDS:
+            if not row["observation_available_at"] or _ts(row["observation_available_at"]) != effective:
                 fail(f"{what}: observation and effective availability disagree")
             resolve_disclosure(row["availability_evidence_hash"], effective, what)
             if kind == "financial_report_disclosure":
                 verify_board_fact(row, effective, what)
-        elif row["artifact_reference_status"] == "verified_public_artifact":
-            if row["filing_version_id"] not in version_ids:
-                fail(f"{what}: references a filing artifact that is not included")
-        else:
-            fail(f"{what}: unknown artifact_reference_status {row['artifact_reference_status']!r}")
+        elif kind != "filing_artifact":
+            fail(f"{what}: unknown availability_evidence_kind {kind!r}")
 
     notices: dict[str, dict] = {}
 

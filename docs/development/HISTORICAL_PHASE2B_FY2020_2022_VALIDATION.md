@@ -13,7 +13,7 @@ conference pipeline ran text-only.
 | Track | Result |
 |---|---|
 | FY2020–FY2022 financial ingestion | 3 inline-XBRL filings, 18 facts each (54), core coverage 17/17; idempotent; identities exact |
-| Official evidence | 30 new sources; 3 annual board-approval notices with key figures; 3 note/interim corrections; no restatement found |
+| Official evidence | 27 new sources (24 source documents + 3 XBRL filings; corrected from "30" in the carryover review); 3 annual board-approval notices with key figures; 3 note/interim corrections; no restatement found |
 | Conference recovery | 2018/2019 backlog (14) and 2020–2022 (14): **28/28 downloaded and hash-verified**; 0 failed requests |
 | PIT improvement | **21 new PIT-eligible facts** (FY2020–2022, 7 per year), dated at the value level by board-approval notices; 0 for FY2017–2019 |
 | Integrity | every pre-Phase-2B DB row byte-identical; all 424 pre-existing archive files unchanged; all 6 earlier package files unchanged |
@@ -303,3 +303,119 @@ Watch for:
 - the 2025-08-11 XBRL correction (Q2 2025);
 - new board-notice formats (the verifier fails closed until it is extended);
 - larger conference volumes.
+
+## Carryover review fixes (after `98952ce`)
+
+### F-2B-01 — conference recovery exit status
+
+**Reproduced.** For a year whose listing named 2 PDFs and archived neither, `recover_historical_conference_pdfs`
+exited **0**.
+
+**Root cause.**
+
+- The runner returned non-zero only for `StopRecovery`.
+- `run_mops_pdf_pipeline` catches every per-document and listing exception and records it in `errors`, so a
+  `StopRecovery` raised by the transport mid-year never propagated. A stop condition would also have been
+  swallowed.
+
+**Fix.**
+
+- **Two separate statuses per year.** `classify_year` derives `acquisition_status` from the listing and the
+  hash-verified archived files only: `complete`, `no_official_record`, `no_documents_listed`, `partial`, `failed`
+  or `stopped`. It reports `review_status` separately: `visual_review_pending` is expected while LLM/OCR analysis
+  is disabled, and it never fails a run.
+- **The stop is tracked on the transport.** Every later request short-circuits, and later years become
+  `not_attempted`.
+- **Exit codes.** 0 = all years complete, no record or nothing listed; 1 = any year partial or failed;
+  2 = stopped.
+- **Testability.** `run_recovery(...)` is injectable for offline tests.
+
+**Tests** (`ConferenceRecoveryExitStatusTests`, 5 tests):
+
+- the classifier matrix;
+- complete years with review pending exit 0;
+- a failed year followed by a complete year: both run, exit 1;
+- a partial download exits 1;
+- a stop swallowed inside the pipeline still stops the run: exit 2, and the next year is `not_attempted`.
+
+### F-2B-02 — missing document counts
+
+**Reproduced.** With a listing of 2 documents and none archived, the row read `document_missing`, expected 2,
+downloaded 0, but **missing 0**. `missing_documents` came only from a pipeline manifest's integrity block.
+
+**Fix.** `ConferenceCoverageRecorder.attachment_counts` computes all counts by attachment identity (file name):
+
+- **expected:** the union of the verified official listing and the pipeline manifest; a file listed in several rows
+  or twice in the manifest counts once;
+- **archived:** an expected file that exists and re-hashes to its manifest SHA-256;
+- **missing:** expected − archived;
+- **failed:** downloads the manifest records as failed. These give `download_failed`.
+
+**Tests.**
+
+- Zero downloads: missing 2. Partial: 1/1. Complete: 2/0. Failed download: `download_failed`.
+- A duplicated listing entry counts once.
+- A file whose bytes no longer match is not archived.
+- The package's `conference_coverage.csv` reports the same totals.
+
+**Existing rows.** Rows recorded before the fix are not rewritten. The historical Phase 2A rows for 2018/2019
+(`document_missing`, missing 0) remain as history; the latest rows (`conference_found`, 10/10 and 4/4, missing 0)
+are correct.
+
+### Strict verifier — disclosure-dated facts with a public artifact
+
+**Found.**
+
+- `strict_facts` marks a fact `verified_public_artifact` whenever its filing version is public before the cutoff,
+  while its `availability_evidence_kind` can still be `financial_report_disclosure` or `restatement_disclosure`
+  (the disclosure being earlier).
+- In that case the verifier only checked that the version was included. It did not resolve or re-derive the
+  disclosure.
+- With consistent CSV/JSON, the `98952ce` verifier **accepted** packages with an unresolvable disclosure hash, a
+  mismatched observation time, or a `filing_artifact` time that was not the version's own. This was demonstrated
+  offline against the committed verifier.
+
+No released package contains such a fact; every disclosure-dated fact there has a withheld artifact.
+
+**Fix.**
+
+- Artifact status and evidence kind are verified independently.
+- Every disclosure-kind fact must resolve its included disclosure, with equal observation and effective times; a
+  board-dated fact is re-derived from the raw notice in both branches.
+- A `filing_artifact` fact must carry its included version's verified time.
+- Unknown evidence kinds fail closed.
+
+All three released strict packages still verify.
+
+**Tests.**
+
+- Fixture: `test_disclosure_dated_fact_with_a_verified_artifact_is_still_verified`, with 5 mutations; CSV and
+  JSON are kept consistent so only semantics can catch them.
+- Real tier: 2 new cases in `RealPhase2bFy2020To2022`, a tampered value and a wrong scope with a public artifact.
+
+### Documentation
+
+- **Inventory counts.** The source-evidence inventory now separates per-phase and cumulative counts:
+
+  | | Phase 1 | Phase 2A | Phase 2B | Total |
+  |---|---|---|---|---|
+  | Source documents | 41 | 18 | 24 | 83 |
+  | MOPS XBRL filings | 4 | 3 | 3 | 10 |
+  | Inventory rows | 45 | 21 | 27 | 93 |
+
+- **Corrected figure.** The Phase 2B figure "30 sources" was an arithmetic error and is corrected to 27.
+- **Released ZIP not rebuilt.** The released `fintrust_1785_2011_2022_full.zip` embeds the earlier inventory text
+  (with "30"). It is unchanged on purpose, so its hash stays stable.
+
+### Reproduction
+
+Run from `fintrust_backend/`:
+
+```bash
+python ../docs/development/evidence/historical_audit_phase2b_carryover_repro.py --before 98952ce
+```
+
+Before → after:
+
+- F-2B-01 exit code: 0 → 1;
+- F-2B-02 `missing_documents`: 0 → 2.

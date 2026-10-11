@@ -639,6 +639,10 @@ class RealPhase2bFy2020To2022(unittest.TestCase):
         self.assertEqual(len(rows), 21)
         revenue = {"period": "2020FY", "metric_code": "revenue"}
         other_ref = next(r for r in rows if r["period"] == "2021FY")["availability_evidence_ref"]
+        with zipfile.ZipFile(path) as archive:
+            included_version = next(_csv.DictReader(_io.StringIO(
+                archive.read(root + "data/filing_versions.csv").decode("utf-8"))))["filing_version_id"]
+        public = {"artifact_reference_status": "verified_public_artifact", "filing_version_id": included_version}
         cases = {
             "value": ({"value": "26665368000"}, "is not what the notice states"),
             "unit": ({"unit": "TWD/share"}, "disagrees with the notice unit"),
@@ -647,6 +651,9 @@ class RealPhase2bFy2020To2022(unittest.TestCase):
             "period": ({"period": "2019FY", "fiscal_year": "2019"}, "does not report fiscal year 2019"),
             "evidence identity": ({"availability_evidence_ref": other_ref}, "evidence identity/time disagrees"),
             "evidence kind": ({"availability_evidence_kind": "filing_artifact"}, "without a disclosure reference"),
+            # A public artifact never exempts a disclosure-dated value from re-derivation (F-2B review).
+            "verified artifact, tampered value": ({**public, "value": "26665368000"}, "is not what the notice states"),
+            "verified artifact, wrong scope": ({**public, "statement_scope": "individual"}, "statement scope individual disagrees"),
         }
         for label, (changes, reason) in cases.items():
             with self.subTest(label):

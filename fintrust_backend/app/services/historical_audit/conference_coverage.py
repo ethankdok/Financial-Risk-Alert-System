@@ -119,19 +119,41 @@ class ConferenceCoverageRecorder:
                                         detected_format="html", retrieval={"source_url": url, "retrieved_at": retrieved_at})
             listed, listing_rows = (parse_listing(raw, ticker=ticker, roc_year=year - 1911, non_pdf=[])
                                     if status == "conference_found" else ([], 0))
-            documents = manifest.get("documents", [])
-            downloaded = sum(1 for d in documents if d.get("sha256"))
+            counts = self.attachment_counts(ticker, year, listed, manifest)
             # The official listing, not only a pipeline manifest, defines what exists: listed documents that were
             # never archived are missing evidence even when no manifest was written for the year.
-            if status == "conference_found" and downloaded < max(len(documents), len(listed)):
-                status = "document_missing" if not manifest.get("errors") else "download_failed"
+            if status == "conference_found" and counts["missing_documents"]:
+                status = "download_failed" if counts["failed_documents"] or manifest.get("errors") else "document_missing"
             errors = list(manifest.get("errors", [])) + ([error] if error else [])
             rows.append(self._save(ticker, year, start_year, end_year, status, url, stored.content_hash,
-                                   stored.relative_path, retrieved_at, manifest, errors, listed, listing_rows))
+                                   stored.relative_path, retrieved_at, manifest, errors, listed, listing_rows, counts))
         return rows
 
+    def attachment_counts(self, ticker: str, year: int, listed, manifest: dict[str, Any]) -> dict[str, int]:
+        """Expected / archived / missing attachments, by official attachment identity (file name).
+
+        Expected = the union of attachments named by the verified official listing and by the pipeline manifest;
+        a file listed in several rows (or twice in the manifest) counts once. Archived = an expected attachment whose
+        file exists in the archive and re-hashes to the manifest's SHA-256 (a manifest entry alone is not enough).
+        Failed = an expected attachment whose download the manifest records as failed.
+        """
+        by_name: dict[str, dict[str, Any]] = {}
+        for document in manifest.get("documents", []):
+            by_name.setdefault(document.get("filename"), document)
+        expected = set(dict.fromkeys(attachment.filename for attachment in listed)) | {n for n in by_name if n}
+        archived = set()
+        for name in expected:
+            document = by_name.get(name) or {}
+            path = self.root / ticker / str(year) / name
+            if document.get("sha256") and path.is_file() and file_sha256(path) == document["sha256"]:
+                archived.add(name)
+        failed = {name for name in expected - archived if (by_name.get(name) or {}).get("error")}
+        return {"expected_documents": len(expected), "downloaded_documents": len(archived),
+                "missing_documents": len(expected - archived), "failed_documents": len(failed)}
+
     def _save(self, ticker, year, start_year, end_year, status, url, digest, raw_path, retrieved_at, manifest, errors,
-              listed=(), listing_rows=0):
+              listed=(), listing_rows=0, counts=None):
+        counts = counts or {"expected_documents": 0, "downloaded_documents": 0, "missing_documents": 0}
         documents = manifest.get("documents", [])
         dates = sorted({date for d in documents for date in d.get("conference_dates", [])}
                        | {date for attachment in listed for date in attachment.conference_dates})
@@ -140,10 +162,10 @@ class ConferenceCoverageRecorder:
             "status": status, "listing_url": url, "listing_sha256": digest, "listing_raw_path": raw_path,
             "listing_retrieved_at": retrieved_at, "conference_rows": int(manifest.get("rows") or listing_rows or 0),
             "meeting_dates_json": to_json(dates),
-            "expected_documents": max(int(manifest.get("expected_pdfs") or 0), len(listed)),
-            "downloaded_documents": sum(1 for d in documents if d.get("sha256")),
+            "expected_documents": counts["expected_documents"],
+            "downloaded_documents": counts["downloaded_documents"],
             "non_pdf_attachments": len(manifest.get("non_pdf_attachments") or []),
-            "missing_documents": len((manifest.get("integrity") or {}).get("missing_pdfs") or []),
+            "missing_documents": counts["missing_documents"],
             "errors_json": to_json(errors), "recorded_at": iso(utc_now()),
         }
         # Same official listing bytes re-recorded after documents were archived: only the acquisition status columns

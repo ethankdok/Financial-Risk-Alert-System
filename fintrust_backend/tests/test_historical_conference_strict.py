@@ -232,6 +232,65 @@ class ConferenceCoverageTests(ConferenceTestCase):
                 f'<td>{"".join(cell(n) for n in zh)}</td><td>{"".join(cell(n) for n in en)}</td></tr></tbody></table>'
                 '<input onclick="page(1)" value="1">').encode()
 
+    def record_with_archive(self, year: int, listed: list[str], archived: dict[str, bytes], *, failed=(), manifest_extra=()):
+        """Isolated F-2B-02 scenario: an official listing plus a pipeline manifest/archive in a temporary root."""
+        directory = self.conference_root / "1785" / str(year)
+        directory.mkdir(parents=True, exist_ok=True)
+        documents = []
+        for name in [*listed, *manifest_extra]:
+            document = {"filename": name}
+            if name in archived:
+                (directory / name).write_bytes(archived[name])
+                document["sha256"] = hashlib.sha256(archived[name]).hexdigest()
+            if name in failed:
+                document["error"] = "MOPS request failed: URLError: timed out"
+            documents.append(document)
+        (directory / "manifest.json").write_text(json.dumps({"documents": documents, "rows": 1}), encoding="utf-8")
+        transport = self.Transport({year: self.found_listing(year - 1911, listed)})
+        recorder = ConferenceCoverageRecorder(self.repository, self.archive, self.conference_root, transport=transport,
+                                              sleep=lambda _: None)
+        return recorder.record("1785", [year], market="otc", start_year=2011, end_year=2022)[0]
+
+    def test_f2b02_missing_counts_follow_listing_and_verified_archive(self) -> None:
+        pair = ["178520200910M001.pdf", "178520200910E001.pdf"]
+
+        def counts(row):
+            return row["status"], row["expected_documents"], row["downloaded_documents"], row["missing_documents"]
+
+        self.assertEqual(counts(self.record_with_archive(2020, pair, {})), ("document_missing", 2, 0, 2))  # zero downloads
+        self.assertEqual(counts(self.record_with_archive(2021, ["178520210910M001.pdf", "178520210910E001.pdf"],
+                                                         {"178520210910M001.pdf": b"%PDF-1 zh"})),
+                         ("document_missing", 2, 1, 1))  # partial
+        self.assertEqual(counts(self.record_with_archive(2022, ["178520220910M001.pdf", "178520220910E001.pdf"],
+                                                         {"178520220910M001.pdf": b"%PDF-1 zh", "178520220910E001.pdf": b"%PDF-1 en"})),
+                         ("conference_found", 2, 2, 0))  # complete
+        self.assertEqual(counts(self.record_with_archive(2019, ["178520190910M001.pdf", "178520190910E001.pdf"],
+                                                         {"178520190910M001.pdf": b"%PDF-1 zh"}, failed=("178520190910E001.pdf",))),
+                         ("download_failed", 2, 1, 1))  # failed download
+
+    def test_f2b02_duplicates_and_unverified_files_are_not_double_counted(self) -> None:
+        # The same attachment listed in two rows and twice in the manifest counts once.
+        twice = self.record_with_archive(2018, ["178520180502M001.pdf", "178520180502M001.pdf", "178520180502E001.pdf"],
+                                         {"178520180502M001.pdf": b"%PDF-1 deck", "178520180502E001.pdf": b"%PDF-1 deck"})
+        self.assertEqual((twice["expected_documents"], twice["downloaded_documents"], twice["missing_documents"]), (2, 2, 0))
+        # A manifest hash whose archived bytes no longer match is not an archived attachment.
+        row = self.record_with_archive(2017, ["178520170414M001.pdf", "178520170414E001.pdf"],
+                                       {"178520170414M001.pdf": b"%PDF-1 zh", "178520170414E001.pdf": b"%PDF-1 en"})
+        self.assertEqual(row["missing_documents"], 0)
+        (self.conference_root / "1785" / "2017" / "178520170414E001.pdf").write_bytes(b"%PDF-1 tampered")
+        listing = self.found_listing(106, ["178520170414M001.pdf", "178520170414E001.pdf"])
+        recorder = ConferenceCoverageRecorder(self.repository, self.archive, self.conference_root,
+                                              transport=self.Transport({2017: listing}), sleep=lambda _: None)
+        again = recorder.record("1785", [2017], market="otc", start_year=2011, end_year=2022)[0]
+        self.assertEqual((again["status"], again["downloaded_documents"], again["missing_documents"]), ("document_missing", 1, 1))
+        # The package's coverage CSV reports the same totals.
+        path = self.root / "f2b02.zip"
+        self.builder().build(PackageParameters("1785", 2017, 2022, include_conference=True), path, generated_at=FIXED)
+        csv_rows = {r["year"]: r for r in self.rows(path, "data/conference_coverage.csv")}
+        self.assertEqual((csv_rows["2017"]["expected_documents"], csv_rows["2017"]["downloaded_documents"],
+                          csv_rows["2017"]["missing_documents"]), ("2", "1", "1"))
+        self.assertEqual((csv_rows["2018"]["expected_documents"], csv_rows["2018"]["missing_documents"]), ("2", "0"))
+
     def test_listed_documents_without_an_archive_are_missing_not_found(self) -> None:
         """A listing with documents but no pipeline manifest must not read as fully covered (0 expected, 0 downloaded)."""
         transport = self.Transport({2019: self.found_listing(108, ["178520190516M001.pdf", "178520190516E001.pdf"])})
@@ -457,6 +516,44 @@ class StrictPointInTimeTests(ConferenceTestCase):
         unknown = parse_restatement_notice(mops_detail("20161113", "212622", "3", "財務報告說明", "說明"))
         self.assertEqual((unknown["scope"], unknown["values"]), ("unknown", {}))  # matches no row -> rows fail closed
 
+    def test_disclosure_dated_fact_with_a_verified_artifact_is_still_verified(self) -> None:
+        """A disclosure-dated fact relabelled as having a public artifact must still resolve its disclosure, and a
+        fact dated by its artifact must carry that artifact's verified time (no bypass via artifact status)."""
+        from tests.historical_evidence_fixtures import mutate_csv, repack_package
+
+        path, _ = self.strict()
+        facts = self.read(path, "data/financial_facts.csv")
+        first = self.rows(path, "data/financial_facts.csv")[0]
+        version = self.rows(path, "data/filing_versions.csv")[0]
+        row = {"period": first["period"], "metric_code": first["metric_code"]}
+        public = {"artifact_reference_status": "verified_public_artifact", "filing_version_id": version["filing_version_id"]}
+        cases = {
+            "unresolvable disclosure": ({**public, "availability_evidence_hash": version["content_hash"]},  # included, not a notice
+                                        "does not resolve to an included disclosure"),
+            "disclosure later than stated time": ({**public, "effective_available_at": "2016-11-13T21:26:21+08:00",
+                                                   "observation_available_at": "2016-11-13T21:26:21+08:00"},
+                                                  "published after the stated availability"),
+            "observation time differs": ({**public, "observation_available_at": "2016-11-13T21:26:21+08:00"},
+                                         "observation and effective availability disagree"),
+            "artifact time not the version's": ({**public, "availability_evidence_kind": "filing_artifact"},
+                                                "not the included artifact's verified time"),
+            "unknown evidence kind": ({**public, "availability_evidence_kind": "rumour"}, "unknown availability_evidence_kind"),
+        }
+        envelope = json.loads(self.read(path, "data/financial_facts.json"))
+
+        def typed(value: str):
+            return None if value == "" else True if value == "true" else False if value == "false" else value
+
+        for label, (changes, reason) in cases.items():
+            with self.subTest(label):
+                mutated = mutate_csv(facts, row, changes)  # CSV and JSON stay consistent: only semantics can catch it
+                records = [{k: typed(v) for k, v in r.items()} for r in csv.DictReader(io.StringIO(mutated.decode("utf-8")))]
+                target = repack_package(path, self.root / f"bypass-{label.replace(' ', '_')}.zip", {
+                    "data/financial_facts.csv": mutated,
+                    "data/financial_facts.json": json.dumps({**envelope, "records": records}, ensure_ascii=False).encode("utf-8")})
+                with self.assertRaisesRegex(PackageVerificationError, reason):
+                    verify_package(target)
+
     def test_cutoff_matrix_fixture(self) -> None:
         previous = None
         for index, cutoff in enumerate(("2016-05-12", "2016-05-13T00:00:00+08:00", "2016-11-13T21:26:21+08:00",
@@ -542,3 +639,97 @@ class ConferenceRecoveryRunnerTests(unittest.TestCase):
             paced.listing("1785", 107, "otc")  # 2 failures: retried once, then reported
         with self.assertRaisesRegex(StopRecovery, "3 consecutive failed requests"):
             paced.listing("1785", 108, "otc")
+
+
+class ConferenceRecoveryExitStatusTests(unittest.TestCase):
+    """F-2B-01: per-year acquisition outcome and CLI exit status (offline; fake pipeline, transport and recorder)."""
+
+    class Case:
+        ticker, default_start_year, default_end_year = "1785", 2011, 2016
+
+    class Recorder:
+        def record(self, ticker, years, **_):
+            return [{"status": "recorded", "conference_rows": 0, "meeting_dates_json": "[]", "expected_documents": 0,
+                     "downloaded_documents": 0, "non_pdf_attachments": 0, "missing_documents": 0}]
+
+    @staticmethod
+    def result(listed, archived, *, review="needs_review", errors=(), listing=True, status="failed"):
+        documents = [{"filename": name, **({"sha256": "a" * 64, "status": review} if name in archived else {"status": "failed"})}
+                     for name in listed]
+        return {"status": status, "listing_pages": [1] if listing else [], "documents": documents, "errors": list(errors),
+                "expected_pdfs": len(listed), "downloaded_pdfs": len(archived)}
+
+    def run_years(self, outcomes, years=(2018, 2019)):
+        from scripts.recover_historical_conference_pdfs import PacedTransport, run_recovery
+
+        calls = []
+        transport = PacedTransport(ConferenceRecoveryRunnerTests.Inner([]), delay=0, max_consecutive_failures=3,
+                                   sleep=lambda _: None)
+
+        def pipeline(*, ticker, year, transport, **_):
+            calls.append(year)
+            outcome = outcomes[year]
+            if callable(outcome):
+                return outcome(transport)
+            if isinstance(outcome, Exception):
+                raise outcome
+            return outcome
+
+        report, code = run_recovery(self.Case(), list(years), market="otc", output=Path("unused"), transport=transport,
+                                    recorder=self.Recorder(), pipeline=pipeline)
+        return report, code, calls
+
+    def test_classify_separates_acquisition_from_review(self) -> None:
+        from scripts.recover_historical_conference_pdfs import classify_year
+
+        pair = ["a.pdf", "b.pdf"]
+        self.assertEqual(classify_year(self.result(pair, pair)), ("complete", "visual_review_pending"))  # LLM/OCR off
+        self.assertEqual(classify_year(self.result(pair, pair, review="complete", status="complete")), ("complete", "complete"))
+        self.assertEqual(classify_year(self.result(pair, ["a.pdf"])), ("partial", "visual_review_pending"))
+        self.assertEqual(classify_year(self.result(pair, [])), ("failed", "not_applicable"))
+        self.assertEqual(classify_year(self.result([], [], listing=False, errors=["MOPS reports no data (查無資料)"])),
+                         ("no_official_record", "not_applicable"))
+        self.assertEqual(classify_year(self.result([], [], listing=False, errors=["MOPS request failed: URLError"])),
+                         ("failed", "not_applicable"))
+        self.assertEqual(classify_year(self.result([], [])), ("no_documents_listed", "not_applicable"))
+
+    def test_complete_years_exit_zero_even_with_review_pending(self) -> None:
+        pair = ["a.pdf", "b.pdf"]
+        report, code, _ = self.run_years({2018: self.result(pair, pair), 2019: self.result([], [], listing=False,
+                                                                                            errors=["查無資料"])})
+        self.assertEqual(code, 0)
+        self.assertEqual(report["years"][2018]["review_status"], "visual_review_pending")
+
+    def test_failed_year_then_next_year_still_runs_and_exits_nonzero(self) -> None:
+        pair = ["a.pdf", "b.pdf"]
+        report, code, calls = self.run_years({2018: RuntimeError("disk full"), 2019: self.result(pair, pair)})
+        self.assertEqual(calls, [2018, 2019])
+        self.assertEqual((report["years"][2018]["acquisition_status"], report["years"][2019]["acquisition_status"]),
+                         ("failed", "complete"))
+        self.assertEqual(code, 1)
+        report, code, _ = self.run_years({2018: self.result(pair, [], errors=["a.pdf: timeout", "b.pdf: timeout"]),
+                                          2019: self.result(pair, pair)})
+        self.assertEqual((report["years"][2018]["acquisition_status"], code), ("failed", 1))
+
+    def test_partial_download_exits_nonzero(self) -> None:
+        report, code, _ = self.run_years({2018: self.result(["a.pdf", "b.pdf"], ["a.pdf"]), 2019: self.result([], [])})
+        self.assertEqual((report["years"][2018]["acquisition_status"], code), ("partial", 1))
+
+    def test_stop_inside_the_pipeline_is_not_swallowed(self) -> None:
+        from app.services.mops_conference_pdf_pipeline import AcquisitionError
+
+        def blocked(transport):
+            transport.inner = ConferenceRecoveryRunnerTests.Inner(
+                [AcquisitionError("MOPS request failed: HTTPError: HTTP Error 403: Forbidden")])
+            try:  # the real pipeline catches per-document exceptions like this
+                transport.pdf(type("A", (), {"filename": "a.pdf"})(), "https://mopsov.twse.com.tw/")
+            except Exception:
+                pass
+            return self.result(["a.pdf"], [])
+
+        report, code, calls = self.run_years({2018: blocked, 2019: self.result(["c.pdf"], ["c.pdf"])})
+        self.assertEqual(calls, [2018])  # no further year once stopped
+        self.assertEqual(report["years"][2018]["acquisition_status"], "stopped")
+        self.assertEqual(report["years"][2019]["acquisition_status"], "not_attempted")
+        self.assertEqual(code, 2)
+        self.assertIn("access restricted", report["stopped"])
