@@ -365,3 +365,13 @@ The 67 strict facts are:
   presentations, 26 listing rows.
 - **JSD.** JSD-ready quarterly observations: **0**, under the unchanged contract (`period_unconfirmed`).
 - **Grouping.** Use `content_duplicate_of` and `language_pair_key` as before.
+
+## Phase 3–5 research layer (branch `feature/phase3-5-research-integration`)
+
+The approved archive is now readable through the research API (`/api/v1/research`, contract
+`docs/data/HISTORICAL_RESEARCH_API_CONTRACT.md`) and the research page `historical-research.html`. Every view carries one
+explicit analysis mode (`RETROSPECTIVE_FORENSIC`, `STRICT_AS_OF` with an exclusive timezone-aware cutoff,
+`CURRENT_EVIDENCE_RECONCILIATION`). The archive is opened read-only; derived runs are stored append-only in a separate
+`research_results.sqlite3`. Methods are DRAFT pending method-owner review
+(`docs/research/07_PHASE3_METHOD_SPECIFICATION_DRAFT.md`); cloud readiness and runbooks:
+`docs/cloud/PHASE5_HISTORICAL_RESEARCH_CLOUD_READINESS.md`.
