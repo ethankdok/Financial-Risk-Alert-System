@@ -56,6 +56,8 @@ class ResearchProxyRegistrationTests(unittest.TestCase):
         rules = {rule.rule for rule in self.app_module.app.url_map.iter_rules()}
         for rule in ("/api/research/cases", "/api/research/cases/<ticker>", "/api/research/cases/<ticker>/<view>",
                      "/api/research/financial-signals/compute", "/api/research/runs/<run_id>",
+                     "/api/research/literature/models", "/api/research/cases/<ticker>/literature/coverage",
+                     "/api/research/literature/<action>",
                      "/api/financial/companies", "/api/financial/data-shift/analyze", "/health"):
             self.assertIn(rule, rules)
         self.assertFalse([r for r in rules if r.startswith("/api/research") and "admin" in r])

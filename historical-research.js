@@ -555,7 +555,16 @@
         $('signalDetail').innerHTML = renderFeatureDetail(lastSignals.result.features[Number(button.dataset.featureIndex)]);
       }
     });
-    const hash = (doc.location && doc.location.hash || '').replace('#', '');
+    const [hash, ...options] = (doc.location && doc.location.hash || '').replace('#', '').split('&');
+    if (hash === 'literature') {  // deep link: #literature&policy=original_only&mode=STRICT_AS_OF&start=2011&end=2015
+      const ids = { policy: 'literaturePolicy', mode: 'literatureMode', start: 'literatureStart', end: 'literatureEnd' };
+      options.map((o) => o.split('=')).forEach(([key, value]) => {
+        const control = ids[key] && $(ids[key]);
+        if (control && Array.from(control.options || []).every((opt) => opt.value !== value) && control.tagName === 'SELECT') return;
+        if (control && /^[A-Za-z0-9_]+$/.test(value || '')) control.value = value;
+      });
+      $('literatureCutoff').disabled = $('literatureMode').value !== 'STRICT_AS_OF';
+    }
     const initial = tabs.find((tab) => tab.dataset.view === hash) || tabs[0];
     select(initial, false);
     return { views, select };

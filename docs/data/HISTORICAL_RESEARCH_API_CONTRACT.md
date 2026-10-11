@@ -1,7 +1,7 @@
 # Historical research API contract (Phase 4)
 
 Implemented in `fintrust_backend/app/routers/historical_research.py` (FastAPI, prefix `/api/v1/research`), proxied by
-`research_routes.py` (Flask, prefix `/api/research`). OpenAPI snapshot of these routes: `docs/data/openapi_research_v1.json`
+`research_routes.py` (Flask, prefix `/api/research`). OpenAPI snapshot of these routes: `docs/data/openapi_research_v2.json` (literature-model pass; `openapi_research_v1.json` kept as the Phase 3–5 record)
 (generated from the running app; 11 paths). Everything here is **read-only research evidence** about reviewed historical
 cases; it is not investment advice, not a fraud determination and never feeds risk thresholds, scores or notifications.
 
@@ -30,7 +30,13 @@ only the reader's point-in-time rows; every row is re-checked against the cutoff
 | `GET /cases/{ticker}/text-readiness` | RETRO, STRICT | archive (44 records / 38 SHA / 1,190 pages / 1,139 text pages / 26 listing rows), `jsd_ready_records=0`, `jsd={"status":"NOT_APPLICABLE","value":null}` |
 | `POST /financial-signals/compute` | all | body `{ticker, analysis_mode, cutoff_at?, start_year?, end_year?, version_policy, persist=false, supersedes_run_id?}` → `run_id`, `input_digest`, `output_digest`, `persisted`, `created`, `result` |
 | `GET /runs/{run_id}` | – | immutable persisted run (`rrun1_<32 hex>`) incl. snapshot identity and output |
-| `GET /runs/{run_id}/verify` | – | recompute from the current archive: `reproducible` / `inputs_changed_since_run` / `output_differs_for_same_input` |
+| `GET /runs/{run_id}/verify` | – | recompute from the current archive: `reproducible` / `method_version_changed` (with `legacy_method_not_reproducible=true` and `source_inputs_unchanged`, F06) / `inputs_changed_since_run` / `output_differs_for_same_input`; also `stored_method_version`, `current_method_version` |
+| `GET /literature/models` | – | source-locked registry: Beneish (1999) `beneish_1999_full8_v1`, Dechow et al. (2011) `dechow_2011_model1_v1`, `literature_comparison_v1`; per term: coefficient, definition, paper location, `verification`; `score_enabled`, `verification_problems`, `approval_status=DRAFT_PENDING_METHOD_OWNER_REVIEW`; DRAFT `input_mapping`; `inputs_available` |
+| `GET /cases/{ticker}/literature/coverage` | RETRO, STRICT | required `version_policy` (`latest_available` \| `original_only`), optional years → `rows` (model × variable × input × FY × t / t−1 / t−2: readiness, missing_reason, filing version, side, value, provenance), `summary`, `filing_selection`, `artifact_diagnostics` |
+| `POST /literature/compute` | RETRO, STRICT | body `{ticker, analysis_mode, cutoff_at?, start_year?, end_year?, version_policy, model_ids[], persist=false, supersedes_run_id?}` → run (`result_kind=literature_models`); per model-year: `status`, `score` or null, `components`, `missing_inputs` (with t-relative period), `validation_warnings`, `input_filing_versions`, `source_observation_ids`, `observation` identity, `numerical_precision`, `scaling_provenance`, `available_at`, `hindsight`, `limitations` |
+| `POST /literature/compare` | RETRO, STRICT | same body without `model_ids` → run (`result_kind=literature_comparison`): `pairs` (comparable only for the same observation), `coverage`, `concordance` (comparable pairs only), `performance_metrics=null`, plus the full `models` output |
+
+Literature statuses: `computed`, `not_computable` (component panel only, never a partial score), `source_unavailable`, `insufficient_point_in_time_evidence`, `ambiguous_version`, `model_formula_unverified`; component reasons include `missing_t_minus_2`, `issuance_absence_not_evidenced`, `invalid_denominator_zero/negative`, `accounting_regime_break`. `CURRENT_EVIDENCE_RECONCILIATION` → 409 `literature_scores_not_supported_in_reconciliation_mode`; `earliest_available` → 422 `version_policy_not_supported_for_literature`; missing `model_ids` → 422 `model_ids_required`. Flask proxy: `GET /api/research/literature/models`, `GET /api/research/cases/<ticker>/literature/coverage` (whitelisted parameters), `POST /api/research/literature/{compute|compare}` (`persist` always false).
 
 `version_policy` is required for computation (`latest_available` | `earliest_available` | `original_only`). Years must lie
 within the case's research coverage (1785: 2011–2025), at most 15 per request.

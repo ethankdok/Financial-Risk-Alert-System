@@ -472,6 +472,34 @@ class LiteratureStoreTests(unittest.TestCase):
                 LiteratureInputStore(Path(tmp) / "absent.sqlite3", read_only=True)
 
 
+class LiteratureRunPersistenceMockTests(unittest.TestCase):
+    """MOCK cloud tier: a literature run is mirrored create-only with its score projection (same read view)."""
+
+    def test_firestore_mirror_parity_for_literature_runs(self) -> None:
+        from app.services.financial_research.result_store import (
+            FirestoreResearchResultStore,
+            SqliteResearchResultStore,
+            build_run,
+        )
+        from tests.historical_cloud_fakes import FakeFirestoreClient
+
+        snapshot = literature_snapshot()
+        output = compute_models(snapshot, [BENEISH_MODEL_ID, DECHOW_MODEL_ID])
+        run = build_run(result_kind="literature_models", method_version="m", method_ids=["m"],
+                        approval_status="DRAFT_PENDING_METHOD_OWNER_REVIEW", snapshot=snapshot.describe(),
+                        parameters={"model_ids": [BENEISH_MODEL_ID, DECHOW_MODEL_ID]}, output=output)
+        client = FakeFirestoreClient()
+        cloud = FirestoreResearchResultStore(client, prefix="historical_research_results")
+        self.assertEqual(cloud.record_run(run), (run["run_id"], True))
+        self.assertEqual(cloud.record_run(run), (run["run_id"], False))
+        with tempfile.TemporaryDirectory() as tmp:
+            local = SqliteResearchResultStore(Path(tmp) / "r.sqlite3")
+            local.record_run(run)
+            strip = lambda view: {k: v for k, v in view.items() if k != "created_at"}  # noqa: E731
+            self.assertEqual(strip(local.get_run(run["run_id"])), strip(cloud.get_run(run["run_id"])))
+            self.assertEqual(local.projection_counts(run["run_id"])["research_literature_scores"], 2)
+
+
 # ------------------------------------------------------------------------------------------- REAL tier
 @unittest.skipUnless(HAS_REAL, "approved local 1785 archive not present")
 class RealLiteratureTests(unittest.TestCase):

@@ -56,6 +56,15 @@ No coefficients are shipped; DSRI, GMI and SGI are shown only as descriptive com
 thresholds are not Taiwan fraud probabilities. Adding inputs requires a new, separately sourced metric set (not a reuse of
 the 18 canonical metrics).
 
+## Literature models — published-formula reproduction (literature-model pass, 2026-10-12)
+
+The gates above concern the 18 canonical metrics only and remain true for them. A separately sourced, append-only
+literature-input extension (line-level observations from the archived XBRL and the FY2011–2012 original TW-GAAP
+reports) now feeds `beneish_1999_full8_v1` and `dechow_2011_model1_v1`; see
+`docs/research/BENEISH_1999_DECHOW_2011_METHOD_LOCK.md`, `LITERATURE_INPUT_COVERAGE_MATRIX.md` and
+`LITERATURE_COMPARATIVE_CASE_STUDY_1785.md`. Coefficients are source-verified; the COMPUSTAT→Taiwan input mapping and
+any interpretation are DRAFT decisions for the method owner. STRICT_AS_OF remains `insufficient_point_in_time_evidence`.
+
 ## M3 — Cross-source reconciliation (RQ-C)
 
 Board-notice vs filed XBRL: 40 match, 2 `mismatch_unresolved`, 18 `not_comparable` (unmapped lines such as
@@ -70,7 +79,9 @@ XBRL; total equity 15,012,536 identical. Cause unverified; no correction/reclass
 1. Approve or change the 1 % near-zero denominator rule and the margin set.
 2. Approve the feature registry wording, the proxy designation and the 2013 (first TIFRS year) t−1 policy.
 3. Classify H1–H4 by judgment paragraph (finding / allegation / disclosure) and archive the judgment if it is to be cited.
-4. Decide whether additional statement lines (PPE, depreciation, SG&A, LTD) should be sourced for literature models.
+4. ~~Decide whether additional statement lines should be sourced~~ — sourced in the literature-model pass (extension
+   store); decide the DRAFT mapping choices listed in the method lock §5 (R&D in SG&A, IFRS 16, opening balance as
+   t−2, statement-line absence, Beneish manuscript-only verification).
 
 ## JSD readiness handoff (Ethan)
 

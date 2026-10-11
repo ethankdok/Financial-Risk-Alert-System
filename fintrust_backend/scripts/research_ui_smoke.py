@@ -6,8 +6,9 @@
   their production stores (``FINANCIAL_DATABASE_PATH``, ``FINANCIAL_FACT_DATABASE_PATH``, ``FLASK_DATABASE_PATH``);
   the research API opens the approved historical archive read-only.
 - Every request goes over real localhost HTTP through the Flask research proxy.
-- With a Chromium-based browser, each of the six research views is rendered headless: a PNG screenshot and the
-  rendered DOM are saved, and the DOM is checked for the key evidence strings.
+- With a Chromium-based browser, each of the six research views and the literature-model view (current-version
+  series, original-filing series, strict pre-event cutoff) is rendered headless: a PNG screenshot and the rendered
+  DOM are saved, and the DOM is checked for the key evidence strings.
 
 No network beyond 127.0.0.1, no cloud, no LLM, no writes to the approved archive or the existing local databases.
 """
@@ -37,7 +38,13 @@ VIEWS = {
     "signals": ["目前缺乏可核驗的事件前財務輸入", "NOT_COMPUTABLE"],
     "discrepancy": ["1,721 千元", "34,436,171 千元", "34,434,450 千元", "第 8 頁", "來源數值差異待查證"],
     "text": ["NOT_APPLICABLE", "1190／1139", "NOT_READY"],
+    "literature": ["Beneish (1999) 8 變數 M-Score", "-2.240182", "0.890320", "hindsight=true", "來源不可用",
+                   "發行事件無證據", "方法待負責人核准", "Table 7 Panel A", "0.0037"],
+    "literature_original": ["-1.730106", "-2.286269", "0.892005", "缺 t−2 期資料", "TW_GAAP"],
+    "literature_strict": ["NOT_COMPUTABLE：截點前無可驗證財務資料", "STRICT_AS_OF"],
 }
+HASHES = {"literature_original": "literature&policy=original_only&start=2011&end=2015",
+          "literature_strict": "literature&mode=STRICT_AS_OF&start=2011&end=2015"}
 BROWSERS = (r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
 
@@ -106,10 +113,22 @@ def main(argv: list[str] | None = None) -> int:
                 "ticker": "1785", "analysis_mode": "STRICT_AS_OF", "cutoff_at": "2016-05-13T00:00:00+08:00",
                 "version_policy": "latest_available", "start_year": 2011, "end_year": 2016, "persist": True}).encode()),
             "fastapi_direct_bridge": get(f"http://127.0.0.1:{api_port}/api/v1/research/cases/1785/restatement-bridge?analysis_mode=RETROSPECTIVE_FORENSIC"),
+            "flask_literature_models": get(f"{web}/api/research/literature/models"),
+            "flask_literature_compare": get(f"{web}/api/research/literature/compare", json.dumps({
+                "ticker": "1785", "analysis_mode": "RETROSPECTIVE_FORENSIC", "version_policy": "latest_available",
+                "start_year": 2011, "end_year": 2025, "persist": True}).encode()),
+            "flask_literature_reconciliation_refused": get(f"{web}/api/research/literature/compare", json.dumps({
+                "ticker": "1785", "analysis_mode": "CURRENT_EVIDENCE_RECONCILIATION",
+                "version_policy": "latest_available"}).encode()),
+            "fastapi_direct_literature_compare": get(f"http://127.0.0.1:{api_port}/api/v1/research/literature/compare",
+                                                     json.dumps({"ticker": "1785", "analysis_mode": "RETROSPECTIVE_FORENSIC",
+                                                                 "version_policy": "latest_available", "start_year": 2011,
+                                                                 "end_year": 2025}).encode()),
             "existing_flask_health": get(f"{web}/health"),
             "existing_fastapi_health": get(f"http://127.0.0.1:{api_port}/health"),
         }
-        expected = {"flask_strict_without_cutoff": 422, "flask_production_ticker": 404}
+        expected = {"flask_strict_without_cutoff": 422, "flask_production_ticker": 404,
+                    "flask_literature_reconciliation_refused": 409}
         for name, (status, _payload) in checks.items():
             report["http"][name] = {"status": status, "ok": status == expected.get(name, 200)}
         report["http"]["proxy_parity_bridge"] = {
@@ -117,10 +136,16 @@ def main(argv: list[str] | None = None) -> int:
         report["http"]["browser_compute_not_persisted"] = {
             "ok": checks["flask_compute_strict"][1]["data"]["persisted"] is False,
             "status": checks["flask_compute_strict"][1]["data"]["result"]["status"]}
+        literature = checks["flask_literature_compare"][1]["data"]
+        report["http"]["literature_browser_not_persisted_and_parity"] = {
+            "ok": literature["persisted"] is False
+            and literature["output_digest"] == checks["fastapi_direct_literature_compare"][1]["output_digest"],
+            "run_id": literature["run_id"], "output_digest": literature["output_digest"],
+            "coverage": literature["result"]["coverage"]}
         if args.browser:
             profile = scratch / "browser-profile"
             for view, needles in VIEWS.items():
-                url = f"{web}/historical-research.html#{view}"
+                url = f"{web}/historical-research.html#{HASHES.get(view, view)}"
                 base = [args.browser, "--headless=new", "--disable-gpu", "--no-first-run", "--disable-extensions",
                         f"--user-data-dir={profile}", "--window-size=1366,2200", "--virtual-time-budget=20000",
                         "--hide-scrollbars"]

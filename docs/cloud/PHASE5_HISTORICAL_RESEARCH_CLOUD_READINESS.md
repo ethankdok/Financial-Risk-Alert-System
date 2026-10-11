@@ -25,6 +25,7 @@ phase. The staging preflight below lists what must be confirmed by the owner.
 |---|---|---|---|
 | Immutable raw bytes (PDF, notice HTML, XBRL, listings, conference PDFs, research ZIPs) | local content-addressed archive `fintrust_backend/data/historical_audit/raw`, `data/historical-conference-pdfs` (approved baseline 506b64c) | optional GCS mirror via `cloud_sync` (create-only, SHA-verified); research ZIPs are **not** uploaded by default (220 MB) | historical ingestion CLI only |
 | Metadata and official facts | local `historical_audit.sqlite3` (read-only for Phase 3–5) | `historical_research_*` Firestore collections (create-only mirror) | historical ingestion / `cloud_sync` only |
+| Literature-model line inputs (extension) | local append-only `data/literature_models/literature_inputs.sqlite3` (rebuildable from the raw archive by `scripts/ingest_literature_inputs.py`) | **not mirrored** in this pass; a Cloud Run image without it reports `literature_inputs_available=false` and every literature year `source_unavailable` | ingestion CLI only |
 | Derived research results | local append-only `research_results.sqlite3` | `<collection_prefix>_results_*` Firestore collections derived from the isolated config (default `historical_research_results_*`; create-only mirror via `result_sync`) | research CLI / authorized `persist=true` |
 
 The research layer never writes official tables; derived results never overwrite (SQLite triggers forbid UPDATE/DELETE;
@@ -120,3 +121,14 @@ npx -y firebase-tools@13 emulators:exec --only firestore --project demo-fintrust
 - Live read of Cloud Run/IAM/Secret Manager/budget state (owner credentials).
 - Creation of a staging/isolated-test project or bucket, and any Firestore writes outside the emulator.
 - Decision on the staging research data source; any production promotion.
+
+## 10. Literature-model pass (2026-10-12)
+
+- New read-only endpoints under `/api/v1/research/literature/*` and `/cases/{ticker}/literature/coverage`; persistence
+  reuses `persist=true` + ingestion token and the existing append-only result store (new result kinds
+  `literature_models` / `literature_comparison`, additive projection table / collection `research_literature_scores`
+  / `<collection_prefix>_results_literature_scores`, created on first open — an additive migration; existing rows unchanged).
+- The literature-input sidecar is a local research artifact; no Firestore/GCS mirror was created and none is required
+  for the API to degrade safely. Any mirror needs the same separate approval as §7.
+- No deployment, cloud write, IAM, Secret Manager or scheduler change was made.
+
