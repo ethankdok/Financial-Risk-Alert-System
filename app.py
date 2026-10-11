@@ -322,10 +322,15 @@ _STATIC_SUFFIXES = {".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".s
 _STATIC_DIRECTORIES = ("static/", "templates/")
 
 
+_UNSERVABLE_MARKERS = ("backup", "_before_", ".bak", ".orig", ".tmp", "~", ":", "%", "\x00")
+
+
 def _servable(filename: str) -> bool:
     parts = filename.replace("\\", "/").split("/")
     if any(part.startswith(".") or part == "" for part in parts):
         return False
+    if any(marker in filename.lower() for marker in _UNSERVABLE_MARKERS):
+        return False  # local backup/temp copies, Windows streams, residual or double URL encodings
     if len(parts) > 1 and not filename.startswith(_STATIC_DIRECTORIES):
         return False
     suffix = Path(filename).suffix.lower()

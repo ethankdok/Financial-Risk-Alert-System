@@ -21,12 +21,13 @@ from pathlib import Path
 from typing import Any, Callable
 
 from app.services.financial_research.result_store import (
+    RESULT_PREFIX_PATTERN,
     FirestoreResearchResultStore,
     ResultStoreIntegrityError,
     SqliteResearchResultStore,
 )
 
-RESULT_COLLECTION_PREFIX = "historical_research_results"
+RESULT_COLLECTION_PREFIX = "historical_research_results"  # default namespace (config prefix "historical_research")
 
 
 class SyncLockedError(RuntimeError):
@@ -56,15 +57,28 @@ class SyncReport:
                 "planned": self.planned, "written": self.written, "failed": self.failed, "deferred": self.deferred}
 
 
+def result_prefix(config: Any) -> str:
+    """Result namespace derived from the configured (validated) collection prefix: ``<prefix>_results``.
+
+    Two independently configured environments therefore never share result collections; the default prefix
+    ``historical_research`` maps to the historical default ``historical_research_results``."""
+    prefix = f"{config.collection_prefix}_results"
+    if not RESULT_PREFIX_PATTERN.fullmatch(prefix):
+        raise ValueError(f"collection prefix {config.collection_prefix!r} does not yield a valid result namespace")
+    return prefix
+
+
 def build_cloud_result_store(config: Any, client: Any | None = None) -> FirestoreResearchResultStore:
     """Target store from a validated ``HistoricalCloudConfig`` (never production without separate approval)."""
-    if config.environment == "production":
-        raise PermissionError("production research-result writes require a separate, explicit approval")
+    if config.environment not in ("emulator", "isolated-test"):
+        raise PermissionError("research-result writes are limited to emulator / isolated-test; production needs "
+                              "a separate, explicit approval")
+    prefix = result_prefix(config)
     if client is None:
         from google.cloud import firestore  # emulator or isolated-test project via ADC
 
         client = firestore.Client(project=config.project)
-    return FirestoreResearchResultStore(client, prefix=RESULT_COLLECTION_PREFIX)
+    return FirestoreResearchResultStore(client, prefix=prefix)
 
 
 class ResearchResultSync:

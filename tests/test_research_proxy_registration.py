@@ -86,6 +86,36 @@ class ResearchProxyRegistrationTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200, path)
             response.close()
 
+    def test_encoded_traversal_backups_and_streams_are_refused(self) -> None:
+        client = self.app_module.app.test_client()
+        for path in ("/%2e%2e/app.py", "/static/%2e%2e/app.py", "/static/..%2fapp.py", "/%252e%252e/app.py",
+                     "/static%5c..%5capp.py", "/static/%5c..%5capp.py", "/app.py%00.html", "/style.css::$DATA",
+                     "/index.html~", "/static/./script.js", "//etc/passwd", "/financial_risk.db%2ehtml",
+                     "/templates/../app.py", "/static/script_backup.js"):
+            response = client.get(path)
+            self.assertIn(response.status_code, (400, 404), path)
+            self.assertNotIn(b"import ", response.data, path)
+            response.close()
+        servable = self.app_module._servable
+        for name in ("static/script_backup.js", "static/script_before_summary.js", "index.html.bak", "app.html.orig",
+                     "x.tmp.js", "a:b.html", "%2e%2e.html", "static\\..\\app.py", "a\x00.html"):
+            self.assertFalse(servable(name), name)
+        for name in ("index.html", "historical-research.js", "static/script.js", "templates/index.html", "style.css"):
+            self.assertTrue(servable(name), name)
+
+    def test_every_root_web_asset_is_a_tracked_site_file(self) -> None:
+        import subprocess
+
+        tracked = set(subprocess.run(["git", "ls-files", "*.html", "*.js", "*.css"], cwd=ROOT, capture_output=True,
+                                     text=True, check=True).stdout.split())
+        on_disk = {p.name for p in ROOT.iterdir() if p.is_file() and p.suffix in {".html", ".js", ".css"}}
+        self.assertFalse(on_disk - tracked, "untracked root web files would be publicly served")
+        client = self.app_module.app.test_client()
+        for name in sorted(on_disk):
+            response = client.get(f"/{name}")
+            self.assertEqual(response.status_code, 200, name)
+            response.close()
+
     def test_unconfigured_backend_returns_a_structured_error(self) -> None:
         app = Flask(__name__)
         app.register_blueprint(create_research_blueprint(client=FinTrustClient(

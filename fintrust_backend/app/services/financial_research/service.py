@@ -21,9 +21,10 @@ from app.services.financial_research.financial_features import compute_features
 from app.services.financial_research.input_snapshot import APPROVED_BASELINE, build_snapshot, safe_official_url
 from app.services.financial_research.literature_models import model_readiness
 from app.services.financial_research.modes import AnalysisContext, AnalysisMode, AnalysisRequestError
+from app.services.financial_research.pdf_evidence import EXTRACTOR_VERSION as PDF_EXTRACTOR_VERSION
 from app.services.financial_research.pdf_evidence import ArchivePdfEvidenceProvider
 from app.services.financial_research.restatement_bridge import build_bridge
-from app.services.financial_research.source_reconciliation import reconcile
+from app.services.financial_research.source_reconciliation import freeze_dependencies, reconcile
 from app.services.financial_research.text_evidence_bridge import build_conference_repository, text_readiness
 from app.services.historical_audit.archive import RawEvidenceArchive
 from app.services.historical_audit.case_registry import UnknownHistoricalCaseError, load_cases
@@ -226,7 +227,12 @@ class ResearchService:
     def snapshot(self, ticker: str, context: AnalysisContext, *, start_year: int | None = None,
                  end_year: int | None = None, version_policy: str = "latest_available"):
         start, end = self._years(ticker, start_year, end_year)
-        return build_snapshot(self.backend, ticker, context, start_year=start, end_year=end, version_policy=version_policy)
+        snapshot = build_snapshot(self.backend, ticker, context, start_year=start, end_year=end,
+                                  version_policy=version_policy)
+        if context.mode is AnalysisMode.CURRENT_EVIDENCE_RECONCILIATION:
+            # every reconciliation dependency (summaries, PDF evidence) is frozen into the digest up front
+            freeze_dependencies(snapshot, self.backend, self.pdf_provider)
+        return snapshot
 
     def bridge(self, ticker: str, context: AnalysisContext, *, scope: str = "all") -> dict[str, Any]:
         case = self.case(ticker)
@@ -238,7 +244,7 @@ class ResearchService:
         snapshot = self.snapshot(ticker, context, start_year=start_year, end_year=end_year, version_policy=version_policy)
         if context.mode is AnalysisMode.CURRENT_EVIDENCE_RECONCILIATION:
             result = compute_features(snapshot)
-            result["source_value_gap"] = reconcile(snapshot, self.backend, pdf_provider=self.pdf_provider)
+            result["source_value_gap"] = reconcile(snapshot)
         else:
             result = compute_features(snapshot)
         result["literature_models"] = model_readiness(snapshot)
@@ -251,7 +257,7 @@ class ResearchService:
 
     def discrepancies(self, ticker: str, context: AnalysisContext) -> dict[str, Any]:
         snapshot = self.snapshot(ticker, context)
-        return reconcile(snapshot, self.backend, pdf_provider=self.pdf_provider)
+        return reconcile(snapshot)
 
     def text(self, ticker: str, context: AnalysisContext) -> dict[str, Any]:
         case = self.case(ticker)
@@ -280,7 +286,7 @@ class ResearchService:
                                              version_policy=version_policy)
             method_ids = [ENGINE_VERSION, REGISTRY_VERSION, GATE_VERSION]
             if context.mode is AnalysisMode.CURRENT_EVIDENCE_RECONCILIATION:
-                method_ids.append(source_reconciliation.METHOD_VERSION)
+                method_ids += [source_reconciliation.METHOD_VERSION, PDF_EXTRACTOR_VERSION]
             parameters = {"statement_scope": "consolidated"}
         elif result_kind == "restatement_bridge":
             case = self.case(ticker)
@@ -290,8 +296,8 @@ class ResearchService:
         elif result_kind == "source_reconciliation":
             snapshot = self.snapshot(ticker, context, start_year=start_year, end_year=end_year,
                                      version_policy=version_policy)
-            output = reconcile(snapshot, self.backend, pdf_provider=self.pdf_provider)
-            method_ids, parameters = [source_reconciliation.METHOD_VERSION], {}
+            output = reconcile(snapshot)
+            method_ids, parameters = [source_reconciliation.METHOD_VERSION, PDF_EXTRACTOR_VERSION], {}
         else:
             raise AnalysisRequestError("result_kind_invalid", f"unknown result kind {result_kind}")
         return build_run(result_kind=result_kind, method_version="+".join(method_ids), method_ids=method_ids,

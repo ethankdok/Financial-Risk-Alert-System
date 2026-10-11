@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -64,6 +65,9 @@ CREATE TABLE IF NOT EXISTS case_research_labels (
     label_id TEXT PRIMARY KEY, ticker TEXT NOT NULL, label TEXT NOT NULL, outcome_known_at TEXT NOT NULL,
     legal_source TEXT NOT NULL, confidence TEXT NOT NULL, purpose TEXT NOT NULL, created_at TEXT NOT NULL);
 """
+
+
+RESULT_PREFIX_PATTERN = re.compile(r"historical_research(_[a-z0-9][a-z0-9_]{0,38})?_results")
 
 
 class ResultStoreIntegrityError(RuntimeError):
@@ -263,8 +267,8 @@ class FirestoreResearchResultStore:
     CHUNK = 400_000  # characters per output chunk (Firestore document limit is 1 MiB)
 
     def __init__(self, client: Any, *, prefix: str = "historical_research_results") -> None:
-        if not prefix.startswith("historical_research_results"):
-            raise ValueError("result collections must start with 'historical_research_results'")
+        if not RESULT_PREFIX_PATTERN.fullmatch(prefix):
+            raise ValueError("result collections must match 'historical_research[_<namespace>]_results'")
         self.client, self.prefix = client, prefix
 
     def _collection(self, kind: str):

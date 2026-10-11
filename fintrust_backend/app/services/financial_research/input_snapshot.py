@@ -105,21 +105,46 @@ class InputSnapshot:
     facts: list[dict[str, Any]] = field(default_factory=list)
     comparisons: list[dict[str, Any]] = field(default_factory=list)
     disclosed_values: list[dict[str, Any]] = field(default_factory=list)
+    # CURRENT_EVIDENCE_RECONCILIATION only: frozen by source_reconciliation.freeze_dependencies() so the
+    # reconciliation never queries data that is not part of the digest. Never populated for PIT/model inputs.
+    summary_observations: list[dict[str, Any]] = field(default_factory=list)
+    pdf_evidence: list[dict[str, Any]] = field(default_factory=list)
+    dependency_versions: dict[str, str] = field(default_factory=dict)
+    reconciliation_frozen: bool = False
 
     def identity(self) -> dict[str, Any]:
-        return {"snapshot_version": SNAPSHOT_VERSION, "ticker": self.ticker, **self.context.as_dict(),
-                "start_year": self.start_year, "end_year": self.end_year, "version_policy": self.version_policy}
+        identity = {"snapshot_version": SNAPSHOT_VERSION, "ticker": self.ticker, **self.context.as_dict(),
+                    "start_year": self.start_year, "end_year": self.end_year, "version_policy": self.version_policy}
+        if self.reconciliation_frozen:
+            identity["reconciliation_dependency_versions"] = dict(sorted(self.dependency_versions.items()))
+        return identity
+
+    def _payload(self) -> dict[str, Any]:
+        payload = {"identity": self.identity(), "facts": self.facts, "comparisons": self.comparisons,
+                   "disclosed_values": self.disclosed_values}
+        if self.reconciliation_frozen:
+            payload.update(summary_observations=self.summary_observations, pdf_evidence=self.pdf_evidence)
+        return payload
 
     @property
     def input_digest(self) -> str:
-        """SHA-256 of the canonical inputs (values, identities, evidence hashes, times) — no reviewer metadata."""
-        return digest({"identity": self.identity(), "facts": self.facts, "comparisons": self.comparisons,
-                       "disclosed_values": self.disclosed_values})
+        """SHA-256 of the canonical inputs (values, identities, evidence hashes, times) — no reviewer metadata.
+
+        For reconciliation snapshots this includes the frozen summary rows and PDF evidence (content, identity and
+        parser version), so any change to a reconciliation dependency changes the digest and the run id."""
+        return digest(self._payload())
+
+    def dependency_digests(self) -> dict[str, str]:
+        return {name: digest(value) for name, value in self._payload().items() if name != "identity"}
 
     def describe(self) -> dict[str, Any]:
-        return {**self.identity(), "backend": self.backend_name, "input_digest": self.input_digest,
-                "fact_count": len(self.facts), "comparison_count": len(self.comparisons),
-                "disclosed_value_count": len(self.disclosed_values), "approved_baseline": APPROVED_BASELINE}
+        description = {**self.identity(), "backend": self.backend_name, "input_digest": self.input_digest,
+                       "fact_count": len(self.facts), "comparison_count": len(self.comparisons),
+                       "disclosed_value_count": len(self.disclosed_values), "approved_baseline": APPROVED_BASELINE}
+        if self.reconciliation_frozen:
+            description.update(summary_observation_count=len(self.summary_observations),
+                               pdf_evidence_count=len(self.pdf_evidence), dependency_digests=self.dependency_digests())
+        return description
 
 
 def _comparison_view(row: dict[str, Any]) -> dict[str, Any]:

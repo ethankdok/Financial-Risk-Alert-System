@@ -110,12 +110,16 @@ class ResultSyncEmulatorTests(unittest.TestCase):
     def test_sqlite_and_emulator_result_stores_agree(self) -> None:
         from google.cloud import firestore
 
-        config = HistoricalCloudConfig.from_env({
-            "HISTORICAL_CLOUD_SYNC_ENABLED": "true", "HISTORICAL_CLOUD_ENVIRONMENT": "emulator",
-            "FIRESTORE_EMULATOR_HOST": os.environ["FIRESTORE_EMULATOR_HOST"], "HISTORICAL_CLOUD_PROJECT": "demo-fintrust",
-            "HISTORICAL_CLOUD_BUCKET": "demo-fintrust-bucket"})
-        client = firestore.Client(project=config.project)
-        target = FirestoreResearchResultStore(client, prefix=f"historical_research_results_e{os.getpid()}")
+        def config(namespace):
+            return HistoricalCloudConfig.from_env({
+                "HISTORICAL_CLOUD_SYNC_ENABLED": "true", "HISTORICAL_CLOUD_ENVIRONMENT": "emulator",
+                "FIRESTORE_EMULATOR_HOST": os.environ["FIRESTORE_EMULATOR_HOST"], "HISTORICAL_CLOUD_PROJECT": "demo-fintrust",
+                "HISTORICAL_CLOUD_BUCKET": "demo-fintrust-bucket",
+                "HISTORICAL_CLOUD_COLLECTION_PREFIX": f"historical_research_{namespace}{os.getpid()}"})
+        client = firestore.Client(project="demo-fintrust")
+        target = build_cloud_result_store(config("ea"), client=client)  # namespace derived from the config
+        other = build_cloud_result_store(config("eb"), client=client)
+        self.assertEqual(target.prefix, f"historical_research_ea{os.getpid()}_results")
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             source = SqliteResearchResultStore(Path(directory) / "r.sqlite3")
             for run in make_runs(3):
@@ -126,6 +130,7 @@ class ResultSyncEmulatorTests(unittest.TestCase):
             for summary in source.list_runs("1785"):
                 strip = lambda r: {k: v for k, v in r.items() if k != "created_at"}  # noqa: E731
                 self.assertEqual(strip(target.get_run(summary["run_id"])), strip(source.get_run(summary["run_id"])))
+                self.assertIsNone(other.get_run(summary["run_id"]))  # isolated namespaces never share results
 
 
 if __name__ == "__main__":

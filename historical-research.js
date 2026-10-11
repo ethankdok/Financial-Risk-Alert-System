@@ -29,6 +29,7 @@
     NOT_APPLICABLE: ['not-applicable', 'NOT_APPLICABLE 不適用'], not_applicable: ['not-applicable', '不適用'],
     NOT_READY: ['not-ready', 'NOT_READY 資料資格未通過'], match: ['ready', '一致'], not_comparable: ['not-applicable', '不可比較'],
     CONSISTENT: ['ready', '一致'],
+    INCONCLUSIVE_NOT_COMPARABLE: ['not-applicable', '無可比較項目（不判定一致）'],
   };
   const FEATURE_LABELS = {
     gross_margin: '毛利率', cogs_sales_ratio: '營業成本率', operating_margin: '營業利益率', net_margin: '淨利率',
@@ -227,14 +228,18 @@
         <td class="num">${groupDigits(i.board_notice_value)} 千元</td><td class="num">${groupDigits(i.filed_value_thousand_twd)} 千元</td>
         <td class="num"><strong>${groupDigits(i.difference_thousand_twd)} 千元</strong></td></tr>`).join('');
       const pdf = f.audited_pdf || {};
-      const checks = (pdf.checks || []).map((c) => `<li>${escapeHtml(c.pdf_line)}（等於申報 XBRL：${c.equals_filed_xbrl ? '是' : '否'}；等於董事會公告：${c.equals_board_notice ? '是' : '否'}）</li>`).join('');
+      const checks = (pdf.checks || []).map((c) => (c.status === 'compared'
+        ? `<li>${escapeHtml(c.pdf_line)}（等於申報 XBRL：${c.equals_filed_xbrl ? '是' : '否'}；等於董事會公告：${c.equals_board_notice ? '是' : '否'}）</li>`
+        : `<li>${escapeHtml(METRIC_LABELS[c.metric] || c.metric)}：${badge('not_comparable')} ${escapeHtml((c.reasons || []).join(', '))}</li>`)).join('');
+      const identity = pdf.identity_checks ? Object.entries(pdf.identity_checks).map(([k, v]) => `${escapeHtml(k)}=${escapeHtml(v)}`).join('；')
+        : `PDF 證據不可用：${escapeHtml(pdf.reason || '')}`;
       return `<div class="panel"><h3>${escapeHtml(f.period)} ${escapeHtml(f.statement_scope)}：來源數值差異待查證 ${badge('mismatch_unresolved')}</h3>
         <div class="table-wrap"><table><thead><tr><th>科目</th><th class="num">董事會公告</th><th class="num">申報 XBRL／查核 PDF</th><th class="num">差額</th></tr></thead><tbody>${items}</tbody></table></div>
         <div class="compare"><div class="source"><strong>來源 A：董事會決議公告</strong><br>${escapeHtml(f.board_notice.announcement_key)}　公開 ${escapeHtml(f.board_notice.notice_published_at)}<br>
           SHA-256 <span class="mono">${escapeHtml(f.board_notice.notice_sha256)}</span><br>${safeLink(f.board_notice.source_url, 'MOPS 公告查詢頁')}</div>
         <div class="source"><strong>來源 B：申報 XBRL 與查核財報 PDF</strong><br>XBRL SHA-256 <span class="mono">${escapeHtml(f.filed_report.artifact_sha256)}</span>（${escapeHtml(f.filed_report.artifact_evidence_status)}）<br>${safeLink(f.filed_report.artifact_url, 'XBRL 下載')}<br>
           PDF 第 ${escapeHtml(pdf.pdf_page_index || '—')} 頁（頁碼 ${escapeHtml(pdf.printed_page_label || '—')}）SHA-256 <span class="mono">${escapeHtml(pdf.pdf_sha256 || '')}</span><br>${safeLink(pdf.source_url, '查核財報 PDF')}</div></div>
-        <ul>${checks}</ul><p class="warning" role="note">原因：未證實（cause=${escapeHtml(f.cause)}）。${escapeHtml(f.explanation_limits)}</p>
+        <p class="muted">PDF 身分檢查（單位／年度／合併範圍）：${identity}</p><ul>${checks}</ul><p class="warning" role="note">原因：未證實（cause=${escapeHtml(f.cause)}）。${escapeHtml(f.explanation_limits)}</p>
         <p class="muted">不轉入風險分數（routes_to_risk_score=false）；不產生舞弊標籤。</p></div>`;
     }).join('');
     return `${modeLine(data)}<p>${badge(data.status)} 一致性：${badge(data.consistency)}</p>

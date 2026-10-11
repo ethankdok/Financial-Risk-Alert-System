@@ -31,7 +31,7 @@ from app.services.financial_research.result_store import (
     SqliteResearchResultStore,
     build_run,
 )
-from app.services.financial_research.source_reconciliation import compare_board_notices, reconcile
+from app.services.financial_research.source_reconciliation import compare_board_notices, freeze_dependencies, reconcile
 from tests.historical_cloud_fakes import FakeFirestoreClient, ServiceUnavailable
 
 PACKAGE = Path(__file__).resolve().parents[1] / "app" / "services" / "financial_research"
@@ -245,7 +245,7 @@ class LiteratureGateTests(unittest.TestCase):
 
 class ReconciliationTests(unittest.TestCase):
     def notice(self, metric, value, *, scope="consolidated", unit="TWD", period="2025FY", label="期末總資產"):
-        return {"disclosure_kind": "annual", "period": period, "fiscal_year": int(period[:4]), "statement_scope": scope,
+        return {"disclosure_kind": "annual_financial_report_board_approval", "period": period, "fiscal_year": int(period[:4]), "statement_scope": scope,
                 "accounting_framework": "TIFRS", "source_label": label, "canonical_metric": metric,
                 "value": str(int(value) // 1000), "published_unit": "TWD_thousand", "normalized_value": value,
                 "normalized_unit": unit, "disclosed_at": "2026-03-06T18:41:23+08:00", "availability_status": "verified",
@@ -272,14 +272,19 @@ class ReconciliationTests(unittest.TestCase):
 
         snap = snapshot([fact(2025, "total_assets", "34434450000")], context=RECON, start=2025, end=2025,
                         disclosed=[self.notice("total_assets", "34436171000")])
-        result = reconcile(snap, Backend())
+        with self.assertRaises(AnalysisRequestError):  # unfrozen inputs are never reconciled
+            reconcile(snap)
+        result = reconcile(freeze_dependencies(snap, Backend(), None))
         self.assertFalse(result["routes_to_risk_score"])
         finding = result["discrepancies"][0]
         self.assertEqual((finding["status"], finding["cause"], finding["fraud_label"], finding["routes_to_risk_score"]),
                          ("mismatch_unresolved", "unverified", None, False))
-        self.assertEqual(finding["audited_pdf"]["status"], "pdf_evidence_unavailable_in_this_deployment")
+        self.assertEqual((finding["audited_pdf"]["status"], finding["audited_pdf"]["reason"]),
+                         ("unavailable", "pdf_evidence_not_available_in_this_deployment"))
         with self.assertRaises(ModeNotSupportedError):
-            reconcile(snapshot([], context=RETRO), Backend())
+            reconcile(snapshot([], context=RETRO))
+        with self.assertRaises(ModeNotSupportedError):
+            freeze_dependencies(snapshot([], context=RETRO), Backend(), None)
 
 
 class IsolationTests(unittest.TestCase):
