@@ -30,6 +30,26 @@
     NOT_READY: ['not-ready', 'NOT_READY 資料資格未通過'], match: ['ready', '一致'], not_comparable: ['not-applicable', '不可比較'],
     CONSISTENT: ['ready', '一致'],
     INCONCLUSIVE_NOT_COMPARABLE: ['not-applicable', '無可比較項目（不判定一致）'],
+    source_unavailable: ['not-computable', '來源不可用（無可機讀報表）'],
+    model_formula_unverified: ['unverified', '模型公式未經原文驗證（停用）'],
+    missing_t_minus_2: ['not-computable', '缺 t−2 期資料'],
+    accounting_regime_break: ['not-computable', '會計制度斷層（TW-GAAP／TIFRS 不混用）'],
+    ambiguous_version: ['unverified', '版本不明確（不依順序選取）'],
+    approval_pending: ['partial', '方法待負責人核准（DRAFT）'],
+    issuance_absence_not_evidenced: ['not-computable', '發行事件無證據（未知，不視為 0）'],
+    missing_input: ['not-computable', '缺少輸入'],
+    computed_score: ['ready', '已計算（原論文美國樣本尺度）'],
+    comparable: ['ready', '可比較（同一觀測）'],
+    source_verified_published: ['ready', '期刊正式版原文已核對'],
+    source_verified_author_manuscript: ['partial', '作者手稿原文已核對（期刊版未核對）'],
+  };
+  const LITERATURE_VARIABLES = {
+    beneish_1999_full8_v1: ['DSRI', 'GMI', 'AQI', 'SGI', 'DEPI', 'SGAI', 'LVGI', 'TATA'],
+    dechow_2011_model1_v1: ['rsst_acc', 'ch_rec', 'ch_inv', 'soft_assets', 'ch_cs', 'ch_roa', 'issue'],
+  };
+  const MODEL_LABELS = {
+    beneish_1999_full8_v1: 'Beneish (1999) 8 變數 M-Score',
+    dechow_2011_model1_v1: 'Dechow et al. (2011) Model 1 F-Score',
   };
   const FEATURE_LABELS = {
     gross_margin: '毛利率', cogs_sales_ratio: '營業成本率', operating_margin: '營業利益率', net_margin: '淨利率',
@@ -265,6 +285,134 @@
       <p class="muted">${escapeHtml(data.ownership)}</p>`;
   }
 
+  // ------------------------------------------------------------------ literature models (Beneish × Dechow)
+  function literatureStatus(row) {
+    if (!row) return badge('not_applicable');
+    if (row.status === 'computed') return badge('computed_score');
+    const reasons = (row.missing_inputs || []).map((m) => m.status).concat(row.reasons || []);
+    if (reasons.some((r) => String(r).startsWith('missing_t_minus_2'))) return `${badge('not_computable')} ${badge('missing_t_minus_2')}`;
+    if (reasons.some((r) => String(r).includes('issuance_absence_not_evidenced'))) return `${badge('not_computable')} ${badge('issuance_absence_not_evidenced')}`;
+    if (reasons.some((r) => String(r).includes('accounting_regime_break'))) return `${badge('not_computable')} ${badge('accounting_regime_break')}`;
+    return badge(row.status);
+  }
+
+  function componentCell(component) {
+    if (!component) return '<td class="cell heat-na">—</td>';
+    if (component.status === 'computed') return `<td class="cell num">${escapeHtml(component.value)}</td>`;
+    const code = ((component.reasons || [])[0] || {}).code || component.status;
+    return `<td class="cell heat-na" title="${escapeHtml((component.reasons || []).map((r) => `${r.code} ${r.metric || ''} ${r.relative_period || ''}`).join('; '))}">${badge(code)}</td>`;
+  }
+
+  function scoreTrend(pairs) {
+    const points = pairs.filter((p) => p.comparable);
+    if (points.length < 2) return '<p class="muted">可比較年度少於 2 年，不繪製趨勢（不比較不可比較年度）。</p>';
+    const years = points.map((p) => p.fiscal_year);
+    const xs = (y) => 40 + ((y - years[0]) / Math.max(1, years[years.length - 1] - years[0])) * 520;
+    const series = (key, transform, color) => {
+      const values = points.map((p) => Number(p[key].score));
+      const min = Math.min(...values); const max = Math.max(...values);
+      const ys = (v) => 150 - ((v - min) / Math.max(1e-9, max - min)) * 120;
+      return `<polyline fill="none" stroke="${color}" stroke-width="2" points="${points.map((p, i) => `${xs(p.fiscal_year)},${ys(values[i])}`).join(' ')}"/>`
+        + points.map((p, i) => `<circle cx="${xs(p.fiscal_year)}" cy="${ys(values[i])}" r="3" fill="${color}"><title>${escapeHtml(transform)} FY${p.fiscal_year}: ${escapeHtml(p[key].score)}</title></circle>`).join('');
+    };
+    return `<svg role="img" aria-label="僅可比較年度的分數走勢（各自尺度標準化）" viewBox="0 0 600 170" style="width:100%;max-width:640px;background:#fff;border:1px solid #e2e8f1;border-radius:8px">
+      ${series('beneish', 'M-Score', '#1847a8')}${series('dechow', 'F-Score', '#b5541c')}
+      ${years.map((y) => `<text x="${xs(y)}" y="166" font-size="10" text-anchor="middle">${y}</text>`).join('')}</svg>
+      <p class="muted">藍：Beneish M-Score；橙：Dechow F-Score。兩條線各自依其最小／最大值縮放，只顯示形狀，不可互相比大小；只連接兩模型都已計算的同一觀測。</p>`;
+  }
+
+  function renderLiterature(data) {
+    const models = data.models || {};
+    const results = models.results || {};
+    const years = [...new Set(Object.values(results).flat().map((r) => r.fiscal_year))].sort();
+    const byModel = {};
+    Object.entries(results).forEach(([id, rows]) => { byModel[id] = {}; rows.forEach((r) => { byModel[id][r.fiscal_year] = r; }); });
+    const selection = {};
+    (models.filing_selection || []).forEach((s) => { selection[s.fiscal_year] = s; });
+    const cov = data.coverage || {};
+    const hindsight = data.hindsight ? '<div class="warning" role="note">hindsight=true：事後重建，使用事件後才公開或重編後的資料；不得解讀為事前預警能力。</div>' : '';
+    const strict = models.strict_note ? `<div class="warning" role="note">${escapeHtml(models.strict_note)}</div>` : '';
+    const rows = years.map((y) => {
+      const b = (byModel.beneish_1999_full8_v1 || {})[y];
+      const d = (byModel.dechow_2011_model1_v1 || {})[y];
+      const pair = (data.pairs || []).find((p) => p.fiscal_year === y) || {};
+      const obs = pair.observation || {};
+      const sel = selection[y] || {};
+      return `<tr><th><button type="button" class="cell-btn" data-literature-year="${y}">FY${y}</button></th>
+        <td>${escapeHtml(obs.accounting_framework || sel.accounting_framework || '—')}</td>
+        <td>${escapeHtml(obs.filing_version_type || '—')}${sel.problem ? `<br><small class="muted">${escapeHtml(sel.problem)}</small>` : ''}</td>
+        <td>${literatureStatus(b)}${b && b.score !== null && b.score !== undefined ? `<br><strong class="mono">${escapeHtml(b.score)}</strong>` : ''}</td>
+        <td>${literatureStatus(d)}${d && d.score !== null && d.score !== undefined ? `<br><strong class="mono">${escapeHtml(d.score)}</strong><br><small>p=${escapeHtml(d.probability_original_model)}</small>` : ''}</td>
+        <td>${pair.comparable ? badge('comparable') : `<small class="muted">${escapeHtml((pair.reasons || []).join(', '))}</small>`}</td></tr>`;
+    }).join('');
+    const heat = (modelId) => {
+      const vars = LITERATURE_VARIABLES[modelId];
+      const head = years.map((y) => `<th class="num">FY${y}</th>`).join('');
+      const body = vars.map((v) => `<tr><th>${escapeHtml(v)}</th>${years.map((y) => {
+        const r = (byModel[modelId] || {})[y];
+        return componentCell(r && (r.components || []).find((c) => c.variable === v));
+      }).join('')}</tr>`).join('');
+      return `<h3>${escapeHtml(MODEL_LABELS[modelId])}：變數 × 年度（缺漏熱圖）</h3>
+        <div class="table-wrap"><table class="heat"><thead><tr><th>變數</th>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+    };
+    return `${modeLine(data)}${hindsight}${strict}
+      <div class="disclaimer" role="note">已發表模型的原始美國樣本係數重現；不是台灣校準的舞弊機率、不是確認舞弊、不是交易訊號，也不進入 2330／2454 正式風險分數。原論文門檻（Beneish −1.78、Dechow F=1.00）只作為原樣本參考點，不在台灣套用。方法狀態：${badge('approval_pending')}</div>
+      <div class="grid">${stat('請求年度', cov.years_requested, data.version_policy)}${stat('可比較配對', cov.comparable_pairs, '兩模型皆已計算且觀測相同')}
+      ${stat('Beneish 已計算', cov.beneish_computed, '8 變數齊全才計分')}${stat('Dechow 已計算', cov.dechow_computed, '7 變數齊全才計分')}</div>
+      <h3>兩模型並列（點選年度看 t／t−1／t−2 來源）</h3>
+      <div class="table-wrap"><table><thead><tr><th>年度</th><th>會計制度</th><th>申報版本</th><th>Beneish M-Score</th><th>Dechow F-Score</th><th>配對</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <h3>分數走勢（僅限可比較年度）</h3>${scoreTrend(data.pairs || [])}
+      ${heat('beneish_1999_full8_v1')}${heat('dechow_2011_model1_v1')}
+      <p class="muted">一致性描述（僅計可比較配對，分母 ${escapeHtml((data.concordance || {}).denominator)}）：同在原樣本參考點同側 ${escapeHtml((data.concordance || {}).same_side_of_original_benchmarks)}。${escapeHtml(data.performance_metrics_reason || '')}</p>
+      <details><summary>限制</summary><ul>${(data.limitations || []).map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul></details>`;
+  }
+
+  function renderLiteratureYear(data, year) {
+    const results = ((data.models || {}).results) || {};
+    const blocks = Object.entries(results).map(([modelId, rows]) => {
+      const row = rows.find((r) => r.fiscal_year === Number(year));
+      if (!row) return '';
+      const comps = (row.components || []).map((c) => {
+        const inputs = (c.inputs || []).map((i) => {
+          const src = (i.source_observations || [])[0] || {};
+          return `<tr><td>${escapeHtml(i.metric)}</td><td>${escapeHtml(i.relative_period)}（FY${escapeHtml(i.fiscal_year)}）</td>
+            <td class="num">${thousand(i.value_twd)}</td><td class="mono">${escapeHtml(i.filing_version_id)}</td>
+            <td class="mono">${escapeHtml(src.source_concept || '')}</td><td class="mono">${escapeHtml((src.raw_sha256 || '').slice(0, 16))}…</td>
+            <td>${(i.warnings || []).map((w) => `<small class="muted">${escapeHtml(w)}</small>`).join('<br>')}</td></tr>`;
+        }).join('');
+        const evidence = (c.evidence || []).map((e) => `<li>${escapeHtml(e.source_concept)}：${thousand(e.value_twd)}（<span class="mono">${escapeHtml((e.raw_sha256 || '').slice(0, 16))}…</span>）</li>`).join('');
+        const reasons = (c.reasons || []).map((r) => `<li><span class="mono">${escapeHtml(r.code)}</span> ${escapeHtml(r.metric || '')} ${escapeHtml(r.relative_period || '')} ${escapeHtml(r.detail || '')}</li>`).join('');
+        return `<details><summary>${escapeHtml(c.variable)}：${c.status === 'computed' ? escapeHtml(c.value) : badge(c.status)}</summary>
+          ${reasons ? `<ul>${reasons}</ul>` : ''}${evidence ? `<ul>${evidence}</ul>` : ''}
+          ${inputs ? `<div class="table-wrap"><table><thead><tr><th>輸入</th><th>期間</th><th class="num">金額</th><th>申報版本</th><th>來源科目</th><th>原始檔 SHA-256</th><th>警示</th></tr></thead><tbody>${inputs}</tbody></table></div>` : ''}</details>`;
+      }).join('');
+      const warnings = (row.validation_warnings || []).map((w) => `<li class="mono">${escapeHtml(w)}</li>`).join('');
+      return `<div class="panel"><h3>${escapeHtml(MODEL_LABELS[modelId] || modelId)} — FY${escapeHtml(year)} ${literatureStatus(row)}</h3>
+        <p>分數：<strong class="mono">${escapeHtml(row.score === null || row.score === undefined ? '無（不以 0 代替）' : row.score)}</strong>
+        ${row.probability_original_model ? `；原模型機率 ${escapeHtml(row.probability_original_model)}` : ''}${row.probit_probability_original_sample ? `；原樣本 probit 機率 ${escapeHtml(row.probit_probability_original_sample)}` : ''}</p>
+        <p class="muted">${escapeHtml(row.paper_variant || '')}</p>${comps}${warnings ? `<h4>驗證警示</h4><ul>${warnings}</ul>` : ''}</div>`;
+    }).join('');
+    return blocks || '<div class="state">此年度沒有結果。</div>';
+  }
+
+  function renderLiteratureModels(data) {
+    const models = (data.models || []).map((m) => {
+      const terms = (m.terms || []).map((t) => `<tr><td class="mono">${escapeHtml(t.variable)}</td><td class="num mono">${escapeHtml(t.coefficient)}</td>
+        <td>${escapeHtml(t.definition)}</td><td><small>${escapeHtml(t.location)}</small></td><td>${badge(t.verification)}</td></tr>`).join('');
+      const source = (data.paper_sources || {})[m.paper] || {};
+      return `<div class="panel"><h3>${escapeHtml(MODEL_LABELS[m.model_id] || m.model_id)} <span class="badge mode">${escapeHtml(m.formula_version)}</span></h3>
+        <p>${escapeHtml(source.citation || '')} DOI <span class="mono">${escapeHtml(source.doi || '')}</span></p>
+        <p class="muted">${escapeHtml(m.paper_variant)}</p>
+        <p>計分啟用：${m.score_enabled ? badge('READY') : badge('model_formula_unverified')}；方法核准：${badge('approval_pending')}（${escapeHtml(m.approval_status)}，資料來源屬性，非裝飾性標章）</p>
+        <p>截距 <span class="mono">${escapeHtml(m.intercept.value)}</span>（${escapeHtml(m.intercept.location)}）；轉換：${escapeHtml(JSON.stringify({ ...m.transformation, source: undefined }))}</p>
+        <div class="table-wrap"><table><thead><tr><th>變數</th><th class="num">係數</th><th>定義</th><th>原文位置</th><th>驗證層級</th></tr></thead><tbody>${terms}</tbody></table></div>
+        ${m.scaling ? `<p>F-Score 尺度：機率 ÷ <span class="mono">${escapeHtml(m.scaling.unconditional_probability)}</span>（${escapeHtml(m.scaling.derivation)}；${escapeHtml(m.scaling.source.location)}）。${escapeHtml(m.scaling.applicability)}</p>` : ''}
+        ${m.benchmark ? `<p class="muted">原樣本參考點：${escapeHtml(m.benchmark.score_cutoff || m.benchmark.f_score_one || '')}（${escapeHtml(m.benchmark.source.location)}）。${escapeHtml(m.benchmark.applicability)}</p>` : ''}
+        <p class="muted">原文核對副本 SHA-256 <span class="mono">${escapeHtml(((source.verified_text || {}).sha256) || '')}</span>（${escapeHtml(((source.verified_text || {}).version) || '')}；不再散布）</p></div>`;
+    }).join('');
+    return `${models}<p class="muted">輸入對照版本 ${escapeHtml(((data.input_mapping || {}).mapping_version) || '')}：${escapeHtml(((data.input_mapping || {}).mapping_status) || '')}</p>`;
+  }
+
   function cutoffValue(input) {
     const value = String(input || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(value)) return null;
@@ -281,6 +429,7 @@
     const $ = (id) => doc.getElementById(id);
     const loaded = {};
     let lastSignals = null;
+    let lastLiterature = null;
     const announce = (text) => { const live = $('liveStatus'); if (live) live.textContent = text; };
 
     async function load(target, url, render, options) {
@@ -345,6 +494,24 @@
       },
       discrepancy: () => load('discrepancyBody', `/api/research/cases/${TICKER}/source-discrepancies?analysis_mode=CURRENT_EVIDENCE_RECONCILIATION`, renderDiscrepancies),
       text: () => load('textBody', `/api/research/cases/${TICKER}/text-readiness?analysis_mode=RETROSPECTIVE_FORENSIC`, renderTextReadiness),
+      literature: async () => {
+        const mode = $('literatureMode').value;
+        const body = { ticker: TICKER, analysis_mode: mode, version_policy: $('literaturePolicy').value,
+          start_year: Number($('literatureStart').value), end_year: Number($('literatureEnd').value) };
+        if (mode === 'STRICT_AS_OF') {
+          body.cutoff_at = cutoffValue($('literatureCutoff').value);
+          if (!body.cutoff_at) { $('literatureBody').textContent = '請輸入完整截點時間'; return null; }
+        }
+        if (!loaded.literatureModels) {
+          loaded.literatureModels = true;
+          load('literatureModelsBody', '/api/research/literature/models', renderLiteratureModels);
+        }
+        const data = await load('literatureBody', '/api/research/literature/compare', (d) => renderLiterature(d.result || d),
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        lastLiterature = data ? (data.result || data) : null;
+        $('literatureDetail').innerHTML = '';
+        return lastLiterature;
+      },
     };
 
     const tabs = Array.from(doc.querySelectorAll('[role="tab"]'));
@@ -368,7 +535,8 @@
         if (event.key === 'End') { event.preventDefault(); select(tabs[tabs.length - 1], true); }
       });
     });
-    [['bridgeMode', 'bridgeCutoff'], ['timelineMode', 'timelineCutoff'], ['signalMode', 'signalCutoff']].forEach(([mode, cutoff]) => {
+    [['bridgeMode', 'bridgeCutoff'], ['timelineMode', 'timelineCutoff'], ['signalMode', 'signalCutoff'],
+      ['literatureMode', 'literatureCutoff']].forEach(([mode, cutoff]) => {
       const sync = () => { $(cutoff).disabled = $(mode).value !== 'STRICT_AS_OF'; };
       $(mode).addEventListener('change', sync);
       sync();
@@ -376,6 +544,11 @@
     $('bridgeLoad').addEventListener('click', () => views.bridge());
     $('timelineLoad').addEventListener('click', () => views.timeline());
     $('signalLoad').addEventListener('click', () => views.signals());
+    $('literatureLoad').addEventListener('click', () => views.literature());
+    $('literatureBody').addEventListener('click', (event) => {
+      const button = event.target.closest && event.target.closest('[data-literature-year]');
+      if (button && lastLiterature) $('literatureDetail').innerHTML = renderLiteratureYear(lastLiterature, button.dataset.literatureYear);
+    });
     $('signalsBody').addEventListener('click', (event) => {
       const button = event.target.closest && event.target.closest('[data-feature-index]');
       if (button && lastSignals) {
@@ -389,5 +562,6 @@
   }
 
   return { escapeHtml, safeLink, badge, thousand, percent, groupDigits, cutoffValue, renderOverview, renderBridge,
-    renderTimeline, renderSignals, renderFeatureDetail, renderDiscrepancies, renderTextReadiness, init };
+    renderTimeline, renderSignals, renderFeatureDetail, renderDiscrepancies, renderTextReadiness, renderLiterature,
+    renderLiteratureYear, renderLiteratureModels, init };
 }));

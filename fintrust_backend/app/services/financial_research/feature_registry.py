@@ -23,6 +23,7 @@ MISSING_REASONS = {
     "zero_denominator": "The denominator is exactly zero.",
     "negative_denominator": "The denominator is negative where the formula requires a positive base.",
     "version_mismatch": "Same-period components come from different filing versions.",
+    "ambiguous_version": "Several filing versions with different identities exist for one input; none is chosen by order.",
     "scope_mismatch": "Components are not all from the same statement scope.",
     "unit_mismatch": "Components are not all in TWD.",
     "accounting_regime_break": "t and t−1 are under different accounting frameworks; no comparison policy approved.",

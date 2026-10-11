@@ -129,6 +129,12 @@ class FinTrustClient:
         """Dry-run research computation; the browser path never persists a run."""
         return self.request("POST", "/api/v1/research/financial-signals/compute", json_body={**body, "persist": False})
 
+    def research_literature(self, action: str, body: dict[str, Any]) -> Any:
+        """Dry-run literature-model compute / compare; the browser path never persists a run."""
+        if action not in ("compute", "compare"):
+            raise ValueError("unknown literature action")
+        return self.request("POST", f"/api/v1/research/literature/{action}", json_body={**body, "persist": False})
+
     def analyze_official_data_shift(self, company_code: str, period_1: str | None = None,
                                     period_2: str | None = None) -> Any:
         """Official conference-document JSD / cosine analysis (no ingestion token needed)."""

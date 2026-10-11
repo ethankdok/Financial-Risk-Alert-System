@@ -27,6 +27,7 @@ from app.services.financial_research.case_knowledge import accounting_regime
 from app.services.financial_research.input_snapshot import InputSnapshot, digest, safe_official_url
 from app.services.financial_research.modes import AnalysisMode, AnalysisRequestError, ModeNotSupportedError
 from app.services.financial_research.pdf_evidence import EXTRACTOR_VERSION, unavailable
+from app.services.financial_research.version_selection import FactIndex, build_index
 
 METHOD_ID = "source_reconciliation"
 METHOD_VERSION = "source_reconciliation_v2"
@@ -78,8 +79,13 @@ def freeze_dependencies(snapshot: InputSnapshot, backend: Any, pdf_provider: Any
 
 
 # ---------------------------------------------------------------------------------------------- comparisons
-def _fact_index(snapshot: InputSnapshot) -> dict[tuple[str, str, str], dict[str, Any]]:
-    return {(f["period"], f["statement_scope"], f["metric_code"]): f for f in snapshot.facts}
+def _fact_index(snapshot: InputSnapshot) -> FactIndex:
+    """Version-aware, order-independent index (F05): an ambiguous key is never resolved by input order."""
+    return build_index(snapshot.facts)
+
+
+def _ambiguous_source(facts: FactIndex, key: tuple) -> dict[str, Any]:
+    return {"source_type": "filed_xbrl_fact_candidates", "candidates": facts.candidates(key)}
 
 
 def _outcome(a: Decimal | None, b: Decimal | None) -> str:
@@ -128,7 +134,12 @@ def compare_board_notices(snapshot: InputSnapshot) -> list[dict[str, Any]]:
             rows.append({**base, "outcome": "not_comparable", "reasons": ["no_verified_canonical_metric_mapping"],
                          "source_b": None})
             continue
-        fact = facts.get((value["period"], value["statement_scope"], metric))
+        key = (value["period"], value["statement_scope"], metric)
+        fact, ambiguity = facts.lookup(key)
+        if ambiguity:
+            rows.append({**base, "outcome": "not_comparable", "reasons": [ambiguity],
+                         "source_b": _ambiguous_source(facts, key)})
+            continue
         if fact is None:
             rows.append({**base, "outcome": "not_comparable", "reasons": ["no_filed_fact_same_period_scope_metric"],
                          "source_b": None})
@@ -171,7 +182,12 @@ def compare_restatement_post_side(snapshot: InputSnapshot) -> list[dict[str, Any
         base = {"comparison_type": "restatement_notice_post_vs_restated_xbrl", "period": comparison["period"],
                 "fiscal_year": comparison["fiscal_year"], "statement_scope": comparison["statement_scope"],
                 "accounting_framework": comparison["accounting_framework"], "metric": metric}
-        fact = facts.get((comparison["period"], comparison["statement_scope"], metric))
+        key = (comparison["period"], comparison["statement_scope"], metric)
+        fact, ambiguity = facts.lookup(key)
+        if ambiguity:
+            rows.append({**base, "source_a": source_a, "source_b": _ambiguous_source(facts, key),
+                         "outcome": "not_comparable", "reasons": [ambiguity], "difference": None})
+            continue
         if fact is None:
             rows.append({**base, "source_a": source_a, "source_b": None, "outcome": "not_comparable",
                          "reasons": ["no_filed_fact_same_period_scope_metric"], "difference": None})

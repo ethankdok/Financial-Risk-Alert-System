@@ -16,6 +16,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from app.services.financial_research.modes import AnalysisContext, AnalysisMode, AnalysisRequestError
+from app.services.financial_research.version_selection import fact_sort_key
 from app.services.historical_audit.models import parse_timestamp
 
 SNAPSHOT_VERSION = "input_snapshot_v1"
@@ -111,12 +112,20 @@ class InputSnapshot:
     pdf_evidence: list[dict[str, Any]] = field(default_factory=list)
     dependency_versions: dict[str, str] = field(default_factory=dict)
     reconciliation_frozen: bool = False
+    # Literature models only: selected filing versions per fiscal year and their line-level observations, frozen
+    # by literature_comparison.freeze_literature_inputs() together with the registry / mapping / extractor versions.
+    literature_filings: list[dict[str, Any]] = field(default_factory=list)
+    literature_observations: list[dict[str, Any]] = field(default_factory=list)
+    literature_versions: dict[str, str] = field(default_factory=dict)
+    literature_frozen: bool = False
 
     def identity(self) -> dict[str, Any]:
         identity = {"snapshot_version": SNAPSHOT_VERSION, "ticker": self.ticker, **self.context.as_dict(),
                     "start_year": self.start_year, "end_year": self.end_year, "version_policy": self.version_policy}
         if self.reconciliation_frozen:
             identity["reconciliation_dependency_versions"] = dict(sorted(self.dependency_versions.items()))
+        if self.literature_frozen:
+            identity["literature_dependency_versions"] = dict(sorted(self.literature_versions.items()))
         return identity
 
     def _payload(self) -> dict[str, Any]:
@@ -124,6 +133,9 @@ class InputSnapshot:
                    "disclosed_values": self.disclosed_values}
         if self.reconciliation_frozen:
             payload.update(summary_observations=self.summary_observations, pdf_evidence=self.pdf_evidence)
+        if self.literature_frozen:
+            payload.update(literature_filings=self.literature_filings,
+                           literature_observations=self.literature_observations)
         return payload
 
     @property
@@ -133,6 +145,15 @@ class InputSnapshot:
         For reconciliation snapshots this includes the frozen summary rows and PDF evidence (content, identity and
         parser version), so any change to a reconciliation dependency changes the digest and the run id."""
         return digest(self._payload())
+
+    def base_input_digest(self) -> str:
+        """Digest of the base inputs only (identity without frozen reconciliation dependencies, facts, comparisons,
+        disclosed values). It equals the ``input_digest`` definition of every pre-v2 snapshot, so a stored legacy run
+        can still be checked for a genuine source change after its method was retired (finding F06)."""
+        identity = {key: value for key, value in self.identity().items()
+                    if key not in ("reconciliation_dependency_versions", "literature_dependency_versions")}
+        return digest({"identity": identity, "facts": self.facts, "comparisons": self.comparisons,
+                       "disclosed_values": self.disclosed_values})
 
     def dependency_digests(self) -> dict[str, str]:
         return {name: digest(value) for name, value in self._payload().items() if name != "identity"}
@@ -144,6 +165,10 @@ class InputSnapshot:
         if self.reconciliation_frozen:
             description.update(summary_observation_count=len(self.summary_observations),
                                pdf_evidence_count=len(self.pdf_evidence), dependency_digests=self.dependency_digests())
+        if self.literature_frozen:
+            description.update(literature_filing_count=len(self.literature_filings),
+                               literature_observation_count=len(self.literature_observations),
+                               dependency_digests=self.dependency_digests())
         return description
 
 
@@ -179,7 +204,9 @@ def build_snapshot(backend: Any, ticker: str, context: AnalysisContext, *, start
             available = parse_timestamp(row.get("effective_available_at"))
             if available is None or not available < context.cutoff_at:
                 raise AssertionError(f"strict reader returned {row['fact_id']} not available before the cutoff")
-    facts = [public_fact(row, context) for row in rows if row.get("source_kind") != "test_fixture"]
+    # canonical order (F05): permuting the backend's rows never changes the snapshot, its digest or any outcome
+    facts = sorted((public_fact(row, context) for row in rows if row.get("source_kind") != "test_fixture"),
+                   key=fact_sort_key)
     snapshot = InputSnapshot(ticker=ticker, context=context, start_year=start_year, end_year=end_year,
                              version_policy=version_policy, backend_name=getattr(backend, "backend_name", "unknown"),
                              facts=facts)

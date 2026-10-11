@@ -20,6 +20,11 @@ from app.services.financial_research.feature_registry import registry_payload
 from app.services.financial_research.financial_features import compute_features
 from app.services.financial_research.input_snapshot import APPROVED_BASELINE, build_snapshot, safe_official_url
 from app.services.financial_research.literature_models import model_readiness
+from app.services.financial_research.literature_store import (
+    DEFAULT_LITERATURE_DATABASE,
+    LiteratureInputStore,
+    LiteratureInputsUnavailable,
+)
 from app.services.financial_research.modes import AnalysisContext, AnalysisMode, AnalysisRequestError
 from app.services.financial_research.pdf_evidence import EXTRACTOR_VERSION as PDF_EXTRACTOR_VERSION
 from app.services.financial_research.pdf_evidence import ArchivePdfEvidenceProvider
@@ -36,6 +41,7 @@ DEFAULT_DATABASE = "./data/historical_audit/historical_audit.sqlite3"
 DEFAULT_RAW_ROOT = "./data/historical_audit/raw"
 DEFAULT_CONFERENCE_ROOT = "./data/historical-conference-pdfs"
 MAX_YEAR_SPAN = 15
+LITERATURE_RESULT_KINDS = ("literature_models", "literature_comparison")
 EVIDENCE_TIERS = {
     "official_listing": "E1_official_listing_metadata",
     "verified_official_quote": "E2_verified_notice_quote",
@@ -74,22 +80,26 @@ class ResearchConfig:
     database: str = DEFAULT_DATABASE
     raw_root: str = DEFAULT_RAW_ROOT
     conference_root: str = DEFAULT_CONFERENCE_ROOT
+    literature_database: str = DEFAULT_LITERATURE_DATABASE
 
     @classmethod
     def from_env(cls) -> "ResearchConfig":
         return cls(database=os.getenv("HISTORICAL_RESEARCH_DATABASE_PATH", DEFAULT_DATABASE),
                    raw_root=os.getenv("HISTORICAL_RESEARCH_RAW_ROOT", DEFAULT_RAW_ROOT),
-                   conference_root=os.getenv("HISTORICAL_RESEARCH_CONFERENCE_ROOT", DEFAULT_CONFERENCE_ROOT))
+                   conference_root=os.getenv("HISTORICAL_RESEARCH_CONFERENCE_ROOT", DEFAULT_CONFERENCE_ROOT),
+                   literature_database=os.getenv("LITERATURE_INPUTS_DATABASE_PATH", DEFAULT_LITERATURE_DATABASE))
 
 
 class ResearchService:
     def __init__(self, config: ResearchConfig | None = None, *, backend: Any = None, repository: Any = None,
-                 conference_repository: Any = "auto", pdf_provider: Any = "auto") -> None:
+                 conference_repository: Any = "auto", pdf_provider: Any = "auto",
+                 literature_store: Any = "auto") -> None:
         self.config = config or ResearchConfig.from_env()
         self._repository = repository
         self._backend = backend
         self._conference = conference_repository
         self._pdf = pdf_provider
+        self._literature = literature_store
 
     # ------------------------------------------------------------ wiring
     @property
@@ -117,6 +127,17 @@ class ResearchService:
             self._pdf = ArchivePdfEvidenceProvider(self.repository, RawEvidenceArchive(root)) if root.is_dir() else None
         return self._pdf
 
+    @property
+    def literature_store(self):
+        """Read-only literature-input sidecar, or ``None`` when this deployment has none (``source_unavailable``)."""
+        if self._literature == "auto":
+            try:
+                self._literature = LiteratureInputStore(self.config.literature_database, read_only=True,
+                                                        protected=(self.config.database,))
+            except LiteratureInputsUnavailable:
+                self._literature = None
+        return self._literature
+
     def health(self) -> dict[str, Any]:
         def check(fn):
             try:
@@ -127,6 +148,7 @@ class ResearchService:
                 "dataset_available": check(lambda: self.repository.is_initialized()),
                 "conference_archive_available": check(lambda: self.conference_repository is not None),
                 "pdf_evidence_available": check(lambda: self.pdf_provider is not None),
+                "literature_inputs_available": check(lambda: self.literature_store is not None),
                 "approved_baseline_commit": APPROVED_BASELINE["commit"]}
 
     # ------------------------------------------------------------ cases
@@ -270,11 +292,93 @@ class ResearchService:
         return text_readiness(self.conference_repository, ticker, context, start_year=case.coverage_start_year,
                               end_year=case.coverage_end_year, coverage_rows=coverage)
 
+    # ------------------------------------------------------------ literature models (Beneish 1999 / Dechow 2011)
+    def literature_registry(self) -> dict[str, Any]:
+        from app.services.financial_research.literature_inputs import mapping_payload
+        from app.services.financial_research.literature_method_registry import registry_payload
+
+        return {**registry_payload(), "input_mapping": mapping_payload(),
+                "inputs_available": self.literature_store is not None}
+
+    def literature_snapshot(self, ticker: str, context: AnalysisContext, *, start_year: int | None,
+                            end_year: int | None, version_policy: str):
+        from app.services.financial_research.literature_comparison import check_request, freeze_literature_inputs
+
+        check_request(context, version_policy)
+        start, end = self._years(ticker, start_year, end_year)
+        snapshot = build_snapshot(self.backend, ticker, context, start_year=start, end_year=end,
+                                  version_policy="latest_available" if version_policy != "original_only"
+                                  else "original_only", include_comparisons=False, include_disclosed=False)
+        snapshot.version_policy = version_policy
+        versions = self.backend.list_filing_versions(ticker, start - 2, end)
+        return freeze_literature_inputs(snapshot, versions, self.literature_store)
+
+    def literature_coverage(self, ticker: str, context: AnalysisContext, *, version_policy: str,
+                            start_year: int | None = None, end_year: int | None = None) -> dict[str, Any]:
+        from app.services.financial_research.literature_comparison import coverage_matrix
+
+        snapshot = self.literature_snapshot(ticker, context, start_year=start_year, end_year=end_year,
+                                            version_policy=version_policy)
+        store = self.literature_store
+        diagnostics = store.list_diagnostics(ticker) if store is not None else []
+        return coverage_matrix(snapshot, [{k: v for k, v in d.items() if k != "source_url"}
+                                          | {"source_url": safe_official_url(d.get("source_url"))} for d in diagnostics])
+
+    def literature_compute(self, ticker: str, context: AnalysisContext, *, model_ids: list[str],
+                           start_year: int | None, end_year: int | None, version_policy: str) -> dict[str, Any]:
+        from app.services.financial_research.literature_comparison import compute_models
+
+        snapshot = self.literature_snapshot(ticker, context, start_year=start_year, end_year=end_year,
+                                            version_policy=version_policy)
+        return compute_models(snapshot, model_ids)
+
+    def literature_compare(self, ticker: str, context: AnalysisContext, *, start_year: int | None,
+                           end_year: int | None, version_policy: str) -> dict[str, Any]:
+        from app.services.financial_research.literature_comparison import compare, compute_models
+        from app.services.financial_research.literature_method_registry import BENEISH_MODEL_ID, DECHOW_MODEL_ID
+
+        snapshot = self.literature_snapshot(ticker, context, start_year=start_year, end_year=end_year,
+                                            version_policy=version_policy)
+        computed = compute_models(snapshot, [BENEISH_MODEL_ID, DECHOW_MODEL_ID])
+        return {**compare(computed), "models": computed}
+
+    def literature_run(self, result_kind: str, ticker: str, context: AnalysisContext, *, start_year: int | None,
+                       end_year: int | None, version_policy: str, parameters: dict[str, Any]):
+        from app.services.financial_research import literature_comparison as lcmp
+        from app.services.financial_research.literature_extraction import EXTRACTOR_VERSION
+        from app.services.financial_research.literature_inputs import MAPPING_VERSION, PANEL_VERSION
+        from app.services.financial_research.literature_method_registry import (
+            BENEISH_MODEL_ID,
+            DECHOW_MODEL_ID,
+            REGISTRY_VERSION,
+        )
+
+        snapshot = self.literature_snapshot(ticker, context, start_year=start_year, end_year=end_year,
+                                            version_policy=version_policy)
+        if result_kind == "literature_comparison":
+            model_ids = [BENEISH_MODEL_ID, DECHOW_MODEL_ID]
+            computed = lcmp.compute_models(snapshot, model_ids)
+            output = {**lcmp.compare(computed), "models": computed}
+        else:
+            model_ids = sorted(set(parameters.get("model_ids") or []))
+            output = lcmp.compute_models(snapshot, model_ids)
+        method_ids = [*model_ids, lcmp.METHOD_VERSION, REGISTRY_VERSION, MAPPING_VERSION, PANEL_VERSION,
+                      EXTRACTOR_VERSION]
+        return snapshot, output, method_ids, {"model_ids": model_ids, "statement_scope": "consolidated"}
+
     # ------------------------------------------------------------ runs
     def build_run(self, result_kind: str, ticker: str, context: AnalysisContext, *, start_year: int | None = None,
                   end_year: int | None = None, version_policy: str = "latest_available", scope: str = "all",
-                  supersedes_run_id: str | None = None, git_commit: str | None = None) -> dict[str, Any]:
+                  supersedes_run_id: str | None = None, git_commit: str | None = None,
+                  parameters: dict[str, Any] | None = None) -> dict[str, Any]:
         """Compute one result kind and wrap it as an immutable, digest-identified run (not yet persisted)."""
+        return self._build(result_kind, ticker, context, start_year=start_year, end_year=end_year,
+                           version_policy=version_policy, scope=scope, supersedes_run_id=supersedes_run_id,
+                           git_commit=git_commit, parameters=parameters)[1]
+
+    def _build(self, result_kind: str, ticker: str, context: AnalysisContext, *, start_year: int | None,
+               end_year: int | None, version_policy: str, scope: str, supersedes_run_id: str | None,
+               git_commit: str | None, parameters: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
         from app.services.financial_research import restatement_bridge, source_reconciliation
         from app.services.financial_research.feature_registry import APPROVAL_STATUS, REGISTRY_VERSION
         from app.services.financial_research.financial_features import ENGINE_VERSION
@@ -298,26 +402,62 @@ class ResearchService:
                                      version_policy=version_policy)
             output = reconcile(snapshot)
             method_ids, parameters = [source_reconciliation.METHOD_VERSION, PDF_EXTRACTOR_VERSION], {}
+        elif result_kind in LITERATURE_RESULT_KINDS:
+            snapshot, output, method_ids, parameters = self.literature_run(
+                result_kind, ticker, context, start_year=start_year, end_year=end_year,
+                version_policy=version_policy, parameters=parameters or {})
         else:
             raise AnalysisRequestError("result_kind_invalid", f"unknown result kind {result_kind}")
-        return build_run(result_kind=result_kind, method_version="+".join(method_ids), method_ids=method_ids,
-                         approval_status=APPROVAL_STATUS, snapshot=snapshot.describe(), parameters=parameters,
-                         output=output, supersedes_run_id=supersedes_run_id, git_commit=git_commit)
+        return snapshot, build_run(result_kind=result_kind, method_version="+".join(method_ids), method_ids=method_ids,
+                                   approval_status=APPROVAL_STATUS, snapshot=snapshot.describe(), parameters=parameters,
+                                   output=output, supersedes_run_id=supersedes_run_id, git_commit=git_commit)
 
     def verify_run(self, stored: dict[str, Any]) -> dict[str, Any]:
-        """Recompute a persisted run from its recorded snapshot identity and compare digests (read-only)."""
+        """Recompute a persisted run from its recorded snapshot identity and compare digests (read-only).
+
+        Distinguishes (finding F06):
+
+        - ``reproducible``: same method version, same input digest, same output digest;
+        - ``method_version_changed``: the run was produced by a method version this build no longer implements
+          (``legacy_method_not_reproducible``); ``source_inputs_unchanged`` then states whether the archived base
+          inputs (facts, restatement comparisons, disclosed values) are still byte-identical, so a method upgrade is
+          never reported as a change of the approved historical data;
+        - ``inputs_changed_since_run``: same method version, different input digest (a genuine source change);
+        - ``output_differs_for_same_input``: same method and inputs, different output (determinism failure).
+
+        Stored runs are never rewritten; a method upgrade produces a new run id.
+        """
         from app.services.financial_research.modes import build_context
 
         snapshot = stored["snapshot"]
         context = build_context(snapshot["analysis_mode"], snapshot.get("cutoff_at"))
-        rebuilt = self.build_run(stored["result_kind"], stored["ticker"], context, start_year=snapshot["start_year"],
-                                 end_year=snapshot["end_year"], version_policy=snapshot["version_policy"],
-                                 scope=stored["parameters"].get("scope", "all"),
-                                 supersedes_run_id=stored.get("supersedes_run_id"))
+        rebuilt_snapshot, rebuilt = self._build(
+            stored["result_kind"], stored["ticker"], context, start_year=snapshot["start_year"],
+            end_year=snapshot["end_year"], version_policy=snapshot["version_policy"],
+            scope=stored["parameters"].get("scope", "all"), supersedes_run_id=stored.get("supersedes_run_id"),
+            git_commit=None, parameters=stored.get("parameters"))
+        same_method = rebuilt["method_version"] == stored["method_version"]
         same_input = rebuilt["input_digest"] == stored["input_digest"]
         same_output = rebuilt["output_digest"] == stored["output_digest"]
-        return {"run_id": stored["run_id"], "recomputed_run_id": rebuilt["run_id"],
-                "input_digest_matches": same_input, "output_digest_matches": same_output,
-                "status": "reproducible" if same_input and same_output else
-                          "inputs_changed_since_run" if not same_input else "output_differs_for_same_input",
-                "stored_input_digest": stored["input_digest"], "current_input_digest": rebuilt["input_digest"]}
+        result = {"run_id": stored["run_id"], "recomputed_run_id": rebuilt["run_id"],
+                  "stored_method_version": stored["method_version"], "current_method_version": rebuilt["method_version"],
+                  "method_version_matches": same_method,
+                  "input_digest_matches": same_input, "output_digest_matches": same_output,
+                  "stored_input_digest": stored["input_digest"], "current_input_digest": rebuilt["input_digest"]}
+        if not same_method:
+            base = getattr(rebuilt_snapshot, "base_input_digest", None)
+            unchanged = stored["input_digest"] in (rebuilt["input_digest"], base()) if base else None
+            result.update(status="method_version_changed", legacy_method_not_reproducible=True,
+                          source_inputs_unchanged=unchanged,
+                          note=("The stored run was produced by a retired method version; it stays append-only and "
+                                "auditable. Recomputing it requires the legacy method, which this build does not "
+                                "implement. A current-method run has a new run id."))
+        elif not same_input:
+            result.update(status="inputs_changed_since_run", legacy_method_not_reproducible=False,
+                          source_inputs_unchanged=False)
+        elif not same_output:
+            result.update(status="output_differs_for_same_input", legacy_method_not_reproducible=False,
+                          source_inputs_unchanged=True)
+        else:
+            result.update(status="reproducible", legacy_method_not_reproducible=False, source_inputs_unchanged=True)
+        return result

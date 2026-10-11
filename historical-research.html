@@ -91,6 +91,7 @@
       <button role="tab" id="tab-signals" aria-controls="view-signals" aria-selected="false" tabindex="-1" data-view="signals">財務訊號探索</button>
       <button role="tab" id="tab-discrepancy" aria-controls="view-discrepancy" aria-selected="false" tabindex="-1" data-view="discrepancy">FY2025 來源差異</button>
       <button role="tab" id="tab-text" aria-controls="view-text" aria-selected="false" tabindex="-1" data-view="text">法說會／JSD 資料品質</button>
+      <button role="tab" id="tab-literature" aria-controls="view-literature" aria-selected="false" tabindex="-1" data-view="literature">文獻模型比較（Beneish × Dechow）</button>
     </div>
     <p id="liveStatus" class="sr-only" role="status" aria-live="polite"></p>
 
@@ -134,6 +135,23 @@
 
     <section id="view-discrepancy" role="tabpanel" aria-labelledby="tab-discrepancy" class="panel" hidden><div id="discrepancyBody" class="state">載入中…</div></section>
     <section id="view-text" role="tabpanel" aria-labelledby="tab-text" class="panel" hidden><div id="textBody" class="state">載入中…</div></section>
+
+    <section id="view-literature" role="tabpanel" aria-labelledby="tab-literature" class="panel" hidden>
+      <h2>已發表文獻模型重現與比較</h2>
+      <p class="muted">Beneish (1999) 8 變數 M-Score 與 Dechow et al. (2011) Table 7 Model 1 F-Score，於同一凍結輸入、同一模式與截點下並列；缺資料時明示原因，不以 0 或低風險代替。</p>
+      <div class="controls">
+        <label>分析模式<select id="literatureMode"><option value="RETROSPECTIVE_FORENSIC">RETROSPECTIVE_FORENSIC</option><option value="STRICT_AS_OF">STRICT_AS_OF</option></select></label>
+        <label>截點（台北時間，不含）<input id="literatureCutoff" type="datetime-local" step="1" value="2016-05-13T00:00:00"></label>
+        <label>版本政策<select id="literaturePolicy"><option value="latest_available">latest_available（目前申報版本）</option><option value="original_only">original_only（原始申報）</option></select></label>
+        <label>起始年度<input id="literatureStart" type="number" min="2011" max="2025" value="2011"></label>
+        <label>結束年度<input id="literatureEnd" type="number" min="2011" max="2025" value="2025"></label>
+        <button type="button" id="literatureLoad">計算（不儲存）</button>
+      </div>
+      <div id="literatureBody" class="state">選擇模式與版本政策後按「計算」。</div>
+      <div id="literatureDetail"></div>
+      <h3>模型版本與原文來源</h3>
+      <div id="literatureModelsBody" class="state">計算後載入。</div>
+    </section>
   </main>
   <script src="historical-research.js"></script>
 </body>

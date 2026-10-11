@@ -26,9 +26,10 @@ from app.services.financial_research.input_snapshot import canonical_json, diges
 
 STORE_SCHEMA_VERSION = "1"
 DEFAULT_RESULTS_DATABASE = "./data/historical_audit/research_results.sqlite3"
-RESULT_KINDS = ("financial_signals", "restatement_bridge", "source_reconciliation")
+RESULT_KINDS = ("financial_signals", "restatement_bridge", "source_reconciliation", "literature_models",
+                "literature_comparison")
 _TABLES = ("research_dataset_snapshots", "research_methods", "research_runs", "research_features",
-           "research_restatement_bridges", "source_discrepancies", "case_research_labels")
+           "research_restatement_bridges", "source_discrepancies", "case_research_labels", "research_literature_scores")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS research_store_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -61,6 +62,11 @@ CREATE TABLE IF NOT EXISTS source_discrepancies (
     period TEXT NOT NULL, statement_scope TEXT NOT NULL, value_a TEXT, value_b TEXT, difference TEXT,
     status TEXT NOT NULL, sources_json TEXT NOT NULL, review_note TEXT NOT NULL,
     PRIMARY KEY (run_id, issue_id, metric));
+CREATE TABLE IF NOT EXISTS research_literature_scores (
+    run_id TEXT NOT NULL REFERENCES research_runs (run_id), model_id TEXT NOT NULL, fiscal_year INTEGER NOT NULL,
+    status TEXT NOT NULL, score TEXT, version_policy TEXT NOT NULL, filing_version_id TEXT,
+    source_observation_ids_json TEXT NOT NULL, missing_inputs_json TEXT NOT NULL,
+    PRIMARY KEY (run_id, model_id, fiscal_year));
 CREATE TABLE IF NOT EXISTS case_research_labels (
     label_id TEXT PRIMARY KEY, ticker TEXT NOT NULL, label TEXT NOT NULL, outcome_known_at TEXT NOT NULL,
     legal_source TEXT NOT NULL, confidence TEXT NOT NULL, purpose TEXT NOT NULL, created_at TEXT NOT NULL);
@@ -98,7 +104,7 @@ def build_run(*, result_kind: str, method_version: str, method_ids: list[str], a
 
 def _projections(run: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     output, kind = run["output"], run["result_kind"]
-    features, bridges, discrepancies = [], [], []
+    features, bridges, discrepancies, literature = [], [], [], []
     if kind == "financial_signals":
         for f in output.get("features", []):
             features.append({"feature_id": f["feature_id"], "fiscal_year": f["fiscal_year"],
@@ -124,7 +130,17 @@ def _projections(run: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
                                                   "audited_pdf": {k: finding["audited_pdf"].get(k) for k in
                                                                   ("pdf_sha256", "pdf_page_index", "printed_page_label", "status")}},
                                       "review_note": finding["explanation_limits"]})
-    return {"features": features, "bridges": bridges, "discrepancies": discrepancies}
+    if kind in ("literature_models", "literature_comparison"):
+        for model_id, rows in (output.get("models") or output).get("results", {}).items():
+            for row in rows:
+                literature.append({"model_id": model_id, "fiscal_year": row["fiscal_year"], "status": row["status"],
+                                   "score": row.get("score"), "version_policy": row["observation"]["version_policy"],
+                                   "filing_version_id": row["observation"]["filing_version_id"],
+                                   "source_observation_ids": row.get("source_observation_ids", []),
+                                   "missing_inputs": [{k: m.get(k) for k in ("component", "metric", "relative_period",
+                                                                              "fiscal_year", "status")}
+                                                      for m in row.get("missing_inputs", [])]})
+    return {"features": features, "bridges": bridges, "discrepancies": discrepancies, "literature_scores": literature}
 
 
 class SqliteResearchResultStore:
@@ -199,6 +215,11 @@ class SqliteResearchResultStore:
                                        (run["run_id"], d["issue_id"], d["metric"], d["period"], d["statement_scope"],
                                         d["value_a"], d["value_b"], d["difference"], d["status"],
                                         canonical_json(d["sources"]), d["review_note"]))
+                for item in projections["literature_scores"]:
+                    connection.execute("INSERT INTO research_literature_scores VALUES (?,?,?,?,?,?,?,?,?)",
+                                       (run["run_id"], item["model_id"], item["fiscal_year"], item["status"], item["score"],
+                                        item["version_policy"], item["filing_version_id"],
+                                        canonical_json(item["source_observation_ids"]), canonical_json(item["missing_inputs"])))
                 connection.execute("COMMIT")
             except Exception:
                 if connection.in_transaction:
@@ -246,7 +267,8 @@ class SqliteResearchResultStore:
     def projection_counts(self, run_id: str) -> dict[str, int]:
         with self._connect() as connection:
             return {table: connection.execute(f"SELECT COUNT(*) FROM {table} WHERE run_id = ?", (run_id,)).fetchone()[0]
-                    for table in ("research_features", "research_restatement_bridges", "source_discrepancies")}
+                    for table in ("research_features", "research_restatement_bridges", "source_discrepancies",
+                                  "research_literature_scores")}
 
 
 def public_run(run: dict[str, Any]) -> dict[str, Any]:

@@ -24,6 +24,8 @@ _VIEWS = {
     "text-readiness": _MODE_PARAMS,
 }
 _COMPUTE_FIELDS = ("ticker", "analysis_mode", "cutoff_at", "start_year", "end_year", "version_policy")
+_LITERATURE_QUERY = _MODE_PARAMS + ("version_policy", "start_year", "end_year")
+_LITERATURE_ACTIONS = {"compute": _COMPUTE_FIELDS + ("model_ids",), "compare": _COMPUTE_FIELDS}
 
 
 def create_research_blueprint(client: FinTrustClient | None = None):
@@ -80,6 +82,29 @@ def create_research_blueprint(client: FinTrustClient | None = None):
         body = {key: payload[key] for key in _COMPUTE_FIELDS if payload.get(key) not in (None, "")}
         try:
             return respond({"success": True, "data": get_client().research_compute(body)})
+        except FinTrustClientError as exc:
+            return failure(exc)
+
+    @blueprint.get("/api/research/literature/models")
+    def research_literature_models():
+        return forward("/literature/models")
+
+    @blueprint.get("/api/research/cases/<ticker>/literature/coverage")
+    def research_literature_coverage(ticker: str):
+        if not _TICKER.fullmatch(ticker):
+            return invalid("Invalid ticker.")
+        return forward(f"/cases/{ticker}/literature/coverage", _LITERATURE_QUERY)
+
+    @blueprint.post("/api/research/literature/<action>")
+    def research_literature(action: str):
+        payload = request.get_json(silent=True) or {}
+        if action not in _LITERATURE_ACTIONS:
+            return invalid("Invalid literature action.")
+        if not isinstance(payload, dict) or not _TICKER.fullmatch(str(payload.get("ticker", ""))):
+            return invalid("Invalid ticker.")
+        body = {key: payload[key] for key in _LITERATURE_ACTIONS[action] if payload.get(key) not in (None, "")}
+        try:
+            return respond({"success": True, "data": get_client().research_literature(action, body)})
         except FinTrustClientError as exc:
             return failure(exc)
 

@@ -197,8 +197,11 @@ class FeatureTests(unittest.TestCase):
         regime = [f if f["fiscal_year"] != 2014 else fact(2014, f["metric_code"], f["value"], framework="TW_GAAP")
                   for f in self.BASE]
         self.assertIn("accounting_regime_break", {r["code"] for r in self.feature(regime, "inventory_turnover")["missing_reasons"]})
-        with self.assertRaises(ValueError):
-            index_facts(self.BASE + [fact(2015, "revenue", "121", version="x")])
+        # F05: a second identity for one key is never resolved by input order; the key is ambiguous and every
+        # feature that needs it fails closed with ``ambiguous_version`` (formerly an unhandled ValueError).
+        duplicated = self.BASE + [fact(2015, "revenue", "121", version="x")]
+        self.assertIn((2015, "consolidated", "revenue"), index_facts(duplicated).ambiguous)
+        self.assertIn("ambiguous_version", {r["code"] for r in self.feature(duplicated, "gross_margin")["missing_reasons"]})
 
     def test_strict_missing_reason_never_consults_full_data(self) -> None:
         strict = build_context("STRICT_AS_OF", "2016-05-13T00:00:00+08:00")

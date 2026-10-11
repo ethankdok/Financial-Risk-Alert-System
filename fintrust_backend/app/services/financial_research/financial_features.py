@@ -21,6 +21,7 @@ from app.services.financial_research.feature_registry import (
 )
 from app.services.financial_research.input_snapshot import InputSnapshot, latest_time
 from app.services.financial_research.modes import AnalysisMode
+from app.services.financial_research.version_selection import FactIndex, build_index
 
 ENGINE_VERSION = "financial_features_v1"
 _INPUT_FIELDS = ("fact_id", "metric_code", "value", "unit", "period", "fiscal_year", "statement_scope",
@@ -34,14 +35,10 @@ class AmbiguousInputError(ValueError):
     pass
 
 
-def index_facts(facts: list[dict[str, Any]]) -> dict[tuple[int, str, str], dict[str, Any]]:
-    index: dict[tuple[int, str, str], dict[str, Any]] = {}
-    for fact in facts:
-        key = (fact["fiscal_year"], fact["statement_scope"], fact["metric_code"])
-        if key in index:
-            raise AmbiguousInputError(f"more than one fact for {key}; the version policy must select exactly one")
-        index[key] = fact
-    return index
+def index_facts(facts: list[dict[str, Any]]) -> FactIndex:
+    """One fact per (fiscal_year, scope, metric); keys with several identities are ``ambiguous`` (F05), never
+    resolved by input order."""
+    return build_index(facts, key=lambda fact: (fact["fiscal_year"], fact["statement_scope"], fact["metric_code"]))
 
 
 def _reason(code: str, metric: str | None = None, detail: str | None = None) -> dict[str, Any]:
@@ -60,7 +57,11 @@ class _Inputs:
         self.reasons: list[dict[str, Any]] = []
 
     def get(self, year: int, metric: str) -> Decimal | None:
-        fact = self.index.get((year, self.scope, metric))
+        key = (year, self.scope, metric)
+        if key in getattr(self.index, "ambiguous", {}):
+            self.reasons.append(_reason("ambiguous_version", metric, f"FY{year}"))
+            return None
+        fact = self.index.get(key)
         if fact is None:
             self.reasons.append(_missing(self.strict, metric, year))
             return None

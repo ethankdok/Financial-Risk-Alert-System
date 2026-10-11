@@ -158,6 +158,85 @@ def compute_financial_signals(request: ComputeRequest,
             "method_version": run["method_version"], **persisted, "result": run["output"]}
 
 
+# ---------------------------------------------------------------------------------- literature models
+LITERATURE_POLICY = Literal["latest_available", "original_only"]
+LITERATURE_MODEL = Literal["beneish_1999_full8_v1", "dechow_2011_model1_v1"]
+_LITERATURE_MODES = (AnalysisMode.RETROSPECTIVE_FORENSIC, AnalysisMode.STRICT_AS_OF)
+
+
+@router.get("/literature/models")
+def literature_models(service: ResearchService = Depends(get_research_service)) -> dict[str, Any]:
+    """Source-verified method lock (Beneish 1999 full 8-variable; Dechow et al. 2011 Table 7 Model 1), approval
+    status and the DRAFT Taiwan input mapping."""
+    return _call(service.literature_registry)
+
+
+@router.get("/cases/{ticker}/literature/coverage")
+def literature_coverage(ticker: str = TICKER, analysis_mode: str = MODE_QUERY, cutoff_at: str | None = CUTOFF_QUERY,
+                        version_policy: LITERATURE_POLICY = Query(..., description="Required; no default"),
+                        start_year: int | None = Query(None, ge=1990, le=2100),
+                        end_year: int | None = Query(None, ge=1990, le=2100),
+                        service: ResearchService = Depends(get_research_service)) -> dict[str, Any]:
+    """Model / variable / year / t-relative input readiness with official-source provenance (no scores)."""
+    context = _context(analysis_mode, cutoff_at, _LITERATURE_MODES)
+    return _call(service.literature_coverage, ticker, context, version_policy=version_policy,
+                 start_year=start_year, end_year=end_year)
+
+
+class LiteratureRequest(BaseModel):
+    ticker: str = Field(..., pattern=r"^\d{4,6}$")
+    analysis_mode: str | None = Field(None, description="Required; RETROSPECTIVE_FORENSIC or STRICT_AS_OF")
+    cutoff_at: str | None = None
+    start_year: int | None = Field(None, ge=1990, le=2100)
+    end_year: int | None = Field(None, ge=1990, le=2100)
+    version_policy: LITERATURE_POLICY | None = Field(None, description="Required; latest_available or original_only")
+    persist: bool = False
+    supersedes_run_id: str | None = Field(None, pattern=r"^rrun1_[0-9a-f]{32}$")
+
+
+class LiteratureComputeRequest(LiteratureRequest):
+    model_ids: list[LITERATURE_MODEL] | None = Field(None, min_length=1, max_length=2,
+                                                     description="Required; explicit model ids (no default)")
+
+
+def _literature_run(kind: str, request: LiteratureRequest, token: str | None, service: ResearchService,
+                    parameters: dict[str, Any]) -> dict[str, Any]:
+    context = _context(request.analysis_mode, request.cutoff_at)
+    if request.version_policy is None:
+        raise HTTPException(status_code=422, detail={"error_code": "version_policy_required",
+                                                     "message": "version_policy is required (no default)."})
+    run = _call(service.build_run, kind, request.ticker, context, start_year=request.start_year,
+                end_year=request.end_year, version_policy=request.version_policy, parameters=parameters,
+                supersedes_run_id=request.supersedes_run_id, git_commit=os.getenv("FINTRUST_BUILD_COMMIT") or None)
+    persisted = {"persisted": False, "created": False}
+    if request.persist:
+        require_ingestion_token(token)
+        run_id, created = get_result_store().record_run(run)
+        persisted = {"persisted": True, "created": created}
+    return {"run_id": run["run_id"], "input_digest": run["input_digest"], "output_digest": run["output_digest"],
+            "method_version": run["method_version"], **persisted, "result": run["output"]}
+
+
+@router.post("/literature/compute")
+def literature_compute(request: LiteratureComputeRequest,
+                       x_ingestion_token: str | None = Header(default=None, alias="X-Ingestion-Token"),
+                       service: ResearchService = Depends(get_research_service)) -> dict[str, Any]:
+    """Explicit model(s), years, mode, cutoff and version policy; dry-run unless ``persist=true`` (token)."""
+    if not request.model_ids:
+        raise HTTPException(status_code=422, detail={"error_code": "model_ids_required",
+                                                     "message": "model_ids is required (no default)."})
+    return _literature_run("literature_models", request, x_ingestion_token, service,
+                           {"model_ids": sorted(set(request.model_ids))})
+
+
+@router.post("/literature/compare")
+def literature_compare(request: LiteratureRequest,
+                       x_ingestion_token: str | None = Header(default=None, alias="X-Ingestion-Token"),
+                       service: ResearchService = Depends(get_research_service)) -> dict[str, Any]:
+    """Both published models on the same frozen snapshot; paired comparable observations and limitations."""
+    return _literature_run("literature_comparison", request, x_ingestion_token, service, {})
+
+
 @router.get("/runs/{run_id}")
 def get_run(run_id: str = Path(..., pattern=_RUN_ID.pattern)) -> dict[str, Any]:
     from pathlib import Path as FilePath
