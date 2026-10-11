@@ -121,6 +121,14 @@ class FinTrustClient:
     def companies(self) -> Any:
         return self.request("GET", "/api/v1/financial/companies")
 
+    # Historical research API (read-only research views; computation stays in FastAPI).
+    def research_get(self, path: str, params: dict[str, Any] | None = None) -> Any:
+        return self.request("GET", f"/api/v1/research{path}", params=params)
+
+    def research_compute(self, body: dict[str, Any]) -> Any:
+        """Dry-run research computation; the browser path never persists a run."""
+        return self.request("POST", "/api/v1/research/financial-signals/compute", json_body={**body, "persist": False})
+
     def analyze_official_data_shift(self, company_code: str, period_1: str | None = None,
                                     period_2: str | None = None) -> Any:
         """Official conference-document JSD / cosine analysis (no ingestion token needed)."""
