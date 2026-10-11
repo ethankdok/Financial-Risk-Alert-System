@@ -32,7 +32,7 @@ from app.services.financial_research.result_store import (
     build_run,
 )
 from app.services.financial_research.source_reconciliation import compare_board_notices, reconcile
-from tests.historical_cloud_fakes import FakeFirestoreClient
+from tests.historical_cloud_fakes import FakeFirestoreClient, ServiceUnavailable
 
 PACKAGE = Path(__file__).resolve().parents[1] / "app" / "services" / "financial_research"
 RETRO = build_context("RETROSPECTIVE_FORENSIC")
@@ -382,7 +382,7 @@ class ResultStoreTests(unittest.TestCase):
         store = FirestoreResearchResultStore(client)
         run = self.run_record()
         client.fail_write = lambda collection, document, operation: collection.endswith("_runs")
-        with self.assertRaises(Exception):
+        with self.assertRaises(ServiceUnavailable):
             store.record_run(run)
         self.assertIsNone(store.get_run(run["run_id"]))  # the run document is the commit marker
         client.fail_write = None

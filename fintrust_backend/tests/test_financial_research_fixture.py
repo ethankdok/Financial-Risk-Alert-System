@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -59,7 +60,7 @@ class ResearchServiceFixtureTests(FixtureResearchTestCase):
                 self.service.discrepancies("1785", context)
         self.service.case_overview("1785")
         self.assertEqual(self.digest_db(), before)
-        with self.assertRaises(Exception):
+        with self.assertRaises(sqlite3.OperationalError):  # "attempt to write a readonly database"
             with self.readonly.connect() as connection:
                 connection.execute("DELETE FROM versioned_financial_facts")
 

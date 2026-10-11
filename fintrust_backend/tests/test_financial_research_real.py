@@ -6,7 +6,6 @@ user's artifacts, not targets. Adversarial cases wrap the real backend and alter
 
 from __future__ import annotations
 
-import os
 import tempfile
 import unittest
 from collections import Counter
@@ -269,7 +268,7 @@ class RealNonMutationAndIsolationTests(unittest.TestCase):
 
         self.assertNotIn("1785", [c.ticker for c in list_companies()])
         self.assertIsNone(get_company("1785"))
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             validate_refresh_tickers(["1785"])
 
     def test_runs_are_deterministic(self) -> None:

@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
             "existing_fastapi_health": get(f"http://127.0.0.1:{api_port}/health"),
         }
         expected = {"flask_strict_without_cutoff": 422, "flask_production_ticker": 404}
-        for name, (status, payload) in checks.items():
+        for name, (status, _payload) in checks.items():
             report["http"][name] = {"status": status, "ok": status == expected.get(name, 200)}
         report["http"]["proxy_parity_bridge"] = {
             "ok": checks["flask_bridge"][1].get("data") == checks["fastapi_direct_bridge"][1]}

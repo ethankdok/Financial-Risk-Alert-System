@@ -14,16 +14,25 @@ Untracked user inputs preserved and never committed: `docs/development/phase3_5_
 
 ## Milestones
 
-| # | Milestone | Status |
-|---|---|---|
-| 0 | Inventory, baseline, design lock (`PHASE3_5_DESIGN_LOCK.md`) | done |
-| 1 | `financial_research` domain layer (modes, Decimal, snapshot, bridge, features, literature gates, reconciliation, text bridge) | in progress |
-| 2 | Append-only result store (SQLite + Firestore) and CLI | pending |
-| 3 | FastAPI router + OpenAPI snapshot | pending |
-| 4 | Flask proxy + research UI + browser evidence | pending |
-| 5 | Cloud readiness: preflight, runbooks, emulator attempt | pending |
-| 6 | Full regression, non-mutation check, review bundle, final report | pending |
+| # | Milestone | Status | Commit |
+|---|---|---|---|
+| 0 | Inventory, baseline, design lock (`PHASE3_5_DESIGN_LOCK.md`) | done | aa9004c |
+| 1 | `financial_research` domain layer (modes, Decimal, snapshot, bridge, features, literature gates, reconciliation + PDF p.8, text bridge) | done | aa9004c |
+| 2 | Append-only result store (SQLite + Firestore), run verification, CLI + review fixture | done | 3398361, 68db626 |
+| 3 | FastAPI router `/api/v1/research` + OpenAPI snapshot | done | aa9004c, 821bb6a |
+| 4 | Flask proxy, six-view research page, UI chain test, real-process smoke + headless Chrome screenshots | done | 68db626 |
+| 4b | Pre-existing Flask catch-all file exposure fixed (separate commit, review requested) | done | 0427418 |
+| 5 | Result export (lock/journal/batches/retries), emulator tier (Firestore emulator 3 passed), preflight, runbooks | done | 5e27573, 821bb6a |
+| 6 | Full regression, non-mutation check, review bundle, final report | in progress | — |
+
+## Key decisions
+
+- No React/Vite exists: the UI follows the real vanilla HTML/JS + Flask static pattern.
+- Derived results live in a separate `research_results.sqlite3`; the approved DB is opened `mode=ro` only.
+- Strict reads use the reader with `as_of = cutoff − 1 µs` (reader treats datetimes inclusively) and re-check `< cutoff`.
+- TPEx summaries are `not_comparable` (scope inferred from XBRL revenue — circular).
+- No literature-model coefficients shipped; methods are `DRAFT_PENDING_METHOD_OWNER_REVIEW`.
 
 ## Next action
 
-Implement milestone 1 under `fintrust_backend/app/services/financial_research/`.
+Collect full regression logs, compare the data baseline, build the review bundle and write the final report.

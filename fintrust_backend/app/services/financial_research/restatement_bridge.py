@@ -130,7 +130,9 @@ def year_bridges(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     result = []
     for (period, scope, announcement), members in sorted(groups.items()):
         mapped = {r["canonical_metric"]: r for r in members if r["canonical_metric"]}
-        get = lambda m, side: dm.parse_decimal(mapped[m][f"{side}_twd"]) if m in mapped else None  # noqa: E731
+
+        def get(metric: str, side: str, mapped: dict[str, dict[str, Any]] = mapped) -> Decimal | None:
+            return dm.parse_decimal(mapped[metric][f"{side}_twd"]) if metric in mapped else None
         identity = {}
         for side in ("pre", "post"):
             rev, cogs, gp = get("revenue", side), get("cost_of_goods_sold", side), get("gross_profit", side)
@@ -182,7 +184,7 @@ def heatmap(rows: list[dict[str, Any]]) -> dict[str, Any]:
                           "delta_twd": row["delta_twd"], "delta_pct": row["delta_pct"],
                           "denominator_status": row["denominator_status"], "comparison_key": row["comparison_key"]})
     regimes = sorted({(r["fiscal_year"], r["accounting_framework"]) for r in rows})
-    breaks = [b for (a, fa), (b, fb) in zip(regimes, regimes[1:]) if fa != fb]
+    breaks = [b for (a, fa), (b, fb) in zip(regimes, regimes[1:], strict=False) if fa != fb]
     return {"fiscal_years": years, "cells": cells, "accounting_regime_break_before_years": breaks,
             "note": "Cells compare figures within one notice/scope/year; years across a regime break are not comparable."}
 
