@@ -181,7 +181,8 @@ class ConferenceCoverageTests(ConferenceTestCase):
         self.assertNotIn(2013, [c[1] + 1911 for c in transport.calls])  # saved listing reused, no request
         self.assertEqual(len(sleeps), 2)  # polite spacing between the three requests
         self.assertEqual(rows[2014]["listing_sha256"], hashlib.sha256(NO_DATA_PAGE).hexdigest())
-        path, _ = self.build("cov.zip")
+        path = self.root / "cov.zip"  # package range covers every recorded year (roles are package-relative)
+        self.builder().build(PackageParameters("1785", 2013, 2016, include_conference=True), path, generated_at=FIXED)
         coverage = {r["year"]: r["status"] for r in self.rows(path, "data/conference_coverage.csv")}
         self.assertEqual(coverage["2014"], "no_official_record_found")
         missing = {(r["fiscal_year"], r["status"]) for r in self.rows(path, "data/missing_evidence.csv")
@@ -189,6 +190,53 @@ class ConferenceCoverageTests(ConferenceTestCase):
         self.assertIn(("2014", "no_official_record_found"), missing)
         self.assertIn(("2015", "official_listing_unavailable"), missing)
         self.assertEqual(classify_listing(NO_DATA_PAGE, ticker="1785", year=2014)[0], "no_official_record_found")
+
+    @staticmethod
+    def found_listing(roc_year: int, filenames: list[str]) -> bytes:
+        def cell(name: str) -> str:
+            link = (f'document.fm_fileDownload.fileName.value=&quot;{name}&quot;;'
+                    'document.fm_fileDownload.filePath.value=&quot;/home/html/nas/STR/&quot;;'
+                    'document.fm_fileDownload.functionName.value=&quot;t100sb02_1&quot;;document.fm_fileDownload.submit();')
+            return f'<a onclick="{link}">{name}</a>'
+        zh = [n for n in filenames if "M" in n[12:]]
+        en = [n for n in filenames if "E" in n[12:]]
+        return ('<form action="/server-java/FileDownLoad"></form>'
+                '<table><thead><tr><th>公司代號</th><th>法人說明會簡報內容</th></tr></thead><tbody>'
+                f'<tr data-type="body"><td>1785</td><td>光洋科</td><td>{roc_year}/05/16</td><td>x</td><td>x</td><td>x</td>'
+                f'<td>{"".join(cell(n) for n in zh)}</td><td>{"".join(cell(n) for n in en)}</td></tr></tbody></table>'
+                '<input onclick="page(1)" value="1">').encode()
+
+    def test_listed_documents_without_an_archive_are_missing_not_found(self) -> None:
+        """A listing with documents but no pipeline manifest must not read as fully covered (0 expected, 0 downloaded)."""
+        transport = self.Transport({2019: self.found_listing(108, ["178520190516M001.pdf", "178520190516E001.pdf"])})
+        recorder = ConferenceCoverageRecorder(self.repository, self.archive, self.conference_root, transport=transport,
+                                              sleep=lambda _: None)
+        row = recorder.record("1785", [2019], market="otc", start_year=2011, end_year=2019)[0]
+        self.assertEqual((row["status"], row["expected_documents"], row["downloaded_documents"], row["conference_rows"]),
+                         ("document_missing", 2, 0, 1))
+        self.assertEqual(json.loads(row["meeting_dates_json"]), ["108/05/16"])
+        path = self.root / "listed.zip"
+        self.builder().build(PackageParameters("1785", 2013, 2019, include_conference=True), path, generated_at=FIXED)
+        detail = next(r["detail"] for r in self.rows(path, "data/missing_evidence.csv")
+                      if r["evidence_kind"] == "conference_listing" and r["fiscal_year"] == "2019")
+        self.assertEqual(detail, "official MOPS t100sb02_1 listing names 2 document(s); 0 archived")
+
+    def test_coverage_role_follows_the_package_range(self) -> None:
+        """2017 recorded while the case range was 2011-2016 is context there, but core in a 2011-2017 package."""
+        transport = self.Transport({2017: NO_DATA_PAGE})
+        recorder = ConferenceCoverageRecorder(self.repository, self.archive, self.conference_root, transport=transport,
+                                              sleep=lambda _: None)
+        stored = recorder.record("1785", [2017], market="otc", start_year=2011, end_year=2016)
+        self.assertEqual(stored[0]["research_role"], "post_period_context")
+        narrow, _ = self.build("narrow.zip")  # 2013-2014 package: 2017 is context and omitted
+        self.assertNotIn("2017", {r["year"] for r in self.rows(narrow, "data/conference_coverage.csv")})
+        wide = self.root / "wide.zip"
+        self.builder().build(PackageParameters("1785", 2013, 2017, include_conference=True), wide, generated_at=FIXED)
+        rows = {r["year"]: r for r in self.rows(wide, "data/conference_coverage.csv")}
+        self.assertEqual((rows["2017"]["research_role"], rows["2017"]["status"]), ("core", "no_official_record_found"))
+        missing = {(r["fiscal_year"], r["status"]) for r in self.rows(wide, "data/missing_evidence.csv")
+                   if r["evidence_kind"] == "conference_listing"}
+        self.assertIn(("2017", "no_official_record_found"), missing)
 
 
 class StrictPointInTimeTests(ConferenceTestCase):

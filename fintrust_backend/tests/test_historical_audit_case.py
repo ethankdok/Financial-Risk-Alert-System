@@ -455,6 +455,10 @@ class NormalizationQualityTests(HistoricalAuditTestCase):
         self.assertEqual(facts["inventory"], 1_234_000.0)
         self.assertEqual(facts["net_income"], -250_000.0)
         self.assertEqual(facts["revenue"], 10_000_000.0)
+        # Scaled iXBRL decimals are stored as fixed-point text, never exponent notation (e.g. "1.234E+6").
+        texts = {row["metric_code"]: row["value_text"] for row in list_historical_facts(self.repository, "1785", 2019, 2019)}
+        self.assertEqual((texts["inventory"], texts["net_income"], texts["revenue"]), ("1234000", "-250000", "10000000"))
+        self.assertFalse([text for text in texts.values() if "E" in text.upper()])
 
     def test_pdf_is_archived_with_extraction_pending(self) -> None:
         docs = self.root / "pdf"

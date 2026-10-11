@@ -248,3 +248,33 @@ for row in comparisons:
         print(row["period"], row["statement_scope"], row["pre_restatement_value"], row["post_restatement_value"],
               row["disclosed_at"])
 ```
+
+## 13. Phase 2A addendum — FY2011–FY2019 packages (2026-10-11)
+
+Two new packages extend the case to FY2019. The FY2011–2016 packages above are **unchanged** (same SHA-256), so
+results computed on them remain reproducible.
+
+| | Full (retrospective) | Strict (point-in-time) |
+|---|---|---|
+| File | `fintrust_1785_2011_2019_full.zip` | `fintrust_1785_2011_2019_asof_2020-12-31.zip` (+ `.audit.json`, reviewer-only) |
+| SHA-256 | `9cbbd789d05d7652884b04f4ed2e865c9070557937ed34afec6476c70c92cb5e` | `7268951fdee67c3fd99465a45595f94550838aeacfb6d12affbd984e4559e0d7` |
+| Cutoff | none | end of 2020-12-31, Asia/Taipei |
+| Financial facts | 126 (18 per year, FY2013–FY2019) | 27 (unchanged: the FY2013–2015 restated facts) |
+| Filing versions | 26 | 10 (adds the FY2019 PDFs, public from 2020-02-14) |
+
+What is new for FY2017–FY2019:
+
+- **Facts and units.** There are 18 consolidated facts per year from the MOPS XBRL; FY2019 is inline XBRL. Units are
+  unchanged: TWD, with EPS in TWD per share. In FY2018 the taxonomy moved to `ifrs-full` concepts; the canonical
+  metrics are unaffected, and the accounting identities hold every year.
+- **Not point-in-time eligible.** These facts appear only in the full package. The XBRL bytes have no verified
+  publication time and no official disclosure dates their values, so the strict package correctly has **no**
+  FY2017–FY2019 facts. Do not use fiscal-year end or audit-report dates as availability.
+- **Verified availability.** Only the FY2019 PDFs (2020-02-14) have a verified upload time. The FY2017/FY2018 PDFs
+  stay unverified, because the archive's 更(補)正 column is blank.
+- **FY2018 correction.** The FY2018 report notes (note 9) were corrected and re-uploaded on 2019-05-29. The
+  notice lists no changed amounts.
+- **FY2016 comparative EPS.** The FY2017 filing presents FY2016 EPS as −1.39, against −1.23 in the FY2016 filing,
+  with net income unchanged. Treat it as a retrospectively adjusted comparative; the reason is not established.
+- **Conference documents.** MOPS lists conference documents for 2018 (10) and 2019 (4); they are not yet archived
+  (`document_missing`). The 2017 decks (2017-04-14) are included and are core in this package.

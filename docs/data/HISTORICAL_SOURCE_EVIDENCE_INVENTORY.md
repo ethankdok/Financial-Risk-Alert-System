@@ -1,4 +1,4 @@
-# 1785 光洋科 — Historical Source Evidence Inventory (FY2011–FY2016)
+# 1785 光洋科 — Historical Source Evidence Inventory (FY2011–FY2019)
 
 Machine-readable form: `evidence-export --dataset source_inventory` (45 rows:
 41 Phase 1B source documents + 4 Phase 1 XBRL instances). Reviewed request plan:
@@ -101,3 +101,66 @@ TPEx announcements 10502004811 (2016-05-13), 10502013431 (2016-11-15) and
 | FY2016 XBRL publication time | Unresolved; only the PDF upload time (2017-03-22 14:20:15) is verified |
 | TPEx summary first-publication times | Unresolved; Wayback Machine CDX has no captures of the 2014/2015 files (2013 query: HTTP 503). Discovery lead only, never evidence |
 | Restated individual PDFs (A05, AI6) and pre-restatement individual IFRS PDFs (AI3) | Listed in the archive, not downloaded in Phase 1B (consolidated scope prioritized; FY2011–2012 individual originals downloaded for the GAAP summary cross-check) |
+
+## Phase 2A — FY2017–FY2019 (retrieved 2026-10-11 UTC)
+
+Phase 2A added 21 official sources: 3 MOPS XBRL filings, 9 discovery documents, 6 PDFs and 3 notice details. It
+also recorded MOPS conference listings for 2018 and 2019, without downloading any documents. Every Phase 1 source is
+unchanged. The exact request log is in `docs/development/HISTORICAL_PHASE2A_FY2017_2019_VALIDATION.md`.
+
+### Complete filings
+
+| FY | Artifact | Scope | Format / taxonomy entry point | Revision | Availability | SHA-256 (prefix) |
+|---|---|---|---|---|---|---|
+| 2017 | MOPS `t164sb01` XBRL | consolidated | XBRL instance, `tifrs-ci-cr-2017-03-31` | unknown_revision | **unverified** (no upload record for these bytes) | `e9c71a2b` |
+| 2017 | TWSE e-book `201704_1785_AI1.pdf` | consolidated | PDF, 8,824,577 B | unknown_revision | **unverified**: listed upload 2018-03-27 16:04:35, but the 更(補)正 column is blank | `0c32ddbd` |
+| 2017 | TWSE e-book `201704_1785_AI3.pdf` | individual | PDF, 6,412,782 B | unknown_revision | **unverified** (listed 2018-03-27 16:19:03, blank 更(補)正) | `cb78010a` |
+| 2018 | MOPS `t164sb01` XBRL | consolidated | XBRL instance, `tifrs-ci-cr-2018-09-30` | unknown_revision | **unverified**; FY2018 correction notice linked (`unverified_linkage`) | `cdec7a7e` |
+| 2018 | TWSE e-book `201804_1785_AI1.pdf` | consolidated | PDF, 6,676,905 B | unknown_revision | **unverified** (listed 2019-03-28 18:32:24, blank 更(補)正; correction notice linked) | `043a676b` |
+| 2018 | TWSE e-book `201804_1785_AI3.pdf` | individual | PDF, 6,579,870 B | unknown_revision | **unverified** (listed 2019-03-28 18:33:38, blank 更(補)正; correction notice linked) | `21eaab8b` |
+| 2019 | MOPS `t164sb01` **inline XBRL** | consolidated | iXBRL, `tifrs-ci-cr-2019-03-31` | unknown_revision | **unverified** | `4dd3b38a` |
+| 2019 | TWSE e-book `201904_1785_AI1.pdf` | consolidated | PDF, 6,731,750 B | unknown_revision | **verified 2020-02-14 14:58:52** (size match, 更(補)正 無) | `059ace3b` |
+| 2019 | TWSE e-book `201904_1785_AI3.pdf` | individual | PDF, 6,594,182 B | unknown_revision | **verified 2020-02-14 14:59:25** (size match, 更(補)正 無) | `094137e3` |
+
+All three MOPS filings parsed, each giving 18 facts, with core coverage 17/17. FY2017 and FY2018 are
+`validated_with_warnings` only because of the known `eps_unit_declared_as_currency` issue; FY2019's inline XBRL
+declares EPS per share correctly.
+
+The FY2019 English translations (`AIA`, `AIC`) were uploaded 2020-06-02. They are listed but not downloaded,
+because they are translations.
+
+### Summaries and notices
+
+- **TPEx summaries.** `O_2017Q4`, `O_2018Q4` and `O_2019Q4` were downloaded. Their current-file `Last-Modified` dates
+  are 2018-04-02, 2019-04-03 and 2020-04-06, which describe the current files only. The 2018 and 2019 workbooks add
+  a 速動 (quick ratio) column; it is ignored, and the column alignment was verified because revenue, operating
+  income and EPS equal the XBRL values.
+- **MOPS material-information listings** for ROC 107, 108 and 109 contain 48, 45 and 76 rows. No 重編 (restatement)
+  of FY2017–FY2019 appears.
+- **Details archived (3):**
+  - **2018-03-21 19:53:37 #6:** FY2017 board dividend resolution.
+  - **2019-02-21 15:29:58 #1:** board resolution to settle the investor-protection centre suit over the misstated
+    2011–2015 financials (≤ NT$334,000,000).
+  - **2019-05-29 14:18:18 #1:** **correction of FY2018 individual and consolidated financial-report notes**, note 9
+    (contingent liabilities / D&O insurance for the settlement); the reports were "重新上傳至公開資訊觀測站"
+    (re-uploaded to MOPS). Only note pages are listed, with no amounts, but the event is recorded as
+    `financial_report_correction` for 2018FY.
+
+### Findings
+
+- **FY2016 comparative EPS.** The FY2017 filing's own XBRL presents FY2016 basic EPS as **−1.39**; the FY2016 filing
+  reported **−1.23**. Net income attributable to owners of the parent is unchanged (−485,453 thousand), so the
+  comparative EPS was adjusted retrospectively. The archived evidence does not state why, and this is not treated as
+  a restatement of fundamentals. The TPEx FY2017 summary carries the same −1.39 as its prior-year comparative.
+- **No restatement found.** No restatement of FY2017–FY2019 was found in the archived listings, so every version is
+  `unknown_revision`. That label does not claim "original".
+
+### Unavailable / unresolved (FY2017–FY2019)
+
+| Item | Status |
+|---|---|
+| XBRL publication times FY2017–FY2019 | Unresolved; there is no upload record for the exact XBRL bytes, so the facts are not point-in-time eligible |
+| FY2017/FY2018 PDF availability | Unresolved; the archive's 更(補)正 column is blank (verification requires 無) |
+| Whether the FY2018 MOPS XBRL/PDF bytes are the 2019-05-29 re-upload | Unresolved (the correction is note-only according to the notice) |
+| Investor-conference documents 2018 (10 listed) and 2019 (4 listed) | Listed by MOPS, not downloaded in Phase 2A (`document_missing`) |
+

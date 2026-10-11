@@ -88,7 +88,9 @@ class RealPointInTimeScenarios(unittest.TestCase):
 
     def test_scenario5_summary_never_promoted_to_filing(self) -> None:
         kinds = {v["source_kind"] for v in self.repository.list_filing_versions("1785")}
-        self.assertEqual(kinds, {"mops_xbrl_instance", "official_pdf"})
+        # Filing artifacts only (FY2019 onwards MOPS serves inline XBRL); a TPEx summary never becomes a filing version.
+        self.assertLessEqual(kinds, {"mops_xbrl_instance", "mops_inline_xbrl", "official_pdf"})
+        self.assertIn("official_pdf", kinds)
         summary = list_summary_observations(self.repository, "1785")
         self.assertEqual({r["completeness"] for r in summary}, {"summary_values_only"})
         self.assertEqual({r["accounting_framework"] for r in summary if r["report_period"] in {"2011FY", "2012FY"}}, {"TW_GAAP"})
@@ -434,3 +436,75 @@ class RealStrictCutoffMatrix(unittest.TestCase):
                                {"data/restatement_comparisons.csv": mutate_csv(data, row, changes)})
                 with self.assertRaisesRegex(PackageVerificationError, reason):
                     verify_package(target)
+
+
+def _has_phase2a_evidence() -> bool:
+    if not _has_phase1b_evidence():
+        return False
+    import sqlite3
+
+    connection = sqlite3.connect(f"file:{REAL_DB.as_posix()}?mode=ro", uri=True)
+    try:
+        return connection.execute("SELECT COUNT(*) FROM financial_filing_versions WHERE fiscal_year = 2019").fetchone()[0] > 0
+    finally:
+        connection.close()
+
+
+@unittest.skipUnless(_has_phase2a_evidence(), "real 1785 FY2017-2019 evidence not present locally")
+class RealPhase2aFy2017To2019(unittest.TestCase):
+    """REAL tier, Phase 2A: FY2017-2019 versions, publication evidence and point-in-time behaviour."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        copy = Path(cls._tmp.name) / "copy.sqlite3"
+        shutil.copyfile(REAL_DB, copy)
+        cls.repository = HistoricalAuditRepository(str(copy))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def versions(self, year: int) -> list[dict]:
+        return [dict(v) for v in self.repository.list_filing_versions("1785", year, year)]
+
+    def test_each_year_has_one_xbrl_with_18_facts_and_no_exponent_text(self) -> None:
+        facts = list_historical_facts(self.repository, "1785", 2017, 2019, include_test_fixtures=False)
+        for year in (2017, 2018, 2019):
+            xbrl = [v for v in self.versions(year) if v["source_kind"].startswith("mops_")]
+            self.assertEqual(len(xbrl), 1, year)
+            self.assertEqual((xbrl[0]["statement_scope"], xbrl[0]["filing_version_type"], xbrl[0]["availability_status"]),
+                             ("consolidated", "unknown_revision", "unverified"))
+            self.assertEqual(len([f for f in facts if f["fiscal_year"] == year]), 18)
+        self.assertEqual({v["source_kind"] for y in (2017, 2018, 2019) for v in self.versions(y) if v["source_kind"].startswith("mops_")},
+                         {"mops_xbrl_instance", "mops_inline_xbrl"})
+        self.assertFalse([f for f in facts if "E" in f["value_text"].upper()])
+        values = {(f["fiscal_year"], f["metric_code"]): int(f["value_text"]) for f in facts if f["metric_code"] != "eps"}
+        for year in (2017, 2018, 2019):  # accounting identities hold on the stored text
+            self.assertEqual(values[(year, "revenue")] - values[(year, "cost_of_goods_sold")], values[(year, "gross_profit")])
+            self.assertEqual(values[(year, "total_liabilities")] + values[(year, "equity")], values[(year, "total_assets")])
+
+    def test_xbrl_facts_are_never_point_in_time_eligible(self) -> None:
+        # No official disclosure dates these values and the XBRL bytes have no verified publication time.
+        self.assertEqual(list_historical_facts(self.repository, "1785", 2017, 2019, as_of="2026-10-11"), [])
+
+    def test_fy2019_pdf_publication_boundary(self) -> None:
+        def periods(as_of):
+            return {(v["period"], v["statement_scope"]) for v in list_filing_versions_as_of(
+                self.repository, "1785", as_of=as_of, start_year=2019, end_year=2019)}
+        self.assertEqual(periods("2020-02-14T14:58:51+08:00"), set())
+        self.assertEqual(periods("2020-02-14T14:58:52+08:00"), {("2019FY", "consolidated")})
+        self.assertEqual(periods("2020-02-14T14:59:25+08:00"), {("2019FY", "consolidated"), ("2019FY", "individual")})
+
+    def test_fy2017_fy2018_pdfs_stay_unverified_and_fy2018_correction_is_linked(self) -> None:
+        for year in (2017, 2018):
+            pdfs = [v for v in self.versions(year) if v["source_kind"] == "official_pdf"]
+            self.assertEqual({v["statement_scope"] for v in pdfs}, {"consolidated", "individual"})
+            self.assertEqual({v["availability_status"] for v in pdfs}, {"unverified"})  # blank 更(補)正 column
+        with self.repository.connect() as connection:
+            linked = {row[0] for row in connection.execute(
+                """SELECT v.source_kind || ':' || v.statement_scope FROM publication_evidence_links l
+                JOIN historical_publication_events e USING (event_id)
+                JOIN financial_filing_versions v ON v.filing_version_id = l.target_id
+                WHERE e.event_key = 'mops:20190529:141818:1' AND l.link_status = 'unverified_linkage'""")}
+        self.assertEqual(linked, {"mops_xbrl_instance:consolidated", "official_pdf:consolidated", "official_pdf:individual"})

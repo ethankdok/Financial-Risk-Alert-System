@@ -323,6 +323,14 @@ class Evid06To08PointInTimeTests(EvidenceTestCase):
                          ("original", "verified", "2016-08-25T08:17:04+00:00"))
         restated = versions["201304_1785_AI4.pdf"]
         self.assertEqual((restated["filing_version_type"], restated["availability_status"]), ("restated", "unverified"))
+        # The link states every reason the upload record does not verify these bytes (blank 更(補)正, later correction).
+        with self.repository.connect() as connection:
+            rationale = connection.execute(
+                """SELECT l.rationale FROM publication_evidence_links l JOIN historical_publication_events e USING (event_id)
+                WHERE e.event_key = 'ebook:201304_1785_AI4.pdf' AND l.target_id = ?""",
+                (restated["filing_version_id"],)).fetchone()["rationale"]
+        self.assertIn("更(補)正 column is blank (not 無)", rationale)
+        self.assertIn("later corrections may have replaced it", rationale)
         mismatch = versions["201404_1785_AI1.pdf"]
         self.assertEqual(mismatch["availability_status"], "unverified")
         self.assertIn("MISMATCH", mismatch["verification_evidence_json"])

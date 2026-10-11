@@ -117,23 +117,30 @@ class ConferenceCoverageRecorder:
             status, error = classify_listing(raw, ticker=ticker, year=year)
             stored = self.archive.store(ticker=ticker, period=f"evidence/mops-conference-listing-{year}", content=raw,
                                         detected_format="html", retrieval={"source_url": url, "retrieved_at": retrieved_at})
+            listed, listing_rows = (parse_listing(raw, ticker=ticker, roc_year=year - 1911, non_pdf=[])
+                                    if status == "conference_found" else ([], 0))
             documents = manifest.get("documents", [])
             downloaded = sum(1 for d in documents if d.get("sha256"))
-            if status == "conference_found" and downloaded < len(documents):
+            # The official listing, not only a pipeline manifest, defines what exists: listed documents that were
+            # never archived are missing evidence even when no manifest was written for the year.
+            if status == "conference_found" and downloaded < max(len(documents), len(listed)):
                 status = "document_missing" if not manifest.get("errors") else "download_failed"
             errors = list(manifest.get("errors", [])) + ([error] if error else [])
             rows.append(self._save(ticker, year, start_year, end_year, status, url, stored.content_hash,
-                                   stored.relative_path, retrieved_at, manifest, errors))
+                                   stored.relative_path, retrieved_at, manifest, errors, listed, listing_rows))
         return rows
 
-    def _save(self, ticker, year, start_year, end_year, status, url, digest, raw_path, retrieved_at, manifest, errors):
+    def _save(self, ticker, year, start_year, end_year, status, url, digest, raw_path, retrieved_at, manifest, errors,
+              listed=(), listing_rows=0):
         documents = manifest.get("documents", [])
-        dates = sorted({date for d in documents for date in d.get("conference_dates", [])})
+        dates = sorted({date for d in documents for date in d.get("conference_dates", [])}
+                       | {date for attachment in listed for date in attachment.conference_dates})
         row = {
             "ticker": ticker, "year": year, "research_role": research_role(year, start_year, end_year),
             "status": status, "listing_url": url, "listing_sha256": digest, "listing_raw_path": raw_path,
-            "listing_retrieved_at": retrieved_at, "conference_rows": int(manifest.get("rows") or 0),
-            "meeting_dates_json": to_json(dates), "expected_documents": int(manifest.get("expected_pdfs") or 0),
+            "listing_retrieved_at": retrieved_at, "conference_rows": int(manifest.get("rows") or listing_rows or 0),
+            "meeting_dates_json": to_json(dates),
+            "expected_documents": max(int(manifest.get("expected_pdfs") or 0), len(listed)),
             "downloaded_documents": sum(1 for d in documents if d.get("sha256")),
             "non_pdf_attachments": len(manifest.get("non_pdf_attachments") or []),
             "missing_documents": len((manifest.get("integrity") or {}).get("missing_pdfs") or []),

@@ -20,7 +20,7 @@ Consumers need only the CSV/JSON files, not SQLite.
 | `fiscal_year` | int | Gregorian fiscal year |
 | `period` | string | `YYYYFY` (annual). Quarterly periods are a future extension. |
 | `metric_code` | string | canonical field code (list below) |
-| `value` | decimal string | exact value as filed, after iXBRL `scale`/`sign`; never zero-filled |
+| `value` | decimal string | exact value as filed, after iXBRL `scale`/`sign`; fixed-point text, never exponent notation (Phase 2A fix: scaled iXBRL values are stored as `1525265000`, not `1.525265E+9`); never zero-filled |
 | `unit` | `TWD` \| `TWD/share` | normalized unit (full TWD, not thousands) |
 | `statement_type` | `income_statement` \| `balance_sheet` \| `cash_flow` | |
 | `statement_scope` | `consolidated` \| `individual` \| `unknown` | from the taxonomy entry point (`…-cr-…` / `…-ir-…`) or a manifest declaration; never assumed |
@@ -123,6 +123,7 @@ and original filing facts only by 重編前 (pre) values.
 | Restatement analysis, one second earlier | 2016-11-13 21:26:21 | 0 facts; 79 individual before/after rows (21:25:31 notice); 6 individual summary rows |
 | Restatement analysis | from 2016-11-13 21:26:22 | 27 restated facts (observation level) + 158 before/after rows + 11 summary rows |
 | Retrospective | e.g. 2017-12-31 | same 27 facts (XBRL identity still withheld) + 8 artifact-verified PDFs (incl. the FY2016 PDF) + 12 summary rows |
+| FY2011–FY2019 strict (Phase 2A) | 2020-12-31 | same 27 facts; **0** FY2017–FY2019 facts (no verified XBRL publication time and no disclosure stating the values); 10 artifact-verified PDFs (adds FY2019 consolidated/individual, public from 2020-02-14 14:58:52 / 14:59:25); 12 summary rows |
 
 Pre-event detection requires verified first-publication evidence for the
 original 2012–2016 reports, which is not yet available. TPEx summary values

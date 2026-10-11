@@ -1,4 +1,4 @@
-# 1785 光洋科 — Official Investor-Conference Coverage (2010–2017)
+# 1785 光洋科 — Official Investor-Conference Coverage (2010–2019)
 
 Source: MOPS 法人說明會 listing `ajax_t100sb02_1` (market `otc`) and the official
 `FileDownLoad` form, acquired with the existing conference pipeline
@@ -6,9 +6,12 @@ Source: MOPS 法人說明會 listing `ajax_t100sb02_1` (market `otc`) and the of
 are archived locally (gitignored) under `fintrust_backend/data/historical-conference-pdfs/1785/`
 and in the historical-audit raw archive (listing responses).
 
-Core research range: **2011–2016**. 2010 and 2017 are context only and are not
-in the core package unless `--include-context-years` is used. They are always
-marked by `research_role`.
+The core research range is set **per package** by its fiscal-year range:
+- the FY2011–2016 packages treat 2010 and 2017 as context;
+- the FY2011–2019 packages (Phase 2A) treat 2011–2019 as core.
+
+Context years are included only with `--include-context-years`. Every row is marked by `research_role`, which is
+recomputed from the package range; the role stored when the listing was recorded is not used.
 
 ## Year-by-year status
 
@@ -21,7 +24,14 @@ marked by `research_role`.
 | 2014 | core | no_official_record_found | 0 | — | 0 / 0 | 0 | `87e52938f7b40c03…` |
 | 2015 | core | no_official_record_found | 0 | — | 0 / 0 | 0 | `87e52938f7b40c03…` |
 | 2016 | core | no_official_record_found | 0 | — | 0 / 0 | 0 | `87e52938f7b40c03…` |
-| 2017 | post_period_context | conference_found | 1 | 106/04/14 | 2 / 2 | 0 | `4f17dee1733f5299…` |
+| 2017 | core in FY2011–2019 packages | conference_found | 1 | 106/04/14 | 2 / 2 | 0 | `4f17dee1733f5299…` |
+| 2018 | core in FY2011–2019 packages | **document_missing** | 5 | 107/02/07, 107/05/03, 107/05/04, 107/05/08 | 10 / 0 | 0 | `07504e990ec9d892…` |
+| 2019 | core in FY2011–2019 packages | **document_missing** | 2 | 108/05/23, 108/08/14 | 4 / 0 | 0 | `31d699e63696e299…` |
+
+The 2018 and 2019 listings were recorded in Phase 2A (2026-10-11 UTC). Their documents are listed by MOPS but were
+**not downloaded**: conference acquisition is outside the scope of Phase 2A. Before a recorder fix in Phase 2A,
+such a year would have read `conference_found` with 0 expected documents, because the counts came only from a
+pipeline manifest. They now come from the verified official listing.
 
 - **No-data years.** The five no-data responses are byte-identical MOPS 「查無資料」 pages. That shows the official listing has no record for those years. It does **not** prove that no conference took place.
 - **The third-party index** (finmoconf.diveinvest.net) was used only as a discovery lead. It agrees with the official result (2011-03-25 and 2017-04-14 for 2011–2017) and is not stored as evidence.

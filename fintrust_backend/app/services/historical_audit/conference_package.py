@@ -181,6 +181,9 @@ def build_conference_datasets(
 
     coverage_out = []
     for row in coverage_rows:
+        # The role is relative to this package's fiscal-year range (as for documents), not the range in force when the
+        # listing was recorded, so a 2011-2019 package treats 2017 coverage as core.
+        row = {**row, "research_role": _role(row["year"], start_year, end_year)}
         if not include_context and row["research_role"] != "core":
             continue
         raw_path = None
@@ -196,8 +199,12 @@ def build_conference_datasets(
         coverage_out.append({**row, "meeting_dates": ";".join(json.loads(row["meeting_dates_json"])),
                              "errors": ";".join(json.loads(row["errors_json"])), "package_raw_path": raw_path})
         if row["research_role"] == "core" and row["status"] != "conference_found":
+            detail = ("official MOPS t100sb02_1 listing; absence of a record is not proof that no conference took place"
+                      if row["status"] in ("no_official_record_found", "official_listing_unavailable") else
+                      f"official MOPS t100sb02_1 listing names {row['expected_documents']} document(s); "
+                      f"{row['downloaded_documents']} archived")
             missing.append({"fiscal_year": row["year"], "evidence_kind": "conference_listing", "status": row["status"],
-                            "detail": "official MOPS t100sb02_1 listing; absence of a record is not proof that no conference took place"})
+                            "detail": detail})
     add("data/conference_coverage.csv", csv_bytes(coverage_out, CONFERENCE_COVERAGE_FIELDS), "conference")
     if not records:
         stats["status"] = "no_documents_in_scope"

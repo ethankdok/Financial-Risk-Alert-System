@@ -88,6 +88,20 @@ def load_plan(ticker: str, path: str | Path | None = None) -> dict[str, Any]:
     return plan
 
 
+def _unverified_upload_rationale(event: Any, version: dict[str, Any]) -> str:
+    """Why an archive upload record does not verify this PDF's availability (every reason that applies)."""
+    correction = json.loads(event["evidence_text"]).get("correction")
+    evidence = " ".join(json.loads(version.get("verification_evidence_json") or "[]"))
+    reasons = []
+    if correction != "無":
+        reasons.append(f"its 更(補)正 column is {correction or 'blank'} (not 無)")
+    if "MISMATCH" in evidence:
+        reasons.append("the archived bytes do not match the listed file size")
+    if "later correction notices may have replaced" in evidence:
+        reasons.append("later corrections may have replaced it")
+    return "archive upload record names this file, but " + "; ".join(reasons or ["its upload time is not verified"])
+
+
 def availability_instant(publication_at: str, precision: str) -> datetime:
     """Earliest instant at which the notice is certainly public.
 
@@ -506,8 +520,7 @@ class HistoricalEvidenceService:
                     if version["source_kind"] == "official_pdf" and version["source_url"].endswith(f"filename={filename}"):
                         status = "verified_linkage" if version["availability_status"] == "verified" else "period_level_only"
                         rationale = ("archive upload record names this exact file and the archived bytes match its size; no correction recorded"
-                                     if status == "verified_linkage" else
-                                     "archive upload record names this file, but later corrections may have replaced it")
+                                     if status == "verified_linkage" else _unverified_upload_rationale(event, version))
                     elif version["source_kind"] != "official_pdf" and version["filing_version_type"] == json.loads(event["evidence_text"])["version_label"]:
                         status, rationale = "period_level_only", "same period, scope and revision as an archived PDF upload; a different artifact (XBRL), so its own publication time is unproven"
                     else:

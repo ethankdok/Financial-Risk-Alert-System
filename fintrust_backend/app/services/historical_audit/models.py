@@ -157,6 +157,17 @@ def fact_id(
     )[:32]
 
 
+def decimal_text(value: Any) -> str:
+    """Canonical fixed-point text of an exact decimal (never exponent notation).
+
+    ``str(Decimal)`` renders scaled iXBRL values such as ``Decimal("1525265").scaleb(3)`` as ``1.525265E+9``;
+    ``format(value, "f")`` gives ``1525265000`` and equals ``str`` for every non-exponent value.
+    """
+    from decimal import Decimal
+
+    return format(value if isinstance(value, Decimal) else Decimal(str(value)), "f")
+
+
 def annual_period(fiscal_year: int) -> str:
     return f"{fiscal_year}FY"
 

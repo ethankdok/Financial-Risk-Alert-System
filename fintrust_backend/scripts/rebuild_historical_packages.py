@@ -247,13 +247,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--archive", type=Path, default=Path("data/historical_audit/raw"))
     parser.add_argument("--conference-root", type=Path, default=Path("data/historical-conference-pdfs"))
     parser.add_argument("--packages", type=Path, default=Path("data/historical_audit/packages"))
+    parser.add_argument("--strict-filename", default=None,
+                        help="strict ZIP file name (default fintrust_<ticker>_asof_<as-of>.zip); its sidecar follows it")
     parser.add_argument("--check-release", action="store_true",
                         help="only recover/validate the strict ZIP + audit sidecar pair, then exit")
     args = parser.parse_args(argv)
 
     stem = f"fintrust_{args.ticker}"
     all_targets = {"full": args.packages / f"{stem}_{args.start_year}_{args.end_year}_full.zip",
-                   "strict": args.packages / f"{stem}_asof_{args.as_of}.zip"}
+                   "strict": args.packages / (args.strict_filename or f"{stem}_asof_{args.as_of}.zip")}
+    if args.strict_filename and (Path(args.strict_filename).name != args.strict_filename
+                                 or not args.strict_filename.endswith(".zip") or ".." in args.strict_filename):
+        parser.error("--strict-filename must be a plain *.zip file name inside --packages")
     selected = ("full", "strict") if args.rebuild == "both" else (args.rebuild,)
     targets = {name: all_targets[name] for name in selected}
     started = datetime.now(timezone.utc)

@@ -918,6 +918,353 @@
     "method": "GET",
     "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2016Q4.xls"
    }
+  },
+  {
+   "source_key": "twse-ebook-listing-106",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=106&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "twse-ebook-listing-107",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=107&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "twse-ebook-listing-108",
+   "category": "official_document_index",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "TWSE e-document listing (t57sb01, financial reports)",
+   "parser": "twse_ebook_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id=1785&year=108&seamon=&mtype=A&"
+   }
+  },
+  {
+   "source_key": "mops-material-listing-107",
+   "category": "official_document_index",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information listing (t05st01)",
+   "parser": "mops_material_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01?encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=all&co_id=1785&year=107"
+   }
+  },
+  {
+   "source_key": "mops-material-listing-108",
+   "category": "official_document_index",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information listing (t05st01)",
+   "parser": "mops_material_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01?encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=all&co_id=1785&year=108"
+   }
+  },
+  {
+   "source_key": "mops-material-listing-109",
+   "category": "official_document_index",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information listing (t05st01)",
+   "parser": "mops_material_listing",
+   "request": {
+    "method": "GET",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01?encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=all&co_id=1785&year=109"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2017Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2017Q4.xls"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2018Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2018Q4.xls"
+   }
+  },
+  {
+   "source_key": "tpex-quarterly-summary-O_2019Q4",
+   "category": "official_historical_summary",
+   "issuer": "TPEx",
+   "document_type": "TPEx 上櫃公司季報 financial summary workbook",
+   "parser": "tpex_quarterly_summary_xls",
+   "request": {
+    "method": "GET",
+    "url": "https://www.tpex.org.tw/storage/statistic/financial/O_2019Q4.xls"
+   }
+  },
+  {
+   "source_key": "twse-ebook-201704_1785_AI1",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-106",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201704_1785_AI1.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201704_1785_AI3",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-106",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201704_1785_AI3.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201804_1785_AI1",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-107",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201804_1785_AI1.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201804_1785_AI3",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-107",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201804_1785_AI3.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201904_1785_AI1",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-108",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201904_1785_AI1.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "twse-ebook-201904_1785_AI3",
+   "category": "official_filing_pdf",
+   "issuer": "TWSE (e-document archive)",
+   "document_type": "annual financial report e-book (PDF)",
+   "parser": "twse_ebook_pdf",
+   "listing_source_key": "twse-ebook-listing-108",
+   "request": {
+    "method": "TWSE_EBOOK",
+    "url": "https://doc.twse.com.tw/server-java/t57sb01",
+    "data": {
+     "colorchg": "1",
+     "step": "9",
+     "kind": "A",
+     "co_id": "1785",
+     "filename": "201904_1785_AI3.pdf",
+     "DEBUG": ""
+    }
+   }
+  },
+  {
+   "source_key": "mops-material-detail-20180321-195337-6",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "107",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20180321",
+     "spoke_time": "195337",
+     "seq_no": "6",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20180321:195337:6",
+     "event_type": "board_dividend_resolution",
+     "event_date": null,
+     "affected_periods": [],
+     "affected_scopes": [],
+     "quote": "董事會決議日期：107/03/21"
+    }
+   ]
+  },
+  {
+   "source_key": "mops-material-detail-20190221-152958-1",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "108",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20190221",
+     "spoke_time": "152958",
+     "seq_no": "1",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20190221:152958:1",
+     "event_type": "misstatement_litigation_settlement_resolution",
+     "event_date": null,
+     "affected_periods": [],
+     "affected_scopes": [],
+     "quote": "決議與未參與犯罪行為之財報不實期間之董監事及總經理等13人"
+    }
+   ]
+  },
+  {
+   "source_key": "mops-material-detail-20190529-141818-1",
+   "category": "official_publication_notice",
+   "issuer": "MOPS (company disclosure)",
+   "document_type": "MOPS material-information detail (t05st01 step 2)",
+   "parser": "mops_material_detail",
+   "request": {
+    "method": "POST",
+    "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st01",
+    "referer": "https://mopsov.twse.com.tw/mops/web/t05st01",
+    "data": {
+     "firstin": "true",
+     "b_date": "",
+     "e_date": "",
+     "TYPEK": "otc",
+     "year": "108",
+     "month": "all",
+     "type": "",
+     "co_id": "1785",
+     "spoke_date": "20190529",
+     "spoke_time": "141818",
+     "seq_no": "1",
+     "MEETING_STEP": "",
+     "MODEL": "",
+     "ITEM": "",
+     "e_month": "all",
+     "step": "2",
+     "off": "1"
+    }
+   },
+   "events": [
+    {
+     "event_key": "mops:20190529:141818:1",
+     "event_type": "financial_report_correction",
+     "event_date": null,
+     "affected_periods": [
+      "2018FY"
+     ],
+     "affected_scopes": [
+      "consolidated",
+      "individual"
+     ],
+     "quote": "更正資訊項目/報表名稱:附註九、重大或有負債及未認列之合約承諾(三)"
+    }
+   ]
   }
  ]
 }
