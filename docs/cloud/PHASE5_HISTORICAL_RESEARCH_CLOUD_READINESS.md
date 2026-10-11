@@ -25,7 +25,7 @@ phase. The staging preflight below lists what must be confirmed by the owner.
 |---|---|---|---|
 | Immutable raw bytes (PDF, notice HTML, XBRL, listings, conference PDFs, research ZIPs) | local content-addressed archive `fintrust_backend/data/historical_audit/raw`, `data/historical-conference-pdfs` (approved baseline 506b64c) | optional GCS mirror via `cloud_sync` (create-only, SHA-verified); research ZIPs are **not** uploaded by default (220 MB) | historical ingestion CLI only |
 | Metadata and official facts | local `historical_audit.sqlite3` (read-only for Phase 3–5) | `historical_research_*` Firestore collections (create-only mirror) | historical ingestion / `cloud_sync` only |
-| Derived research results | local append-only `research_results.sqlite3` | `historical_research_results_*` Firestore collections (create-only mirror via `result_sync`) | research CLI / authorized `persist=true` |
+| Derived research results | local append-only `research_results.sqlite3` | `<collection_prefix>_results_*` Firestore collections derived from the isolated config (default `historical_research_results_*`; create-only mirror via `result_sync`) | research CLI / authorized `persist=true` |
 
 The research layer never writes official tables; derived results never overwrite (SQLite triggers forbid UPDATE/DELETE;
 Firestore writes are `create()` only; a different output for the same run id is an integrity error).
@@ -55,7 +55,9 @@ to Firestore was made.
   root, `static/` or `templates/` (commit `fix(flask): restrict the catch-all static route…`). Review requested.
 - **Health vs readiness**: `/health` (liveness, unchanged) vs `/api/v1/research/health` (dataset readiness).
 - **Export safety** (`result_sync`): dry-run plan by default, exclusive lock file, `batch_limit` (1–500), bounded retries
-  with ×4 backoff, JSON-lines journal, collision report (never overwritten), idempotent re-run, non-production targets only.
+  with ×4 backoff, JSON-lines journal, collision report (never overwritten), idempotent re-run, non-production targets only
+  (`emulator` / `isolated-test`); the result namespace is `<config collection_prefix>_results`, so independently configured
+  environments never share result collections (debug pass P2-F04).
 - **Logging/monitoring signals**: research endpoints use structured HTTP status codes (`503 research_dataset_unavailable`,
   `409`, `422`); the export journal records `start/written/retry/integrity_failure/end`. Proposed alerts (not created):
   5xx rate on `/api/v1/research/*`, `research_health.status=degraded` after deploy, any `integrity_failure` journal entry.

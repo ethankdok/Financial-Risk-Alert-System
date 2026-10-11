@@ -59,7 +59,8 @@ the 18 canonical metrics).
 ## M3 — Cross-source reconciliation (RQ-C)
 
 Board-notice vs filed XBRL: 40 match, 2 `mismatch_unresolved`, 18 `not_comparable` (unmapped lines such as
-期末歸屬於母公司業主之權益, 稅前淨利, 歸屬於母公司業主淨利). Restatement post side vs restated XBRL: 27 match. TPEx summaries: 45
+期末歸屬於母公司業主之權益, 稅前淨利, 歸屬於母公司業主淨利). Restatement post side vs restated XBRL: 27 match, 67 `not_comparable`
+(no filed fact for the period/scope; v2 fails closed on framework, regime, version, unit, sign, side and availability). TPEx summaries: 45
 `not_comparable` (scope inferred by matching XBRL revenue — circular). **FY2025**: total assets 34,436,171 vs 34,434,450 and
 total liabilities 19,423,635 vs 19,421,914 thousand TWD (each 1,721); audited PDF (SHA `fc715140…`) page 8 equals the filed
 XBRL; total equity 15,012,536 identical. Cause unverified; no correction/reclassification/fraud wording; not routed to risk.
