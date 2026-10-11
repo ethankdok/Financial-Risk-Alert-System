@@ -199,7 +199,9 @@ def recover_release(target: Path) -> dict:
     """Finish or undo an interrupted ``publish_release``; then validate the pair (fail closed)."""
     journal_path = _journal_name(target)
     if not journal_path.exists():
-        return {"action": "none", **(verify_release_pair(target) if target.exists() else {})}
+        if not target.exists() and not _audit_name(target).exists():
+            return {"action": "none", "status": "no_existing_release"}
+        return {"action": "none", **verify_release_pair(target)}  # a lone ZIP or lone sidecar fails closed
     journal = json.loads(journal_path.read_text(encoding="utf-8"))
     directory = target.parent
     audit_target = directory / journal["audit"]
@@ -260,13 +262,15 @@ def main(argv: list[str] | None = None) -> int:
 
     # The existing strict release must be a valid pair (or recoverable) before anything else happens.
     try:
-        report["existing_release"] = recover_release(all_targets["strict"]) if all_targets["strict"].exists() \
-            or _journal_name(all_targets["strict"]).exists() else {"action": "none", "status": "no_existing_release"}
+        report["existing_release"] = recover_release(all_targets["strict"])
     except (ReleaseError, Exception) as exc:  # noqa: BLE001 - any doubt about the pair fails closed
         print(json.dumps({**report, "status": "failed_existing_release_invalid", "error": f"{type(exc).__name__}: {exc}"},
                          ensure_ascii=False, indent=2, default=str))
         return 1
     if args.check_release:
+        if report["existing_release"].get("status") == "no_existing_release":  # nothing to validate is not "valid"
+            print(json.dumps({**report, "status": "failed_no_release_found"}, ensure_ascii=False, indent=2, default=str))
+            return 1
         print(json.dumps({**report, "status": "release_pair_valid"}, ensure_ascii=False, indent=2, default=str))
         return 0
 

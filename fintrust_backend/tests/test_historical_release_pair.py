@@ -124,3 +124,22 @@ class ReleasePairTests(EvidenceTestCase):
             release.publish_release(self.zip_b, self.audit_b, self.target)
         self.assertEqual(_sha(self.target), self.sha_a)
         self.assertEqual(release.main(["--check-release", "--packages", str(self.packages)]), 0)
+
+
+class MissingReleaseTests(EvidenceTestCase):
+    """--check-release must fail when there is nothing to validate (isolated temporary packages directory)."""
+
+    def test_check_release_fails_without_zip_and_sidecar(self) -> None:
+        packages = self.root / "empty-packages"
+        packages.mkdir()
+        self.assertEqual(release.main(["--check-release", "--packages", str(packages)]), 1)
+        self.assertEqual(release.recover_release(packages / TARGET_NAME)["status"], "no_existing_release")
+        self.assertEqual(sorted(p.name for p in packages.iterdir()), [])  # nothing was created
+
+    def test_lone_sidecar_fails_closed(self) -> None:
+        packages = self.root / "lone"
+        packages.mkdir()
+        (packages / "fintrust_1785_asof_2016-11-14.audit.json").write_text("{}", encoding="utf-8")
+        with self.assertRaisesRegex(release.ReleaseError, "incomplete release pair"):
+            release.recover_release(packages / TARGET_NAME)
+        self.assertEqual(release.main(["--check-release", "--packages", str(packages)]), 1)
