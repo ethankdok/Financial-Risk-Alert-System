@@ -402,7 +402,7 @@ class RealStrictCutoffMatrix(unittest.TestCase):
             "evidence reference": (op_income, {"pit_evidence_ref": "mops:20161113:212622:3"}, "is not the included notice"),
             "evidence identity": (op_income, {"pit_evidence_ref": "mops:20161113:212622:3", "pit_evidence_hash": consolidated,
                                               "effective_available_at": "2016-11-13T21:26:22+08:00"},
-                                  "statement scope individual disagrees with the notice \(consolidated\)"),
+                                  r"statement scope individual disagrees with the notice \(consolidated\)"),
             "restated value in an earlier report": (fy2015, {"value": "61376037", "normalized_value": "61376037000",
                                                              "pit_evidence_side": "post"},
                                                     "a 2015FY report must carry the pre side; the notice states post"),
