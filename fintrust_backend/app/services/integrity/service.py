@@ -37,6 +37,14 @@ DISCLAIMERS = [
 ]
 
 
+ASSUMPTIONS = [
+    "合併口徑由 MOPS t164sb01 下載連結的 report_id=C 推定（僅在已審查樣本確認）。",
+    "會計年度假設 12 月 31 日結束（已審查公司皆為曆年制）。",
+    "管線事實沒有來源檔 SHA-256 與公告時間；因此不支援 STRICT_AS_OF。",
+    "只有通過驗證的 MOPS 申報連結（HTTPS、白名單主機與路徑、co_id 與公司代號一致）才會取得官方來源身分。",
+]
+
+
 class UnsupportedTicker(LookupError):
     pass
 
@@ -83,6 +91,7 @@ def _claim_record(check: dict[str, Any], ticker: str, issuer: str | None,
         "method_version": ad.CLAIMS_ADAPTER_VERSION, "pit_eligible": True,
         "pit_reason": "date_precision_admitted_only_after_end_of_day_asia_taipei",
         "missing_fields": ["source_url", "ingested_at", "filing_version"],
+        "source_trust": "archived_issuer_document",
     }
 
 
@@ -246,7 +255,13 @@ class IntegrityWorkbench:
             "data_latest_available_at": None,
             "data_latest_available_at_note": "pipeline facts do not record publication instants",
             "data_latest_ingested_at": ingested[-1] if ingested else None,
-            "method_approval": METHOD_APPROVAL, "disclaimers": DISCLAIMERS,
+            "method_approval": METHOD_APPROVAL, "disclaimers": DISCLAIMERS, "assumptions": ASSUMPTIONS,
+            "freshness": {
+                "latest_fact_fiscal_year": fc.latest_fact_year(index),
+                "stale_findings": [f["finding_id"] for f in validated_findings
+                                   if f.get("freshness_status") == "latest_period_not_computable"],
+                "rule": "the current review describes the latest fiscal year; an older computable year is history only",
+            },
             "source_coverage": {
                 "annual_years": years, "annual_fact_records": len(index), "excluded_fact_records": facts["excluded"],
                 "official_sources": {k: sources.get(k) for k in ("status", "readiness", "live_fetch",

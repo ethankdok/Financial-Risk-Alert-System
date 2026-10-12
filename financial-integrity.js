@@ -146,7 +146,8 @@
       el("div", {className: "stat"}, el("span", {text: "已發現的篩檢項目"}), el("strong", {text: anomalies.length + " 項"}),
         el("small", {text: anomalies.map(function (f) { return f.check_id; }).join("、") || "無"})),
       el("div", {className: "stat"}, el("span", {text: "來源不足／不可計算"}), el("strong", {text: insufficient + " 項"}),
-        el("small", {text: "最近擷取：" + (r.data_latest_ingested_at || "未知") + "；發布時間未記錄"}))
+        el("small", {text: "最近擷取：" + (r.data_latest_ingested_at || "未知") + "；發布時間未記錄；最新年度不可計算的檢查 " +
+          ((r.freshness && r.freshness.stale_findings) || []).length + " 項"}))
     );
     target.appendChild(grid);
     target.appendChild(el("p", {className: "muted", text: "分析模式 " + r.review_mode + "；" + r.hindsight_note + " 產生時間 " + r.generated_at + "；不儲存（persist=false）。"}));
@@ -223,6 +224,13 @@
     if (f.implementation_tier !== "implemented") { header.appendChild(badge(f.implementation_tier === "readiness_only" ? "僅就緒度檢查" : "未來研究", "na")); }
     box.appendChild(header);
     if (f.period) { box.appendChild(el("p", {className: "muted", text: "期間 " + f.period + "；方法 " + f.method_version})); }
+    if (f.freshness_status === "latest_period_not_computable") {
+      box.appendChild(el("p", {className: "state error", text: "最新年度 " + f.period + " 無法計算：本項不產生目前的查核結論。"}));
+      if (f.last_computable) {
+        box.appendChild(el("p", {className: "muted", text: "歷史觀察（非目前結論）：" + f.last_computable.period + " " +
+          (STATUS_TEXT[f.last_computable.status] || f.last_computable.status)}));
+      }
+    }
     if (f.reasons.length) { box.appendChild(el("p", {className: "muted", text: "原因：" + f.reasons.join("、")})); }
     var details = el("details", null, el("summary", {text: "展開：原始數字 → 公式 → 差異 → 來源 → 限制 → 應確認文件"}));
     if (state.expand) { details.setAttribute("open", ""); }

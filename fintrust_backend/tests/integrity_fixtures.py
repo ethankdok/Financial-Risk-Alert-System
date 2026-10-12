@@ -193,10 +193,15 @@ def statement(ticker: str = "2303", **overrides: Any) -> dict[str, Any]:
     entry = {"statement_id": f"{ticker}-synthetic-revenue", "ticker": ticker, "archive_year": 2025,
              "document": "syn.pdf", "document_sha256": "d" * 64, "document_type": "earnings_presentation",
              "language": "en", "page": 3, "published_on": "2025-02-07", "published_on_basis": "synthetic",
-             "statement_kind": "issuer_presentation_table_unaudited", "context_excerpt": "(In NT$ millions)",
+             "statement_kind": "issuer_presentation_table_unaudited",
+             "context_excerpt": "(In NT$ millions) 2024 2023 Y-Y",
              "excerpt": "Net Sales 1,000 900 11.1%", "normalized_claim": "SYNTHETIC 2024年營收1000百萬元",
              "normalization": "synthetic", "expected_parse": {"metric": "revenue", "period": "2024FY",
-                                                              "value": "1000", "unit": "百萬"}}
+                                                              "value": "1000", "unit": "百萬"},
+             "quote_extraction": {"row_label": "Net Sales", "column_label": "2024", "column_position": 1,
+                                  "original_token": "1,000", "header_unit_excerpt": "(In NT$ millions) 2024 2023 Y-Y",
+                                  "period_label_excerpt": "(In NT$ millions) 2024 2023 Y-Y",
+                                  "column_order_from_period_label": True, "column_order_basis": "synthetic"}}
     entry.update(overrides)
     return entry
 

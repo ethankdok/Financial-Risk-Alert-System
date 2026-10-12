@@ -1,5 +1,5 @@
 {
-  "registry_version": "integrity_issuer_statement_registry_v1",
+  "registry_version": "integrity_issuer_statement_registry_v2",
   "purpose": "Issuer statements quoted verbatim from archived official MOPS conference presentations. Each excerpt is re-verified against the archived page text and the pinned document SHA-256 on every request; a missing or changed source makes the check insufficient_evidence. No statement is paraphrased into a different figure.",
   "statements": [
     {
@@ -18,7 +18,22 @@
       "excerpt": "Net Sales 530,586 433,446 22.4%",
       "normalized_claim": "聯發科2024年營收530586百萬元",
       "normalization": "Row 'Net Sales', column 2024, unit stated by the table header 'In NT$ millions'. Thousands separator removed so the existing deterministic claim parser reads the figure.",
-      "expected_parse": {"metric": "revenue", "period": "2024FY", "value": "530586", "unit": "百萬"}
+      "expected_parse": {
+        "metric": "revenue",
+        "period": "2024FY",
+        "value": "530586",
+        "unit": "百萬"
+      },
+      "quote_extraction": {
+        "row_label": "Net Sales",
+        "column_label": "2024",
+        "column_position": 1,
+        "original_token": "530,586",
+        "header_unit_excerpt": "(In NT$ millions, except EPS)    2024 2023 Y-Y",
+        "period_label_excerpt": "(In NT$ millions, except EPS) 2024 2023 Y-Y",
+        "column_order_from_period_label": true,
+        "column_order_basis": "header row lists 2024 before 2023; confirmed by the row's printed Y-Y percentage"
+      }
     },
     {
       "statement_id": "2454-FY2024-net-income-4Q24-presentation-p15",
@@ -36,7 +51,22 @@
       "excerpt": "Net income 107,141 77,191 38.8%",
       "normalized_claim": "聯發科2024年淨利107141百萬元",
       "normalization": "Row 'Net income' (consolidated, including non-controlling interests), column 2024, unit 'In NT$ millions'. Thousands separator removed for the existing parser.",
-      "expected_parse": {"metric": "net_income", "period": "2024FY", "value": "107141", "unit": "百萬"}
+      "expected_parse": {
+        "metric": "net_income",
+        "period": "2024FY",
+        "value": "107141",
+        "unit": "百萬"
+      },
+      "quote_extraction": {
+        "row_label": "Net income",
+        "column_label": "2024",
+        "column_position": 1,
+        "original_token": "107,141",
+        "header_unit_excerpt": "(In NT$ millions, except EPS)    2024 2023 Y-Y",
+        "period_label_excerpt": "(In NT$ millions, except EPS) 2024 2023 Y-Y",
+        "column_order_from_period_label": true,
+        "column_order_basis": "header row lists 2024 before 2023; confirmed by the row's printed Y-Y percentage"
+      }
     },
     {
       "statement_id": "2330-FY2024-net-revenue-4Q24-presentation-p11",
@@ -54,7 +84,22 @@
       "excerpt": "Net Revenue 2,894.31 2,161.74 +33.9%",
       "normalized_claim": "台積電2024年營收28943.1億元",
       "normalization": "Row 'Net Revenue', 2024 column, unit 'In NT$ billions'. NT$ billions × 10 = 億 (exact decimal shift, no rounding).",
-      "expected_parse": {"metric": "revenue", "period": "2024FY", "value": "28943.1", "unit": "億"}
+      "expected_parse": {
+        "metric": "revenue",
+        "period": "2024FY",
+        "value": "28943.1",
+        "unit": "億"
+      },
+      "quote_extraction": {
+        "row_label": "Net Revenue",
+        "column_label": "2024",
+        "column_position": 1,
+        "original_token": "2,894.31",
+        "header_unit_excerpt": "(In NT$ billions unless otherwise noted)",
+        "period_label_excerpt": "2024 Financial Highlights",
+        "column_order_from_period_label": false,
+        "column_order_basis": "page title '2024 Financial Highlights'; column 1 = 2024 confirmed by the row's printed YoY percentage (column-label line is garbled in the text layer)"
+      }
     },
     {
       "statement_id": "2330-FY2024-operating-cash-flow-4Q24-presentation-p11",
@@ -72,7 +117,22 @@
       "excerpt": "Operating Cash Flow 1,826.18 1,241.97 +47.0%",
       "normalized_claim": "台積電2024年營業現金流量18261.8億元",
       "normalization": "Row 'Operating Cash Flow', 2024 column, unit 'In NT$ billions'. NT$ billions × 10 = 億 (exact decimal shift, no rounding).",
-      "expected_parse": {"metric": "operating_cash_flow", "period": "2024FY", "value": "18261.8", "unit": "億"}
+      "expected_parse": {
+        "metric": "operating_cash_flow",
+        "period": "2024FY",
+        "value": "18261.8",
+        "unit": "億"
+      },
+      "quote_extraction": {
+        "row_label": "Operating Cash Flow",
+        "column_label": "2024",
+        "column_position": 1,
+        "original_token": "1,826.18",
+        "header_unit_excerpt": "(In NT$ billions unless otherwise noted)",
+        "period_label_excerpt": "2024 Financial Highlights",
+        "column_order_from_period_label": false,
+        "column_order_basis": "page title '2024 Financial Highlights'; column 1 = 2024 confirmed by the row's printed YoY percentage (column-label line is garbled in the text layer)"
+      }
     }
   ]
 }

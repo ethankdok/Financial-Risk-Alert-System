@@ -45,7 +45,8 @@ class DecimalAlignmentTests(unittest.TestCase):
     def test_mops_identity_scope_and_filing_policy(self) -> None:
         identity = al.mops_filing_identity(mops_url("2454", 2024))
         self.assertEqual((identity["filing_fiscal_year"], identity["season"], identity["scope"]), (2024, 4, "consolidated"))
-        self.assertEqual(al.derive_scope("unknown", mops_url("2454", 2024)), ("consolidated", "mops_report_id_C"))
+        self.assertEqual(al.derive_scope("unknown", mops_url("2454", 2024)),
+                         ("consolidated", "mops_report_id_C_reviewed_sample_assumption"))
         self.assertEqual(al.derive_scope("unknown", mops_url("2454", 2024, report_id="A"))[0], "unknown")
         self.assertEqual(al.derive_scope("individual", mops_url("2454", 2024)), ("individual", "stored_statement_scope"))
         self.assertEqual(al.derive_scope(None, "https://example.test/x")[0], "unknown")
@@ -174,7 +175,10 @@ class RevenueReceivablesTests(unittest.TestCase):
         missing = fc.check_revenue_receivables(index_of(rows)["index"])
         self.assertEqual(missing["series"][-1]["status"], "not_computable")
         self.assertIn("missing:accounts_receivable:2025FY", missing["series"][-1]["reasons"])
-        self.assertEqual(missing["period"], "2024FY")  # falls back to the latest computable pair, labelled
+        # Review CR-02: the latest year stays top-level; the older computable pair is history only.
+        self.assertEqual((missing["period"], missing["status"], missing["freshness_status"], missing["review_queue"]),
+                         ("2025FY", "not_computable", "latest_period_not_computable", "insufficient_evidence"))
+        self.assertEqual(missing["last_computable"]["period"], "2024FY")
 
     def test_quarterly_and_demo_values_are_excluded_with_reasons(self) -> None:
         rows = annual_rows(TICKER, BASE_DATA) + [fact(TICKER, "revenue", "2026Q2", 5.0, unit="新台幣仟元", analysis_type="latest")]

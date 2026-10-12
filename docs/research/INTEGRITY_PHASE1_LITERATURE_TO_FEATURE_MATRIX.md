@@ -30,7 +30,7 @@
 
 | Workbench check | Shares figures with | Evidence family |
 |---|---|---|
-| F1 Revenue / AR alignment | Beneish DSRI (the AR/sales change is the same quantity); Dechow `ch_rec` | `receivables`, `revenue` |
+| F1 Revenue / AR alignment | Beneish DSRI and Dechow `ch_rec`. F1's gap (AR growth − revenue growth) is **related to but numerically different from** DSRI − 1: AR 200→250 with sales 1,000→1,100 gives F1 = 0.15 but DSRI − 1 = 0.136364. Only the auxiliary field `receivables_to_revenue_relative_change` equals DSRI − 1 (Phase 1.1, review CR-06) | `receivables`, `revenue` |
 | F2 NI / CFO alignment | Beneish TATA; Dechow `rsst_acc` (accrual measures) | `net_income`, `operating_cash_flow` |
 | F3 issuer claim vs filing | The same issuer reports both the presentation and the filing | `issuer_presentation` + the metric's family |
 

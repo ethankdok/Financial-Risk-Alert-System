@@ -13,7 +13,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 METHOD_APPROVAL = "DRAFT_PENDING_METHOD_OWNER_REVIEW"
-CONTRACT_VERSION = "integrity_workbench_contract_v1"
+CONTRACT_VERSION = "integrity_workbench_contract_v2"
 
 
 class ReviewMode(str, Enum):
@@ -79,6 +79,7 @@ class Independence(str, Enum):
     issuer_self_reported = "issuer_self_reported"
     regulator_published_issuer_data = "regulator_published_issuer_data"
     independent_third_party = "independent_third_party"
+    unverified_source = "unverified_source"  # source URL failed validation: no official identity is inferred
 
 
 class EvidenceRecord(BaseModel):
@@ -120,6 +121,9 @@ class EvidenceRecord(BaseModel):
     pit_eligible: bool
     pit_reason: str
     missing_fields: list[str]
+    source_trust: Literal["validated_mops_filing", "untrusted_source", "archived_issuer_document"] = "untrusted_source"
+    candidate_evidence_ids: list[str] = Field(default_factory=list)
+    selection_policy: str | None = None
 
 
 class Finding(BaseModel):
@@ -146,6 +150,11 @@ class Finding(BaseModel):
     legitimate_explanations: list[str]
     limitations: list[str]
     not_independent_of: list[str] = Field(default_factory=list)
+    latest_fact_fiscal_year: int | None = None
+    latest_period_status: str | None = None
+    freshness_status: Literal["current", "latest_period_not_computable", "no_computable_period",
+                              "not_applicable"] = "not_applicable"
+    last_computable: dict[str, Any] | None = None
 
 
 class PaperModel(BaseModel):
@@ -183,6 +192,7 @@ class ClaimCheck(BaseModel):
     corroboration: dict[str, Any]
     limitations: list[str]
     precision_check: dict[str, Any] | None = None
+    quote_extraction: dict[str, Any] | None = None
 
 
 class DataShift(BaseModel):

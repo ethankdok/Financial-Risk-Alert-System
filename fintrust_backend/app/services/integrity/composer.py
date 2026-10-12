@@ -12,12 +12,14 @@ from typing import Any
 
 from app.services.integrity.contracts import FindingFamily, FindingStatus, ReviewQueue
 
-COMPOSER_VERSION = "integrity_composer_v1"
-QUEUE_RULE_VERSION = "integrity_review_queue_rule_v1"
+COMPOSER_VERSION = "integrity_composer_v2"
+QUEUE_RULE_VERSION = "integrity_review_queue_rule_v2"
 QUEUE_RULE = ("requires_verification if any finding meets its documented document-request rule (F1 gap above the "
               "uncalibrated heuristic, or a conflicting issuer claim); otherwise monitor if any finding asks for "
               "monitoring (F2 latest-year CFO below net income); otherwise insufficient_evidence when no financial "
-              "check could be computed; otherwise no_item_triggered (which is not a low-risk statement)")
+              "check could be computed for the latest fiscal year; otherwise no_item_triggered (which is not a "
+              "low-risk statement). A finding whose latest fiscal year is not computable is stale: it only queues "
+              "insufficient_evidence and its older computable year never triggers or clears the present-day queue.")
 _RANK = {ReviewQueue.requires_verification.value: 0, ReviewQueue.monitor.value: 1}
 
 
@@ -90,9 +92,10 @@ def investigation_priority(findings: list[dict[str, Any]], records: dict[str, di
     triggering = [f for f in findings if f.get("review_queue") in _RANK]
     triggering.sort(key=lambda f: (_RANK[f["review_queue"]], f["finding_id"]))
     financial = [f for f in findings if f["check_id"] in ("F1_REVENUE_RECEIVABLES_ALIGNMENT", "F2_NET_INCOME_CFO_ALIGNMENT")]
-    computed_financial = [f for f in financial if f["status"] in (
+    computed_financial = [f for f in financial if f.get("freshness_status", "current") == "current" and f["status"] in (
         FindingStatus.descriptive_divergence.value, FindingStatus.within_screening_heuristic.value,
         FindingStatus.descriptive_gap.value)]
+    stale = [f["finding_id"] for f in financial if f.get("freshness_status") == "latest_period_not_computable"]
     if any(f["review_queue"] == ReviewQueue.requires_verification.value for f in triggering):
         queue = ReviewQueue.requires_verification.value
     elif triggering:
@@ -122,6 +125,7 @@ def investigation_priority(findings: list[dict[str, Any]], records: dict[str, di
         "evidence_family_citations": {family: sorted(set(ids)) for family, ids in sorted(family_citations.items())},
         "distinct_evidence_family_count": len(family_citations),
         "independent_third_party_corroboration_count": len(independent),
+        "stale_findings": stale,
         "meaning": "查核優先順序（需要補件確認／持續監測／資料不足），不是舞弊機率或風險等級。",
         "fraud_probability": None,
     }
@@ -154,6 +158,14 @@ def next_checks(findings: list[dict[str, Any]], shift: dict[str, Any]) -> list[d
             "可選：請對方說明主要客戶付款條件是否於近期調整。", ["最近一期應收帳款帳齡表"],
             "未觸發篩檢項目不等於低風險，仍可作為一般盡職調查。")
     f2 = by_check.get("F2_NET_INCOME_CFO_ALIGNMENT")
+    for finding in (f1, f2):
+        if finding and finding.get("freshness_status") == "latest_period_not_computable":
+            history = finding.get("last_computable") or {}
+            add("B2B_LATEST_PERIOD_DATA", finding,
+                f"{finding['period']} 為最新年度但無法計算（{', '.join(finding['reasons'][1:]) or '資料不足'}）；"
+                f"較早的 {history.get('period', '—')} 結果只供歷史參考",
+                "請提供最新年度完整財務報表（含應收帳款與現金流量表），以便重新檢查。",
+                ["最新年度經查核財務報告"], "最新年度不足時，不以較早年度的結果作為目前的查核結論。")
     if f2 and f2["status"] == FindingStatus.descriptive_gap.value and f2["computed"].get("direction") == "cfo_below_net_income":
         streak = f2["computed"].get("consecutive_latest_years_cfo_below_net_income")
         add("B2B_WORKING_CAPITAL", f2, f"{f2['period']} 營業現金流低於淨利（連續 {streak} 年）",

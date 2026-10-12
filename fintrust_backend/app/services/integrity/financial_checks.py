@@ -2,8 +2,15 @@
 
 These are *screening* computations over issuer-reported figures. A divergence is a reason to ask for documents,
 never a finding of misstatement. Thresholds are uncalibrated, versioned work-queue heuristics, reported together
-with their sensitivity. F1 and F2 are financial-only checks: they are not a replication of Brazel et al. (2009),
-and F1's AR-to-sales change is the same quantity Beneish's DSRI uses, so the two are one evidence family.
+with their sensitivity. F1 and F2 are financial-only checks: they are not a replication of Brazel et al. (2009).
+F1's gap (AR growth − revenue growth) is *related to but numerically different from* Beneish's DSRI − 1
+((AR_t/Sales_t)/(AR_t-1/Sales_t-1) − 1): AR 200→250 with sales 1,000→1,100 gives a gap of 0.15 but DSRI − 1 of
+0.136364 (review CR-06). Both rest on the same receivables and sales figures, so they are one evidence family.
+
+Freshness (review CR-02): the top-level result always describes the latest fiscal year present in the company's
+facts. When that year cannot be evaluated, the top level reports it as not computable with the
+``insufficient_evidence`` queue, and the last computable year is kept only as ``last_computable`` history; a stale
+year can neither trigger nor clear the present-day queue.
 """
 
 from __future__ import annotations
@@ -16,8 +23,8 @@ from app.services.integrity import alignment as al
 from app.services.integrity.contracts import FindingFamily, FindingStatus, ImplementationTier, ReviewQueue
 
 F1_ID, F2_ID, F4_ID = "F1_REVENUE_RECEIVABLES_ALIGNMENT", "F2_NET_INCOME_CFO_ALIGNMENT", "F4_REVENUE_NFM_GROWTH"
-F1_VERSION = "integrity_f1_revenue_receivables_v1"
-F2_VERSION = "integrity_f2_net_income_cfo_v1"
+F1_VERSION = "integrity_f1_revenue_receivables_v2"
+F2_VERSION = "integrity_f2_net_income_cfo_v2"
 F4_VERSION = "integrity_f4_revenue_nfm_readiness_v1"
 F1_HEURISTIC_VERSION = "integrity_f1_uncalibrated_gap_heuristic_v1"
 F1_DEFAULT_GAP = Decimal("0.20")
@@ -34,7 +41,10 @@ F1_LIMITS = [
     "本檢查僅使用發行人申報之財務數字（同一發行人自報），不是獨立第三方查證。",
     "應收帳款採 XBRL AccountsReceivableNet（不含關係人應收與應收票據）；營收為全年合計、應收為期末時點餘額。",
     "門檻為未經台灣樣本校準的篩檢啟發式規則（附敏感度），超過門檻只代表需要補件查核，不代表財報不實。",
-    "AR 對營收比率的年變動與 Beneish DSRI 為同一數量，兩者不可視為互相獨立的佐證。",
+    "F1 差距（AR 成長率 − 營收成長率）與 Beneish DSRI 相關但數值不同（例：AR 200→250、營收 1,000→1,100："
+    "F1 = 0.15，DSRI−1 ≈ 0.136364）；附帶欄位 receivables_to_revenue_relative_change 在數學上等於 DSRI−1，"
+    "但未經文獻模型輸入閘門。兩者共用應收與營收數字，不可視為互相獨立的佐證。",
+    "合併口徑由 MOPS report_id=C 推定、會計年度假設 12/31 結束：兩者僅在已審查樣本（2330／2454）確認。",
 ]
 F2_EXPLANATIONS = [
     "營運資金變動（應收、存貨增加，應付減少）",
@@ -46,6 +56,8 @@ F2_LIMITS = [
     "淨利採 XBRL ProfitLoss（含非控制權益）；營業現金流採 CashFlowsFromUsedInOperatingActivities。",
     "營業現金流低於淨利本身不是異常判定；僅作為優先查核排序（監測）。",
     "同一發行人自報數字，不是獨立第三方查證。",
+    "正負號約定：本檢查儲存 NI − CFO；研究簡報常用 CFO − NI，兩者互為相反數（cfo_minus_net_income_twd 同時提供）。",
+    "合併口徑由 MOPS report_id=C 推定、會計年度假設 12/31 結束：兩者僅在已審查樣本確認。",
 ]
 
 
@@ -68,7 +80,9 @@ def _finding(check_id: str, family: FindingFamily, title: str, status: FindingSt
             "title": title, "status": status.value, "review_queue": None, "implementation_tier": tier.value,
             "method_version": version, "literature_basis": None, "period": None, "evidence_families": [],
             "evidence_ids": [], "inputs": {}, "formula": None, "computed": {}, "heuristic": None, "series": [],
-            "reasons": [], "legitimate_explanations": [], "limitations": [], "not_independent_of": []}
+            "reasons": [], "legitimate_explanations": [], "limitations": [], "not_independent_of": [],
+            "latest_fact_fiscal_year": None, "latest_period_status": None, "freshness_status": "not_applicable",
+            "last_computable": None}
     base.update(fields)
     base["finding_id"] = f"{check_id}:{base['period'] or 'na'}"
     return base
@@ -147,23 +161,48 @@ def check_revenue_receivables(index: dict[tuple[str, int], dict[str, Any]]) -> d
                   formula="gap = (AR_t / AR_t-1 − 1) − (Revenue_t / Revenue_t-1 − 1)",
                   legitimate_explanations=F1_EXPLANATIONS, limitations=F1_LIMITS,
                   not_independent_of=["beneish_1999_full8_v1:DSRI", "dechow_2011_model1_v1:ch_rec"],
-                  literature_basis="Financial-only consistency screen (receivables vs sales); shares the DSRI quantity "
-                                   "of Beneish (1999). Not a Brazel et al. (2009) NFM replication.")
-    computed = [p for p in pairs if p["status"] in (FindingStatus.descriptive_divergence.value,
-                                                     FindingStatus.within_screening_heuristic.value)]
-    if not pairs:
+                  literature_basis="Financial-only consistency screen (receivables vs sales); related to, but numerically "
+                                   "different from, Beneish (1999) DSRI. Not a Brazel et al. (2009) NFM replication.")
+    computable = (FindingStatus.descriptive_divergence.value, FindingStatus.within_screening_heuristic.value)
+    latest_year = latest_fact_year(index)
+    if latest_year is None or not pairs:
         reasons = ["fewer_than_two_consecutive_annual_periods"] + _missing(
             index, [("revenue", y) for y in years] + [("accounts_receivable", y) for y in years])
         return _finding(F1_ID, FindingFamily.financial_consistency, status=FindingStatus.not_computable,
-                        reasons=sorted(set(reasons)), review_queue=ReviewQueue.insufficient_evidence.value, **common)
-    primary = computed[-1] if computed else pairs[-1]
-    queue = (ReviewQueue.requires_verification.value if primary.get("exceeds_heuristic")
-             else ReviewQueue.insufficient_evidence.value if not computed else None)
-    return _finding(F1_ID, FindingFamily.financial_consistency, status=FindingStatus(primary["status"]),
-                    period=primary["period"], review_queue=queue, evidence_ids=primary.get("evidence_ids", []),
-                    inputs=primary.get("inputs", {}), computed={**primary.get("computed", {}),
-                                                                "sensitivity": primary.get("sensitivity", {})},
-                    reasons=primary.get("reasons", []), series=pairs, **common)
+                        reasons=sorted(set(reasons)), review_queue=ReviewQueue.insufficient_evidence.value,
+                        latest_fact_fiscal_year=latest_year, latest_period_status=FindingStatus.not_computable.value,
+                        freshness_status="no_computable_period", series=pairs, **common)
+    latest = next((p for p in pairs if p["period"] == f"{latest_year}FY"), None) or _f1_pair(index, latest_year, threshold)
+    last = next((p for p in reversed(pairs) if p["status"] in computable), None)
+    freshness = dict(latest_fact_fiscal_year=latest_year, latest_period_status=latest["status"])
+    if latest["status"] in computable:
+        queue = ReviewQueue.requires_verification.value if latest.get("exceeds_heuristic") else None
+        return _finding(F1_ID, FindingFamily.financial_consistency, status=FindingStatus(latest["status"]),
+                        period=latest["period"], review_queue=queue, evidence_ids=latest.get("evidence_ids", []),
+                        inputs=latest.get("inputs", {}), computed={**latest.get("computed", {}),
+                                                                   "sensitivity": latest.get("sensitivity", {})},
+                        reasons=latest.get("reasons", []), series=pairs, freshness_status="current", **freshness,
+                        **common)
+    return _finding(F1_ID, FindingFamily.financial_consistency, status=FindingStatus(latest["status"]),
+                    period=latest["period"], review_queue=ReviewQueue.insufficient_evidence.value,
+                    evidence_ids=latest.get("evidence_ids", []), inputs=latest.get("inputs", {}),
+                    reasons=["latest_period_not_computable", *latest.get("reasons", [])], series=pairs,
+                    freshness_status="latest_period_not_computable", **freshness,
+                    last_computable=_history(last), **common)
+
+
+def latest_fact_year(index: dict[tuple[str, int], dict[str, Any]]) -> int | None:
+    """Latest fiscal year with any admitted annual fact of the company (the year a current review must describe)."""
+    return max((year for _metric, year in index), default=None)
+
+
+def _history(entry: dict[str, Any] | None) -> dict[str, Any] | None:
+    """A stale computable year, kept as history only: it never drives the present-day queue."""
+    if entry is None:
+        return None
+    return {"period": entry["period"], "status": entry["status"], "computed": entry.get("computed", {}),
+            "evidence_ids": entry.get("evidence_ids", []), "is_current": False,
+            "note": "歷史觀察：最新年度不可計算，本期間結果不代表目前查核結論。"}
 
 
 # ----------------------------------------------------------------------------------------------- F2
@@ -186,7 +225,7 @@ def _f2_year(index: dict[tuple[str, int], dict[str, Any]], year: int) -> dict[st
         ctx.prec = al.PRECISION
         gap = ni - cfo
         computed = {"net_income_twd": al.text(ni), "operating_cash_flow_twd": al.text(cfo),
-                    "net_income_minus_cfo_twd": al.text(gap),
+                    "net_income_minus_cfo_twd": al.text(gap), "cfo_minus_net_income_twd": al.text(-gap),
                     "cfo_to_net_income": al.ratio(cfo, ni) if ni > 0 else None,
                     "direction": "cfo_below_net_income" if cfo < ni else "cfo_at_or_above_net_income"}
     if ni <= 0:
@@ -203,17 +242,28 @@ def check_net_income_cfo(index: dict[tuple[str, int], dict[str, Any]]) -> dict[s
                   not_independent_of=["beneish_1999_full8_v1:TATA", "dechow_2011_model1_v1:rsst_acc"],
                   literature_basis="Financial-only accrual-quality screen (earnings vs operating cash flow). Accrual "
                                    "measures in Beneish (1999) TATA and Dechow et al. (2011) RSST use related inputs.")
-    computed = [s for s in series if s["status"] == FindingStatus.descriptive_gap.value]
-    if not computed:
-        status = FindingStatus.not_comparable if any(s["status"] == "not_comparable" for s in series) \
-            else FindingStatus.unavailable
-        reasons = sorted({r for s in series for r in s["reasons"]}) or ["no_annual_net_income_and_cfo"]
-        return _finding(F2_ID, FindingFamily.financial_consistency, status=status, reasons=reasons, series=series,
-                        review_queue=ReviewQueue.insufficient_evidence.value, **common)
-    latest = computed[-1]
+    gap = FindingStatus.descriptive_gap.value
+    latest_year = latest_fact_year(index)
+    if latest_year is None:
+        return _finding(F2_ID, FindingFamily.financial_consistency, status=FindingStatus.unavailable,
+                        reasons=["no_annual_net_income_and_cfo"], series=series,
+                        review_queue=ReviewQueue.insufficient_evidence.value, latest_period_status=None,
+                        freshness_status="no_computable_period", **common)
+    latest = next((s for s in series if s["period"] == f"{latest_year}FY"), None) or _f2_year(index, latest_year)
+    last = next((s for s in reversed(series) if s["status"] == gap), None)
+    freshness = dict(latest_fact_fiscal_year=latest_year, latest_period_status=latest["status"])
+    if latest["status"] != gap:
+        status = FindingStatus(latest["status"])
+        reasons = ["latest_period_not_computable", *latest.get("reasons", [])] if last else latest.get("reasons", [])
+        return _finding(F2_ID, FindingFamily.financial_consistency, status=status, period=latest["period"],
+                        reasons=reasons or ["no_annual_net_income_and_cfo"], series=series,
+                        evidence_ids=latest.get("evidence_ids", []), inputs=latest.get("inputs", {}),
+                        review_queue=ReviewQueue.insufficient_evidence.value,
+                        freshness_status="latest_period_not_computable" if last else "no_computable_period",
+                        last_computable=_history(last), **freshness, **common)
     streak = 0
     for item in reversed(series):
-        if item["status"] != FindingStatus.descriptive_gap.value or item["computed"]["direction"] != "cfo_below_net_income":
+        if item["status"] != gap or item["computed"]["direction"] != "cfo_below_net_income":
             break
         streak += 1
     queue = ReviewQueue.monitor.value if latest["computed"]["direction"] == "cfo_below_net_income" else None
@@ -221,9 +271,10 @@ def check_net_income_cfo(index: dict[tuple[str, int], dict[str, Any]]) -> dict[s
                     period=latest["period"], review_queue=queue, evidence_ids=latest["evidence_ids"],
                     inputs=latest["inputs"], computed={**latest["computed"],
                                                        "consecutive_latest_years_cfo_below_net_income": streak},
-                    reasons=latest["reasons"], series=series,
+                    reasons=latest["reasons"], series=series, freshness_status="current", **freshness,
                     heuristic={"version": "integrity_f2_work_queue_rule_v1", "calibrated": False,
-                               "rule": "latest-year CFO below net income → monitor (document request), never a risk level"},
+                               "rule": "latest-year CFO below net income → monitor (document request), never a risk level",
+                               "sign_convention": "net_income_minus_cfo_twd = NI − CFO; cfo_minus_net_income_twd = CFO − NI"},
                     **common)
 
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sqlite3
 from decimal import Decimal, localcontext
 from pathlib import Path
@@ -22,10 +23,10 @@ from typing import Any
 from app.services.integrity import alignment as al
 from app.services.integrity.contracts import Availability, FindingStatus, Independence
 
-FACTS_ADAPTER_VERSION = "integrity_facts_adapter_v1"
+FACTS_ADAPTER_VERSION = "integrity_facts_adapter_v2"
 LITERATURE_ADAPTER_VERSION = "integrity_literature_readiness_adapter_v1"
 JSD_ADAPTER_VERSION = "integrity_jsd_adapter_v1"
-CLAIMS_ADAPTER_VERSION = "integrity_claims_adapter_v1"
+CLAIMS_ADAPTER_VERSION = "integrity_claims_adapter_v2"
 SOURCES_ADAPTER_VERSION = "integrity_official_sources_adapter_v1"
 REGISTRY_PATH = Path(__file__).with_name("issuer_statements.json")
 
@@ -57,17 +58,29 @@ def _sha(value: Any) -> str:
 
 # --------------------------------------------------------------------------------------------- facts
 class FactsAdapter:
+    """Persisted pipeline facts → typed records, partitioned before any selection (review CR-01 / CR-03):
+
+    demo fixtures and non-annual periods are excluded first, then rows whose ``source_url`` is not a validated
+    MOPS filing of *this* ticker are rejected (kept with their reason, never given an official identity), and
+    only the remaining official candidates are compared. Different amounts → ``conflicting_duplicate_values``;
+    the same amount from incompatible filing versions / scopes / policies → ``incompatible_candidate_versions``;
+    both fail closed. Identical official observations are deduplicated deterministically by evidence id (never
+    by retrieval time). A listing that reaches the read limit fails closed as possibly truncated.
+    """
+
+    FACT_LIMIT = 5000
+
     def __init__(self, repository: Any) -> None:
         self.repository = repository
 
     def _rows(self, ticker: str) -> list[dict[str, Any]]:
         try:
-            return list(self.repository.list_facts(ticker, limit=5000))
+            return list(self.repository.list_facts(ticker, limit=self.FACT_LIMIT))
         except Exception as exc:  # repository/backend unavailable
             raise IntegrityDataUnavailable(f"fact repository unavailable: {type(exc).__name__}") from exc
 
     @staticmethod
-    def record(row: dict[str, Any]) -> dict[str, Any]:
+    def record(row: dict[str, Any], ticker: str | None = None) -> dict[str, Any]:
         metric = str(row.get("metric_code"))
         family, _statement = FACT_METRICS.get(metric, (metric, "unknown"))
         period = str(row.get("period"))
@@ -75,34 +88,43 @@ class FactsAdapter:
         value = al.to_decimal(row.get("value"))
         unit = row.get("unit")
         source_url = row.get("source_url")
-        scope, scope_basis = al.derive_scope(row.get("statement_scope"), source_url)
-        identity = al.mops_filing_identity(source_url)
+        expected = ticker or str(row.get("ticker"))
+        identity = al.mops_filing_identity(source_url, ticker=expected)
+        trusted = bool(identity.get("recognised"))
+        if trusted:
+            scope, scope_basis = al.derive_scope(row.get("statement_scope"), source_url, ticker=expected)
+        else:
+            scope, scope_basis = "unknown", "untrusted_source_scope_not_derived"
         is_demo = bool(row.get("is_demo")) or row.get("source_kind") == "mvp_fixture"
         missing = ["source_sha256", "published_at", "effective_available_at"]
         if not row.get("taxonomy_concept"):
             missing.append("source_concept")
-        if not identity.get("recognised"):
+        if not trusted:
             missing.append("filing_version")
         if not al.is_float64_exact(al.to_twd(value, unit)):
             missing.append("exact_value_beyond_float64_integer_precision")
         key = {"ticker": row.get("ticker"), "metric": metric, "period": period, "value": al.text(value), "unit": unit,
                "source_url": source_url, "retrieved_at": row.get("retrieved_at")}
+        if is_demo:  # a demo row may duplicate an official row field for field; keep the two ids distinct
+            key["is_demo"] = True
         return {
             "evidence_id": f"fact:{row.get('ticker')}:{metric}:{period}:{_sha(key)[:12]}",
             "ticker": str(row.get("ticker")), "fiscal_period": period,
             "period_start": parsed["start"] if parsed["period_type"] != "unknown" else None,
             "period_end": parsed["end"], "period_type": parsed["period_type"],
-            "document_type": "mops_ifrs_financial_report_xbrl" if identity.get("recognised")
-            else str(row.get("source_kind") or "unknown"),
+            "document_type": "mops_ifrs_financial_report_xbrl" if trusted else str(row.get("source_kind") or "unknown"),
             "language": None, "concept": metric, "source_concept": row.get("taxonomy_concept"),
             "value": al.text(value), "unit": unit, "value_twd": al.text(al.to_twd(value, unit)),
             "scope": scope, "scope_basis": scope_basis,
-            "filing_version": identity.get("filing_version"), "filing_policy": al.filing_policy(period, source_url),
-            "issuer": row.get("company_name"), "publisher": MOPS_PUBLISHER if identity.get("recognised") else None,
-            "independence": Independence.regulator_published_issuer_data.value if identity.get("recognised")
-            else Independence.issuer_self_reported.value,
-            "source_sha256": None, "source_identity": identity.get("filing_version") or str(source_url or "unknown"),
-            "source_url": al.official_url(source_url),
+            "filing_version": identity.get("filing_version"),
+            "filing_policy": al.filing_policy(period, source_url, ticker=expected) if trusted else None,
+            "issuer": row.get("company_name"), "publisher": MOPS_PUBLISHER if trusted else None,
+            "independence": (Independence.regulator_published_issuer_data.value if trusted
+                             else Independence.unverified_source.value),
+            "source_trust": "validated_mops_filing" if trusted else "untrusted_source",
+            "source_rejection_reason": identity.get("reason"),
+            "source_sha256": None, "source_identity": identity.get("filing_version") or "unverified_source",
+            "source_url": al.official_url(source_url) if trusted else None,
             "locator": {"xbrl_concept": row.get("taxonomy_concept"), "pipeline_fact_id": row.get("fact_id"),
                         "source_field": row.get("source_field")},
             "published_at": row.get("filed_at"), "effective_available_at": None,
@@ -110,38 +132,60 @@ class FactsAdapter:
             "provenance": "persisted_pipeline_fact:" + str(row.get("source_kind") or "unknown"),
             "evidence_family": family, "method_version": FACTS_ADAPTER_VERSION,
             "pit_eligible": False, "pit_reason": "effective_available_at_unknown",
-            "missing_fields": missing, "is_demo": is_demo, "analysis_type": row.get("analysis_type"),
+            "missing_fields": missing, "candidate_evidence_ids": [], "selection_policy": None,
+            "is_demo": is_demo, "analysis_type": row.get("analysis_type"),
         }
 
     def collect(self, ticker: str) -> dict[str, Any]:
         """Annual index (metric, year) → record, plus excluded rows with reasons (never silently dropped)."""
-        records = [self.record(row) for row in self._rows(ticker) if row.get("metric_code") in FACT_METRICS]
-        grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
-        for record in records:
-            grouped.setdefault((record["concept"], record["fiscal_period"]), []).append(record)
+        rows = self._rows(ticker)
+        records = [self.record(row, ticker) for row in rows if row.get("metric_code") in FACT_METRICS]
         index: dict[tuple[str, int], dict[str, Any]] = {}
         excluded: list[dict[str, Any]] = []
         quality: list[dict[str, Any]] = []
+        if len(rows) >= self.FACT_LIMIT:
+            quality.append({"issue": "fact_listing_at_read_limit_possible_truncation", "concept": "*",
+                            "fiscal_period": "*", "values": [str(len(rows))],
+                            "evidence_ids": [r["evidence_id"] for r in records]})
+            excluded += [{"evidence_id": r["evidence_id"], "reason": "fact_listing_possibly_truncated"} for r in records]
+            return {"index": index, "records": records, "excluded": excluded, "quality": quality, "truncated": True}
+        grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+        for record in records:
+            if record["is_demo"]:
+                reason = "demo_fixture_value"
+            elif record["period_type"] != "annual":
+                reason = "period_type_" + record["period_type"] + "_not_used"
+            elif record["source_trust"] != "validated_mops_filing":
+                reason = "untrusted_source:" + str(record["source_rejection_reason"])
+            else:
+                grouped.setdefault((record["concept"], record["fiscal_period"]), []).append(record)
+                continue
+            excluded.append({"evidence_id": record["evidence_id"], "reason": reason})
         for (metric, period), items in sorted(grouped.items()):
+            ids = sorted(i["evidence_id"] for i in items)
             values = {item["value_twd"] or f"{item['value']} {item['unit']}" for item in items}
             if len(values) > 1:
                 quality.append({"issue": "conflicting_duplicate_values", "concept": metric, "fiscal_period": period,
-                                "values": sorted(values), "evidence_ids": [i["evidence_id"] for i in items]})
-                excluded += [{"evidence_id": i["evidence_id"], "reason": "conflicting_duplicate_values"} for i in items]
+                                "values": sorted(values), "evidence_ids": ids})
+                excluded += [{"evidence_id": i, "reason": "conflicting_duplicate_values"} for i in ids]
                 continue
-            item = sorted(items, key=lambda i: (i.get("analysis_type") != "historical", str(i.get("ingested_at"))))[0]
-            if item["is_demo"]:
-                excluded.append({"evidence_id": item["evidence_id"], "reason": "demo_fixture_value"})
+            versions = {(i["filing_version"], i["scope"], i["filing_policy"]) for i in items}
+            if len(versions) > 1:
+                quality.append({"issue": "incompatible_candidate_versions", "concept": metric, "fiscal_period": period,
+                                "values": sorted("|".join(map(str, v)) for v in versions), "evidence_ids": ids})
+                excluded += [{"evidence_id": i, "reason": "incompatible_candidate_versions"} for i in ids]
                 continue
-            if item["period_type"] != "annual":
-                excluded.append({"evidence_id": item["evidence_id"], "reason": f"period_type_{item['period_type']}_not_used"})
-                continue
-            index[(metric, int(period[:4]))] = item
-        return {"index": index, "records": records, "excluded": excluded, "quality": quality}
+            chosen = dict(next(i for i in items if i["evidence_id"] == ids[0]))
+            chosen["candidate_evidence_ids"] = ids
+            chosen["selection_policy"] = ("single_official_candidate" if len(ids) == 1
+                                          else "identical_official_observations_lowest_evidence_id")
+            excluded += [{"evidence_id": i, "reason": "duplicate_of:" + ids[0]} for i in ids[1:]]
+            index[(metric, int(period[:4]))] = chosen
+        return {"index": index, "records": records, "excluded": excluded, "quality": quality, "truncated": False}
 
 
 def public_record(record: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in record.items() if key not in ("is_demo", "analysis_type")}
+    return {key: value for key, value in record.items() if key not in ("is_demo", "analysis_type", "source_rejection_reason")}
 
 
 # ---------------------------------------------------------------------------------------- literature
@@ -356,6 +400,100 @@ def printed_precision_check(parsed: dict[str, Any], official_twd: Decimal | None
     return ("within_printed_precision" if difference <= half_step else "outside_printed_precision"), detail
 
 
+# ------------------------------------------------------------------------------------- quote lineage
+# Table-header units an issuer presentation may state, as a multiplier to NT$1.
+HEADER_UNITS = {"millions": Decimal(1_000_000), "billions": Decimal(1_000_000_000), "thousands": Decimal(1_000)}
+HEADER_UNIT_RE = re.compile(r"In NT\$ (thousands|millions|billions)", re.I)
+NUMBER_TOKEN_RE = re.compile(r"^[+-]?\(?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?%?$|^[+-]?\(?\d+(?:\.\d+)?\)?%?$")
+CLAIM_UNITS = {"百萬": Decimal(1_000_000), "億": Decimal(100_000_000), "元": Decimal(1)}
+QUOTE_EXTRACTION_VERSION = "integrity_quote_extraction_v1"
+
+
+def _token_value(token: str) -> Decimal | None:
+    text = token.strip().rstrip("%").replace(",", "")
+    negative = text.startswith("(") and text.endswith(")")
+    text = text.strip("()")
+    number = al.to_decimal(text)
+    return -number if negative and number is not None else number
+
+
+def derive_quote(statement: dict[str, Any], page_text: str) -> dict[str, Any]:
+    """Re-derive a pinned claim's number from the archived page: row label → column → printed token →
+    table-header unit → Decimal NT$ → the normalized claim value (review CR-04).
+
+    ``verified`` only when every step is unique and agrees. Ambiguity (several matching rows or units, an
+    inconsistent YoY column) or a disagreement is ``inconclusive``; a missing row / spec is ``insufficient``.
+    """
+    spec = statement.get("quote_extraction")
+    out: dict[str, Any] = {"method_version": QUOTE_EXTRACTION_VERSION, "result": "insufficient", "reason": None,
+                           "page": statement.get("page"), "row_label": None, "column_label": None,
+                           "original_token": None, "header_unit": None, "extracted_value_twd": None,
+                           "normalized_claim_value_twd": None, "yoy_check": None}
+    if not spec:
+        return {**out, "reason": "no_quote_extraction_spec"}
+    out.update(row_label=spec["row_label"], column_label=spec["column_label"])
+    lines = [_normalize_space(line) for line in (page_text or "").splitlines()]
+    units = {match.group(1).lower() for match in HEADER_UNIT_RE.finditer(page_text or "")}
+    if _normalize_space(spec["header_unit_excerpt"]) not in _normalize_space(page_text or ""):
+        return {**out, "reason": "header_unit_excerpt_not_on_page"}
+    if len(units) != 1:
+        return {**out, "result": "inconclusive" if units else "insufficient",
+                "reason": "ambiguous_header_units" if units else "no_header_unit"}
+    unit = units.pop()
+    out["header_unit"] = f"NT$ {unit}"
+    period_line = _normalize_space(spec["period_label_excerpt"])
+    if period_line not in _normalize_space(page_text or "") or spec["column_label"] not in period_line:
+        return {**out, "reason": "period_label_not_on_page"}
+    label = _normalize_space(spec["row_label"])
+    rows = []
+    for line in lines:
+        if not line.startswith(label + " "):
+            continue
+        tokens = line[len(label):].split()
+        if tokens and NUMBER_TOKEN_RE.match(tokens[0]):
+            rows.append(tokens)
+    if len(rows) != 1:
+        return {**out, "result": "inconclusive" if rows else "insufficient",
+                "reason": "ambiguous_row_label" if rows else "row_label_not_found"}
+    tokens = rows[0]
+    position = int(spec["column_position"])
+    numbers = [t for t in tokens if NUMBER_TOKEN_RE.match(t) and not t.endswith("%")]
+    if len(numbers) < position:
+        return {**out, "reason": "column_not_present"}
+    token = numbers[position - 1]
+    out["original_token"] = token
+    if token != spec["original_token"]:
+        return {**out, "result": "inconclusive", "reason": "printed_token_differs_from_registry"}
+    percents = [t for t in tokens if t.endswith("%")]
+    if percents and len(numbers) >= 2:
+        current, prior = _token_value(numbers[0]), _token_value(numbers[1])
+        printed = _token_value(percents[0])
+        decimals = len(percents[0].rstrip("%").split(".")[1]) if "." in percents[0] else 0
+        with localcontext() as ctx:
+            ctx.prec = al.PRECISION
+            implied = ((current / prior - 1) * 100).quantize(Decimal(1).scaleb(-decimals)) if prior else None
+        consistent = implied is not None and implied == printed
+        out["yoy_check"] = {"printed": percents[0], "implied_from_columns_1_2": al.text(implied),
+                            "column_1_is_current_year": consistent}
+        if not consistent:
+            return {**out, "result": "inconclusive", "reason": "yoy_column_order_not_confirmed"}
+    elif not spec.get("column_order_from_period_label"):
+        return {**out, "result": "inconclusive", "reason": "column_order_not_confirmed"}
+    with localcontext() as ctx:
+        ctx.prec = al.PRECISION
+        extracted = _token_value(token) * HEADER_UNITS[unit]
+        expected = statement.get("expected_parse") or {}
+        claim_scale = CLAIM_UNITS.get(expected.get("unit") or "")
+        claim_value = al.to_decimal(expected.get("value"))
+        normalized = claim_value * claim_scale if claim_scale is not None and claim_value is not None else None
+    out.update(extracted_value_twd=al.text(extracted), normalized_claim_value_twd=al.text(normalized))
+    if normalized is None or normalized != extracted:
+        return {**out, "result": "inconclusive", "reason": "normalized_claim_differs_from_source"}
+    if al.text(claim_value) not in statement.get("normalized_claim", "").replace(",", ""):
+        return {**out, "result": "inconclusive", "reason": "normalized_claim_text_lacks_value"}
+    return {**out, "result": "verified"}
+
+
 class ClaimsAdapter:
     """Verbatim issuer statements, verified at the source, checked with the existing deterministic verifier."""
 
@@ -389,6 +527,7 @@ class ClaimsAdapter:
             page_text = _normalize_space(page.get("text") or "")
             result["excerpt_found"] = _normalize_space(statement["excerpt"]) in page_text
             result["context_found"] = _normalize_space(statement["context_excerpt"]) in page_text
+            result["_page_text"] = page.get("text") or ""
         checks = ("sha256_matches_pin", "page_found", "excerpt_found", "context_found")
         failed = [name for name in checks if not result[name]]
         result["verified"] = not failed
@@ -404,6 +543,7 @@ class ClaimsAdapter:
 
     def _check(self, statement: dict[str, Any], official_index: dict[tuple[str, int], dict[str, Any]]) -> dict[str, Any]:
         source = self.verify_source(statement)
+        page_text = source.pop("_page_text", "")
         public_statement = {key: statement[key] for key in (
             "statement_id", "ticker", "document", "document_sha256", "document_type", "language", "page",
             "published_on", "published_on_basis", "statement_kind", "context_excerpt", "excerpt")}
@@ -420,6 +560,11 @@ class ClaimsAdapter:
                                  "簡報摘要數字為發行人自行彙整。"]}
         if not source["verified"]:
             return {**check, "reason_code": source["reason"] or "source_not_verified"}
+        quote = derive_quote(statement, page_text)
+        check["quote_extraction"] = quote
+        if quote["result"] != "verified":
+            verdict = FindingStatus.inconclusive if quote["result"] == "inconclusive" else FindingStatus.insufficient_evidence
+            return {**check, "verdict": verdict.value, "reason_code": f"quote_extraction_{quote['result']}:{quote['reason']}"}
         if self.claim_service is None:
             return {**check, "reason_code": "claim_verifier_not_available"}
         from app.claim_verification_models import ClaimVerifyRequest

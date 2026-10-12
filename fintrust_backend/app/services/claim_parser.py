@@ -61,7 +61,9 @@ COMPARATOR_RE = (
 
 PERCENT_RE = re.compile(r"(-?\d+(?:\.\d+)?)\s*(?:%|％)")
 PERCENTAGE_POINT_RE = re.compile(r"(-?\d+(?:\.\d+)?)\s*個?百分點")
-AMOUNT_RE = re.compile(r"(-?\d+(?:\.\d+)?)\s*(兆|億|百萬|萬|千|仟|元)(?:元)?")
+# Whole number token only: plain digits or valid thousands grouping (530,586 / 5,305.86), optional sign. The
+# look-behind stops a match from starting inside a longer or malformed number ("5,30.5億" yields no amount).
+AMOUNT_RE = re.compile(r"(?<![\d,.])(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*(兆|億|百萬|萬|千|仟|元)(?:元)?")
 
 
 def _detect_metric(text: str) -> str | None:
@@ -104,7 +106,7 @@ def _number_with_unit(text: str) -> tuple[float | None, str | None]:
     # Prefer the last explicit amount so a year or stock ticker near the start of
     # the sentence cannot be mistaken for the claimed financial value.
     match = matches[-1]
-    return float(match.group(1)), match.group(2)
+    return float(match.group(1).replace(",", "")), match.group(2)
 
 
 def extract_claim(
