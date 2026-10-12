@@ -15,6 +15,7 @@ from app.services.integrity import adapters as ad
 from app.services.integrity import alignment as al
 from app.services.integrity import composer as cp
 from app.services.integrity import financial_checks as fc
+from app.services.integrity import nfm_evidence_bridge as nfm
 from app.services.integrity.contracts import (
     CONTRACT_VERSION,
     METHOD_APPROVAL,
@@ -138,6 +139,7 @@ class IntegrityWorkbench:
         years = sorted({y for _m, y in index})
         f1 = fc.check_revenue_receivables(index)
         f2 = fc.check_net_income_cfo(index)
+        f4 = nfm.check_revenue_nfm_strict(index, self.nfm_records, ticker=ticker)
         count, store_problem = self.literature.frozen_observation_count(ticker)
         registry = [s for s in ad.load_registry(self.claims.registry_path).get("statements", [])
                     if s.get("ticker") == ticker]
@@ -160,7 +162,8 @@ class IntegrityWorkbench:
                                     "availability": "available" if index else "unavailable"},
                 "F1_revenue_receivables": {"status": f1["status"], "period": f1["period"]},
                 "F2_net_income_cfo": {"status": f2["status"], "period": f2["period"]},
-                "F4_revenue_nfm": {"status": "unavailable", "reason": "no_verified_nonfinancial_measure_series"},
+                "F4_revenue_nfm": {"status": f4["status"], "reason": ", ".join(f4["reasons"]) or None,
+                                   "method_version": nfm.BRIDGE_VERSION},
                 "literature_models": {"availability": "not_computable", "frozen_observation_count": count,
                                       "reason": store_problem or ("no_frozen_literature_inputs_for_ticker" if not count
                                                                   else "historical_research_case_only")},
@@ -187,7 +190,7 @@ class IntegrityWorkbench:
         findings: list[dict[str, Any]] = []
         if Section.financial_checks in sections:
             findings += [fc.check_revenue_receivables(index), fc.check_net_income_cfo(index),
-                         fc.check_revenue_nfm(index, self.nfm_records)]
+                         nfm.check_revenue_nfm_strict(index, self.nfm_records, ticker=request.ticker)]
             findings += cp.data_quality_findings(facts)
             for finding in findings:
                 if finding["status"] in ("not_computable", "not_comparable", "unavailable"):
@@ -285,7 +288,7 @@ class IntegrityWorkbench:
             "missing_data": missing,
             "method_versions": {
                 "contract": CONTRACT_VERSION, "alignment": al.ALIGNMENT_VERSION, "f1": fc.F1_VERSION,
-                "f1_heuristic": fc.F1_HEURISTIC_VERSION, "f2": fc.F2_VERSION, "f4": fc.F4_VERSION,
+                "f1_heuristic": fc.F1_HEURISTIC_VERSION, "f2": fc.F2_VERSION, "f4": nfm.BRIDGE_VERSION,
                 "composer": cp.COMPOSER_VERSION, "review_queue_rule": cp.QUEUE_RULE_VERSION,
                 "facts_adapter": ad.FACTS_ADAPTER_VERSION, "literature_adapter": ad.LITERATURE_ADAPTER_VERSION,
                 "jsd_adapter": ad.JSD_ADAPTER_VERSION, "claims_adapter": ad.CLAIMS_ADAPTER_VERSION,
