@@ -12,6 +12,7 @@ from flask import Flask, jsonify, request, session, send_from_directory
 from financial_routes import create_financial_blueprint
 from research_routes import create_research_blueprint
 from integrity_routes import create_integrity_blueprint
+from b2b_routes import create_b2b_blueprint
 from fintrust_client import FinTrustClient, FinTrustClientError
 from flask_data_repository import DuplicateRecordError, build_flask_data_repository
 from member_services import MemberAuthService, NotificationService, bool_int, create_email_provider, utc_now_str
@@ -48,6 +49,7 @@ app.register_blueprint(create_financial_blueprint(admin_required=_financial_admi
 app.register_blueprint(data_shift_bp)
 app.register_blueprint(create_research_blueprint())
 app.register_blueprint(create_integrity_blueprint())
+app.register_blueprint(create_b2b_blueprint())
 
 repository = build_flask_data_repository(BASE_DIR)
 repository.initialize()
