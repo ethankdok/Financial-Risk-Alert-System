@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.integrity.nfm_evidence_bridge import check_revenue_nfm_strict
+
 VERSION = "fintrust_source_readiness_v1"
 
 
@@ -56,6 +58,7 @@ def summarize_source_readiness(
     } | ({"two_years_of_verified_nfm_missing"} if len({
         r.get("fiscal_year") for r in nfm_verified if r.get("fiscal_year") in needed
     }) < 2 else set()) | ({"data_quality_ambiguity_requires_review"} if facts.get("quality") else set()))
+    strict = check_revenue_nfm_strict(index, nfm_records or [], ticker=ticker)
     return {
         "method_version": VERSION,
         "ticker": ticker,
@@ -70,8 +73,11 @@ def summarize_source_readiness(
         "frozen_literature_store_reason": frozen_store_reason,
         "data_quality_findings_count": len(facts.get("quality") or []),
         "excluded_fact_rows": len(facts.get("excluded") or []),
-        "f4_data_ready": not missing and len(needed) == 2,
-        "blockers": missing or ([] if needed else ["no_annual_financial_evidence"]),
+        "f4_data_ready": strict["status"] == "descriptive_gap" and not missing,
+        "f4_verification_status": strict["status"],
+        "blockers": sorted(set(missing + strict["reasons"])) or (
+            [] if needed else ["no_annual_financial_evidence"]
+        ),
         "fraud_probability": None,
         "note": "This is a gap checklist, not risk, independent evidence, or approval of a new model. Reported NFM flags require upstream archive audit.",
     }
