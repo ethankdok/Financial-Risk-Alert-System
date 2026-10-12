@@ -133,7 +133,8 @@ class ContractTests(ApiTestCase):
                   if path.startswith("/api/v1/integrity")}
         self.assertEqual(routes, {("/api/v1/integrity/companies", ("GET",)),
                                   ("/api/v1/integrity/companies/{ticker}/readiness", ("GET",)),
-                                  ("/api/v1/integrity/assessments/preview", ("POST",))})
+                                  ("/api/v1/integrity/assessments/preview", ("POST",)),
+                                  ("/api/v1/integrity/research-cases/{ticker}/summary", ("GET",))})  # Phase 1.1, read-only
         self.api.post("/api/v1/integrity/assessments/preview", json={"ticker": "2303"})
         self.assertTrue(set(self.repo.calls) <= {"list_facts", "get_latest_snapshot", "list_investor_conferences",
                                                  "list_material_events", "get_official_event_sync_status"}, self.repo.calls)
