@@ -40,9 +40,12 @@ growth_gap_percentage_points = (financial_growth - nonfinancial_growth) * 100
 測試通過只代表純計算核心；不代表已取得正式員工／產能資料，也不等於真實資料 E2E 通過。
 
 ## 與 Phase 1.1 同步
-本 GitHub 分支基於遠端 v4-integration，因為本機 Phase 1.1 尚未推送。
-請先完成 Phase 1.1 獨立驗收與安全推送，再從該 Commit 建立整合分支，以 cherry-pick 或選擇性移植納入本模組。
-後續仍須完成官方非財務資料擷取及版本封存、文獻模型多公司輸入適配、Workbench F4／前端串接、真實資料測試及研究方法審核。
+本次整合分支 feature/fintrust-phase23-integrate-phase11 已直接基於使用者確認推送的 Phase 1.1 HEAD cb1ea1a3d80227d4733a860b6babff3b07ff63a4。
+比較核心透過 integrity/nfm_evidence_bridge.py 接到 IntegrityWorkbench.readiness／assess，前端能呈現非財務來源文件；沒有新增對外寫入 API。
+Phase 1.1 舊的 check_revenue_nfm 為合成資料相容性輔助函式，正式 Workbench 採用新的 check_revenue_nfm_strict。
+目前正式 pipeline facts 沒有 source_sha256／source_document_verified，正式 F4 仍然資料不足。只有當「財報原始檔身分與 bytes」、「非財務原始檔身分與 bytes」、同年度、範圍與計量政策都被上游 adapter 核驗後，才允許描述性計算。
+新整合程式碼尚需 Claude CLI 在實際本機環境執行新增測試、Phase 1／1.1 回歸、Flask/FastAPI 與瀏覽器 E2E、SQLite 前後雜湊比對。之前 19 項純計算測試已在隔離 Python 環境通過，不能視為這次完整整合測試通過。
+後續仍須完成官方非財務資料擷取及版本封存、Beneish／Dechow 多公司輸入適配、真實資料測試及研究方法審核。
 
 ## 參考文獻（APA 7）
 Brazel, J. F., Jones, K. L., & Zimbelman, M. F. (2009). Using nonfinancial measures to assess fraud risk. Journal of Accounting Research, 47(5), 1135–1166. https://doi.org/10.1111/j.1475-679X.2009.00349.x
