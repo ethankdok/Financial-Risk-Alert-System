@@ -1,4 +1,4 @@
-"""Phase 5 retrospective experiment gate.
+"""Phase 5 retrospective descriptive experiment gate.
 
 A descriptive, holdout-only fixed-threshold confusion matrix. It never
 estimates fraud probabilities or claims predictive skill; real-world labels
@@ -95,8 +95,6 @@ def evaluate_holdout(
             unique = (ticker, cutoff.isoformat())
             if unique in seen:
                 reason = "duplicate_company_cutoff"
-            else:
-                seen.add(unique)
         if reason is None:
             horizon_end = cutoff + timedelta(days=horizon_days)
             if label == "documented_event":
@@ -112,6 +110,7 @@ def evaluate_holdout(
         if reason:
             exclusions.append({"observation_index": i, "ticker": ticker, "reason": reason})
         else:
+            seen.add((ticker, cutoff.isoformat()))
             accepted.append({
                 "ticker": ticker,
                 "cutoff_at": cutoff.isoformat(),
@@ -141,7 +140,11 @@ def evaluate_holdout(
         "sample_size_admitted": len(accepted),
         "positive_outcomes": positives, "negative_controls": negatives,
         "exclusions": exclusions, "accepted_observations": accepted,
-        "status": "descriptive_holdout_ready" if complete else "insufficient_verified_holdout",
+        "status": "descriptive_cohort_computable_not_preregistered" if complete
+                  else "insufficient_observed_holdout_evidence",
+        "preregistration_status": "unverified_identifier_only",
+        "threshold_pre_registered": False,
+        "outcome_source_authenticity_independently_verified": False,
         "confusion_matrix": {"tp": tp, "fp": fp, "fn": fn, "tn": tn} if complete else None,
         "descriptive_metrics": ({
             "precision": ratio(tp, tp + fp),
@@ -155,7 +158,9 @@ def evaluate_holdout(
         "limitations": [
             "Labels require independently documented outcomes and complete control follow-up.",
             "Only information demonstrably available before each cutoff is admissible.",
-            "A fixed pre-registered threshold and disjoint training company IDs are required.",
+            "Threshold ID is an asserted label, not independently verified preregistration.",
+            "Independent timestamped preregistration and verified outcome documents are still required for predictive validation.",
+            "Disjoint training company IDs are required; excluding a company after looking at outcomes is not acceptable.",
             "Metrics are descriptive for this holdout sample; no statistical confidence or Taiwan calibration is inferred.",
             "Unknown or missing outcomes are exclusions, never silently negative controls.",
         ],
