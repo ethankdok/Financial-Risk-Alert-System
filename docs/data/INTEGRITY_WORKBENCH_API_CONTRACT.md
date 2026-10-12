@@ -104,7 +104,7 @@ The page is `financial-integrity.html` with `financial-integrity.js`. It uses `t
 
 ### Method version changes
 
-The version identifiers changed as follows. `alignment`, `facts_adapter`, `claims_adapter`, `f1`, `f2`, `composer` and `review_queue_rule` moved from v1 to v2. `issuer_statement_registry` also moved to v2. Genuine 2330/2454/3711 decision fields are identical to the accepted `0c51a74` output.
+The version identifiers changed as follows. `alignment`, `facts_adapter`, `claims_adapter`, `f1`, `f2`, `composer` and `review_queue_rule` moved from v1 to v2. `issuer_statement_registry` also moved to v2. These stayed at v1 or are new at v1: `literature_readiness_adapter`, `jsd_adapter`, `f4_revenue_nfm_readiness`, `quote_extraction` (new), `case_1785_view` (new) and `case_1785_event_registry` (new). These are engineering version identifiers. They do not mean the method has been approved; method approval remains `DRAFT_PENDING_METHOD_OWNER_REVIEW`. Genuine 2330/2454/3711 decision fields are identical to the accepted `0c51a74` output.
 
 ### Retrospective research case (`RETROSPECTIVE_CASE`)
 
