@@ -120,8 +120,14 @@ def load_approved_nfm_release(
             raise ValueError("invalid review attestation")
         if (review.get("status") != "approved"
                 or review.get("ticker") != ticker or review.get("fiscal_year") != year
-                or review.get("pdf_sha256", "").lower() != pdf_sha.lower()
+                or str(review.get("pdf_sha256") or "").lower() != pdf_sha.lower()
                 or review.get("scope") != scope
+                or not isinstance(review.get("review_id"), str)
+                or not review["review_id"].strip()
+                or not isinstance(review.get("verbatim"), str)
+                or not 8 <= len(review["verbatim"].strip()) <= 500
+                or str(review.get("reviewed_value") or "") != str(value)
+                or review.get("reviewed_unit") != "persons"
                 or not _instant(review.get("reviewed_at"))
                 or not all(review.get(k) is True for k in (
                     "source_origin_confirmed", "pdf_page_quote_confirmed",
