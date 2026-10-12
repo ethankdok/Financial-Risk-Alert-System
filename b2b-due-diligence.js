@@ -77,6 +77,34 @@
     $("results").classList.remove("hidden");
   }
 
+  async function loadSourceReadiness(ticker) {
+    const target = $("sourceReadiness");
+    clear(target);
+    line(target, "正在讀取年度資料來源與缺漏狀態…");
+    try {
+      const response = await fetch("/api/b2b/companies/" + encodeURIComponent(ticker) +
+        "/source-readiness", {credentials: "same-origin"});
+      const payload = await response.json();
+      if (!response.ok || payload.success !== true || !payload.data) {
+        throw new Error("資料就緒度無法取得");
+      }
+      const data = payload.data;
+      clear(target);
+      line(target, "最新年度：" + (data.latest_fiscal_year || "未知") +
+        "；F4 資料完整性：" + (data.f4_data_ready ? "已齊備（仍須方法審查）" : "不足"));
+      (data.f4_required_revenue_years || []).forEach(function (r) {
+        line(target, r.year + " 年營收：官方連結 " + (r.source_url_allowlisted ? "已有" : "不足") +
+          "，原檔 SHA " + (r.official_document_sha256_present ? "已有" : "缺少") +
+          "，原檔驗證 " + (r.file_bytes_verified ? "已完成" : "未完成") +
+          "；缺漏 " + (r.reasons.length ? r.reasons.join("、") : "無"));
+      });
+      (data.blockers || []).forEach(function (reason) { line(target, "待補證據：" + reason); });
+    } catch (_error) {
+      clear(target);
+      line(target, "無法取得資料就緒度，請確認後端服務。這不代表證據已足夠。");
+    }
+  }
+
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
     const ticker = $("ticker").value, relation = $("relation").value;
@@ -96,6 +124,7 @@
         throw new Error((json && json.error) || "查核服務暫時無法使用。");
       }
       render(json.data);
+      await loadSourceReadiness(ticker);
       status.textContent = "查核完成（本次結果不會被儲存）。";
     } catch (error) {
       status.textContent = "無法完成查核：" + error.message;
