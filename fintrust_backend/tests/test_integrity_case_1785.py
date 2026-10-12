@@ -22,7 +22,9 @@ from fastapi.testclient import TestClient
 
 from app.main import app as fastapi_app
 from app.routers.historical_research import get_research_service
+from app.routers.integrity import get_integrity_workbench
 from app.services.integrity import case_study as cs
+from tests.integrity_fixtures import workbench as synthetic_workbench
 
 BACKEND = Path(__file__).resolve().parents[1]
 REPO = BACKEND.parent
@@ -191,6 +193,10 @@ class CaseApiChainTests(unittest.TestCase):
     def setUp(self) -> None:
         self.research = FakeResearch()
         fastapi_app.dependency_overrides[get_research_service] = lambda: self.research
+        # Every route reached here must be isolated: the default analysis repository commits its schema on open
+        # and would rewrite the approved pipeline database (Phase 1.1 incident).
+        synthetic = synthetic_workbench()
+        fastapi_app.dependency_overrides[get_integrity_workbench] = lambda: synthetic
         self.api = TestClient(fastapi_app)
         self.seen = []
 
