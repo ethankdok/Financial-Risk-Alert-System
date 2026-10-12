@@ -145,6 +145,11 @@ class FinTrustClient:
     def integrity_preview(self, body: dict[str, Any]) -> Any:
         return self.request("POST", "/api/v1/integrity/assessments/preview", json_body={**body, "persist": False})
 
+    def b2b_watchlist_preview(self, body: dict[str, Any]) -> Any:
+        """Bounded user-defined watchlist; intentionally no persistence."""
+        return self.request("POST", "/api/v1/b2b/watchlists/preview",
+                            json_body={**body, "persist": False})
+
     def b2b_source_readiness(self, ticker: str) -> Any:
         """Read-only company data-coverage report, separate from Phase 1.1."""
         return self.request("GET", f"/api/v1/b2b/companies/{ticker}/source-readiness")
