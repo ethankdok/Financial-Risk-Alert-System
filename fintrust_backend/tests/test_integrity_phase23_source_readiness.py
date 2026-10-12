@@ -77,6 +77,13 @@ class SourceReadinessTests(unittest.TestCase):
         self.assertEqual(result["blockers"], [])
         self.assertEqual(result["f4_verification_status"], "descriptive_gap")
 
+    def test_other_company_nfm_records_do_not_poison_target_company(self):
+        records = nonfinancial()
+        records += [{**r, "ticker": "2330"} for r in nonfinancial()]
+        result = summarize_source_readiness(self.rows, ticker="2454", nfm_records=records)
+        self.assertTrue(result["f4_data_ready"])
+        self.assertEqual(result["nfm_years_with_attested_documents"], [2024, 2025])
+
     def test_missing_latest_facts_show_explicit_blocker(self):
         result = summarize_source_readiness({"index": {}, "quality": [], "excluded": []}, ticker="2454")
         self.assertFalse(result["f4_data_ready"])
