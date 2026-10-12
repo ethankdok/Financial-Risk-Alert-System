@@ -34,6 +34,33 @@ def create_b2b_blueprint(client: FinTrustClient | None = None):
             status = exc.status_code if exc.status_code and 400 <= exc.status_code < 600 else 502
             return respond({"success": False, "error": str(exc), "status_code": status}, status)
 
+    @bp.post("/api/b2b/watchlists/preview")
+    def watchlist():
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or set(payload) - {"items", "persist"}:
+            return respond({"success": False, "error": "Invalid request."}, 400)
+        items = payload.get("items")
+        if payload.get("persist") is not False or not isinstance(items, list) or not 1 <= len(items) <= 5:
+            return respond({"success": False, "error": "Invalid watchlist size or persist field."}, 400)
+        tickers = set()
+        clean = []
+        for item in items:
+            if not isinstance(item, dict) or set(item) - {"ticker", "relationship_type"}:
+                return respond({"success": False, "error": "Invalid company fields."}, 400)
+            ticker = str(item.get("ticker") or "")
+            relation = item.get("relationship_type", "potential_counterparty")
+            if not _TICKER.fullmatch(ticker) or ticker in tickers or relation not in _RELATIONS:
+                return respond({"success": False, "error": "Invalid or duplicate company."}, 400)
+            tickers.add(ticker)
+            clean.append({"ticker": ticker, "relationship_type": relation})
+        try:
+            active_client = client if client is not None else FinTrustClient()
+            result = active_client.b2b_watchlist_preview({"items": clean, "persist": False})
+            return respond({"success": True, "data": result})
+        except FinTrustClientError as exc:
+            status = exc.status_code if exc.status_code and 400 <= exc.status_code < 600 else 502
+            return respond({"success": False, "error": str(exc), "status_code": status}, status)
+
     @bp.post("/api/b2b/dossiers/preview")
     def preview():
         payload = request.get_json(silent=True)
