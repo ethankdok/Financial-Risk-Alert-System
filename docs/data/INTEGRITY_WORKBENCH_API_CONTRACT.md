@@ -83,3 +83,58 @@ The routes `/companies`, `/companies/<ticker>/readiness` and `/assessments/previ
 - passes backend status codes 403, 404, 409, 422 and 503 through with their detail, and returns 502 when the backend is unreachable.
 
 The page is `financial-integrity.html` with `financial-integrity.js`. It uses `textContent` only.
+
+---
+
+## Phase 1.1 (`integrity_workbench_contract_v2`)
+
+### Old → new field mapping (v1 → v2)
+
+| v1 | v2 | Change |
+|---|---|---|
+| `Finding.period` / `status` | Unchanged names | Now always describe the **latest fiscal year** (CR-02). |
+| — | `Finding.latest_fact_fiscal_year`, `latest_period_status`, `freshness_status`, `last_computable` | New. `freshness_status` is one of `current`, `latest_period_not_computable`, `no_computable_period` or `not_applicable`. |
+| — | Response `freshness` | `latest_fact_fiscal_year`, `stale_findings[]`, `rule`. |
+| — | Response `assumptions[]` | `report_id=C` → consolidated; FY ends 31 Dec; no source SHA or publication time; validated MOPS only. |
+| `EvidenceRecord.independence` | Adds `unverified_source` | Used for rows whose URL fails validation (CR-01). |
+| — | `EvidenceRecord.source_trust`, `candidate_evidence_ids`, `selection_policy` | New (CR-01 / CR-03). |
+| `F2.computed.net_income_minus_cfo_twd` | Kept, plus `cfo_minus_net_income_twd` | Both sign conventions are reported (CR-06). |
+| — | `ClaimCheck.quote_extraction` | Re-verified quote lineage (CR-04). |
+| `investigation_priority` | Adds `stale_findings` | A stale finding can neither trigger nor clear the queue. |
+
+### Method version changes
+
+The version identifiers changed as follows. `alignment`, `facts_adapter`, `claims_adapter`, `f1`, `f2`, `composer` and `review_queue_rule` moved from v1 to v2. `issuer_statement_registry` also moved to v2. Genuine 2330/2454/3711 decision fields are identical to the accepted `0c51a74` output.
+
+### Retrospective research case (`RETROSPECTIVE_CASE`)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/integrity/research-cases/{ticker}/summary?version_policy=latest_available\|original_only` | Only `1785` is served; any other ticker returns 404 `research_case_not_supported`, with no substitution. `version_policy` is required (422 if it is missing or unknown). |
+
+How the endpoint works:
+
+- It is read-only and never persists anything.
+- It recomputes on demand through `ResearchService.build_run` dry runs, using the unchanged Beneish and Dechow engines.
+- It makes no LLM calls and no live network requests.
+
+Response fields:
+
+| Field | Content |
+|---|---|
+| `review_mode`, `hindsight`, `banner`, `separation` | `review_mode = RETROSPECTIVE_CASE`, `hindsight = true`, plus the banner and the separation notice. |
+| `dataset_identity` | Run id, digests, method version and `matches_accepted_run`. |
+| `counts`, `baseline_check` | Matched against the accepted 26/34 result, the withdrawn cells and the FY2012 value. |
+| `cells[]` | Status, score, components and bounded observations (at most 4 per component, plus a total). Also missing reasons, filing versions and zero-proof use. |
+| `series` | GMI, TATA, ch_inv, rsst_acc and soft_assets. |
+| `inventory_turnover_readiness[]` | Readiness only; no values. |
+| `crosswalk[]` | The feature crosswalk. |
+| `strict_pre_event` | Computed at the 2016-05-13 cutoff; null scores. |
+| `events[]` | Each event carries a verification status (`verified_official_document`, `official_listing_only` or `needs_source_verification`) and has `used_in_model_calculation=false`. |
+| `event_registry`, `restatement_evidence`, `limitations` | Registry metadata, the restatement evidence and the stated limitations. |
+
+When the data is unavailable, the endpoint returns 200 with `status = source_unavailable` and instructions, and no scores.
+
+The Flask proxy path is `GET /api/integrity/research-cases/<ticker>/summary`. It checks the ticker pattern and whitelists `version_policy`, returning 400 otherwise. It passes 404/422/503 through.
+
+The page is `financial-integrity-case.html`, reached through one link from `financial-integrity.html`.
