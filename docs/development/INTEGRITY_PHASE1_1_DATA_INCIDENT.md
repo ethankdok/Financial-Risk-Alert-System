@@ -45,3 +45,9 @@
 - **B**：接受目前狀態（原有資料不變，只多一張空表與檔頭變更），以 `8734fb68…` 作為新基線，並把此事件列入審查紀錄。
 
 在你決定之前，Gate C 維持 **FAIL（受保護資料變更）**，不產生「全部通過」的交付。
+
+## 7. 狀態更新（2026-10-13，以上原文保留）
+
+- Stage 0 唯讀鑑識已完成：`INTEGRITY_PHASE1_1_INCIDENT_FORENSIC_ASSESSMENT.md`，結論為 `no_exact_backup_found`。
+- 使用者明確核准 **Option B**，以 `8734fb68…` 作為新的本機核准基線；此檔仍屬「已修改」，不得描述為未修改。
+- 結案與防範措施：`INTEGRITY_PHASE1_1_INCIDENT_CLOSURE.md`。

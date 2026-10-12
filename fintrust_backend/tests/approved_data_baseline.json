@@ -1,0 +1,67 @@
+{
+  "baseline_version": "approved_local_store_baseline_v2",
+  "updated_on": "2026-10-13",
+  "rule": "Tests must never change these files. The test session fails before running if a present store differs from its approved SHA-256, and any attempt to open a write-capable repository inside fintrust_backend/data is blocked before the constructor touches the file.",
+  "stores": {
+    "data/financial_pipeline.sqlite3": {
+      "sha256": "8734fb68bca0e6e4a741226764d03de1684a56b2fa0fad90150fb193c50f2b9f",
+      "bytes": 1343488,
+      "status": "accepted_modified_baseline_option_B",
+      "supersedes_sha256": "5526d2adc20fee9253b39cafaa9bb967fb45521af20d114a003442ae840ea181",
+      "approval": "User explicitly approved Option B on 2026-10-13 after the Stage 0 forensic assessment.",
+      "incident": "docs/development/INTEGRITY_PHASE1_1_INCIDENT_FORENSIC_ASSESSMENT.md",
+      "not_described_as_unmodified": true,
+      "byte_identity_with_pre_incident": false,
+      "verified_against_pre_incident_export": {
+        "normalized_financial_facts_rows": "77/148 identical in every field",
+        "snapshot_rule_cards": "22/22 identical"
+      },
+      "unprovable": "71 normalized_financial_facts rows and the content of calculated_metrics, rule_results, analysis_runs, official_events, text_model_runs, text_evidence and analysis_snapshots have no pre-incident row fingerprint; only their row counts match the Phase 1 Gate 0 record.",
+      "row_counts": {
+        "financial_filings": 7,
+        "normalized_financial_facts": 148,
+        "analysis_runs": 5,
+        "calculated_metrics": 395,
+        "rule_results": 100,
+        "latest_analysis_snapshots": 2,
+        "official_events": 7,
+        "analysis_snapshots": 1,
+        "text_model_runs": 1,
+        "text_evidence": 150,
+        "companies": 0,
+        "official_event_sync_status": 0
+      },
+      "row_fingerprints_sha256": {
+        "analysis_runs": "2096a89f9c75cc33a8731a887804d783c5899de7417e8ab7682f0fd7dd9298bd",
+        "analysis_snapshots": "65934e16eceb7abcefdfac94d4fc174c15d713d554b49ad76d565ef5da83f284",
+        "calculated_metrics": "aa22f9b851957514254d0aed05ec001c48ff32abd627d7ec9a591953ccef238a",
+        "companies": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "financial_filings": "538ced294674c005adfdf31fb2f2606f6ba9a72694dddb87acde26cf34ee4bcb",
+        "latest_analysis_snapshots": "ead933a8d17e49d8381c03a065d2cd5c1c5c14aaee3a34504b6116488364a6b2",
+        "normalized_financial_facts": "5c23a2e78ce2f7206cfb2c60747a64234b07621b20854feea94df098a2bed47c",
+        "official_event_sync_status": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "official_events": "c1fe8df9657a359a1b9b791e8cb0fde56a63530c0b17cf6bd10d71cda5e533cd",
+        "rule_results": "a233a919cda45da27a843468d8e3f72d8087e292722c17581a60e058c21423ad",
+        "text_evidence": "e0c9254fd723747692314027eaadefed4ecae891de9b7890e15cdbc7d5460f11",
+        "text_model_runs": "7ef6148a3dc2d7a13868fd5771d73bbf7a200d1b2685824ca45a26420fdc600d"
+      }
+    },
+    "data/literature_models/literature_inputs.sqlite3": {
+      "sha256": "b8bc1424b1c97dac53fca5656fe36082bdaca3d6a00be6af5feff6bd8207cf0c",
+      "status": "unchanged_since_phase1"
+    },
+    "data/historical_audit/historical_audit.sqlite3": {
+      "sha256": "43dbd37716c056ea324784e03441ff84b04e3192ba338d547825f86723b740f9",
+      "status": "unchanged_since_phase1"
+    },
+    "data/historical_audit/research_results.sqlite3": {
+      "sha256": "b4cd8d438944dd41ecb995b2a66b5843e17346335e7ea47bde258eff6deb2ff9",
+      "status": "unchanged_since_phase1"
+    },
+    "../financial_risk.db": {
+      "sha256": "6e439ab9eeaa6fb2bc9ff4d6c418086b66c60fac4507591a02b7f9409f5da6bf",
+      "status": "unchanged_since_phase1",
+      "owner": "root Flask app"
+    }
+  }
+}
