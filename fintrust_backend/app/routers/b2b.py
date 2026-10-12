@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.routers.integrity import get_integrity_workbench
 from app.services.integrity.adapters import IntegrityDataUnavailable
 from app.services.integrity.b2b_dossier import build_dossier
+from app.services.integrity.b2b_watchlist import preview_watchlist
 from app.services.integrity.source_readiness import summarize_source_readiness
 from app.services.integrity.contracts import AssessmentRequest, Section
 from app.services.integrity.service import IntegrityWorkbench, UnsupportedTicker
@@ -77,3 +78,45 @@ def source_readiness(
         raise HTTPException(status_code=503, detail={
             "error_code": "integrity_data_unavailable", "message": str(exc),
         }) from exc
+
+class WatchlistItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ticker: str = Field(..., pattern=r"^\d{4,6}$")
+    relationship_type: Literal["supplier", "customer", "partner", "potential_counterparty"] = (
+        "potential_counterparty"
+    )
+
+
+class WatchlistRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[WatchlistItem] = Field(..., min_length=1, max_length=5)
+    persist: Literal[False] = False
+
+
+@router.post("/watchlists/preview")
+def watchlist_preview(
+    request: WatchlistRequest,
+    workbench: IntegrityWorkbench = Depends(get_integrity_workbench),
+) -> dict[str, Any]:
+    """One to five user-entered counterparties; no persisted links or inference."""
+    identifiers = [item.ticker for item in request.items]
+    if len(set(identifiers)) != len(identifiers):
+        raise HTTPException(status_code=422, detail={
+            "error_code": "duplicate_tickers", "message": "Each company can appear only once per preview.",
+        })
+    assessments = []
+    try:
+        for item in request.items:
+            assessments.append(workbench.assess(
+                AssessmentRequest(ticker=item.ticker, persist=False,
+                                  sections=[Section.financial_checks, Section.claims, Section.jsd])
+            ))
+    except UnsupportedTicker as exc:
+        raise HTTPException(status_code=404, detail={
+            "error_code": "ticker_not_supported", "message": str(exc),
+        }) from exc
+    except IntegrityDataUnavailable as exc:
+        raise HTTPException(status_code=503, detail={
+            "error_code": "integrity_data_unavailable", "message": str(exc),
+        }) from exc
+    return preview_watchlist(assessments, [x.relationship_type for x in request.items])
