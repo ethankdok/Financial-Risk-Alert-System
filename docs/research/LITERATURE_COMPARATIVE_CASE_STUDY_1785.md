@@ -11,7 +11,7 @@
 
 **Every value below is `hindsight=true`** (RETROSPECTIVE_FORENSIC).
 
-**Revision:** corrected by the data-integrity pass on the independent review of f83aa98 (LIT-F01..F04). Two current-filing Dechow scores are withdrawn (FY2015, FY2023) and every other score is unchanged; see §7 and `LITERATURE_INPUT_EVIDENCE_POLICY.md`.
+**Revision:** corrected by the data-integrity pass on the independent review of f83aa98 (LIT-F01..F04). Two current-filing Dechow scores are withdrawn (FY2015, FY2023) and every other score is unchanged; see §7 and `LITERATURE_INPUT_EVIDENCE_POLICY.md`. Re-run after the R01/R02 input hardening (independent review of df0fc44): every status, score and coverage-matrix row is identical; only the run identities changed (new method versions), see §8.
 
 **Evidence:**
 - `literature_case_study_1785_results.json` (run ids, input and output digests, every component and missing input);
@@ -26,12 +26,14 @@ Every score is identified by:
 
 Both models run on one frozen snapshot per version series:
 
-| Series | Corrected run id | Input digest | Output digest | Supersedes (f83aa98) |
+| Series | Current run id (R01/R02 hardening) | Input digest | Output digest | Supersedes (df0fc44) |
 |---|---|---|---|---|
-| `latest_available` | `rrun1_1648246ccaca6ea204bcd347fc83d247` | `c37b7d3f3c0db47e68c45713bc8b890b55eb24264998da40cb05b078f5a21d62` | `5da642dc50e9b7d2aae7e41e8de23e3f2ca470b81cb59c3a6a6df956c162f838` | `rrun1_94c4ffe2c129d7a5640239bb5fda2542` |
-| `original_only` | `rrun1_fab682f2390383952588b6b0522503ab` | `dddb603607bb998a3bd65330c2ba4b222ad16d7f0e2c1d11a9aec96584409fe6` | `1203b870edb7a35c803320a059d4d3f1279c68b64e8dd338ee4501ccd6bcceee` | `rrun1_8d74e4bba6acee88bc4fd0113bc50900` |
+| `latest_available` | `rrun1_3aee901dc66e02346710d41e9fd0bc02` | `0e9279debe92e96e53376ecd1a2476b252eb21eade9cfee92f419a07181f157d` | `88878163bdfd42fc3364ce1548794df7236042997b3481fcaad76bd25214c0c0` | `rrun1_1648246ccaca6ea204bcd347fc83d247` |
+| `original_only` | `rrun1_2120551b6b6763dd65b49439602a28f4` | `4c7b49401e8813639f67906cfa9681d2e523e0585b11864c5bc211932972fec3` | `2e88df132fabc2678978aa04fb438c5f5b9e3a99278bf872a42720e9a68fffd0` | `rrun1_fab682f2390383952588b6b0522503ab` |
 
-Method version of both corrected runs: `beneish_1999_full8_v1`, `dechow_2011_model1_v1`, `literature_comparison_v1`, `literature_method_registry_v1`, `literature_input_mapping_v2`, `literature_panel_v2`, `literature_line_extractor_v1`, `literature_twgaap_pdf_extractor_v2`, `literature_zero_evidence_policy_v1`, `literature_source_gate_v1`.
+The df0fc44 runs (`rrun1_1648246c…`, `rrun1_fab682f2…`) themselves superseded the f83aa98 evidence runs (`rrun1_94c4ffe2…`, `rrun1_8d74e4bb…`).
+
+Method version of both corrected runs: `beneish_1999_full8_v1`, `dechow_2011_model1_v1`, `literature_comparison_v1`, `literature_method_registry_v1`, `literature_input_mapping_v2`, `literature_panel_v2`, `literature_line_extractor_v1`, `literature_twgaap_pdf_extractor_v2`, `literature_zero_evidence_policy_v2`, `literature_source_gate_v2` (both v1 at df0fc44).
 
 ## 2. Current-filing series (`latest_available`, TIFRS XBRL)
 
@@ -141,3 +143,24 @@ So no year has both sides computed, and **no "pre vs post" score delta is report
 
 These are counted over both series (60 cells).
 
+## 8. R01/R02 input hardening: df0fc44 vs hardened results
+
+The independent review of df0fc44 found two input-validation gaps, both reproduced with synthetic inputs only:
+R01 (only the first present statement-anchor candidate was checked) and R02 (a frozen zero proof was not re-verified
+where it was used). Both are fixed and versioned (`literature_source_gate_v2`, `literature_zero_evidence_policy_v2`).
+
+Re-running 1785 FY2011–2025 for both series and the three strict cutoffs:
+
+- all 60 year-model cells have the same status, score and missing inputs as df0fc44 (26 computed / 34 not computable);
+- every coverage-matrix row (1,395 per series) has the same readiness, input status, evidence type, value, missing
+  reason, filing and source observations;
+- the 4 original-series preferred-stock proofs are accepted at their point of use, and their operands are identical;
+  only `rule_version` and therefore `evidence_fingerprint` changed;
+- FY2012 original Dechow stays 0.892005 on the re-verified `verified_zero`; latest FY2015 and FY2023 Dechow stay null
+  (`cross_filing_overlap_mismatch`);
+- the strict cutoffs are unchanged (all null, 0 admitted observations);
+- 2 TW-GAAP balance dates present two total-assets candidates (`code:1XXX`, `label:資產總計`) and both agree; no
+  anchor decision differs from the df0fc44 rule.
+
+Evidence: `literature_r01_r02_hardening_evidence.json` (anchor and proof audits, cell-by-cell and row-by-row
+comparison, run supersession) and `literature_r01_r02_repro_{before,after}.json`.

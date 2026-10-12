@@ -6,7 +6,9 @@ the conservative choice until she approves or withdraws it.
 **Scope:** the inputs that the Beneish (1999) and Dechow et al. (2011) engines receive. The engines, coefficients and
 transformations are unchanged (see `BENEISH_1999_DECHOW_2011_METHOD_LOCK.md`).
 
-**Findings addressed:** the independent review of `f83aa98` (`FinTrust_Beneish_Dechow_Independent_Code_Audit_f83aa98_2026-10-12.md`), findings LIT-F01 to LIT-F04.
+**Findings addressed:**
+- the independent review of `f83aa98` (`FinTrust_Beneish_Dechow_Independent_Code_Audit_f83aa98_2026-10-12.md`), findings LIT-F01 to LIT-F04;
+- the independent review of `df0fc44` (`FinTrust_df0fc44_Final_Independent_Code_Review_2026-10-12.md`), findings R01 (statement-anchor candidates) and R02 (zero proof verified at its point of use); see §2 and §4.
 
 ## 1. Versions (all part of the run identity and the frozen input digest)
 
@@ -14,8 +16,8 @@ transformations are unchanged (see `BENEISH_1999_DECHOW_2011_METHOD_LOCK.md`).
 |---|---|---|
 | Input mapping | `literature_input_mapping_v2` (was v1) | `sum` without any presented line is `not_presented`; `one_of` / `difference` aliases must agree; preferred stock (TW-GAAP) anchored on equity with a zero-evidence rule |
 | Period panel | `literature_panel_v2` (was v1) | cross-filing t−2 overlap check; transition-year-only opening balance |
-| Zero-evidence policy | `literature_zero_evidence_policy_v1` (new) | one rule, `twgaap_equity_section_exhaustive_enumeration` |
-| Source gate | `literature_source_gate_v1` (new) | TW-GAAP statement identities and XBRL balance identity gate every input line |
+| Zero-evidence policy | `literature_zero_evidence_policy_v2` (v1 at df0fc44) | one rule, `twgaap_equity_section_exhaustive_enumeration`; v2 (R02): the frozen proof is re-derived and compared field for field where it is used |
+| Source gate | `literature_source_gate_v2` (v1 at df0fc44) | TW-GAAP statement identities and XBRL balance identity gate every input line; v2 (R01): every present statement-anchor candidate is gate- and value-checked |
 | TW-GAAP PDF extractor | `literature_twgaap_pdf_extractor_v2` (new) | every balance-sheet account-code row; 10 identities per column, each `verified` / `mismatch` / `incomplete` (`twgaap_statement_identities_v1`) |
 | XBRL extractor | `literature_line_extractor_v1` (unchanged) | the 4,247 XBRL observations are byte-identical to f83aa98 |
 
@@ -62,6 +64,24 @@ to be a printed line. Otherwise the equation would fail.
 
 The records are stored in `snapshot.literature_zero_evidence`, which is part of the input digest. Each model-year
 result lists the fingerprints it used (`zero_evidence_used`).
+
+**Verification at the point of use (R02, `literature_zero_evidence_policy_v2`).** A frozen record is never trusted on
+its own word. Where `assemble()` would use it, `check_zero_proof()` accepts it only when all of the following hold:
+1. it is the only record for that (metric, balance date) of the filing (duplicates: `duplicate_proof_records:<n>`);
+2. its `status` is `verified`; otherwise `zero_evidence_not_verified:<rule>:<status>`, as before;
+3. `rule`, `rule_version`, `accounting_framework`, `filing_version_id`, `metric` and `period` equal the mapping's rule,
+   the current policy version and the filing/date being assembled (`<field>_differs`);
+4. `evidence_fingerprint` is the SHA-256 of the record's own content (`evidence_fingerprint_mismatch`; a record that
+   cannot be serialised is `malformed_record`);
+5. `prove_zero()` re-derived from the current observations is `verified` (`recomputed_status:<status>`, e.g. after an
+   operand changed, an operand observation disappeared, or a preferred line was added), and equals the stored record
+   field for field, including every operand's observation id, line, value, printed value and locator
+   (`stale_or_altered:<fields>`).
+
+A failed check gives `not_presented`, value null, and the reason `zero_evidence_invalid:<reason>`; it never raises and
+never yields `computed/0`. The operands of an accepted proof come from the re-derived record, so a missing observation
+can no longer raise `KeyError`. A record without a text metric/period is ignored (it can certify nothing). A v1 record
+fails check 3, so a snapshot built by v1 code is never silently re-scored by v2 code.
 
 **Residual risk for the method owner:** a mandatorily redeemable preferred share classified as a *liability* (TW-GAAP
 SFAS 36) would not be in the equity section; the mapping does not cover preferred shares presented as liabilities.
@@ -135,8 +155,28 @@ filing. All instants used in the 1785 series are verified, including the FY2013 
 **Digest:** all observations of the selected filings are frozen, so a changed alternate value changes the input digest.
 
 **Order independence:** results and digests do not depend on the order of the observations (tested with permutations).
+Every present candidate is inspected (none is skipped after the first problem), and reasons are sorted, so the order of
+the candidate list does not change the status or the reasons either.
 
-**Real 1785 data:** 28 inputs have two agreeing candidates (26 current-filing, 2 original), and there are 0 conflicts.
+**Statement anchors (R01, `literature_source_gate_v2`).** A `sum` is assembled only when its statement anchor is
+present. Where the anchor has several candidate lines (TIFRS operating cash flow:
+`CashFlowsFromUsedInOperatingActivities` / `NetCashFlowsFromUsedInOperatingActivities`; TW-GAAP total assets:
+`code:1XXX` / `label:資產總計`; TW-GAAP operating cash flow: three labels), every present candidate follows the alias
+rule above:
+- none present: `anchor_missing` (unchanged);
+- a conflicting duplicate of any candidate: `ambiguous_version`;
+- any candidate blocked by the source gate: its gate status, reason `anchor:<line>:<gate reason>`;
+- candidates with different values: `mapping_conflict`, reason `anchor_conflict:<anchor>:<line>=<value>;...`,
+  and the candidates are listed in `alias_candidates`;
+- one candidate, or several with equal values, passing the gate: the anchor is usable.
+
+At df0fc44 only the first present candidate was checked, so a conflicting second candidate was ignored.
+
+**Real 1785 data (R01/R02 audit):** 2 TW-GAAP balance dates present two total-assets candidates, and both agree. Every
+other anchor has one candidate. No anchor decision differs from the df0fc44 rule. All 4 frozen preferred-stock proofs
+are accepted at their point of use.
+
+**Real 1785 data (alias rule):** 28 inputs have two agreeing candidates (26 current-filing, 2 original), and there are 0 conflicts.
 
 ## 5. Cross-filing t−2 coherence (LIT-F04)
 

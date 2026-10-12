@@ -179,8 +179,12 @@ def main() -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--previous-results", type=Path)
     parser.add_argument("--previous-coverage-dir", type=Path)
+    parser.add_argument("--supersedes-results", type=Path,
+                        help="case-study results whose run ids the new runs supersede (no correction evidence)")
     args = parser.parse_args()
     previous = json.loads(args.previous_results.read_text(encoding="utf-8")) if args.previous_results else None
+    superseded = previous or (json.loads(args.supersedes_results.read_text(encoding="utf-8"))
+                              if args.supersedes_results else None)
     args.out.mkdir(parents=True, exist_ok=True)
     service = ResearchService()
     out, coverages = {}, {}
@@ -192,7 +196,7 @@ def main() -> int:
         compared = service.literature_compare("1785", RETRO, start_year=2011, end_year=2025, version_policy=policy)
         run = service.build_run("literature_comparison", "1785", RETRO, start_year=2011, end_year=2025,
                                 version_policy=policy,
-                                supersedes_run_id=previous[policy]["run_id"] if previous else None)
+                                supersedes_run_id=superseded[policy]["run_id"] if superseded else None)
         out[policy] = {"run_id": run["run_id"], "input_digest": run["input_digest"], "output_digest": run["output_digest"],
                        "method_version": run["method_version"], "supersedes_run_id": run["supersedes_run_id"],
                        "coverage": compared["coverage"], "concordance": compared["concordance"],

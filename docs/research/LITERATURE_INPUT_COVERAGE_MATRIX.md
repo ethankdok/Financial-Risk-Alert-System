@@ -1,6 +1,6 @@
 # Literature input coverage matrix: 1785, FY2011–FY2025 (Beneish 1999 / Dechow 2011)
 
-**Mapping status:** `literature_input_mapping_v2` with `literature_panel_v2`, `literature_zero_evidence_policy_v1` and `literature_source_gate_v1` (data-integrity correction of f83aa98; see `LITERATURE_INPUT_EVIDENCE_POLICY.md`). DRAFT pending the method owner. Matrix version `literature_input_coverage_v2`.
+**Mapping status:** `literature_input_mapping_v2` with `literature_panel_v2`, `literature_zero_evidence_policy_v2` and `literature_source_gate_v2` (data-integrity correction of f83aa98, hardened after the df0fc44 review R01/R02 with identical matrix rows; see `LITERATURE_INPUT_EVIDENCE_POLICY.md`). DRAFT pending the method owner. Matrix version `literature_input_coverage_v2`.
 
 **Machine-readable matrices:**
 - `literature_coverage_matrix_latest_available.json`

@@ -15,7 +15,11 @@ Mapping rules (mapping ``literature_input_mapping_v2``, DRAFT for the method own
   ``lines_not_presented`` (component-level presentation rule: the remaining presented lines are summed). ``required``
   lines must be present. If *no* listed line is presented the metric is ``not_presented`` — never ``computed/0``
   (finding LIT-F01) — unless the mapping names a zero-evidence rule of ``ZERO_POLICY_VERSION`` whose proof is
-  verified for that filing/period (``verified_zero``).
+  verified for that filing/period (``verified_zero``). The frozen proof is re-derived from the current observations
+  where it is used and must match field for field (finding R02); otherwise ``not_presented`` with a
+  ``zero_evidence_invalid:<reason>`` reason. An anchor with several candidate lines follows the ``one_of`` agreement
+  rule: every present candidate is gate- and value-checked (finding R01); disagreeing candidates are
+  ``mapping_conflict`` with an ``anchor_conflict:<anchor>:...`` reason.
 - ``difference``: ``minuend - subtrahend``, both required (each side follows the ``one_of`` agreement rule).
 - a printed 0 or dash is an explicit published zero (``explicit_zero``); a missing required line is
   ``missing_input`` (never 0).
@@ -56,8 +60,11 @@ from app.services.financial_research.literature_extraction import PDF_METHODS, X
 
 MAPPING_VERSION = "literature_input_mapping_v2"
 PANEL_VERSION = "literature_panel_v2"
-ZERO_POLICY_VERSION = "literature_zero_evidence_policy_v1"
-SOURCE_GATE_VERSION = "literature_source_gate_v1"
+# v2 of both (finding R02 / R01 of the df0fc44 review): zero proofs are re-derived at their point of use, and every
+# present statement-anchor candidate is gate- and value-checked. Proof records name their rule_version, so a v1 proof
+# is never accepted by v2 code; snapshots and runs built with v1 stay immutable and verify as method_version_changed.
+ZERO_POLICY_VERSION = "literature_zero_evidence_policy_v2"
+SOURCE_GATE_VERSION = "literature_source_gate_v2"
 MAPPING_STATUS = "draft_mapping_needs_method_owner_review"
 ZERO_RULE_TWGAAP_EQUITY = "twgaap_equity_section_exhaustive_enumeration"
 # Zero-evidence rules approved for use by this DRAFT method (each one is documented in ZERO_RULES and tested); the
@@ -244,7 +251,20 @@ class FilingLines:
             elif current is None:
                 self.values[key] = obs
         self.identities = self._xbrl_balance_identities()
-        self.zero_evidence = {(z["metric"], z["period"]): z for z in (zero_evidence or [])}
+        self.filing_version_id = next(iter(self.by_id.values()), {}).get("filing_version_id")
+        # Frozen zero-evidence records by (metric, period). A record without a text metric/period can certify nothing
+        # and is ignored; two records for one key are ambiguous and both are refused (finding R02).
+        self.zero_evidence: dict[tuple[str, str], dict[str, Any]] = {}
+        self.zero_evidence_duplicates: dict[tuple[str, str], int] = {}
+        for record in zero_evidence or []:
+            if not isinstance(record, dict):
+                continue
+            key = (record.get("metric"), record.get("period"))
+            if not all(isinstance(part, str) for part in key):
+                continue
+            if key in self.zero_evidence:
+                self.zero_evidence_duplicates[key] = self.zero_evidence_duplicates.get(key, 1) + 1
+            self.zero_evidence[key] = record
 
     def _xbrl_balance_identities(self) -> dict[str, dict[str, Any]]:
         """``Assets = Liabilities + Equity`` for every XBRL instant of this filing (verified / mismatch / incomplete)."""
@@ -326,38 +346,49 @@ class MetricValue:
 def _agreeing(lines: FilingLines, candidates: list[str],
               period: str) -> tuple[list[dict[str, Any]], str, list[str], list[dict[str, Any]]]:
     """Alias agreement rule: every present candidate must pass the source gate and carry the same value
-    (``mapping_conflict`` otherwise; list order never decides). Returns (observations, status, reasons, candidates)."""
-    found = []
+    (``mapping_conflict`` otherwise; list order never decides). Every candidate is inspected, and reasons are sorted,
+    so neither the candidate nor the observation order changes the outcome. Returns (observations, status, reasons,
+    candidates)."""
+    found, ambiguous = [], []
     for line in candidates:
         obs, problem = lines.get(line, period)
         if problem:
-            return [], "ambiguous_version", [f"{line}:{problem}"], []
-        if obs is not None:
+            ambiguous.append(f"{line}:{problem}")
+        elif obs is not None:
             found.append(obs)
+    if ambiguous:
+        return [], "ambiguous_version", sorted(ambiguous), []
     listed = [{"line_key": o["line_key"], "value": o["value"], "observation_id": o["observation_id"]} for o in found]
     if not found:
         return [], "missing_input", [], listed
-    for obs in found:
-        blocked = lines.gate(obs)
-        if blocked:
-            return [], blocked[0], [blocked[1]], listed
+    blocked = sorted(b for b in (lines.gate(obs) for obs in found) if b)
+    if blocked:
+        mismatch = any(status == "source_identity_mismatch" for status, _ in blocked)
+        return [], "source_identity_mismatch" if mismatch else blocked[0][0], [reason for _, reason in blocked], listed
     if len({dm.parse_decimal(o["value"]) for o in found}) > 1:
-        return [], "mapping_conflict", ["mapping_conflict:" + ";".join(f"{o['line_key']}={o['value']}" for o in found)], \
-            listed
+        return [], "mapping_conflict", ["mapping_conflict:" + ";".join(sorted(f"{o['line_key']}={o['value']}"
+                                                                              for o in found))], listed
     return found, "computed", [], listed
 
 
-def _anchor(lines: FilingLines, framework: str, anchor: str, period: str) -> tuple[str | None, str | None]:
-    """(status, reason) when the statement anchor total is absent or unusable, else (None, None)."""
+def _anchor(lines: FilingLines, framework: str, anchor: str,
+            period: str) -> tuple[str | None, list[str], list[dict[str, Any]]]:
+    """(status, reasons, candidates) when the statement anchor total is absent or unusable, else (None, [], []).
+
+    Every present anchor candidate follows the alias agreement rule (finding R01): each must pass the source gate and
+    all must carry the same value; a disagreement is ``mapping_conflict`` with an ``anchor_conflict:`` reason."""
     target = ANCHORS[framework][anchor]
-    present = [c for c in (target if isinstance(target, tuple) else (target,)) if lines.present(c, period)]
-    if not present:
-        return "anchor_missing", f"statement_anchor_{anchor}_not_present"
-    obs, problem = lines.get(present[0], period)
-    if problem:
-        return "ambiguous_version", f"{present[0]}:{problem}"
-    blocked = lines.gate(obs)
-    return (blocked[0], f"anchor:{blocked[1]}") if blocked else (None, None)
+    candidates = list(target) if isinstance(target, tuple) else [target]
+    if not any(lines.present(c, period) for c in candidates):
+        return "anchor_missing", [f"statement_anchor_{anchor}_not_present"], []
+    _, status, reasons, listed = _agreeing(lines, candidates, period)
+    if status == "computed":
+        return None, [], []
+    if status == "mapping_conflict":
+        reasons = [f"anchor_conflict:{anchor}:{r.removeprefix('mapping_conflict:')}" for r in reasons]
+    elif status != "ambiguous_version":
+        reasons = [f"anchor:{r}" for r in reasons]
+    return status, reasons, listed
 
 
 def _rule(framework: str, metric: str) -> dict[str, Any]:
@@ -391,9 +422,9 @@ def assemble(lines: FilingLines, framework: str, metric: str, period: str) -> Me
         result.evidence_type = "derived_difference"
         return result
     # sum
-    status, reason = _anchor(lines, framework, rule["anchor"], period)
+    status, reasons, listed = _anchor(lines, framework, rule["anchor"], period)
     if status:
-        result.status, result.reasons = status, [reason]
+        result.status, result.reasons, result.candidates = status, reasons, listed
         return result
     total, used = Decimal(0), []
     for line in rule["lines"]:
@@ -419,19 +450,62 @@ def assemble(lines: FilingLines, framework: str, metric: str, period: str) -> Me
                                 else "presented_lines_sum")
         result.warnings = sorted({w for obs in used for w in lines.line_warnings(obs)})
         return result
-    # LIT-F01: no listed line presented. Never computed/0 unless a documented zero-evidence proof is verified.
+    # LIT-F01: no listed line presented. Never computed/0 unless a documented zero-evidence proof is verified, and
+    # the frozen proof is re-derived from these observations here, at its point of use (finding R02).
     zero_rule = rule.get("zero_evidence_rule")
-    proof = lines.zero_evidence.get((metric, period)) if zero_rule else None
-    if proof is not None and proof["status"] == "verified" and proof["rule"] in ZERO_RULES:
-        result.value, result.status, result.evidence_type = Decimal(0), "computed", "verified_zero"
-        result.zero_evidence = proof
-        result.observations = [lines.by_id[o["observation_id"]] for o in proof["operands"]]
-        return result
+    reason = "zero_inference_not_permitted_for_metric"
+    if zero_rule:
+        proof, reason = check_zero_proof(lines, framework, metric, period, zero_rule)
+        if proof is not None:
+            result.value, result.status, result.evidence_type = Decimal(0), "computed", "verified_zero"
+            result.zero_evidence = proof
+            result.observations = [lines.by_id[o["observation_id"]] for o in proof["operands"]]
+            return result
     result.status = "not_presented"
-    result.reasons = [f"no_listed_line_presented:{'|'.join(rule['lines'])}",
-                      (f"zero_evidence_not_verified:{zero_rule}:{proof['status'] if proof else 'not_evaluated'}"
-                       if zero_rule else "zero_inference_not_permitted_for_metric")]
+    result.reasons = [f"no_listed_line_presented:{'|'.join(rule['lines'])}", reason]
     return result
+
+
+# Fields that tie a zero-evidence record to one rule version, filing, framework, metric and balance date.
+_PROOF_IDENTITY_FIELDS = ("rule", "rule_version", "accounting_framework", "filing_version_id", "metric", "period")
+
+
+def check_zero_proof(lines: FilingLines, framework: str, metric: str, period: str,
+                     zero_rule: str) -> tuple[dict[str, Any] | None, str]:
+    """Verify the frozen zero-evidence record of one filing/metric/period at its point of use (pure, finding R02).
+
+    The record is accepted only when it is the single record for (metric, period), names the mapping's rule of the
+    current ``ZERO_POLICY_VERSION`` for this framework and filing, carries a valid SHA-256 fingerprint of its own
+    content, and equals — field for field, operands included — the proof ``prove_zero`` re-derives from the current
+    observations, which must itself be ``verified``. Returns (re-derived record, "") or (None, reason); a stale,
+    altered, cross-filing, cross-period, duplicate or malformed record fails closed and never raises."""
+    key = (metric, period)
+    if key in lines.zero_evidence_duplicates:
+        return None, f"zero_evidence_invalid:duplicate_proof_records:{lines.zero_evidence_duplicates[key]}"
+    proof = lines.zero_evidence.get(key)
+    if proof is None:
+        return None, f"zero_evidence_not_verified:{zero_rule}:not_evaluated"
+    if proof.get("status") != "verified":
+        return None, f"zero_evidence_not_verified:{zero_rule}:{proof.get('status')}"
+    expected = {"rule": zero_rule, "rule_version": ZERO_POLICY_VERSION, "accounting_framework": framework,
+                "filing_version_id": lines.filing_version_id, "metric": metric, "period": period}
+    for name in _PROOF_IDENTITY_FIELDS:
+        if proof.get(name) != expected[name] or (name == "rule" and zero_rule not in ZERO_RULES):
+            return None, f"zero_evidence_invalid:{name}_differs"
+    try:
+        fingerprint_ok = proof.get("evidence_fingerprint") == digest(
+            {k: v for k, v in proof.items() if k != "evidence_fingerprint"})
+    except (TypeError, ValueError):
+        return None, "zero_evidence_invalid:malformed_record"
+    if not fingerprint_ok:
+        return None, "zero_evidence_invalid:evidence_fingerprint_mismatch"
+    recomputed = prove_zero(lines, framework, metric, period)
+    if recomputed is None or recomputed["status"] != "verified":
+        return None, f"zero_evidence_invalid:recomputed_status:{recomputed['status'] if recomputed else 'not_applicable'}"
+    differing = sorted(k for k in set(proof) | set(recomputed) if proof.get(k) != recomputed.get(k))
+    if differing:
+        return None, f"zero_evidence_invalid:stale_or_altered:{','.join(differing)}"
+    return recomputed, ""
 
 
 def prove_zero(lines: FilingLines, framework: str, metric: str, period: str) -> dict[str, Any] | None:
@@ -442,7 +516,7 @@ def prove_zero(lines: FilingLines, framework: str, metric: str, period: str) -> 
         return None
     record: dict[str, Any] = {"metric": metric, "period": period, "rule": name, "rule_version": ZERO_POLICY_VERSION,
                               "accounting_framework": framework,
-                              "filing_version_id": next(iter(lines.by_id.values()), {}).get("filing_version_id"),
+                              "filing_version_id": lines.filing_version_id,
                               "operands": [], "findings": []}
     if name != ZERO_RULE_TWGAAP_EQUITY or framework != "TW_GAAP":
         record["status"] = "rule_not_applicable"

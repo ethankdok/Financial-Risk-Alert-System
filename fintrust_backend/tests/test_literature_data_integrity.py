@@ -164,7 +164,7 @@ class ZeroEvidenceTests(unittest.TestCase):
         value = assemble(lines, "TW_GAAP", "preferred_stock", "I:2012-12-31")
         self.assertEqual((value.status, value.value, value.evidence_type), ("computed", Decimal(0), "verified_zero"))
         self.assertEqual(value.zero_evidence["rule"], ZERO_RULE_TWGAAP_EQUITY)
-        self.assertEqual(value.zero_evidence["rule_version"], "literature_zero_evidence_policy_v1")
+        self.assertEqual(value.zero_evidence["rule_version"], "literature_zero_evidence_policy_v2")
         self.assertEqual(len(value.zero_evidence["evidence_fingerprint"]), 64)
         self.assertEqual({o["line_key"] for o in value.observations}, {"code:3XXX", "code:3110", "code:3350"})
 
@@ -232,7 +232,7 @@ class ZeroEvidenceTests(unittest.TestCase):
         self.assertTrue(base.literature_zero_evidence)
         self.assertEqual({z["status"] for z in base.literature_zero_evidence}, {"verified"})
         self.assertEqual(base.identity()["literature_dependency_versions"]["zero_evidence_policy"],
-                         "literature_zero_evidence_policy_v1")
+                         "literature_zero_evidence_policy_v2")
         self.assertIn("literature_zero_evidence", base.dependency_digests())
         result = result_for(base, DECHOW_MODEL_ID, 2012)
         self.assertEqual(result["status"], "computed", result["missing_inputs"])
