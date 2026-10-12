@@ -37,6 +37,9 @@ class StubWorkbench:
         self.literature = StubLiterature()
         self.nfm_records = []
 
+    def _financial_for_ticker(self, index, ticker):
+        return index
+
     def resolve(self, ticker):
         if ticker != "2454":
             from app.services.integrity.service import UnsupportedTicker
