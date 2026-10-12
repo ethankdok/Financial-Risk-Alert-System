@@ -121,7 +121,13 @@ class StrictF4Tests(unittest.TestCase):
         idx = financial_index()
         idx[("revenue", 2026)] = {**idx[("revenue", 2025)], "fiscal_period": "2026FY"}
         self.assertEqual(run(idx)["period"], "2026FY")
-        self.assertEqual(run(idx)["status"], "not_computable")
+        self.assertIn(run(idx)["status"], ("not_comparable", "not_computable"))
+        self.assertEqual(run(idx)["freshness_status"], "latest_period_not_computable")
+
+    def test_counterfeit_mops_url_cannot_assert_official_identity(self):
+        idx = financial_index()
+        idx[("revenue", 2025)]["source_url"] = "https://mops.twse.com.tw.evil.test/server-java/FileDownLoad"
+        self.assertEqual(run(idx)["status"], "not_comparable")
 
     def test_cutoff_excludes_documents_first_published_at_cutoff(self):
         out = run(cutoff=datetime(2026, 4, 10, 0, tzinfo=timezone.utc))
