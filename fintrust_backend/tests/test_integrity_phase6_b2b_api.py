@@ -2,6 +2,12 @@
 from __future__ import annotations
 
 import unittest
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
 
 from fastapi.testclient import TestClient
 from flask import Flask
