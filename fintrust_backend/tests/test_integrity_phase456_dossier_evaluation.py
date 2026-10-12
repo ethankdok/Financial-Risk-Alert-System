@@ -61,6 +61,8 @@ def cohort():
             "cutoff_at": "2020-01-01T00:00:00+00:00",
             "data_available_at": "2019-12-01T00:00:00+00:00",
             "score": "0.80", "score_source_sha256": SHA,
+            "feature_sources": [{"source_sha256": "b" * 64, "published_at": "2019-11-01T00:00:00Z",
+                                 "archive_bytes_verified": True, "source_identity_verified": True}],
             "label_kind": "documented_event", "label_source_sha256": SHA,
             "event_at": "2020-06-01T00:00:00+00:00",
         }, {
@@ -68,6 +70,8 @@ def cohort():
             "cutoff_at": "2020-01-01T00:00:00+00:00",
             "data_available_at": "2019-12-01T00:00:00+00:00",
             "score": "0.20", "score_source_sha256": SHA,
+            "feature_sources": [{"source_sha256": "c" * 64, "published_at": "2019-11-01T00:00:00Z",
+                                 "archive_bytes_verified": True, "source_identity_verified": True}],
             "label_kind": "verified_no_event", "label_source_sha256": SHA,
             "followup_through": "2021-02-01T00:00:00+00:00",
         },
@@ -150,6 +154,23 @@ class PITExperimentTests(unittest.TestCase):
         rows[0]["data_available_at"] = "2020-02-01T00:00:00Z"
         self.assertEqual(evaluate(rows)["exclusions"][0]["reason"],
                          "score_uses_information_unavailable_at_cutoff")
+
+    def test_score_digest_without_feature_level_lineage_is_not_pit_eligible(self):
+        rows = cohort()
+        rows[0].pop("feature_sources")
+        self.assertEqual(evaluate(rows)["exclusions"][0]["reason"], "feature_level_pit_evidence_missing")
+
+    def test_later_published_component_blocks_hindsight_score(self):
+        rows = cohort()
+        rows[0]["feature_sources"][0]["published_at"] = "2020-02-01T00:00:00Z"
+        self.assertEqual(evaluate(rows)["exclusions"][0]["reason"],
+                         "feature_source_not_available_before_cutoff")
+
+    def test_unreviewed_document_bytes_cannot_enter_holdout(self):
+        rows = cohort()
+        rows[0]["feature_sources"][0]["archive_bytes_verified"] = False
+        self.assertEqual(evaluate(rows)["exclusions"][0]["reason"],
+                         "feature_source_identity_or_publication_unverified")
 
     def test_excludes_leakage_from_training_companies(self):
         result = evaluate(training_tickers=["2454"])
