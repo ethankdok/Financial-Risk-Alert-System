@@ -199,6 +199,8 @@ class LiteratureAdapter:
             reason = "frozen_inputs_exist_only_as_historical_research_case_use_research_api"
         else:
             reason = "no_frozen_literature_inputs_for_ticker"
+        if fiscal_year is None:  # no annual period at all: the engines only supply the required-input list
+            reason = "no_annual_financial_periods_for_ticker"
         year = fiscal_year or 0
         models = []
         for module, paper_key, title in ((beneish_1999, "beneish_1999", "Beneish (1999) M-Score（8 變數）"),
@@ -224,7 +226,8 @@ class LiteratureAdapter:
                 "raw_score": result["score"], "fiscal_year": fiscal_year, "approval_status": APPROVAL_STATUS,
                 "component_coverage": result["component_coverage"],
                 "missing_input_count": len(result["missing_inputs"]), "missing_metrics": missing_metrics,
-                "missing_reasons": sorted({r for m in result["missing_inputs"] for r in m.get("reasons", [])}),
+                "missing_reasons": [reason] if fiscal_year is None else
+                sorted({r for m in result["missing_inputs"] for r in m.get("reasons", [])}),
                 "pipeline_fact_availability": availability, "shares_inputs_with": SHARED_INPUTS[result["model_id"]],
                 "limitations": [
                     "未以 1785 歷史研究案例分數或任何其他公司分數替代。",

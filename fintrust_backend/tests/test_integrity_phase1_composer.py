@@ -201,6 +201,15 @@ class LiteratureTests(unittest.TestCase):
         receivables = next(a for a in beneish["pipeline_fact_availability"] if a["model_input"] == "receivables")
         self.assertTrue(receivables["pipeline_fact_t"])  # available in the pipeline, still not admitted
 
+    def test_company_without_annual_periods_has_no_fictitious_fiscal_year(self) -> None:
+        out = LiteratureAdapter(None).assess("3711", None, {})
+        self.assertEqual(out["reason"], "no_annual_financial_periods_for_ticker")
+        for model in out["models"]:
+            self.assertIsNone(model["fiscal_year"])
+            self.assertEqual(model["missing_reasons"], ["no_annual_financial_periods_for_ticker"])
+            self.assertIsNone(model["raw_score"])
+            self.assertGreater(model["missing_input_count"], 0)
+
     @unittest.skipUnless(LITERATURE_DB.is_file(), "local literature input store not present")
     def test_1785_retrospective_scores_are_never_substituted_and_stores_are_untouched(self) -> None:
         before = (sha(LITERATURE_DB), sha(RESULTS_DB) if RESULTS_DB.is_file() else None)
