@@ -6,7 +6,10 @@ explicit, preserving lack-of-evidence as a distinct state.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
+
+_SHA256 = re.compile(r"^[0-9a-fA-F]{64}$")
 
 VERSION = "fintrust_cross_evidence_v1"
 POSITIVE = frozenset({"supported", "descriptive_gap", "within_screening_heuristic", "descriptive_divergence"})
@@ -23,6 +26,7 @@ def compose_corroboration(assessment: dict[str, Any]) -> dict[str, Any]:
     records = {r.get("evidence_id"): r for r in assessment.get("evidence_records", [])
                if r.get("evidence_id")}
     source_families: dict[str, dict[str, Any]] = {}
+    third_party_artifacts: set[str] = set()
     for finding in findings:
         for family in finding.get("evidence_families", []):
             entry = source_families.setdefault(family, {
@@ -39,7 +43,10 @@ def compose_corroboration(assessment: dict[str, Any]) -> dict[str, Any]:
                     continue
                 entry["evidence_ids"].add(evidence_id)
                 if evidence.get("independence") == "independent_third_party":
-                    entry["independent_third_party"] = True
+                    artifact_sha = str(evidence.get("source_sha256") or "")
+                    if _SHA256.fullmatch(artifact_sha):
+                        third_party_artifacts.add(artifact_sha.lower())
+                        entry["independent_third_party"] = True
                 elif evidence.get("independence") in ("issuer_self_reported", "regulator_published_issuer_data"):
                     entry["issuer_reported"] = True
     families = [
@@ -49,8 +56,10 @@ def compose_corroboration(assessment: dict[str, Any]) -> dict[str, Any]:
     ]
     shift = assessment.get("data_shift") or {}
     jsd_ready = shift.get("status") == "comparable" and shift.get("calibration_status") == "calibrated"
-    matches = [f for f in findings if f.get("status") == "supported"]
-    conflicts = [f for f in findings if f.get("status") == "conflicting"]
+    matches = [f for f in findings if f.get("check_id") == "F3_ISSUER_CLAIM_VERIFICATION"
+               and f.get("status") == "supported"]
+    conflicts = [f for f in findings if f.get("check_id") == "F3_ISSUER_CLAIM_VERIFICATION"
+                 and f.get("status") == "conflicting"]
     missing = [f for f in findings if f.get("status") in NO_EVIDENCE]
     independent_families = [x["family"] for x in families if x["independent_third_party"]]
     return {
@@ -63,6 +72,8 @@ def compose_corroboration(assessment: dict[str, Any]) -> dict[str, Any]:
         "evidence_families": families,
         "distinct_evidence_family_count": len(families),
         "independent_third_party_family_count": len(independent_families),
+        "distinct_verified_third_party_source_artifacts": len(third_party_artifacts),
+        "distinct_verified_third_party_source_sha256": sorted(third_party_artifacts),
         "independent_third_party_families": independent_families,
         "narrative": {
             "status": shift.get("status") or "unavailable",
@@ -74,7 +85,8 @@ def compose_corroboration(assessment: dict[str, Any]) -> dict[str, Any]:
         "limitations": [
             "issuer presentation and MOPS financial filing are both issuer-originated, even if different documents.",
             "an issuer claim agreeing with its own financial filing is not independent third-party verification.",
-            "related evidence is grouped by family; the count is not a quantitative confidence score.",
+            "related evidence is grouped by family; one source can cover multiple families and is counted once by original SHA-256.",
+            "third-party labels without an archived source SHA-256 are not counted as verified independent artifacts.",
             "a missing or uncalibrated JSD measure is not evidence of no change.",
         ],
         "fraud_probability": None,
