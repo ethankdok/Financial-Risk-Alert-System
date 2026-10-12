@@ -16,6 +16,7 @@ from app.services.integrity import alignment as al
 from app.services.integrity import composer as cp
 from app.services.integrity import financial_checks as fc
 from app.services.integrity import nfm_evidence_bridge as nfm
+from app.services.integrity.financial_source_release import overlay_approved_revenue
 from app.services.integrity.contracts import (
     CONTRACT_VERSION,
     METHOD_APPROVAL,
@@ -99,7 +100,8 @@ def _claim_record(check: dict[str, Any], ticker: str, issuer: str | None,
 class IntegrityWorkbench:
     def __init__(self, repository: Any, *, jsd_bridge: Any | None = None, conference_repository: Any | None = None,
                  claim_service: Any | None = None, literature_database: str | None = None,
-                 nfm_records: list[dict[str, Any]] | None = None) -> None:
+                 nfm_records: list[dict[str, Any]] | None = None,
+                 financial_source_records: list[dict[str, Any]] | None = None) -> None:
         self.repository = repository
         self.facts = ad.FactsAdapter(repository)
         self.literature = ad.LiteratureAdapter(literature_database)
@@ -108,11 +110,21 @@ class IntegrityWorkbench:
         self.sources = ad.OfficialSourcesAdapter(repository)
         self.conference_repository = conference_repository
         self.nfm_records = nfm_records or []  # default is empty until official document review
+        self.financial_source_records = financial_source_records or []
 
     def _nfm_for_ticker(self, ticker: str) -> list[dict[str, Any]]:
         """The shared archive can hold many companies; the strict checker receives one company only."""
         return [record for record in self.nfm_records
                 if isinstance(record, dict) and record.get("ticker") == ticker]
+
+    def _financial_for_ticker(self, index: dict[tuple[str, int], dict[str, Any]],
+                              ticker: str) -> dict[tuple[str, int], dict[str, Any]]:
+        try:
+            return overlay_approved_revenue(index, self.financial_source_records, ticker=ticker)
+        except ValueError as exc:
+            raise ad.IntegrityDataUnavailable(
+                f"approved financial source overlay rejected: {type(exc).__name__}"
+            ) from exc
 
     # ------------------------------------------------------------------------------------- companies
     @staticmethod
@@ -140,7 +152,7 @@ class IntegrityWorkbench:
     def readiness(self, ticker: str) -> dict[str, Any]:
         company = self.resolve(ticker)
         facts = self.facts.collect(ticker)
-        index = facts["index"]
+        index = self._financial_for_ticker(facts["index"], ticker)
         years = sorted({y for _m, y in index})
         f1 = fc.check_revenue_receivables(index)
         f2 = fc.check_net_income_cfo(index)
@@ -187,7 +199,7 @@ class IntegrityWorkbench:
         company = self.resolve(request.ticker)
         sections = set(request.sections)
         facts = self.facts.collect(request.ticker)
-        index = facts["index"]
+        index = self._financial_for_ticker(facts["index"], request.ticker)
         years = sorted({y for _m, y in index})
         latest_year = years[-1] if years else None
         missing: list[dict[str, Any]] = []
