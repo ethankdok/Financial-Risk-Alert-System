@@ -46,7 +46,7 @@
 |---|---|---|
 | Git 物件 | `git ls-files` | 沒有追蹤任何 SQLite → 無 |
 | 同 repo 資料夾 | 2,027 檔基線重算 | 只有事件檔 |
-| 第二份 clone `C:\Users\samue\Financial-Risk-Alert-System` | 直接檢查 | 舊 `main`（`34eb1ef`），沒有任何 `.sqlite3` |
+| 第二份 clone（使用者家目錄下的 `<HOME>\Financial-Risk-Alert-System`） | 直接檢查 | 舊 `main`（`34eb1ef`），沒有任何 `.sqlite3` |
 | 所有 ZIP（Documents、Downloads、Desktop、第二份 clone、Claude 暫存，共 339 個） | 只列出成員，不解壓 | 338 個可讀，**沒有 SQLite 成員**（只有檔名含 `financial_pipeline` 的 `.py` 腳本）；1 個 Downloads 檔不是有效 ZIP（BadZipFile） |
 | 整個使用者目錄與資源回收筒 | 只讀 metadata，搜尋大小 1,335,296／1,343,488 或檔名 `*financial_pipeline*`、`*pipeline*.sqlite3*`；候選檔再算完整 SHA-256（OneDrive 雲端預留位置不讀取） | 見 §3.1 |
 | Windows 陰影複製 | `Win32_ShadowCopy` | 無系統管理員權限無法查詢；**未提權** |
