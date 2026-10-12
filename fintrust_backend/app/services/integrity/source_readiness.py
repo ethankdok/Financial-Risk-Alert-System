@@ -53,6 +53,13 @@ def summarize_source_readiness(
                     if r.get("source_document_verified") is True
                     and r.get("document_identity_verified") is True
                     and r.get("verified_source") is True]
+    if latest is None:
+        required_revenue.append({
+            "year": None, "evidence_id": None, "present": False,
+            "source_url_allowlisted": False, "official_document_sha256_present": False,
+            "file_bytes_verified": False, "publication_instant_available": False,
+            "reasons": ["no_annual_financial_evidence"],
+        })
     missing = sorted({
         code for row in required_revenue for code in row["reasons"]
     } | ({"two_years_of_verified_nfm_missing"} if len({
