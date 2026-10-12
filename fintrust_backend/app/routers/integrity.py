@@ -51,16 +51,20 @@ def get_integrity_workbench(
     nfm_records = []
     if any(config.values()):
         if not all(config.values()):
-            raise IntegrityDataUnavailable("optional approved NFM release settings are incomplete")
+            raise HTTPException(status_code=503, detail={
+                "error_code": "nfm_release_unavailable",
+                "message": "optional approved NFM release settings are incomplete",
+            })
         try:
             nfm_records = load_approved_nfm_release(
                 config["manifest"], approved_manifest_sha256=config["sha256"],
                 pdf_archive_root=config["archive_root"],
             )["records"]
         except (ValueError, OSError, TypeError, RuntimeError) as exc:
-            raise IntegrityDataUnavailable(
-                f"approved nonfinancial release rejected: {type(exc).__name__}"
-            ) from exc
+            raise HTTPException(status_code=503, detail={
+                "error_code": "nfm_release_unavailable",
+                "message": f"approved nonfinancial release rejected: {type(exc).__name__}",
+            }) from exc
     return IntegrityWorkbench(repository, jsd_bridge=jsd_bridge, conference_repository=conference_repository,
                               claim_service=claim_service,
                               literature_database=ResearchConfig.from_env().literature_database,
