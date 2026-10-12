@@ -91,6 +91,26 @@ def evaluate_holdout(
         elif row.get("sample_role") != "holdout":
             reason = "not_predeclared_holdout"
         if reason is None:
+            lineage = row.get("feature_sources")
+            if not isinstance(lineage, list) or not lineage:
+                reason = "feature_level_pit_evidence_missing"
+            else:
+                for source in lineage:
+                    if not isinstance(source, dict):
+                        reason = "feature_source_record_invalid"
+                        break
+                    source_sha = str(source.get("source_sha256") or "")
+                    source_date = _timestamp(source.get("published_at"))
+                    if (not SHA256.fullmatch(source_sha)
+                            or source.get("archive_bytes_verified") is not True
+                            or source.get("source_identity_verified") is not True
+                            or source_date is None):
+                        reason = "feature_source_identity_or_publication_unverified"
+                        break
+                    if source_date >= cutoff or source_date > published:
+                        reason = "feature_source_not_available_before_cutoff"
+                        break
+        if reason is None:
             assert cutoff is not None
             unique = (ticker, cutoff.isoformat())
             if unique in seen:
@@ -116,6 +136,9 @@ def evaluate_holdout(
                 "cutoff_at": cutoff.isoformat(),
                 "score": str(val),
                 "score_source_sha256": data_hash.lower(),
+                "verified_lineage_source_hashes": sorted({
+                    str(e["source_sha256"]).lower() for e in row["feature_sources"]
+                }),
                 "label_source_sha256": label_hash.lower(),
                 "event": label == "documented_event",
                 "flagged": val >= limit,
@@ -158,6 +181,7 @@ def evaluate_holdout(
         "limitations": [
             "Labels require independently documented outcomes and complete control follow-up.",
             "Only information demonstrably available before each cutoff is admissible.",
+            "Each scored observation needs original archived source hashes, explicit verification and publication timestamps for ALL source inputs; a score-level digest alone is insufficient.",
             "Threshold ID is an asserted label, not independently verified preregistration.",
             "Independent timestamped preregistration and verified outcome documents are still required for predictive validation.",
             "Disjoint training company IDs are required; excluding a company after looking at outcomes is not acceptable.",
