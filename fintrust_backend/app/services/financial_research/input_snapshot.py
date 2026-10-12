@@ -113,9 +113,11 @@ class InputSnapshot:
     dependency_versions: dict[str, str] = field(default_factory=dict)
     reconciliation_frozen: bool = False
     # Literature models only: selected filing versions per fiscal year and their line-level observations, frozen
-    # by literature_comparison.freeze_literature_inputs() together with the registry / mapping / extractor versions.
+    # by literature_comparison.freeze_literature_inputs() together with the registry / mapping / extractor versions
+    # and the zero-evidence records (rule version + evidence fingerprint) the assembly may rely on.
     literature_filings: list[dict[str, Any]] = field(default_factory=list)
     literature_observations: list[dict[str, Any]] = field(default_factory=list)
+    literature_zero_evidence: list[dict[str, Any]] = field(default_factory=list)
     literature_versions: dict[str, str] = field(default_factory=dict)
     literature_frozen: bool = False
 
@@ -135,7 +137,8 @@ class InputSnapshot:
             payload.update(summary_observations=self.summary_observations, pdf_evidence=self.pdf_evidence)
         if self.literature_frozen:
             payload.update(literature_filings=self.literature_filings,
-                           literature_observations=self.literature_observations)
+                           literature_observations=self.literature_observations,
+                           literature_zero_evidence=self.literature_zero_evidence)
         return payload
 
     @property
@@ -168,6 +171,7 @@ class InputSnapshot:
         if self.literature_frozen:
             description.update(literature_filing_count=len(self.literature_filings),
                                literature_observation_count=len(self.literature_observations),
+                               literature_zero_evidence_count=len(self.literature_zero_evidence),
                                dependency_digests=self.dependency_digests())
         return description
 

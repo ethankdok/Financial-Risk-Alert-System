@@ -26,15 +26,18 @@ from typing import Any
 from app.services.financial_research import beneish_1999, dechow_2011
 from app.services.financial_research.case_knowledge import accounting_regime
 from app.services.financial_research.input_snapshot import InputSnapshot, latest_time, safe_official_url
-from app.services.financial_research.literature_extraction import EXTRACTOR_VERSION
+from app.services.financial_research.literature_extraction import EXTRACTOR_VERSION, is_current_observation
 from app.services.financial_research.literature_inputs import (
     MAPPING_INDEX,
     MAPPING_VERSION,
     PANEL_VERSION,
+    SOURCE_GATE_VERSION,
+    ZERO_POLICY_VERSION,
     FilingLines,
     Panel,
     lease_flags,
     period_key,
+    zero_evidence_records,
 )
 from app.services.financial_research.literature_method_registry import (
     APPROVAL_STATUS,
@@ -118,6 +121,8 @@ def freeze_literature_inputs(snapshot: InputSnapshot, versions: list[dict[str, A
     check_request(snapshot.context, snapshot.version_policy)
     years = range(snapshot.start_year - 2, snapshot.end_year + 1)
     observations = store.list_observations(snapshot.ticker) if store is not None else []
+    # Only the extractor versions this method reads (older records stay in the append-only store, unread).
+    observations = [o for o in observations if is_current_observation(o)]
     strict = snapshot.context.mode is AnalysisMode.STRICT_AS_OF
     if strict:  # only observations admitted by the strict source contract and public before the cutoff
         observations = [o for o in observations if o.get("pit_admitted")
@@ -135,8 +140,18 @@ def freeze_literature_inputs(snapshot: InputSnapshot, versions: list[dict[str, A
     snapshot.literature_filings = selections
     snapshot.literature_observations = sorted((o for o in observations if o["filing_version_id"] in selected),
                                               key=lambda o: o["observation_id"])
+    zero_evidence = []
+    for record in selections:
+        filing = record["filing"]
+        if filing:
+            lines = FilingLines([o for o in snapshot.literature_observations
+                                 if o["filing_version_id"] == filing["filing_version_id"]])
+            zero_evidence += zero_evidence_records(lines, filing["accounting_framework"])
+    snapshot.literature_zero_evidence = sorted(zero_evidence, key=lambda z: (z["filing_version_id"], z["metric"],
+                                                                            z["period"]))
     snapshot.literature_versions = {"method_registry": REGISTRY_VERSION, "input_mapping": MAPPING_VERSION,
                                     "period_panel": PANEL_VERSION, "line_extractor": EXTRACTOR_VERSION,
+                                    "zero_evidence_policy": ZERO_POLICY_VERSION, "source_gate": SOURCE_GATE_VERSION,
                                     "fact_selection": SELECTION_POLICY_VERSION, "comparison": COMPARISON_ID}
     snapshot.literature_frozen = True
     return snapshot
@@ -158,9 +173,11 @@ def _panel(snapshot: InputSnapshot, year: int) -> tuple[Panel | None, dict[str, 
     lines = {}
     for filing in (filings.get(year), filings.get(year - 1)):
         if filing:
-            lines[filing["filing_version_id"]] = FilingLines(
-                [o for o in snapshot.literature_observations if o["filing_version_id"] == filing["filing_version_id"]])
-    return Panel(year, record["filing"]["accounting_framework"], filings, lines, problems), record
+            fid = filing["filing_version_id"]
+            lines[fid] = FilingLines([o for o in snapshot.literature_observations if o["filing_version_id"] == fid],
+                                     [z for z in snapshot.literature_zero_evidence if z["filing_version_id"] == fid])
+    frameworks = {y: r["accounting_framework"] for y, r in selection.items()}
+    return Panel(year, record["filing"]["accounting_framework"], filings, lines, problems, frameworks), record
 
 
 def observation_identity(snapshot: InputSnapshot, year: int, model_id: str, framework: str | None,
@@ -202,11 +219,14 @@ def run_model_year(snapshot: InputSnapshot, model_id: str, year: int) -> dict[st
         warnings.append("ifrs16_depreciation_may_include_right_of_use_assets")
     if len({f for f in filings_used}) > 1:
         warnings.append("t-2_values_from_prior_year_filing_of_the_same_version_series")
+    evidence_types = sorted({u.evidence_type for u in used if u.evidence_type})
     descriptor = {f["filing_version_id"]: f for f in (r["filing"] for r in snapshot.literature_filings) if f}
     return {**base, **result, "fiscal_year": year,
             "observation": observation_identity(snapshot, year, model_id, panel.framework, filing),
             "input_filing_versions": [descriptor[f] for f in filings_used if f in descriptor],
             "source_observation_ids": observation_ids, "validation_warnings": sorted(set(warnings)),
+            "input_evidence_types": evidence_types,
+            "zero_evidence_used": sorted({u.zero_evidence["evidence_fingerprint"] for u in used if u.zero_evidence}),
             "available_at": latest_time([descriptor[f].get("available_at") for f in filings_used if f in descriptor])
             if snapshot.context.mode is AnalysisMode.STRICT_AS_OF else None,
             "limitations": list(LIMITATIONS)}
@@ -328,12 +348,16 @@ def coverage_matrix(snapshot: InputSnapshot, diagnostics: list[dict[str, Any]] |
                     if panel is None:
                         rows.append({**base, "accounting_framework": record.get("accounting_framework")
                                      if isinstance(record, dict) else None, "readiness": "missing",
+                                     "input_status": "no_selected_filing", "evidence_type": None,
                                      "missing_reason": record.get("problem") if isinstance(record, dict) else "no_filing",
                                      "filing_version_id": None, "side": None, "sources": []})
                         continue
                     item = panel.value(metric, relative)
                     rows.append({**base, "accounting_framework": panel.framework,
                                  "readiness": "complete" if item.status == "computed" else "missing",
+                                 "input_status": item.status, "evidence_type": item.evidence_type,
+                                 "zero_evidence": item.zero_evidence, "cross_filing_overlap": item.cross_filing_overlap,
+                                 "alias_candidates": item.candidates,
                                  "missing_reason": None if item.status == "computed" else
                                  ";".join([item.status, *item.reasons]),
                                  "filing_version_id": item.filing_version_id,
@@ -351,7 +375,12 @@ def coverage_matrix(snapshot: InputSnapshot, diagnostics: list[dict[str, Any]] |
         key = f"{row['model_id']}|{row['fiscal_year']}"
         bucket = summary.setdefault(key, {"complete": 0, "missing": 0})
         bucket[row["readiness"]] += 1
-    return {"matrix_version": "literature_input_coverage_v1", "approval_status": APPROVAL_STATUS,
+    status_counts: dict[str, int] = {}
+    for row in rows:
+        key = f"{row['input_status']}|{row['evidence_type']}"
+        status_counts[key] = status_counts.get(key, 0) + 1
+    return {"matrix_version": "literature_input_coverage_v2", "input_status_counts": dict(sorted(status_counts.items())),
+            "zero_evidence_records": snapshot.literature_zero_evidence, "approval_status": APPROVAL_STATUS,
             **snapshot.context.as_dict(), "ticker": snapshot.ticker, "version_policy": snapshot.version_policy,
             "filing_selection": snapshot.literature_filings, "rows": rows, "summary": summary,
             "artifact_diagnostics": diagnostics or [], "input_snapshot": snapshot.describe()}

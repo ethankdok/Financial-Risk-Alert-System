@@ -29,6 +29,7 @@ from app.services.financial_research.literature_comparison import (
     select_filings,
 )
 from app.services.financial_research.literature_extraction import (
+    XBRL_EXTRACTOR_VERSION,
     parse_code_rows,
     parse_label_rows,
     parse_total_rows,
@@ -60,7 +61,8 @@ RAW = ROOT / "data" / "historical_audit" / "raw"
 HAS_REAL = DATABASE.is_file() and RAW.is_dir()
 
 # ------------------------------------------------------------------------------------------- synthetic fixture
-# Beneish hand example (TWD; t = FY2015, t-1 = FY2014). Hand arithmetic from Table 2:
+# Beneish hand example (TWD; t = FY2015, t-1 = FY2014). Short-term investments are an explicitly published 0 line
+# (an absent line would be ``not_presented``, finding LIT-F01). Hand arithmetic from Table 2:
 #   DSRI = (150/1200)/(100/1000) = 1.25        GMI  = (400/1000)/(420/1200) = 8/7
 #   AQI  = (1-860/1200)/(1-700/1000) = 17/18   SGI  = 1200/1000 = 1.2
 #   DEPI = (50/350)/(40/400) = 10/7            SGAI = (132/1200)/(100/1000) = 1.1
@@ -74,16 +76,19 @@ T_1 = {"OperatingRevenue": 1000, "OperatingCosts": 600, "AccountsReceivableNet":
        "CashAndCashEquivalents": 50, "LongtermLiabilitiesCurrentPortion": 20, "CurrentTaxLiabilities": 10,
        "Inventories": 120, "Liabilities": 450, "ShorttermBorrowings": 40, "CapitalStock": 300, "OrdinaryShare": 300,
        "ProfitLossFromContinuingOperations": 40, "NoncurrentAvailableForSaleFinancialAssets": 30,
-       "CashFlowsFromUsedInOperatingActivities": 90, "ProceedsFromLongTermDebt": 0}
+       "CashFlowsFromUsedInOperatingActivities": 90, "ProceedsFromLongTermDebt": 0, "Equity": 550,
+       "CurrentFinancialAssetsAtFairValueThroughProfitOrLoss": 0}
 T_0 = {"OperatingRevenue": 1200, "OperatingCosts": 780, "AccountsReceivableNet": 150, "CurrentAssets": 500,
        "PropertyPlantAndEquipment": 360, "Assets": 1200, "DepreciationExpense": 40, "AmortizationExpense": 10,
        "SellingExpenses": 40, "AdministrativeExpense": 92, "LongtermBorrowings": 300, "CurrentLiabilities": 300,
        "CashAndCashEquivalents": 60, "LongtermLiabilitiesCurrentPortion": 30, "CurrentTaxLiabilities": 15,
        "Inventories": 150, "Liabilities": 650, "ShorttermBorrowings": 60, "CapitalStock": 300, "OrdinaryShare": 300,
        "ProfitLossFromContinuingOperations": 66, "NoncurrentAvailableForSaleFinancialAssets": 30,
-       "CashFlowsFromUsedInOperatingActivities": 100, "ProceedsFromLongTermDebt": 250}
-T_2 = {"AccountsReceivableNet": 80, "Assets": 900, "CurrentAssets": 380}  # CurrentAssets = statement anchor
-DURATION = {"OperatingRevenue", "OperatingCosts", "DepreciationExpense", "AmortizationExpense", "SellingExpenses",
+       "CashFlowsFromUsedInOperatingActivities": 100, "ProceedsFromLongTermDebt": 250, "Equity": 550,
+       "CurrentFinancialAssetsAtFairValueThroughProfitOrLoss": 0}
+# CurrentAssets = statement anchor; Liabilities + Equity let the XBRL balance identity (source gate) verify each instant
+T_2 = {"AccountsReceivableNet": 80, "Assets": 900, "CurrentAssets": 380, "Liabilities": 400, "Equity": 500}
+DURATION = {"OperatingRevenue", "Revenue", "OperatingCosts", "DepreciationExpense", "AmortizationExpense", "SellingExpenses",
             "AdministrativeExpense", "ProfitLossFromContinuingOperations", "CashFlowsFromUsedInOperatingActivities",
             "ProceedsFromLongTermDebt"}
 
@@ -98,8 +103,15 @@ def obs(filing: str, year: int, line: str, value, *, framework="TIFRS", vtype="r
             "statement_scope": "consolidated", "statement": "primary_statement", "line_key": line,
             "source_concept": f"ifrs:{line}", "value": str(value), "published_value": str(value), "published_unit": "TWD",
             "locator": "context=x", "raw_sha256": sha * 64, "source_url": None, "extraction_method": "xbrl_instance",
-            "extractor_version": "test", "artifact_available_at": None, "artifact_availability_status": "unverified",
+            "extractor_version": XBRL_EXTRACTOR_VERSION, "artifact_available_at": None,
+            "artifact_availability_status": "unverified",
             "pit_admitted": False, "pit_basis": "test", "checks": {}, **period}
+
+
+def balance(filing: str, year: int, assets, liabilities, equity) -> list[dict]:
+    """Balance totals so the XBRL identity Assets = Liabilities + Equity can be evaluated by the source gate."""
+    return [obs(filing, year, "Assets", assets), obs(filing, year, "Liabilities", liabilities),
+            obs(filing, year, "Equity", equity)]
 
 
 def fixture_observations(*, drop=(), overrides=None):
@@ -289,14 +301,17 @@ class GracefulIncompletenessTests(unittest.TestCase):
         reasons = {r["code"] for c in zero["components"] for r in c["reasons"]}
         self.assertIn("invalid_denominator_zero", reasons)
         self.assertIsNone(zero["score"])
-        negative = result_for(literature_snapshot(fixture_observations(overrides={"Assets": -5})), DECHOW_MODEL_ID)
+        # equity moves with assets so the XBRL balance identity (source gate) still holds and the ratio itself is tested
+        negative = result_for(literature_snapshot(fixture_observations(overrides={"Assets": -5, "Equity": -655})),
+                              DECHOW_MODEL_ID)
         self.assertIn("invalid_denominator_negative", {r["code"] for c in negative["components"] for r in c["reasons"]})
         self.assertIsNone(negative["score"])
 
     def test_reported_zero_is_a_value_and_missing_line_is_not(self) -> None:
         lines = FilingLines([obs("F2015", 2015, "CurrentAssets", 10), obs("F2015", 2015, "CurrentTaxLiabilities", 0),
-                             obs("F2015", 2015, "CurrentLiabilities", 5)])
-        self.assertEqual(assemble(lines, "TIFRS", "income_tax_payable", "I:2015-12-31").value, Decimal(0))
+                             obs("F2015", 2015, "CurrentLiabilities", 5), *balance("F2015", 2015, 10, 5, 5)])
+        explicit = assemble(lines, "TIFRS", "income_tax_payable", "I:2015-12-31")
+        self.assertEqual((explicit.status, explicit.value, explicit.evidence_type), ("computed", Decimal(0), "explicit_zero"))
         missing = assemble(lines, "TIFRS", "inventory", "I:2015-12-31")
         self.assertEqual((missing.status, missing.value), ("missing_input", None))
         no_anchor = FilingLines([obs("F2015", 2015, "ShorttermBorrowings", 3)])
@@ -522,9 +537,11 @@ class RealLiteratureTests(unittest.TestCase):
 
     def test_extraction_is_bounded_deterministic_and_reports_unreadable_versions(self) -> None:
         self.assertEqual(self.report["network_requests"], 0)
-        self.assertEqual(self.report["observations"], 4393)
+        # 4,247 XBRL observations (extractor v1, unchanged) + 396 TW-GAAP PDF observations (extractor v2, every
+        # balance-sheet account-code row so equity / current sections can be enumerated)
+        self.assertEqual(self.report["observations"], 4643)
         self.assertEqual(self.report["observation_digest"],
-                         "1dc6ef8c4125781f8c594a6f801c8fd61013da66ad9891674dec675392748d93")
+                         "a2dce8911b87901261f03823378538fe9ae027e1ad3dde9e2cf6fe8d46e77793")
         self.assertEqual(self.report["status_counts"]["statement_pages_not_machine_readable"], 12)
         for detail in self.report["artifacts_detail"]:
             if detail["source_kind"] == "official_pdf" and detail["status"] == "extracted":
@@ -539,7 +556,14 @@ class RealLiteratureTests(unittest.TestCase):
         self.assertEqual([y for y, r in beneish.items() if r["status"] == "computed"], list(range(2013, 2026)))
         self.assertEqual({beneish[y]["status"] for y in (2011, 2012)}, {"source_unavailable"})
         self.assertEqual(beneish[2015]["score"], "-2.240182")
-        self.assertEqual(dechow[2015]["score"], "0.890320")
+        # LIT-F04: FY2015 / FY2023 t-2 balances come from the prior filing, whose overlapping year disagrees with the
+        # year-t filing's comparative column (receivables 2014; total assets 2022), so no F-Score (was 0.890320 / 1.0xx)
+        for year, metric in ((2015, "receivables"), (2023, "total_assets")):
+            self.assertEqual(dechow[year]["status"], "not_computable")
+            self.assertIn((metric, "t-2", "cross_filing_overlap_mismatch"),
+                          {(m["metric"], m["relative_period"], m["status"]) for m in dechow[year]["missing_inputs"]})
+        self.assertEqual([y for y, r in dechow.items() if r["status"] == "computed"],
+                         [2013, 2014, 2016, 2017, 2019, 2020, 2021, 2022, 2024, 2025])
         self.assertEqual(dechow[2018]["status"], "not_computable")  # no positive issuance line in FY2018
         self.assertIn("issuance_absence_not_evidenced", {m["status"] for m in dechow[2018]["missing_inputs"]})
         self.assertTrue(all(r["hindsight"] for r in beneish.values()))

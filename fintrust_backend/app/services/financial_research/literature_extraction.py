@@ -10,9 +10,17 @@ downloaded. Each artifact's SHA-256 is re-verified before parsing and the bytes 
 - **TW-GAAP consolidated annual-report PDF text** (FY2011-2012 ``official_pdf``): only the catalogued account-code
   lines of the consolidated balance sheet and income statement and the catalogued labels of the cash-flow statement,
   current and comparative columns, with the printed line kept verbatim. Statements are located by title; the unit
-  (新台幣仟元/千元), the printed ROC year and the consolidated title are verified, and arithmetic identities are
-  checked (total assets = total liabilities and equity; net sales - operating costs = gross profit). PDFs whose
+  (新台幣仟元/千元), the printed ROC year and the consolidated title are verified. Every account-code row of the
+  balance-sheet page is kept (so sections can be enumerated), plus the catalogued income-statement codes and
+  cash-flow labels. Statement identities (``TWGAAP_IDENTITY_VERSION``) are evaluated per fiscal-year column and each
+  is ``verified`` / ``mismatch`` (all operands printed, equation fails) / ``incomplete`` (an operand is not printed or
+  not parsed); see ``IDENTITY_RULES``. Each observation records the identities that cover its line, so the input
+  gate (``literature_inputs``) can block exactly the affected lines and never the whole artifact. PDFs whose
   statement pages carry no text layer are recorded as ``statement_pages_not_machine_readable`` (no OCR is attempted).
+
+Extractor versions: XBRL observations keep ``literature_line_extractor_v1`` (unchanged); TW-GAAP PDF observations
+are ``literature_twgaap_pdf_extractor_v2`` (finding LIT-F02). Older PDF observations stay in the append-only store
+but are not read by the current method (``is_current_observation``).
 
 No observation is admitted to STRICT_AS_OF: the verified strict source contract admits only observation-level
 timestamps of the canonical facts, so ``pit_admitted`` is always false here (artifact timing is kept for review).
@@ -33,16 +41,19 @@ from app.services.financial_research.case_knowledge import accounting_regime
 from app.services.historical_audit.normalization import _is_statement_namespace
 from app.services.historical_audit.xbrl_document import parse_xbrl_document
 
-EXTRACTOR_VERSION = "literature_line_extractor_v1"
+XBRL_EXTRACTOR_VERSION = "literature_line_extractor_v1"
+TWGAAP_PDF_EXTRACTOR_VERSION = "literature_twgaap_pdf_extractor_v2"
+TWGAAP_IDENTITY_VERSION = "twgaap_statement_identities_v1"
+EXTRACTOR_VERSION = f"{XBRL_EXTRACTOR_VERSION}+{TWGAAP_PDF_EXTRACTOR_VERSION}"
+XBRL_METHODS = ("xbrl_instance", "inline_xbrl")
+PDF_METHODS = ("pdf_text_account_code", "pdf_text_label")
+XBRL_SOURCE_KINDS = ("mops_xbrl_instance", "mops_inline_xbrl")
 PIT_BASIS = ("not_admitted: the current STRICT_AS_OF contract admits only observation-level verified timestamps of "
              "canonical facts; literature line observations carry artifact-level timing only")
 
 # TW-GAAP catalogue: account codes (balance sheet / income statement) and cash-flow labels.
-TWGAAP_BALANCE_CODES = ("1100", "1120", "1140", "1150", "1160", "1178", "1180", "11XX", "120X", "1200", "1310", "1320",
-                        "1330", "1350", "1360", "1421", "1430", "1440", "1450", "1460", "1480", "15XX", "1XXX", "2100",
-                        "2110", "2160", "2270", "21XX", "2410", "2420", "2430", "24XX", "2XXX", "3110", "3120", "3XXX")
-TWGAAP_INCOME_CODES = ("4100", "5000", "5910", "6100", "6200", "6300", "6000", "7900", "9600")
-DEDUCTION_CODES = {"5000", "6100", "6200", "6300", "6000"}  # printed in parentheses as deductions
+TWGAAP_INCOME_CODES = ("4100", "5000", "5910", "6100", "6200", "6300", "6000", "7900", "8110", "9600")
+DEDUCTION_CODES = {"5000", "6100", "6200", "6300", "6000", "8110"}  # printed in parentheses as deductions
 TWGAAP_CASHFLOW_LABELS = ("各項折舊(含出租資產及閒置資產)", "各項折舊(含出租資產)", "各項折舊", "折舊費用", "各項攤提",
                           "攤銷費用", "長期借款增加", "舉借長期借款", "發行應付公司債", "發行公司債",
                           "應付公司債(減少)增加", "應付公司債增加", "現金增資", "員工認股權執行",
@@ -58,6 +69,51 @@ class ExtractionError(RuntimeError):
     pass
 
 
+def _code_in(low: int, high: int, *extra: str):
+    return lambda code: code in extra or (code.isdigit() and low <= int(code) <= high)
+
+
+# Statement identities of the TW-GAAP consolidated statements (``TWGAAP_IDENTITY_VERSION``). Each rule names the
+# total, how its operands are found and which lines it covers (a covered line is only usable when the identity is
+# ``verified`` for that fiscal-year column). Section enumerations sum every *printed* account-code row of a section,
+# so they also prove that no unparsed or unprinted row carries a balance (used by the zero-evidence policy).
+IDENTITY_RULES: dict[str, dict[str, Any]] = {
+    "balance": {"statement": "balance_sheet", "rule": "1XXX (or 資產總計) = 2XXX + 3XXX",
+                "total": ("code:1XXX", "label:資產總計"), "terms": ("code:2XXX", "code:3XXX"),
+                "covers": ("code:1XXX", "label:資產總計", "code:2XXX", "code:3XXX")},
+    "asset_sections": {"statement": "balance_sheet",
+                       "rule": "1XXX (or 資產總計) = sum of the printed asset section totals 11XX, 14XX, 15XX, 17XX, 18XX",
+                       "total": ("code:1XXX", "label:資產總計"),
+                       "terms": ("code:11XX", "code:14XX", "code:15XX", "code:17XX", "code:18XX"), "optional_terms": True,
+                       "covers": ("code:1XXX", "label:資產總計", "code:11XX", "code:14XX", "code:15XX", "code:17XX",
+                                  "code:18XX")},
+    "current_assets_enumeration": {"statement": "balance_sheet",
+                                   "rule": "11XX = sum of every printed code 1100-1399 and 120X",
+                                   "total": ("code:11XX",), "members": _code_in(1100, 1399, "120X")},
+    "investments_enumeration": {"statement": "balance_sheet", "rule": "14XX = sum of every printed code 1400-1499",
+                                "total": ("code:14XX",), "members": _code_in(1400, 1499)},
+    "current_liabilities_enumeration": {"statement": "balance_sheet",
+                                        "rule": "21XX = sum of every printed code 2100-2399",
+                                        "total": ("code:21XX",), "members": _code_in(2100, 2399)},
+    "long_term_liabilities_enumeration": {"statement": "balance_sheet",
+                                          "rule": "24XX = sum of every printed code 2400-2499",
+                                          "total": ("code:24XX",), "members": _code_in(2400, 2499)},
+    "equity_enumeration": {"statement": "balance_sheet",
+                           "rule": "3XXX = sum of every printed code 3000-3999 (share capital, capital surplus, retained "
+                                   "earnings, other equity, treasury shares, minority interest)",
+                           "total": ("code:3XXX",), "members": _code_in(3000, 3999)},
+    "gross_profit": {"statement": "income_statement", "rule": "4100 - 5000 = 5910 (5000 stored as a positive cost)",
+                     "total": ("code:5910",), "terms": ("code:4100",), "negative_terms": ("code:5000",),
+                     "covers": ("code:4100", "code:5000", "code:5910")},
+    "operating_expenses": {"statement": "income_statement", "rule": "6100 + 6200 + 6300 = 6000 (all stored as costs)",
+                           "total": ("code:6000",), "terms": ("code:6100", "code:6200", "code:6300"),
+                           "covers": ("code:6000", "code:6100", "code:6200", "code:6300")},
+    "net_income": {"statement": "income_statement", "rule": "7900 - 8110 = 9600 (8110 stored as a positive expense)",
+                   "total": ("code:9600",), "terms": ("code:7900",), "negative_terms": ("code:8110",),
+                   "covers": ("code:7900", "code:8110", "code:9600")},
+}
+
+
 def sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
@@ -66,12 +122,19 @@ def observation_id(*parts: Any) -> str:
     return "lobs1_" + hashlib.sha256("\x1f".join(str(p) for p in parts).encode("utf-8")).hexdigest()[:32]
 
 
-def _base(filing: dict[str, Any], framework: str) -> dict[str, Any]:
+def is_current_observation(obs: dict[str, Any]) -> bool:
+    """True for observations written by the extractor version the current method reads."""
+    if obs.get("extraction_method") in XBRL_METHODS:
+        return obs.get("extractor_version") == XBRL_EXTRACTOR_VERSION
+    return obs.get("extractor_version") == TWGAAP_PDF_EXTRACTOR_VERSION
+
+
+def _base(filing: dict[str, Any], framework: str, extractor_version: str) -> dict[str, Any]:
     return {"ticker": filing["ticker"], "filing_version_id": filing["filing_version_id"],
             "filing_version_type": filing["filing_version_type"], "filing_fiscal_year": filing["fiscal_year"],
             "source_kind": filing["source_kind"], "accounting_framework": framework,
             "statement_scope": filing["statement_scope"], "raw_sha256": filing["content_hash"],
-            "source_url": filing.get("source_url"), "extractor_version": EXTRACTOR_VERSION,
+            "source_url": filing.get("source_url"), "extractor_version": extractor_version,
             "artifact_available_at": filing.get("available_at"),
             "artifact_availability_status": filing.get("availability_status"),
             "pit_admitted": False, "pit_basis": PIT_BASIS}
@@ -88,7 +151,7 @@ def extract_xbrl(content: bytes, filing: dict[str, Any]) -> list[dict[str, Any]]
         raise ExtractionError(f"statement_scope_mismatch:{scope}")
     instants = {date(year, 12, 31), date(year - 1, 12, 31), date(year - 1, 1, 1)}
     durations = {(date(y, 1, 1), date(y, 12, 31)) for y in (year, year - 1)}
-    base = _base(filing, "TIFRS")
+    base = _base(filing, "TIFRS", XBRL_EXTRACTOR_VERSION)
     method = "inline_xbrl" if document.document_format != "xbrl_instance" else "xbrl_instance"
     rows: dict[str, dict[str, Any]] = {}
     for fact in document.numeric_facts:
@@ -107,7 +170,7 @@ def extract_xbrl(content: bytes, filing: dict[str, Any]) -> list[dict[str, Any]]
         else:
             continue
         value = dm.text(fact.value)
-        oid = observation_id(EXTRACTOR_VERSION, filing["filing_version_id"], filing["content_hash"], fact.concept,
+        oid = observation_id(XBRL_EXTRACTOR_VERSION, filing["filing_version_id"], filing["content_hash"], fact.concept,
                              period["period_type"], period["period_start"], period["period_end"], value)
         rows[oid] = {**base, **period, "observation_id": oid, "statement": _statement(fact.namespace),
                      "line_key": fact.local_name, "source_concept": fact.concept, "value": value,
@@ -147,14 +210,15 @@ def _row_tokens(segment: str) -> list[str]:
     return _NUMBER_TOKEN.findall(kept)
 
 
-def parse_code_rows(text: str, codes: tuple[str, ...]) -> dict[str, dict[str, Any]]:
-    """Two-column statement rows ``CODE label [notes] amount pct amount pct`` for the catalogued codes (pure)."""
+def parse_code_rows(text: str, codes: tuple[str, ...] | None) -> dict[str, dict[str, Any]]:
+    """Two-column statement rows ``CODE label [notes] amount pct amount pct`` for the catalogued codes, or for every
+    account code when ``codes`` is None (pure)."""
     found: dict[str, dict[str, Any]] = {}
     for line in text.splitlines():
         matches = list(_CODE_TOKEN.finditer(line))
         for index, match in enumerate(matches):
             code = match.group(1)
-            if code not in codes or code in found:
+            if (codes is not None and code not in codes) or code in found:
                 continue
             end = matches[index + 1].start() if index + 1 < len(matches) else len(line)
             segment = line[match.end():end]
@@ -220,9 +284,10 @@ def extract_twgaap_pdf(content: bytes, filing: dict[str, Any]) -> tuple[list[dic
     if not any(located.values()):
         diagnostics["status"] = "statement_pages_not_machine_readable"
         return [], diagnostics
-    base = _base(filing, accounting_regime(filing["ticker"], year) or "unknown")
+    base = _base(filing, accounting_regime(filing["ticker"], year) or "unknown", TWGAAP_PDF_EXTRACTOR_VERSION)
     rows: list[dict[str, Any]] = []
     checks: dict[str, Any] = {}
+    pages_by_statement = {name: (loc[0] if loc else None) for name, loc in located.items()}
     for statement, loc in located.items():
         if loc is None:
             checks[statement] = "statement_page_not_found"
@@ -238,7 +303,7 @@ def extract_twgaap_pdf(content: bytes, filing: dict[str, Any]) -> tuple[list[dic
         if statement == "cash_flow_statement":
             parsed = {f"label:{k}": v for k, v in parse_label_rows(text, TWGAAP_CASHFLOW_LABELS).items()}
         else:
-            codes = TWGAAP_BALANCE_CODES if statement == "balance_sheet" else TWGAAP_INCOME_CODES
+            codes = None if statement == "balance_sheet" else TWGAAP_INCOME_CODES
             parsed = {f"code:{k}": v for k, v in parse_code_rows(text, codes).items()}
             if statement == "balance_sheet":
                 parsed.update({f"label:{k}": v for k, v in parse_total_rows(text).items()})
@@ -256,7 +321,8 @@ def extract_twgaap_pdf(content: bytes, filing: dict[str, Any]) -> tuple[list[dic
                 else:
                     period = {"period_type": "duration", "period_start": f"{fiscal_year}-01-01",
                               "period_end": f"{fiscal_year}-12-31"}
-                oid = observation_id(EXTRACTOR_VERSION, filing["filing_version_id"], filing["content_hash"], line_key,
+                oid = observation_id(TWGAAP_PDF_EXTRACTOR_VERSION, filing["filing_version_id"], filing["content_hash"],
+                                     line_key,
                                      period["period_type"], period["period_start"], period["period_end"], value)
                 rows.append({**base, **period, "observation_id": oid, "statement": statement, "line_key": line_key,
                              "source_concept": f"{line_key} {row['label']}".strip(), "value": value,
@@ -265,30 +331,77 @@ def extract_twgaap_pdf(content: bytes, filing: dict[str, Any]) -> tuple[list[dic
                              "extraction_method": "pdf_text_account_code" if line_key.startswith("code:")
                              else "pdf_text_label", "checks": identity})
     diagnostics["identity_checks"] = checks
-    diagnostics["arithmetic_checks"] = _arithmetic_checks(rows, year)
+    details = arithmetic_checks(rows, year, pages=pages_by_statement, raw_sha256=filing["content_hash"],
+                                statement_scope=filing["statement_scope"])
+    diagnostics["identity_rule_version"] = TWGAAP_IDENTITY_VERSION
+    diagnostics["arithmetic_checks"] = {name: item["status"] for name, item in details.items()}
+    diagnostics["arithmetic_check_details"] = details
+    diagnostics["failed_identities"] = sorted(name for name, item in details.items() if item["status"] != "verified")
     diagnostics["status"] = "extracted" if rows else "no_catalogued_lines_found"
     for row in rows:
-        row["checks"] = {**row["checks"], "arithmetic": diagnostics["arithmetic_checks"]}
+        row["checks"] = {**row["checks"], "identity_rule_version": TWGAAP_IDENTITY_VERSION,
+                         "identities": covering_identities(row, details)}
     return sorted(rows, key=lambda r: r["observation_id"]), diagnostics
 
 
-def _arithmetic_checks(rows: list[dict[str, Any]], year: int) -> dict[str, str]:
-    def value(key: str, fiscal_year: int) -> Decimal | None:
-        for row in rows:
-            if row["line_key"] == key and row["period_end"] == f"{fiscal_year}-12-31":
-                return dm.parse_decimal(row["value"])
-        return None
+def _identity_operands(rule: dict[str, Any], by_key: dict[str, dict[str, Any]]) -> tuple[list, list, list, list[str]]:
+    totals = [by_key[k] for k in rule["total"] if k in by_key][:1]
+    if "members" in rule:
+        terms = [row for key, row in sorted(by_key.items())
+                 if key.startswith("code:") and rule["members"](key.split(":", 1)[1])]
+        return totals, terms, [], [] if terms else ["no_member_line_printed"]
+    terms = [by_key[k] for k in rule.get("terms", ()) if k in by_key]
+    negative = [by_key[k] for k in rule.get("negative_terms", ()) if k in by_key]
+    if rule.get("optional_terms"):
+        missing = [] if terms else ["no_section_total_printed"]
+    else:
+        missing = [k for k in (*rule.get("terms", ()), *rule.get("negative_terms", ())) if k not in by_key]
+    return totals, terms, negative, missing
 
-    result = {}
+
+def arithmetic_checks(rows: list[dict[str, Any]], year: int, *, pages: dict[str, int | None] | None = None,
+                      raw_sha256: str | None = None, statement_scope: str | None = None) -> dict[str, dict[str, Any]]:
+    """Evaluate ``IDENTITY_RULES`` per fiscal-year column: ``verified`` / ``mismatch`` / ``incomplete`` (pure)."""
+    result: dict[str, dict[str, Any]] = {}
     for fiscal_year in (year, year - 1):
-        assets = value("code:1XXX", fiscal_year) or value("label:資產總計", fiscal_year)
-        liabilities, equity = value("code:2XXX", fiscal_year), value("code:3XXX", fiscal_year)
-        result[f"balance_{fiscal_year}"] = ("verified" if None not in (assets, liabilities, equity)
-                                            and assets == dm.add(liabilities, equity) else "failed_or_incomplete")
-        sales, cogs, gross = value("code:4100", fiscal_year), value("code:5000", fiscal_year), value("code:5910", fiscal_year)
-        result[f"gross_profit_{fiscal_year}"] = ("verified" if None not in (sales, cogs, gross)
-                                                 and dm.sub(sales, cogs) == gross else "failed_or_incomplete")
+        for name, rule in IDENTITY_RULES.items():
+            by_key = {row["line_key"]: row for row in rows if row["statement"] == rule["statement"]
+                      and row["period_end"] == f"{fiscal_year}-12-31"}
+            totals, terms, negative, missing = _identity_operands(rule, by_key)
+            if not totals:
+                missing = [f"total:{'|'.join(rule['total'])}", *missing]
+            item: dict[str, Any] = {
+                "identity": name, "fiscal_year": fiscal_year, "rule": rule["rule"], "rule_version": TWGAAP_IDENTITY_VERSION,
+                "statement": rule["statement"], "pdf_page": (pages or {}).get(rule["statement"]),
+                "period_end": f"{fiscal_year}-12-31", "unit": "TWD_thousand (stored as TWD)",
+                "statement_scope": statement_scope, "raw_sha256": raw_sha256,
+                "operands": {row["line_key"]: row["published_value"] for row in (*totals, *terms, *negative)}}
+            if missing:
+                item.update(status="incomplete", missing_operands=missing)
+            else:
+                expected = dm.parse_decimal(totals[0]["value"])
+                positive = dm.add(*(dm.parse_decimal(r["value"]) for r in terms)) if terms else Decimal(0)
+                deducted = dm.add(*(dm.parse_decimal(r["value"]) for r in negative)) if negative else Decimal(0)
+                computed = dm.sub(positive, deducted)
+                item.update(status="verified" if computed == expected else "mismatch", expected_twd=dm.text(expected),
+                            computed_twd=dm.text(computed), difference_twd=dm.text(dm.sub(computed, expected)))
+            result[f"{name}_{fiscal_year}"] = item
     return result
+
+
+def covering_identities(row: dict[str, Any], details: dict[str, dict[str, Any]]) -> dict[str, str]:
+    """Identities (and their status) whose operands include this line, for the line's own fiscal-year column."""
+    fiscal_year = int(row["period_end"][:4])
+    code = row["line_key"].split(":", 1)[1]
+    covered = {}
+    for name, rule in IDENTITY_RULES.items():
+        if rule["statement"] != row["statement"]:
+            continue
+        member = "members" in rule and row["line_key"].startswith("code:") and rule["members"](code)
+        if member or row["line_key"] in rule.get("covers", ()) or row["line_key"] in rule["total"]:
+            key = f"{name}_{fiscal_year}"
+            covered[key] = details[key]["status"]
+    return dict(sorted(covered.items()))
 
 
 def _tifrs_pdf_status(content: bytes) -> dict[str, Any]:
@@ -308,6 +421,8 @@ def extract_filing(raw_root: str | Path, filing: dict[str, Any]) -> tuple[list[d
     """Read one archived artifact (SHA-256 re-verified) and extract its line observations."""
     path = Path(raw_root) / filing["raw_storage_path"]
     diagnostics: dict[str, Any] = {"filing_version_id": filing["filing_version_id"], "fiscal_year": filing["fiscal_year"],
+                                   "extractor_version": (XBRL_EXTRACTOR_VERSION if filing["source_kind"] in XBRL_SOURCE_KINDS
+                                                         else TWGAAP_PDF_EXTRACTOR_VERSION),
                                    "filing_version_type": filing["filing_version_type"],
                                    "source_kind": filing["source_kind"], "statement_scope": filing["statement_scope"],
                                    "raw_sha256": filing["content_hash"], "source_url": filing.get("source_url")}
@@ -317,7 +432,7 @@ def extract_filing(raw_root: str | Path, filing: dict[str, Any]) -> tuple[list[d
     if sha256(content) != filing["content_hash"]:
         return [], {**diagnostics, "status": "raw_sha256_mismatch"}
     framework = accounting_regime(filing["ticker"], int(filing["fiscal_year"]))
-    if filing["source_kind"] in ("mops_xbrl_instance", "mops_inline_xbrl"):
+    if filing["source_kind"] in XBRL_SOURCE_KINDS:
         rows = extract_xbrl(content, filing)
         return rows, {**diagnostics, "status": "extracted" if rows else "no_statement_facts", "observations": len(rows)}
     if filing["source_kind"] == "official_pdf" and framework == "TW_GAAP":

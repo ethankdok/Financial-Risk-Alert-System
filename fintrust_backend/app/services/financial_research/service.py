@@ -316,11 +316,17 @@ class ResearchService:
     def literature_coverage(self, ticker: str, context: AnalysisContext, *, version_policy: str,
                             start_year: int | None = None, end_year: int | None = None) -> dict[str, Any]:
         from app.services.financial_research.literature_comparison import coverage_matrix
+        from app.services.financial_research.literature_extraction import (
+            TWGAAP_PDF_EXTRACTOR_VERSION,
+            XBRL_EXTRACTOR_VERSION,
+        )
 
         snapshot = self.literature_snapshot(ticker, context, start_year=start_year, end_year=end_year,
                                             version_policy=version_policy)
         store = self.literature_store
-        diagnostics = store.list_diagnostics(ticker) if store is not None else []
+        current = (XBRL_EXTRACTOR_VERSION, TWGAAP_PDF_EXTRACTOR_VERSION)
+        diagnostics = [d for d in (store.list_diagnostics(ticker) if store is not None else [])
+                       if d.get("extractor_version") in current]
         return coverage_matrix(snapshot, [{k: v for k, v in d.items() if k != "source_url"}
                                           | {"source_url": safe_official_url(d.get("source_url"))} for d in diagnostics])
 
@@ -346,7 +352,12 @@ class ResearchService:
                        end_year: int | None, version_policy: str, parameters: dict[str, Any]):
         from app.services.financial_research import literature_comparison as lcmp
         from app.services.financial_research.literature_extraction import EXTRACTOR_VERSION
-        from app.services.financial_research.literature_inputs import MAPPING_VERSION, PANEL_VERSION
+        from app.services.financial_research.literature_inputs import (
+            MAPPING_VERSION,
+            PANEL_VERSION,
+            SOURCE_GATE_VERSION,
+            ZERO_POLICY_VERSION,
+        )
         from app.services.financial_research.literature_method_registry import (
             BENEISH_MODEL_ID,
             DECHOW_MODEL_ID,
@@ -363,7 +374,7 @@ class ResearchService:
             model_ids = sorted(set(parameters.get("model_ids") or []))
             output = lcmp.compute_models(snapshot, model_ids)
         method_ids = [*model_ids, lcmp.METHOD_VERSION, REGISTRY_VERSION, MAPPING_VERSION, PANEL_VERSION,
-                      EXTRACTOR_VERSION]
+                      EXTRACTOR_VERSION, ZERO_POLICY_VERSION, SOURCE_GATE_VERSION]
         return snapshot, output, method_ids, {"model_ids": model_ids, "statement_scope": "consolidated"}
 
     # ------------------------------------------------------------ runs

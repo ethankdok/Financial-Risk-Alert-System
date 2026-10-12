@@ -38,6 +38,15 @@
     approval_pending: ['partial', '方法待負責人核准（DRAFT）'],
     issuance_absence_not_evidenced: ['not-computable', '發行事件無證據（未知，不視為 0）'],
     missing_input: ['not-computable', '缺少輸入'],
+    not_presented: ['not-computable', '報表未列示（未知，不視為 0）'],
+    mapping_conflict: ['inconsistent', '同義科目數值不一致（不依順序選取）'],
+    source_identity_mismatch: ['inconsistent', '原始報表恆等式不符（阻擋）'],
+    source_identity_incomplete: ['unverified', '原始報表恆等式無法完整驗證（阻擋）'],
+    cross_filing_overlap_mismatch: ['inconsistent', 't−2 跨申報重疊年度不一致'],
+    cross_filing_overlap_unverifiable: ['unverified', 't−2 跨申報重疊年度無法驗證'],
+    explicit_line: ['ready', '原文明列科目'], explicit_zero: ['ready', '原文明列 0'],
+    presented_lines_sum: ['ready', '列示科目加總'], derived_difference: ['ready', '明列科目相減'],
+    verified_zero: ['partial', '經證明之 0（權益區段完整列舉）'],
     computed_score: ['ready', '已計算（原論文美國樣本尺度）'],
     comparable: ['ready', '可比較（同一觀測）'],
     source_verified_published: ['ready', '期刊正式版原文已核對'],
@@ -293,6 +302,9 @@
     if (reasons.some((r) => String(r).startsWith('missing_t_minus_2'))) return `${badge('not_computable')} ${badge('missing_t_minus_2')}`;
     if (reasons.some((r) => String(r).includes('issuance_absence_not_evidenced'))) return `${badge('not_computable')} ${badge('issuance_absence_not_evidenced')}`;
     if (reasons.some((r) => String(r).includes('accounting_regime_break'))) return `${badge('not_computable')} ${badge('accounting_regime_break')}`;
+    const typed = ['source_identity_mismatch', 'mapping_conflict', 'cross_filing_overlap_mismatch',
+      'cross_filing_overlap_unverifiable', 'source_identity_incomplete', 'not_presented'].find((s) => reasons.includes(s));
+    if (typed) return `${badge('not_computable')} ${badge(typed)}`;
     return badge(row.status);
   }
 
@@ -375,8 +387,10 @@
       const comps = (row.components || []).map((c) => {
         const inputs = (c.inputs || []).map((i) => {
           const src = (i.source_observations || [])[0] || {};
+          const zero = i.zero_evidence ? `<br><small class="muted">${escapeHtml(i.zero_evidence.rule)} ${escapeHtml(i.zero_evidence.rule_version)}：${escapeHtml(i.zero_evidence.status)}；權益合計 ${thousand(i.zero_evidence.section_total_twd)} = 列舉加總 ${thousand(i.zero_evidence.enumerated_sum_twd)}；指紋 <span class="mono">${escapeHtml((i.zero_evidence.evidence_fingerprint || '').slice(0, 16))}…</span></small>` : '';
+          const overlap = i.cross_filing_overlap ? `<br><small class="muted">重疊年度 ${escapeHtml(i.cross_filing_overlap.overlap_period)}：${escapeHtml(i.cross_filing_overlap.status)}（FY${escapeHtml(i.cross_filing_overlap.year_t_filing.fiscal_year)} ${thousand(i.cross_filing_overlap.year_t_filing.value_twd)}／FY${escapeHtml(i.cross_filing_overlap.year_t_minus_1_filing.fiscal_year)} ${thousand(i.cross_filing_overlap.year_t_minus_1_filing.value_twd)}）</small>` : '';
           return `<tr><td>${escapeHtml(i.metric)}</td><td>${escapeHtml(i.relative_period)}（FY${escapeHtml(i.fiscal_year)}）</td>
-            <td class="num">${thousand(i.value_twd)}</td><td class="mono">${escapeHtml(i.filing_version_id)}</td>
+            <td class="num">${thousand(i.value_twd)}</td><td>${i.evidence_type ? badge(i.evidence_type) : '—'}${zero}${overlap}</td><td class="mono">${escapeHtml(i.filing_version_id)}</td>
             <td class="mono">${escapeHtml(src.source_concept || '')}</td><td class="mono">${escapeHtml((src.raw_sha256 || '').slice(0, 16))}…</td>
             <td>${(i.warnings || []).map((w) => `<small class="muted">${escapeHtml(w)}</small>`).join('<br>')}</td></tr>`;
         }).join('');
@@ -384,7 +398,7 @@
         const reasons = (c.reasons || []).map((r) => `<li><span class="mono">${escapeHtml(r.code)}</span> ${escapeHtml(r.metric || '')} ${escapeHtml(r.relative_period || '')} ${escapeHtml(r.detail || '')}</li>`).join('');
         return `<details><summary>${escapeHtml(c.variable)}：${c.status === 'computed' ? escapeHtml(c.value) : badge(c.status)}</summary>
           ${reasons ? `<ul>${reasons}</ul>` : ''}${evidence ? `<ul>${evidence}</ul>` : ''}
-          ${inputs ? `<div class="table-wrap"><table><thead><tr><th>輸入</th><th>期間</th><th class="num">金額</th><th>申報版本</th><th>來源科目</th><th>原始檔 SHA-256</th><th>警示</th></tr></thead><tbody>${inputs}</tbody></table></div>` : ''}</details>`;
+          ${inputs ? `<div class="table-wrap"><table><thead><tr><th>輸入</th><th>期間</th><th class="num">金額</th><th>證據型別</th><th>申報版本</th><th>來源科目</th><th>原始檔 SHA-256</th><th>警示</th></tr></thead><tbody>${inputs}</tbody></table></div>` : ''}</details>`;
       }).join('');
       const warnings = (row.validation_warnings || []).map((w) => `<li class="mono">${escapeHtml(w)}</li>`).join('');
       return `<div class="panel"><h3>${escapeHtml(MODEL_LABELS[modelId] || modelId)} — FY${escapeHtml(year)} ${literatureStatus(row)}</h3>
