@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>非財務證據 F4｜FinTrust</title>
+<style>
+:root{font-family:"Noto Sans TC","Segoe UI",sans-serif;color:#172033;background:#f4f7fa}*{box-sizing:border-box}
+body{margin:0}header{background:#fff;border-bottom:1px solid #dce4ee;padding:18px 22px}.shell{max-width:1000px;margin:auto}
+header .shell{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+main{padding:28px 20px 60px}a{color:#1756b8}h1{font-size:27px}h2{font-size:20px}
+.note{color:#53657b;line-height:1.65}.caution{padding:13px;border-radius:8px;border:1px solid #ead296;background:#fff8e6}
+section{background:#fff;border:1px solid #dce4ee;border-radius:10px;margin-top:18px;padding:18px}
+select,button{border-radius:6px;padding:10px 14px;min-height:40px}select{border:1px solid #9cb0c9;background:#fff;color:#172033}
+button{border:0;background:#1856aa;color:white;font-weight:700;cursor:pointer}button:disabled{background:#9ab0cf}
+button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #ffb100;outline-offset:2px}
+ul{padding-left:20px}li{margin-bottom:8px;line-height:1.6}.item{border:1px solid #d8e3ef;border-radius:8px;padding:12px;margin-bottom:12px}
+.label{font-weight:700}.error{color:#a32828}#results[hidden]{display:none}
+code{white-space:normal;word-break:break-word}
+</style>
+</head>
+<body>
+<header><div class="shell"><strong>FinTrust · 非財務資料一致性</strong><nav><a href="financial-integrity.html">原財務工作台</a> · <a href="b2b-due-diligence.html">B2B 查核</a></nav></div></header>
+<main class="shell">
+<h1>F4：營收與非財務指標的成長比較</h1>
+<p class="note">獨立證據檢視頁。需兩個連續年度的官方營收與同口徑非財務資料，通過原檔、申報版本與公司範圍檢查，才會顯示描述性差距。</p>
+<div class="caution"><strong>研究限制：</strong>這是依 Brazel 等人（2009）構想設計的描述性查核，不等於舞弊模型複製、舞弊機率或經台灣資料校準的風險分數。</div>
+<section><label for="ticker" class="label">選擇公司</label> <select id="ticker"><option value="">載入公司中…</option></select> <button type="button" id="run">檢視 F4 證據</button>
+<p id="status" role="status" aria-live="polite" class="note">尚未查詢。</p></section>
+<div id="results" hidden>
+<section><h2>計算與可用性</h2><div id="finding"></div></section>
+<section><h2>官方文件來源與核對資料</h2><div id="sources"></div></section>
+<section><h2>資料不足原因與方法限制</h2><ul id="limits"></ul></section>
+</div>
+</main>
+<script src="financial-nfm-evidence.js"></script>
+</body></html>
