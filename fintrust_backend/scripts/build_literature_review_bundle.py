@@ -1,11 +1,13 @@
 """Build the single literature-model (Beneish 1999 / Dechow 2011) independent-review ZIP (run from fintrust_backend/).
 
     python -m scripts.build_literature_review_bundle --commit HEAD --artifacts <handoff dir> --output <zip>
+        [--base <commit> --bundle-name <name>]
 
-- ``source/``: every file added/changed since the approved Phase 3-5 commit plus the reused dependencies the new code
-  reads, taken from the commit with ``git show`` (tracked content only; no databases, archives, paper PDFs, caches or
-  environment files);
-- ``diff/``: full ``git diff`` approved..commit, name-status, commit log;
+- ``source/``: every file added/changed since the approved Phase 3-5 commit (and since ``--base``) plus the reused
+  dependencies the new code reads, taken from the commit with ``git show`` (tracked content only; no databases,
+  archives, paper PDFs, caches or environment files);
+- ``diff/``: full ``git diff`` base..commit (default base: the approved Phase 3-5 commit; the data-integrity correction
+  pass uses ``--base f83aa98``), name-status, commit log;
 - ``handoff/``: generated evidence (report, test log, coverage matrices, case-study JSON, ledger, OpenAPI, UI evidence,
   baseline proofs);
 - ``MANIFEST.json`` / ``PROVENANCE.json``. The ZIP is re-extracted, every hash re-verified and every Python file parsed
@@ -54,18 +56,22 @@ CONTEXT_FILES = (
 )
 
 
-def build(commit: str, artifacts: Path | None, output: Path) -> dict:
+def build(commit: str, artifacts: Path | None, output: Path, *, base: str = APPROVED,
+          bundle_name: str = "literature_models_independent_review") -> dict:
     resolved = git("rev-parse", commit).decode().strip()
-    changed = [p for p in git("diff", "--name-only", f"{APPROVED}..{resolved}").decode("utf-8").splitlines() if p]
+    base = git("rev-parse", base).decode().strip()
+    changed = [p for p in git("diff", "--name-only", f"{base}..{resolved}").decode("utf-8").splitlines() if p]
+    literature_pass = [p for p in git("diff", "--name-only", f"{APPROVED}..{resolved}").decode("utf-8").splitlines() if p]
     present = set(git("ls-tree", "-r", "--name-only", resolved).decode("utf-8").splitlines())
     members: dict[str, bytes] = {}
-    for path in sorted({p for p in changed if p in present} | {p for p in CONTEXT_FILES if p in present}):
+    for path in sorted({p for p in (*changed, *literature_pass, *CONTEXT_FILES) if p in present}):
         if path.endswith(EXCLUDED_SUFFIXES) or "__pycache__" in path:
             continue
         members[f"source/{path}"] = git("show", f"{resolved}:{path}")
-    members["diff/literature_pass_full.diff"] = git("diff", "--binary", f"{APPROVED}..{resolved}")
-    members["diff/changed_files.txt"] = git("diff", "--name-status", f"{APPROVED}..{resolved}")
-    members["diff/commits.txt"] = git("log", "--format=%H %ad %s", "--date=iso", f"{APPROVED}..{resolved}")
+    diff_name = "literature_pass_full.diff" if base == APPROVED else f"changes_since_{base[:7]}_full.diff"
+    members[f"diff/{diff_name}"] = git("diff", "--binary", f"{base}..{resolved}")
+    members["diff/changed_files.txt"] = git("diff", "--name-status", f"{base}..{resolved}")
+    members["diff/commits.txt"] = git("log", "--format=%H %ad %s", "--date=iso", f"{base}..{resolved}")
     members["diff/stat_since_archive_baseline.txt"] = git("diff", "--stat", f"{ARCHIVE_BASELINE}..{resolved}")
     if artifacts is not None:
         for path in sorted(p for p in artifacts.rglob("*") if p.is_file()):
@@ -76,11 +82,12 @@ def build(commit: str, artifacts: Path | None, output: Path) -> dict:
              if not name.endswith(".png") and any(pattern.search(data) for pattern in SECRET_PATTERNS)]
     if leaks:
         raise SystemExit(f"secret-like content found in {leaks}")
-    manifest = {"bundle": "literature_models_independent_review", "commit": resolved, "approved_parent": APPROVED,
+    manifest = {"bundle": bundle_name, "commit": resolved, "approved_parent": APPROVED, "diff_base": base,
                 "archive_baseline": ARCHIVE_BASELINE, "source_files": sum(n.startswith("source/") for n in members),
-                "changed_files_since_approved": len(changed),
+                "changed_files_since_diff_base": len(changed),
+                "changed_files_since_approved": len(literature_pass),
                 "files": {name: {"bytes": len(data), "sha256": sha256(data)} for name, data in sorted(members.items())}}
-    provenance = {"commit": resolved, "approved_parent": APPROVED, "archive_baseline": ARCHIVE_BASELINE,
+    provenance = {"commit": resolved, "approved_parent": APPROVED, "diff_base": base, "archive_baseline": ARCHIVE_BASELINE,
                   "branch": git("rev-parse", "--abbrev-ref", "HEAD").decode().strip(),
                   "excluded_suffixes": EXCLUDED_SUFFIXES,
                   "not_included": ["paper PDFs (copyright; SHA-256 recorded in the method lock)",
@@ -109,7 +116,8 @@ def build(commit: str, artifacts: Path | None, output: Path) -> dict:
     data = output.read_bytes()
     return {"output": str(output.resolve()), "bytes": len(data), "sha256": sha256(data), "entries": len(members) + 2,
             "manifest_files": len(members), "source_files": manifest["source_files"],
-            "python_files_ast_parsed": len(python_files), "changed_files_since_approved": len(changed),
+            "python_files_ast_parsed": len(python_files), "changed_files_since_diff_base": len(changed),
+            "changed_files_since_approved": len(literature_pass), "diff_base": base,
             "commit": resolved, "manifest_verified": True, "secret_scan": "clean"}
 
 
@@ -118,8 +126,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--commit", default="HEAD")
     parser.add_argument("--artifacts", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--base", default=APPROVED)
+    parser.add_argument("--bundle-name", default="literature_models_independent_review")
     args = parser.parse_args(argv)
-    print(json.dumps(build(args.commit, args.artifacts, args.output), ensure_ascii=False, indent=2))
+    print(json.dumps(build(args.commit, args.artifacts, args.output, base=args.base, bundle_name=args.bundle_name),
+                     ensure_ascii=False, indent=2))
     return 0
 
 

@@ -119,7 +119,7 @@ RSST components:
 ## 5. Unresolved items (for the method owner and the reviewer)
 
 1. **Beneish source:** enabling the Beneish score on the author's manuscript (published FAJ text not accessed) is a reviewer decision. Setting the registry level to `unverified` disables it.
-2. **Taiwan mapping of COMPUSTAT items** (`literature_input_mapping_v1`) is DRAFT. The main choices:
+2. **Taiwan mapping of COMPUSTAT items** (`literature_input_mapping_v2`; v1 superseded by the data-integrity correction) is DRAFT. The main choices:
    - receivables include other receivables;
    - SG&A excludes R&D (COMPUSTAT XSGA usually includes it);
    - DLTT excludes IFRS 16 lease liabilities;
@@ -127,5 +127,10 @@ RSST components:
    - IVAO excludes equity-method investments;
    - IB is consolidated profit from continuing operations.
 3. **IFRS 16 (FY2019+):** depreciation may include right-of-use assets. The result is flagged, not adjusted.
-4. **FY2013 t−2:** the IFRS transition opening balance at 2012-01-01 is used as the 2011 year-end balance (flagged).
-5. **Statement-line absence** inside a parsed, complete statement is treated as "line not presented" (listed per value). It is not a filled zero.
+4. **FY2013 t−2:** the IFRS transition opening balance at 2012-01-01 is used as the 2011 year-end balance (flagged). Since `literature_panel_v2` this exception applies only to the first year of a framework and the opening balance must pass the XBRL balance identity.
+5. **Statement-line absence:** when *no* listed line is presented the input is `not_presented` (never 0). Inside a sum where some listed lines are presented, the absent lines are listed in `lines_not_presented` and the presented lines are summed (component-level presentation rule, pending approval). A structural zero is accepted only through a documented, tested zero-evidence rule (`verified_zero`); see `LITERATURE_INPUT_EVIDENCE_POLICY.md`.
+6. **Cross-filing t−2:** a t−2 balance from the prior filing is used only when the overlapping year agrees; FY2015 (receivables 2014) and FY2023 (total assets 2022) disagree in the 1785 latest series and are not computable until an explanation register is approved.
+
+## 6. Input evidence policy (data-integrity correction of f83aa98)
+
+The engines and coefficients above are unchanged. The inputs they receive are governed by `docs/research/LITERATURE_INPUT_EVIDENCE_POLICY.md`: typed zero evidence (LIT-F01), the TW-GAAP / XBRL source-identity gate (LIT-F02), alias agreement (LIT-F03) and cross-filing t−2 coherence (LIT-F04).
