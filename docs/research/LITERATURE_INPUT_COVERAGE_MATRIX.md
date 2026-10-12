@@ -6,7 +6,7 @@
 - `literature_coverage_matrix_latest_available.json`
 - `literature_coverage_matrix_original_only.json`
 
-Both are under `fintrust_backend/data/literature_models/handoff_fix/evidence/` and inside the correction review ZIP. Each matrix has 1,395 rows. The f83aa98 matrices stay unchanged in `handoff/evidence/` and in the f83aa98 review ZIP.
+Both are under `fintrust_backend/data/literature_models/handoff_fix_final/evidence/` and inside the correction review ZIP. Each matrix has 1,395 rows. The f83aa98 matrices stay unchanged in `handoff/evidence/` and in the f83aa98 review ZIP.
 
 **API:** the same matrix is served by `GET /api/v1/research/cases/{ticker}/literature/coverage`.
 
