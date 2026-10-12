@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>多公司合作方查核｜FinTrust</title>
+<style>
+:root{font-family:"Noto Sans TC","Segoe UI",sans-serif;color:#172033;background:#f4f7fa}*{box-sizing:border-box}
+body{margin:0}header{padding:18px 24px;background:#fff;border-bottom:1px solid #dce4ee}.wrap{max-width:1000px;margin:0 auto}
+header .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+a{color:#1855b0}main{padding:24px 20px 48px}h1{font-size:28px}.muted{color:#55657c;line-height:1.7}
+section{background:#fff;border:1px solid #dce4ee;border-radius:9px;margin:18px 0;padding:18px}
+.notice{padding:14px;border:1px solid #e6ce96;background:#fff8e8;border-radius:8px;line-height:1.6}
+.entry{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+select{padding:9px 12px;border:1px solid #a7bad2;border-radius:6px;min-width:200px;background:#fff;color:#172033}
+button{padding:10px 15px;border:0;border-radius:6px;background:#1855b0;color:white;font-weight:650;cursor:pointer}
+button:disabled{background:#9fadc1}button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #ffae00;outline-offset:2px}
+button.ghost{background:#e9eff9;color:#163f82}.report{border:1px solid #dbe4ef;border-radius:8px;padding:14px;margin-bottom:13px}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid #dbe4ef;padding:10px;text-align:left;vertical-align:top}
+ul{padding-left:20px}li{margin-bottom:7px}#results[hidden]{display:none}.error{color:#b42318}
+</style>
+</head>
+<body>
+<header><div class="wrap"><strong>FinTrust · 多公司查核清單</strong><nav><a href="b2b-due-diligence.html">單一合作方查核</a> · <a href="financial-integrity.html">原財務工作台</a></nav></div></header>
+<main class="wrap">
+<h1>多家合作方盡職調查</h1>
+<p class="muted">最多五家、僅限使用者選定的企業。這份報告整合既有財報與文獻證據的缺口，並非自動推定誰與誰有供應鏈關係。</p>
+<div class="notice"><strong>重要：</strong>合作關係為使用者自行標示，尚未驗證。查核順序是補件工作排序，不是舞弊、信用或斷鏈風險排名。沒有可計算結果也不代表企業安全。</div>
+<section><h2>選擇查核名單</h2><div id="entries"></div>
+<div class="entry"><button id="add" type="button" class="ghost">新增一家公司</button><button id="preview" type="button">產生全部查核摘要</button></div>
+<p id="status" role="status" aria-live="polite" class="muted">正在讀取公司清單…</p></section>
+<section id="results" hidden><h2>查核清單結果</h2><div id="summary"></div><p class="muted">僅顯示可驗證的查核項目與應補文件，不儲存此清單。</p></section>
+</main>
+<script src="b2b-watchlist.js"></script>
+</body></html>
