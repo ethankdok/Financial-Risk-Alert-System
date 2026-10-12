@@ -39,4 +39,4 @@ python -m pytest -q tests/test_financial_nonfinancial_alignment.py tests/test_in
 - 財務原檔與目前年度 fact 的可重現來源錨點，不能改寫已核准 fact。
 - Beneish、Dechow 的多公司完整模型輸入與 literature source gate。
 - 2330／2454／1785 真實數據校驗、Method Owner 科目對應審核、前後端實測。
-- Phase 4–6 尚未開始實作，需在上述 Gate 通過後繼續。
+- Phase 4–6 已另外提交跨證據彙整、PIT 研究評估與獨立 B2B 頁面／API 初版；詳見 docs/development/PHASE2_TO_6_INTEGRATION_STATUS.md。這些程式尚未完成真實資料與 E2E 集中驗收。
