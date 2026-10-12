@@ -8,7 +8,7 @@ import unittest
 from app.services.integrity.contracts import Finding
 from app.services.integrity.nfm_evidence_bridge import check_revenue_nfm_strict
 
-_URL = "https://mopsov.twse.com.tw/server-java/FileDownLoad?co_id=2454"
+_URL = "https://mopsov.twse.com.tw/server-java/FileDownLoad"
 _DATE = "2026-04-10T08:00:00+08:00"
 
 
@@ -19,7 +19,9 @@ def financial_index():
             "period_type": "annual", "concept": "revenue",
             "value": value, "value_twd": value, "unit": "TWD",
             "scope": "consolidated", "filing_policy": "as_filed_own_year",
-            "filing_version": f"mops:{year}:C", "source_url": _URL,
+            "filing_version": f"mops_t164sb01:{year}:S4:C:as_retrieved",
+            "source_url": (_URL + f"?functionName=t164sb01&step=9&co_id=2454&year={year-1911}"
+                           "&season=4&report_id=C"),
             "source_sha256": digest, "source_document_verified": True,
             "source_trust": "validated_mops_filing",
             "effective_available_at": _DATE,
