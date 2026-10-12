@@ -44,7 +44,7 @@ def main() -> int:
     except ValueError as exc:
         parser.error(str(exc))
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if result["status"] == "descriptive_holdout_ready" else 2
+    return 0 if result["status"] == "descriptive_cohort_computable_not_preregistered" else 2
 
 
 if __name__ == "__main__":
