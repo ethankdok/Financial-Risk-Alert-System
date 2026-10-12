@@ -23,6 +23,17 @@ def create_b2b_blueprint(client: FinTrustClient | None = None):
         return Response(json.dumps(body, ensure_ascii=False), status=status,
                         mimetype="application/json")
 
+    @bp.get("/api/b2b/companies/<ticker>/source-readiness")
+    def readiness(ticker: str):
+        if not _TICKER.fullmatch(ticker):
+            return respond({"success": False, "error": "Invalid ticker."}, 400)
+        try:
+            active_client = client if client is not None else FinTrustClient()
+            return respond({"success": True, "data": active_client.b2b_source_readiness(ticker)})
+        except FinTrustClientError as exc:
+            status = exc.status_code if exc.status_code and 400 <= exc.status_code < 600 else 502
+            return respond({"success": False, "error": str(exc), "status_code": status}, status)
+
     @bp.post("/api/b2b/dossiers/preview")
     def preview():
         payload = request.get_json(silent=True)
