@@ -7,14 +7,16 @@ are reused in-process through the same dependency providers as the financial rou
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from app.dependencies import get_analysis_repository
 from app.routers.financial import get_jsd_bridge_service
 from app.services.analysis_repository import AnalysisRepository
+from app.routers.historical_research import get_research_service
 from app.services.integrity.adapters import IntegrityDataUnavailable
+from app.services.integrity.case_study import RetrospectiveCaseService, UnsupportedResearchCase
 from app.services.integrity.contracts import AssessmentRequest
 from app.services.integrity.service import IntegrityWorkbench, ReviewModeNotSupported, UnsupportedTicker
 from app.services.jsd_bridge_service import JsdBridgeService
@@ -76,3 +78,25 @@ def integrity_preview(request: AssessmentRequest,
                       workbench: IntegrityWorkbench = Depends(get_integrity_workbench)) -> dict[str, Any]:
     """Preview assessment (never persisted): findings, model availability, claims, data shift and B2B checks."""
     return _call(workbench.assess, request)
+
+
+# ------------------------------------------------------------------ retrospective research case (RETROSPECTIVE_CASE)
+def get_case_service(research=Depends(get_research_service)) -> RetrospectiveCaseService:
+    return RetrospectiveCaseService(research)
+
+
+@router.get("/research-cases/{ticker}/summary")
+def research_case_summary(
+    ticker: str = TICKER,
+    version_policy: Literal["latest_available", "original_only"] = Query(..., description="Required; no default"),
+    service: RetrospectiveCaseService = Depends(get_case_service),
+) -> dict[str, Any]:
+    """Read-only 1785 retrospective case view: unchanged Beneish / Dechow engines on frozen inputs (dry run, never
+    persisted), strict pre-event status, feature crosswalk and an evidence-verified event timeline. Separate from
+    CURRENT_REVIEW; hindsight; not a pre-event prediction. Unregistered tickers → 404 (no substitution)."""
+    try:
+        return service.summary(ticker, version_policy)
+    except UnsupportedResearchCase as exc:
+        raise HTTPException(status_code=404, detail={
+            "error_code": "research_case_not_supported", "supported_cases": ["1785"],
+            "message": f"{exc} is not a registered retrospective research case of the workbench."}) from exc

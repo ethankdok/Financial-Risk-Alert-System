@@ -16,6 +16,7 @@ from fintrust_client import FinTrustClient, FinTrustClientError
 _TICKER = re.compile(r"^\d{4,6}$")
 _MODES = ("CURRENT_REVIEW", "STRICT_AS_OF")
 _SECTIONS = ("financial_checks", "literature", "jsd", "claims")
+_CASE_POLICIES = ("latest_available", "original_only")
 
 
 def create_integrity_blueprint(client: FinTrustClient | None = None):
@@ -72,5 +73,12 @@ def create_integrity_blueprint(client: FinTrustClient | None = None):
                 return invalid("Invalid sections.")
             body["sections"] = list(dict.fromkeys(sections))
         return call(get_client().integrity_preview, body)
+
+    @blueprint.get("/api/integrity/research-cases/<ticker>/summary")
+    def integrity_research_case(ticker: str):
+        policy = request.args.get("version_policy", "")
+        if not _TICKER.fullmatch(ticker) or policy not in _CASE_POLICIES:
+            return invalid("Invalid ticker or version policy.")
+        return call(get_client().integrity_research_case, ticker, policy)
 
     return blueprint

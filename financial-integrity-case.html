@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>光洋科歷史財報異常案例｜FinTrust</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body.fc-body{margin:0;background:#f6f8fb;color:#172033;font-family:"Noto Sans TC","Segoe UI",sans-serif}
+    .fc-header{background:#fff;border-bottom:1px solid #dfe5ee}
+    .fc-header-inner{max-width:1180px;margin:0 auto;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .fc-brand{display:flex;gap:12px;align-items:center;color:#172033;text-decoration:none}
+    .fc-mark{width:42px;height:42px;border-radius:8px;background:#1847a8;color:#fff;display:grid;place-items:center;font-weight:800}
+    .fc-brand span{display:block;color:#5d6b82;font-size:13px}
+    .fc-header nav a{color:#1847a8;font-weight:700;margin-left:14px}
+    .fc-shell{max-width:1180px;margin:0 auto;padding:24px 20px 44px}
+    .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#7d1f1f;font-weight:800}
+    h1{font-size:28px;margin:4px 0 8px}
+    .lead{max-width:880px;margin:0 0 14px;color:#5d6b82;line-height:1.7}
+    .banner{background:#fdecec;border:2px solid #e8a3a3;border-radius:8px;padding:12px 14px;color:#7d1f1f;line-height:1.6;margin-bottom:16px;font-weight:700}
+    .disclaimer{background:#fff8e7;border:1px solid #f0d596;border-radius:8px;padding:12px;color:#6b520f;line-height:1.6;margin-bottom:16px}
+    .panel{background:#fff;border:1px solid #dfe5ee;border-radius:8px;padding:16px;margin-bottom:16px}
+    .panel h2{margin:0 0 12px;font-size:20px}
+    .panel h3{margin:16px 0 8px;font-size:16px}
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px}
+    .controls label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#42516a}
+    .controls select{min-height:36px;border:1px solid #ccd5e2;border-radius:6px;padding:0 10px;background:#fff;color:#172033}
+    .controls select:focus-visible,.cell-btn:focus-visible{outline:3px solid #f0a500;outline-offset:2px}
+    .badge{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:800;background:#eef3f8;color:#35445d;white-space:nowrap}
+    .badge.ok{background:#e8eefc;color:#1847a8}
+    .badge.na{background:#f1edf9;color:#4f3a86}
+    .badge.listing{background:#fff3dc;color:#7a5410}
+    .badge.unverified{background:#fdecec;color:#9b1c1c}
+    .badge.physical{background:#e6f6ec;color:#1d6b3a}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border-bottom:1px solid #e5eaf1;padding:7px 8px;text-align:left;vertical-align:top}
+    th{color:#526179;font-size:12px;background:#f7f9fc}
+    td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .table-wrap{overflow-x:auto}
+    .cell-btn{border:1px solid #d5deea;background:#fff;border-radius:6px;padding:4px 6px;cursor:pointer;font:inherit;min-width:86px;text-align:center}
+    .cell-btn.computed{background:#e8eefc;border-color:#b9cbf2}
+    .cell-btn.withdrawn{background:#fdecec;border-color:#f2b8b8}
+    .bars{display:grid;gap:6px}
+    .bar-row{display:grid;grid-template-columns:70px 1fr 110px;gap:8px;align-items:center;font-size:13px}
+    .bar-track{background:#f1f4f8;border-radius:4px;height:14px;position:relative;overflow:hidden}
+    .bar-fill{position:absolute;top:0;height:14px;background:#1847a8;border-radius:4px}
+    .bar-fill.neg{background:#b34b4b}
+    .bar-zero{position:absolute;top:0;bottom:0;width:1px;background:#8a94a6;left:50%}
+    .mono{font-family:Consolas,"SFMono-Regular",monospace;font-size:12px;overflow-wrap:anywhere}
+    .muted{color:#6b7890}
+    .fc-shell p,.fc-shell li{overflow-wrap:anywhere}
+    .state{padding:18px;color:#6b7890;background:#fff;border:1px dashed #bfcbdb;border-radius:8px}
+    .state.error{color:#9b1c1c;border-color:#f2b8b8;background:#fff7f7}
+    ul.plain{margin:6px 0;padding-left:20px;line-height:1.7}
+    .timeline{border-left:3px solid #c9d5e7;margin-left:6px;padding-left:14px}
+    .tl-item{margin:0 0 14px}
+    .tl-item b{display:block}
+    .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .stat{background:#f7f9fc;border:1px solid #e2e8f1;border-radius:8px;padding:12px;min-width:0}
+    .stat span{display:block;font-size:12px;color:#65738b;font-weight:800}
+    .stat strong{display:block;font-size:17px;margin-top:4px;overflow-wrap:anywhere}
+    .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+    @media (max-width:760px){.grid2{grid-template-columns:1fr}.bar-row{grid-template-columns:52px 1fr 90px}}
+  </style>
+</head>
+<body class="fc-body">
+  <header class="fc-header">
+    <div class="fc-header-inner">
+      <a class="fc-brand" href="index.html"><div class="fc-mark">FT</div><div><strong>FinTrust</strong><span>歷史財報異常案例（事後研究，非投資建議）</span></div></a>
+      <nav aria-label="站內導覽"><a href="financial-integrity.html">財務可信度健檢</a><a href="historical-research.html">歷史案例研究</a></nav>
+    </div>
+  </header>
+  <main class="fc-shell">
+    <div class="eyebrow">RETROSPECTIVE_CASE · 1785</div>
+    <h1 id="caseTitle">1785 光洋科｜歷史財報異常案例</h1>
+    <div class="banner" id="caseBanner" role="note">事後研究／包含後續申報版本，不代表事件曝光前可用資訊</div>
+    <p class="lead">以已驗收的 Beneish (1999) 與 Dechow et al. (2011) 計分核心，在凍結的官方財報輸入上重算（不儲存），並對照團隊研究簡報的事件時間線。此頁與「財務可信度健檢」的 CURRENT_REVIEW 完全分開，不會用於任何公司的目前查核，也不是事件前預測。</p>
+    <div class="disclaimer" role="note">研究方法仍待方法負責人審核（DRAFT_PENDING_METHOD_OWNER_REVIEW）。分數不是舞弊機率；「不可計算」不代表低風險。黃金不法轉出（實體資產損失）與 2011–2015 財報重編（多年度報導不實）是不同事件，金額不可等同。</div>
+
+    <section class="panel" aria-labelledby="ctlTitle">
+      <h2 id="ctlTitle">資料版本與選擇</h2>
+      <div class="controls">
+        <label>申報版本<select id="policySelect"><option value="latest_available">latest_available（含後續重編）</option><option value="original_only">original_only（只用原始申報）</option></select></label>
+        <label>模型<select id="modelSelect"><option value="all">兩種模型</option><option value="beneish_1999_full8_v1">Beneish M-Score</option><option value="dechow_2011_model1_v1">Dechow F-Score</option></select></label>
+        <label>變數走勢<select id="variableSelect"><option value="GMI">GMI（Beneish）</option><option value="TATA">TATA（Beneish）</option><option value="ch_inv">ΔInventory（Dechow ch_inv）</option><option value="rsst_acc">RSST Accruals（Dechow）</option><option value="soft_assets">Soft Assets（Dechow）</option></select></label>
+      </div>
+      <p id="liveStatus" class="sr-only" role="status" aria-live="polite"></p>
+      <div id="identityBody" class="state">載入中…</div>
+    </section>
+
+    <section class="panel" aria-labelledby="gridTitle"><h2 id="gridTitle">年度 × 模型計算狀態</h2><div id="gridBody" class="state">載入中…</div><div id="cellDetail"></div></section>
+    <section class="panel" aria-labelledby="seriesTitle"><h2 id="seriesTitle">變數年度走勢</h2><div id="seriesBody" class="state">載入中…</div></section>
+    <section class="panel" aria-labelledby="strictTitle"><h2 id="strictTitle">事件前（2016-05-13 截點）是否可得</h2><div id="strictBody" class="state">載入中…</div></section>
+    <section class="panel" aria-labelledby="xwTitle"><h2 id="xwTitle">方法 → 案例問題 → 實作狀態</h2><div id="crosswalkBody" class="state">載入中…</div></section>
+    <section class="panel" aria-labelledby="tlTitle"><h2 id="tlTitle">事件時間線（研究簡報候選事件 × 官方封存佐證）</h2><div id="timelineBody" class="state">載入中…</div></section>
+  </main>
+  <script src="financial-integrity-case.js"></script>
+</body>
+</html>

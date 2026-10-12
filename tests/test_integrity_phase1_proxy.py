@@ -45,7 +45,8 @@ class IntegrityHostTests(unittest.TestCase):
     def test_routes_registered_alongside_existing_ones(self) -> None:
         rules = {rule.rule for rule in self.app_module.app.url_map.iter_rules()}
         for rule in ("/api/integrity/companies", "/api/integrity/companies/<ticker>/readiness",
-                     "/api/integrity/assessments/preview", "/api/research/cases", "/api/financial/companies", "/health"):
+                     "/api/integrity/assessments/preview", "/api/integrity/research-cases/<ticker>/summary",
+                     "/api/research/cases", "/api/financial/companies", "/health"):
             self.assertIn(rule, rules)
         self.assertFalse([r for r in rules if r.startswith("/api/integrity") and ("persist" in r or "admin" in r)])
 
@@ -63,7 +64,8 @@ class IntegrityHostTests(unittest.TestCase):
         index = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertEqual(index.count('href="financial-integrity.html"'), 1)
         self.assertEqual(sum(p.read_text(encoding="utf-8").count("financial-integrity.html")
-                             for p in ROOT.glob("*.html") if p.name not in ("index.html", "financial-integrity.html")), 0)
+                             for p in ROOT.glob("*.html")
+                             if p.name not in ("index.html", "financial-integrity.html", "financial-integrity-case.html")), 0)
         dockerfile = (ROOT / "Dockerfile.flask").read_text(encoding="utf-8")
         self.assertIn("integrity_routes.py", dockerfile)  # app.py imports it at start-up
         self.assertIn("COPY *.html *.js *.css ./", dockerfile)
@@ -144,3 +146,42 @@ class IntegrityProxyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IntegrityCasePageTests(unittest.TestCase):
+    """Phase 1.1: the isolated 1785 retrospective case page (served by Flask, reachable from the workbench only)."""
+
+    def test_case_page_is_isolated_and_reachable_from_the_workbench_only(self) -> None:
+        workbench = (ROOT / "financial-integrity.html").read_text(encoding="utf-8")
+        self.assertEqual(workbench.count('href="financial-integrity-case.html"'), 1)
+        others = [p.name for p in ROOT.glob("*.html") if p.name != "financial-integrity.html"
+                  and "financial-integrity-case.html" in p.read_text(encoding="utf-8")]
+        self.assertEqual(others, [])
+        page = (ROOT / "financial-integrity-case.html").read_text(encoding="utf-8")
+        self.assertIn("事後研究／包含後續申報版本，不代表事件曝光前可用資訊", page)
+        self.assertIn("RETROSPECTIVE_CASE", page)
+
+    def test_case_script_calls_only_its_flask_route_and_never_writes_markup(self) -> None:
+        script = (ROOT / "financial-integrity-case.js").read_text(encoding="utf-8")
+        self.assertEqual(set(re.findall(r'"(/api/[^"?]+)', script)), {"/api/integrity/research-cases/1785/summary"})
+        self.assertNotIn("innerHTML", script)
+        self.assertNotIn("insertAdjacentHTML", script)
+        self.assertNotRegex(script, r"https?://(?!doi\.org)[a-z]")
+        self.assertNotIn("method: \"POST\"", script)
+
+    def test_case_proxy_forwards_only_the_whitelisted_policy(self) -> None:
+        seen = []
+
+        def opener(request, timeout):
+            seen.append((request.full_url, request.get_method(), request.data))
+            return FakeHttpResponse({"status": "available"})
+
+        app = Flask(__name__)
+        app.register_blueprint(create_integrity_blueprint(client=FinTrustClient(base_url=BASE, opener=opener)))
+        client = app.test_client()
+        ok = client.get("/api/integrity/research-cases/1785/summary?version_policy=original_only&persist=true")
+        self.assertEqual(ok.status_code, 200)
+        self.assertEqual(seen, [(f"{BASE}/api/v1/integrity/research-cases/1785/summary?version_policy=original_only", "GET", None)])
+        for query in ("", "?version_policy=STRICT_AS_OF", "?version_policy=latest_available%00"):
+            self.assertEqual(client.get("/api/integrity/research-cases/1785/summary" + query).status_code, 400)
+        self.assertEqual(len(seen), 1)

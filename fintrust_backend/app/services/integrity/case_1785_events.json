@@ -1,0 +1,96 @@
+{
+  "registry_version": "integrity_case_1785_event_registry_v1",
+  "source_document": {
+    "title": "陳雨靚_專題 1013 光洋科財報不實事件與財務異常預警模型研究（14 頁研究簡報）",
+    "owner": "陳雨靚（研究方法負責人）",
+    "sha256": "8fb6cf01905d9d40c81619125ad728fc2fab4edc001e1cec097c526d6f5de849",
+    "status": "teammate_research_reference_not_verified_evidence",
+    "redistribution": "not_redistributed; cited by slide page only"
+  },
+  "verification_rule": "An event is shown as verified only when an archived official record (historical audit archive, re-read on every request) carries the claim. E2 = archived official bytes with the quote verified; E1 = official listing metadata only (date and title, not the content). Anything else stays needs_source_verification and is never used in a model calculation.",
+  "incident_distinction": "The 2015 physical gold-transfer incident (an asset loss from employee misconduct) and the FY2011–FY2015 financial restatement (multi-year reporting misstatement) are different events with different loss measures. Slide 5 states that the ~NT$3.27 billion five-year net-income reduction must not be equated with the gold-transfer loss.",
+  "excluded_archive_records": [
+    {"event_key": "tpex:證櫃監字第10502013431號", "reason": "concerns another company (樂陞科技, 3662); not 1785 evidence"}
+  ],
+  "events": [
+    {
+      "event_id": "restated_period_fy2011_fy2015", "date": "2011/2015", "date_precision": "period",
+      "title": "2011–2015 歷史財報不實期間（後續重編五個年度）", "event_class": "financial_reporting_misstatement",
+      "slide_pages": [4, 5], "slide_claims": ["後續重編五個年度財報"],
+      "verifying_event_keys": ["mops:20160819:171005:1"], "related_event_keys": ["mops:20161113:212622:3", "mops:20161113:212531:2"],
+      "verification_scope": "官方公告引文確認重編範圍為民國 100–104 年（FY2011–FY2015）各受影響期間。"
+    },
+    {
+      "event_id": "gold_transfer_2015q4", "date": "2015Q4", "date_precision": "quarter",
+      "title": "員工不法轉出黃金（約 450 公斤，涉及存貨管理）", "event_class": "physical_asset_incident",
+      "slide_pages": [3, 4], "slide_claims": ["數量約 450 公斤", "發生於 2015 年第 4 季", "公司最初認列相關損失約 5.13 億元"],
+      "verifying_event_keys": [], "related_event_keys": ["mops:20160408:182836:1"],
+      "verification_scope": "封存資料只有 2016-04-08「本公司對員工不法行為提起刑事訴訟」的官方清單標題；數量、發生季度與 5.13 億元損失皆未經官方原文驗證。"
+    },
+    {
+      "event_id": "press_conference_20160331", "date": "2016-03-31", "date_precision": "day",
+      "title": "黃金事件公開說明（重大訊息說明會）", "event_class": "disclosure",
+      "slide_pages": [4], "slide_claims": ["公司召開重大訊息說明會說明黃金事件"],
+      "verifying_event_keys": ["mops:20160331:184945:4"], "related_event_keys": ["mops:20160331:185032:5"],
+      "verification_scope": "官方清單確認 2016-03-31 召開記者會（日期與標題）；記者會內容未封存。"
+    },
+    {
+      "event_id": "press_conference_20160506", "date": "2016-05-06", "date_precision": "day",
+      "title": "財務疑義進一步擴大（存貨差異與未入帳負債待釐清）", "event_class": "disclosure",
+      "slide_pages": [4], "slide_claims": ["存貨差異與未入帳負債待釐清"],
+      "verifying_event_keys": ["mops:20160506:183845:1"], "related_event_keys": [],
+      "verification_scope": "官方清單確認 2016-05-06 召開記者會；「存貨差異與未入帳負債」內容未經官方原文驗證。"
+    },
+    {
+      "event_id": "trading_method_change_20160510", "date": "2016-05-10", "date_precision": "day",
+      "title": "股票變更交易方法（採預收全部款券方式）", "event_class": "market_action",
+      "slide_pages": [4], "slide_claims": ["變更交易方法為預收全部款券"],
+      "verifying_event_keys": [], "related_event_keys": [],
+      "verification_scope": "封存資料中沒有對應的櫃買中心處置公告。"
+    },
+    {
+      "event_id": "misstatement_admission_20160513", "date": "2016-05-13", "date_precision": "day",
+      "title": "高層坦承財報不實（不當遞延損失及存貨跌價問題）", "event_class": "financial_reporting_misstatement",
+      "slide_pages": [4], "slide_claims": ["不當遞延損失", "存貨跌價問題"],
+      "verifying_event_keys": ["misstatement_admitted_20160513", "mops:20160513:184919:8"], "related_event_keys": [],
+      "verification_scope": "官方原文引文「致有財務報表不實表達之情事」與 2016-05-13 記者會清單；「不當遞延損失、存貨跌價」細節未經官方原文驗證。"
+    },
+    {
+      "event_id": "trading_suspension_20160517", "date": "2016-05-17", "date_precision": "day",
+      "title": "股票停止買賣（櫃買中心實施交易處置）", "event_class": "market_action",
+      "slide_pages": [4], "slide_claims": [],
+      "verifying_event_keys": ["trading_suspension_from_20160517", "tpex:證櫃監字第10502004811號"], "related_event_keys": [],
+      "verification_scope": "櫃買中心公告原文「自105年5月17日起，停止在證券商營業處所買賣」。"
+    },
+    {
+      "event_id": "restatement_completed_20161205", "date": "2016-12-05", "date_precision": "day",
+      "title": "完成歷史財報重編（2011–2015 年財報更正申報）", "event_class": "restatement",
+      "slide_pages": [4], "slide_claims": [],
+      "verifying_event_keys": ["restatement_and_corrections_completed_20161205", "mops:20161205:174316:2"],
+      "related_event_keys": ["restated_annual_reports_filed_20161114", "mops:20161113:212622:3"],
+      "verification_scope": "櫃買中心公告原文「12月5日完成100年至104年之財務報告重編及更(補)正公告申報」；另有 2016-11-13 重編說明與 2016-11-14 申報重編年報的官方紀錄。"
+    },
+    {
+      "event_id": "restatement_impact_20161229", "date": "2016-12-29", "date_precision": "day",
+      "title": "公開說明重編影響（五年淨利合計調減約 32.7 億元）", "event_class": "restatement",
+      "slide_pages": [4, 5], "slide_claims": ["2011–2015 年稅後淨利合計調減約 32.7 億元", "累計損益由盈轉虧"],
+      "verifying_event_keys": ["mops:20161229:113206:1"], "related_event_keys": ["restated_fy2015_eps_cited"],
+      "verification_scope": "官方清單確認 2016-12-29 召開重大訊息說明記者會；32.7 億元合計數未經官方原文驗證（封存只有重編後 FY2015 每股虧損 2.62 元的官方引文）。"
+    },
+    {
+      "event_id": "trading_resumption_20170103", "date": "2017-01-03", "date_precision": "day",
+      "title": "恢復股票交易（恢復普通方法交割）", "event_class": "market_action",
+      "slide_pages": [4], "slide_claims": [],
+      "verifying_event_keys": ["trading_resumption_20170103", "tpex:證櫃監字第10502015021號"], "related_event_keys": [],
+      "verification_scope": "櫃買中心公告原文「自106年1月3日起恢復在證券商營業處所買賣」。"
+    }
+  ],
+  "slide_references_unverified": [
+    {"slide_page": 13, "publisher": "中央通訊社", "date": "2016-03-31", "url_text": "https://www.cna.com.tw/news/firstnews/201603310404.aspx"},
+    {"slide_page": 13, "publisher": "中央通訊社", "date": "2016-05-06", "url_text": "https://www.cna.com.tw/news/afe/201605060386.aspx"},
+    {"slide_page": 13, "publisher": "中央通訊社", "date": "2016-05-13", "url_text": "https://www.cna.com.tw/news/firstnews/201605130403.aspx"},
+    {"slide_page": 13, "publisher": "MoneyDJ（轉載公開資訊觀測站重大訊息）", "date": "2016-12-29", "url_text": "https://m.moneydj.com/f1a.aspx?a=79c89d93-b74b-405a-92dd-8a5f48d8e1c0"},
+    {"slide_page": 13, "publisher": "鉅亨網", "date": "2016-12-29", "url_text": "https://news.cnyes.com/news/id/3664744"},
+    {"slide_page": 13, "publisher": "證券櫃檯買賣中心", "date": "2016-12-29", "url_text": "https://www.tpex.org.tw/storage/eb_data/10512/10502015021.htm", "note": "same document as archived event tpex:證櫃監字第10502015021號"}
+  ]
+}

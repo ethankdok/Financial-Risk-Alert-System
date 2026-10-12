@@ -145,6 +145,11 @@ class FinTrustClient:
     def integrity_preview(self, body: dict[str, Any]) -> Any:
         return self.request("POST", "/api/v1/integrity/assessments/preview", json_body={**body, "persist": False})
 
+    def integrity_research_case(self, ticker: str, version_policy: str) -> Any:
+        """Read-only retrospective case view (RETROSPECTIVE_CASE); never persisted."""
+        return self.request("GET", f"/api/v1/integrity/research-cases/{ticker}/summary",
+                            params={"version_policy": version_policy})
+
     def analyze_official_data_shift(self, company_code: str, period_1: str | None = None,
                                     period_2: str | None = None) -> Any:
         """Official conference-document JSD / cosine analysis (no ingestion token needed)."""
