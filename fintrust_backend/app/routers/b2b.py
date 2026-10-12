@@ -65,6 +65,7 @@ def source_readiness(
     try:
         workbench.resolve(ticker)
         facts = workbench.facts.collect(ticker)
+        facts = {**facts, "index": workbench._financial_for_ticker(facts["index"], ticker)}
         count, problem = workbench.literature.frozen_observation_count(ticker)
         return summarize_source_readiness(
             facts, ticker=ticker, frozen_literature_observations=count,
