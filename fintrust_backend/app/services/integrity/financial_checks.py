@@ -288,7 +288,13 @@ F4_LIMITS = [
 
 
 def check_revenue_nfm(index: dict[tuple[str, int], dict[str, Any]], nfm_records: list[dict[str, Any]]) -> dict[str, Any]:
-    """Revenue growth minus a verified, positively scale-related non-financial measure's growth (two years)."""
+    """Phase 1 synthetic compatibility helper, *not* the production F4 entry.
+
+    This historical test-path accepts caller-attested verified_source; it has
+    no archived-bytes check. IntegrityWorkbench now exclusively invokes
+    nfm_evidence_bridge.check_revenue_nfm_strict. Do not reuse this helper for
+    persisted, third-party or real-company assertions.
+    """
     common = dict(title="營收與非財務指標成長差異（F4，Brazel 啟發，條件式）", version=F4_VERSION,
                   tier=ImplementationTier.readiness_only, evidence_families=["revenue", "nonfinancial_measure"],
                   formula="diff = (Revenue_t / Revenue_t-1 − 1) − (NFM_t / NFM_t-1 − 1)",
