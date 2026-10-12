@@ -65,7 +65,7 @@ def summarize_source_readiness(
     } | ({"two_years_of_verified_nfm_missing"} if len({
         r.get("fiscal_year") for r in nfm_verified if r.get("fiscal_year") in needed
     }) < 2 else set()) | ({"data_quality_ambiguity_requires_review"} if facts.get("quality") else set()))
-    strict = check_revenue_nfm_strict(index, nfm_records or [], ticker=ticker)
+    strict = check_revenue_nfm_strict(index, nfm, ticker=ticker)
     return {
         "method_version": VERSION,
         "ticker": ticker,
