@@ -13,6 +13,8 @@ from app.services.analysis_repository import AnalysisRepository
 
 MONEY_SCALES = {
     "元": 1.0,
+    # MOPS Inline XBRL facts are persisted in this unit; without it no amount claim could be compared with them.
+    "新台幣元": 1.0,
     "千": 1_000.0,
     "仟": 1_000.0,
     "千元": 1_000.0,

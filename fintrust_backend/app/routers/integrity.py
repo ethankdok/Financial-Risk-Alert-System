@@ -1,0 +1,78 @@
+"""Financial Integrity Workbench API (Phase 1): read-only readiness and preview assessments.
+
+No endpoint here persists, ingests, refreshes, extracts documents, fetches MOPS live or calls an LLM. The services
+are reused in-process through the same dependency providers as the financial router (no self HTTP calls).
+``persist`` accepts only ``false``; ``STRICT_AS_OF`` is refused with 409 because publication instants are unknown.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Path
+
+from app.dependencies import get_analysis_repository
+from app.routers.financial import get_jsd_bridge_service
+from app.services.analysis_repository import AnalysisRepository
+from app.services.integrity.adapters import IntegrityDataUnavailable
+from app.services.integrity.contracts import AssessmentRequest
+from app.services.integrity.service import IntegrityWorkbench, ReviewModeNotSupported, UnsupportedTicker
+from app.services.jsd_bridge_service import JsdBridgeService
+
+router = APIRouter(prefix="/api/v1/integrity", tags=["integrity-workbench"])
+TICKER = Path(..., pattern=r"^\d{4,6}$", description="Registered company ticker")
+
+
+def get_integrity_workbench(
+    repository: AnalysisRepository = Depends(get_analysis_repository),
+    jsd_bridge: JsdBridgeService = Depends(get_jsd_bridge_service),
+) -> IntegrityWorkbench:
+    from app.services.claim_evidence_adapter import ClaimEvidenceAdapter
+    from app.services.claim_verification_service import ClaimVerificationService
+    from app.services.financial_research.service import ResearchConfig
+    from app.services.pipeline_evidence_repository import PipelineEvidenceRepository
+
+    conference_repository = jsd_bridge.conference_repository
+    # Deterministic verification only: the workbench never enables the optional Gemini claim assistance.
+    claim_service = ClaimVerificationService(
+        ClaimEvidenceAdapter(fact_repository=PipelineEvidenceRepository(repository),
+                             conference_repository=conference_repository, event_repository=repository),
+        llm=None,
+    )
+    return IntegrityWorkbench(repository, jsd_bridge=jsd_bridge, conference_repository=conference_repository,
+                              claim_service=claim_service,
+                              literature_database=ResearchConfig.from_env().literature_database)
+
+
+def _call(fn, *args):
+    try:
+        return fn(*args)
+    except UnsupportedTicker as exc:
+        raise HTTPException(status_code=404, detail={
+            "error_code": "ticker_not_supported",
+            "message": f"{exc} is not a registered company of the workbench."}) from exc
+    except ReviewModeNotSupported as exc:
+        raise HTTPException(status_code=409, detail=exc.as_dict()) from exc
+    except IntegrityDataUnavailable as exc:
+        raise HTTPException(status_code=503, detail={"error_code": "integrity_data_unavailable",
+                                                     "message": str(exc)}) from exc
+
+
+@router.get("/companies")
+def integrity_companies(workbench: IntegrityWorkbench = Depends(get_integrity_workbench)) -> dict[str, Any]:
+    companies = _call(workbench.companies)
+    return {"count": len(companies), "companies": companies,
+            "note": "Reviewed seed companies; a company without a persisted snapshot returns explicit unavailable states."}
+
+
+@router.get("/companies/{ticker}/readiness")
+def integrity_readiness(ticker: str = TICKER,
+                        workbench: IntegrityWorkbench = Depends(get_integrity_workbench)) -> dict[str, Any]:
+    return _call(workbench.readiness, ticker)
+
+
+@router.post("/assessments/preview")
+def integrity_preview(request: AssessmentRequest,
+                      workbench: IntegrityWorkbench = Depends(get_integrity_workbench)) -> dict[str, Any]:
+    """Preview assessment (never persisted): findings, model availability, claims, data shift and B2B checks."""
+    return _call(workbench.assess, request)

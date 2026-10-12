@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>財務可信度健檢｜FinTrust</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body.fi-body{margin:0;background:#f6f8fb;color:#172033;font-family:"Noto Sans TC","Segoe UI",sans-serif}
+    .fi-header{background:#fff;border-bottom:1px solid #dfe5ee}
+    .fi-header-inner{max-width:1180px;margin:0 auto;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .fi-brand{display:flex;gap:12px;align-items:center;color:#172033;text-decoration:none}
+    .fi-mark{width:42px;height:42px;border-radius:8px;background:#1847a8;color:#fff;display:grid;place-items:center;font-weight:800}
+    .fi-brand span{display:block;color:#5d6b82;font-size:13px}
+    .fi-header nav a{color:#1847a8;font-weight:700;margin-left:14px}
+    .fi-shell{max-width:1180px;margin:0 auto;padding:24px 20px 44px}
+    .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#1847a8;font-weight:800}
+    h1{font-size:28px;margin:4px 0 8px}
+    .lead{max-width:860px;margin:0 0 14px;color:#5d6b82;line-height:1.7}
+    .disclaimer{background:#fff8e7;border:1px solid #f0d596;border-radius:8px;padding:12px;color:#6b520f;line-height:1.6;margin-bottom:16px}
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:14px}
+    .controls label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#42516a}
+    .controls select{min-height:36px;border:1px solid #ccd5e2;border-radius:6px;padding:0 10px;background:#fff;color:#172033}
+    .controls button{min-height:38px;border:0;border-radius:6px;background:#1847a8;color:#fff;font-weight:800;padding:0 16px;cursor:pointer}
+    .controls button:disabled{background:#9aa8c0;cursor:not-allowed}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+    .tabs button{border:1px solid #c9d5e7;background:#fff;color:#1847a8;border-radius:6px;min-height:38px;padding:0 14px;font-weight:800;cursor:pointer}
+    .tabs button[aria-selected="true"]{background:#1847a8;color:#fff;border-color:#1847a8}
+    .tabs button:focus-visible,.controls button:focus-visible,.controls select:focus-visible{outline:3px solid #f0a500;outline-offset:2px}
+    .panel{background:#fff;border:1px solid #dfe5ee;border-radius:8px;padding:16px;margin-bottom:16px}
+    .panel h2{margin:0 0 12px;font-size:20px}
+    .panel h3{margin:16px 0 8px;font-size:16px}
+    .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .stat{background:#f7f9fc;border:1px solid #e2e8f1;border-radius:8px;padding:12px;min-width:0}
+    .stat span{display:block;font-size:12px;color:#65738b;font-weight:800}
+    .stat strong{display:block;font-size:18px;margin-top:4px;overflow-wrap:anywhere}
+    .stat small{display:block;color:#5d6b82;margin-top:4px;line-height:1.5}
+    .badge{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:800;background:#eef3f8;color:#35445d;white-space:nowrap}
+    .badge.verify{background:#fdf0e3;color:#8a4a12}
+    .badge.monitor{background:#fff3dc;color:#7a5410}
+    .badge.na{background:#f1edf9;color:#4f3a86}
+    .badge.ok{background:#e8eefc;color:#1847a8}
+    .badge.conflict{background:#fdecec;color:#9b1c1c}
+    .badge.synthetic{background:#9b1c1c;color:#fff}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border-bottom:1px solid #e5eaf1;padding:7px 8px;text-align:left;vertical-align:top}
+    th{color:#526179;font-size:12px;background:#f7f9fc}
+    td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .table-wrap{overflow-x:auto}
+    .finding{border:1px solid #e0e7f0;border-radius:8px;padding:12px;margin:10px 0;background:#fbfcfe}
+    .finding header{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .finding header strong{font-size:15px}
+    details{margin-top:8px}
+    details summary{cursor:pointer;color:#1847a8;font-weight:800}
+    .steps{display:grid;gap:8px;margin-top:8px}
+    .step{border-left:3px solid #c9d5e7;padding:4px 10px}
+    .step b{display:block;font-size:12px;color:#526179}
+    .mono{font-family:Consolas,"SFMono-Regular",monospace;font-size:12px;overflow-wrap:anywhere}
+    .muted{color:#6b7890}
+    .state{padding:18px;color:#6b7890;background:#fff;border:1px dashed #bfcbdb;border-radius:8px}
+    .state.error{color:#9b1c1c;border-color:#f2b8b8;background:#fff7f7}
+    ul.plain{margin:6px 0;padding-left:20px;line-height:1.7}
+    .method-drawer{margin-top:8px}
+    .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+    @media (max-width:900px){.summary{grid-template-columns:1fr 1fr}}
+    @media (max-width:620px){.summary{grid-template-columns:1fr}}
+  </style>
+</head>
+<body class="fi-body">
+  <header class="fi-header">
+    <div class="fi-header-inner">
+      <a class="fi-brand" href="index.html"><div class="fi-mark">FT</div><div><strong>FinTrust</strong><span>財務可信度健檢（查核輔助，非投資建議）</span></div></a>
+      <nav aria-label="站內導覽"><a href="index.html">首頁</a><a href="financial-evidence.html">官方財務證據</a></nav>
+    </div>
+  </header>
+  <main class="fi-shell">
+    <div class="eyebrow">Financial Integrity Workbench · Phase 1</div>
+    <h1>企業財務可信度健檢</h1>
+    <p class="lead">輸入已收錄上市公司，彙整目前已歸檔的官方財務資料、可解釋的財務一致性篩檢、文獻模型可計算性、官方文件文字差異與發行人主張比對，並產生合作前應確認的查核清單。
+      分析範圍：<span class="badge ok">CURRENT_REVIEW</span>（目前已歸檔資訊，不是歷史時點重建）。</p>
+    <div class="disclaimer" role="note">本頁是查核輔助（screening / due diligence support），不是舞弊認定，也不輸出舞弊機率或風險等級。所有數字為發行人自行申報；「不可計算」「資料不足」「未觸發」都不代表低風險。研究方法仍待方法負責人審核（DRAFT_PENDING_METHOD_OWNER_REVIEW）。</div>
+
+    <section class="panel" aria-labelledby="pickTitle">
+      <h2 id="pickTitle">選擇公司</h2>
+      <div class="controls">
+        <label>公司<select id="tickerSelect" aria-describedby="pickNote"><option value="">載入中…</option></select></label>
+        <button type="button" id="runBtn" disabled>產生健檢（預覽，不儲存）</button>
+      </div>
+      <p id="pickNote" class="muted">只列出已登錄的公司；尚無已歸檔財報快照的公司仍可查詢，但會顯示資料不足。</p>
+      <div id="summaryBody" class="state">選擇公司後按「產生健檢」。</div>
+    </section>
+
+    <div class="tabs" role="tablist" aria-label="健檢分區">
+      <button role="tab" id="tab-overview" aria-controls="view-overview" aria-selected="true" data-view="overview">財務概況</button>
+      <button role="tab" id="tab-models" aria-controls="view-models" aria-selected="false" tabindex="-1" data-view="models">文獻模型</button>
+      <button role="tab" id="tab-cross" aria-controls="view-cross" aria-selected="false" tabindex="-1" data-view="cross">資訊交叉查核（含 JSD）</button>
+      <button role="tab" id="tab-b2b" aria-controls="view-b2b" aria-selected="false" tabindex="-1" data-view="b2b">B2B 合作前查核</button>
+    </div>
+    <p id="liveStatus" class="sr-only" role="status" aria-live="polite"></p>
+
+    <section id="view-overview" role="tabpanel" aria-labelledby="tab-overview" class="panel"><div id="overviewBody" class="state">尚未查詢。</div></section>
+    <section id="view-models" role="tabpanel" aria-labelledby="tab-models" class="panel" hidden><div id="modelsBody" class="state">尚未查詢。</div></section>
+    <section id="view-cross" role="tabpanel" aria-labelledby="tab-cross" class="panel" hidden><div id="crossBody" class="state">尚未查詢。</div></section>
+    <section id="view-b2b" role="tabpanel" aria-labelledby="tab-b2b" class="panel" hidden><div id="b2bBody" class="state">尚未查詢。</div></section>
+
+    <section class="panel" aria-labelledby="methodTitle">
+      <h2 id="methodTitle">研究方法說明</h2>
+      <details class="method-drawer" id="methodDrawer"><summary>展開文獻與實作分層</summary><div id="methodBody"></div></details>
+    </section>
+  </main>
+  <script src="financial-integrity.js"></script>
+</body>
+</html>

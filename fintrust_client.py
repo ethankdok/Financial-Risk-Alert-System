@@ -135,6 +135,16 @@ class FinTrustClient:
             raise ValueError("unknown literature action")
         return self.request("POST", f"/api/v1/research/literature/{action}", json_body={**body, "persist": False})
 
+    # Financial Integrity Workbench (Phase 1): read-only; the browser path can never persist.
+    def integrity_companies(self) -> Any:
+        return self.request("GET", "/api/v1/integrity/companies")
+
+    def integrity_readiness(self, ticker: str) -> Any:
+        return self.request("GET", f"/api/v1/integrity/companies/{ticker}/readiness")
+
+    def integrity_preview(self, body: dict[str, Any]) -> Any:
+        return self.request("POST", "/api/v1/integrity/assessments/preview", json_body={**body, "persist": False})
+
     def analyze_official_data_shift(self, company_code: str, period_1: str | None = None,
                                     period_2: str | None = None) -> Any:
         """Official conference-document JSD / cosine analysis (no ingestion token needed)."""
