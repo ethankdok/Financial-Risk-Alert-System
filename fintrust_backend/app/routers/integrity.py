@@ -7,6 +7,7 @@ are reused in-process through the same dependency providers as the financial rou
 
 from __future__ import annotations
 
+import os
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -16,6 +17,7 @@ from app.routers.financial import get_jsd_bridge_service
 from app.services.analysis_repository import AnalysisRepository
 from app.routers.historical_research import get_research_service
 from app.services.integrity.adapters import IntegrityDataUnavailable
+from app.services.integrity.nfm_reviewed_release import load_approved_nfm_release
 from app.services.integrity.case_study import RetrospectiveCaseService, UnsupportedResearchCase
 from app.services.integrity.contracts import AssessmentRequest
 from app.services.integrity.service import IntegrityWorkbench, ReviewModeNotSupported, UnsupportedTicker
@@ -41,9 +43,28 @@ def get_integrity_workbench(
                              conference_repository=conference_repository, event_repository=repository),
         llm=None,
     )
+    config = {
+        "manifest": os.getenv("FINTRUST_NFM_REVIEW_MANIFEST", "").strip(),
+        "sha256": os.getenv("FINTRUST_NFM_APPROVED_RELEASE_SHA256", "").strip(),
+        "archive_root": os.getenv("FINTRUST_NFM_ARCHIVE_ROOT", "").strip(),
+    }
+    nfm_records = []
+    if any(config.values()):
+        if not all(config.values()):
+            raise IntegrityDataUnavailable("optional approved NFM release settings are incomplete")
+        try:
+            nfm_records = load_approved_nfm_release(
+                config["manifest"], approved_manifest_sha256=config["sha256"],
+                pdf_archive_root=config["archive_root"],
+            )["records"]
+        except (ValueError, OSError, TypeError, RuntimeError) as exc:
+            raise IntegrityDataUnavailable(
+                f"approved nonfinancial release rejected: {type(exc).__name__}"
+            ) from exc
     return IntegrityWorkbench(repository, jsd_bridge=jsd_bridge, conference_repository=conference_repository,
                               claim_service=claim_service,
-                              literature_database=ResearchConfig.from_env().literature_database)
+                              literature_database=ResearchConfig.from_env().literature_database,
+                              nfm_records=nfm_records)
 
 
 def _call(fn, *args):
