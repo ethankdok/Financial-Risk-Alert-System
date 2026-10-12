@@ -198,7 +198,8 @@ def compare_financial_nonfinancial_growth(
                     return unavailable(f"{reason}:{metric}:{year}")
             unique = {
                 (e.source_sha256.lower(), e.filing_version_id, e.statement_scope,
-                 e.measurement_policy, e.unit, e.period_basis, str(e.value)): e
+                 e.measurement_policy, e.unit, e.period_basis, str(e.value),
+                 e.source_url, e.published_at): e
                 for e in candidates
             }
             if len(unique) != 1:
