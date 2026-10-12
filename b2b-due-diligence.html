@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>B2B 合作方查核｜FinTrust 獨立頁面</title>
+<link rel="icon" href="data:,">
+<style>
+:root{font-family:"Noto Sans TC","Segoe UI",sans-serif;color:#172033;background:#f4f7fa}
+*{box-sizing:border-box}body{margin:0}
+header{background:#fff;border-bottom:1px solid #dce4ee;padding:18px 24px}
+.wrap{max-width:1000px;margin:0 auto}header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+a{color:#1855b0}h1{font-size:28px;margin:.5em 0}.lead,.muted{color:#52647b;line-height:1.65}
+main{padding:25px 20px 48px}.notice{background:#fff8e8;border:1px solid #e6ce96;border-radius:9px;padding:14px;line-height:1.6}
+section{margin-top:18px;background:#fff;border:1px solid #dce4ee;border-radius:10px;padding:18px}
+form{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+label{display:flex;flex-direction:column;gap:7px;font-weight:650}
+select{min-width:190px;padding:10px;border:1px solid #aabbd0;border-radius:6px;background:#fff;color:#172033}
+button{padding:11px 17px;background:#1855b0;color:#fff;border:0;border-radius:6px;font-weight:700;cursor:pointer}
+button:disabled{background:#aabbd0}button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #ffa700;outline-offset:2px}
+.hidden{display:none}.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.stat{border:1px solid #dde6f0;border-radius:8px;padding:14px}.stat b{display:block;font-size:19px;margin-top:6px}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;background:#e9effa;font-size:13px}
+li{margin-bottom:9px;line-height:1.55}ul{padding-left:21px}
+section h2{font-size:20px;margin-top:2px}.error{color:#b42318}
+footer{padding:15px 20px 30px;color:#66778d;text-align:center}
+</style>
+</head>
+<body>
+<header><div class="wrap"><strong>FinTrust · 合作方查核</strong><nav><a href="financial-integrity.html">返回原財務可信度工作台</a></nav></div></header>
+<main class="wrap">
+<p class="muted">獨立功能頁面 · 原 Workbench 的四個分頁與版面保持不變</p>
+<h1>B2B 合作方盡職調查</h1>
+<p class="lead">根據已歸檔財報、發行人主張與相容的 JSD 結果，整理建議補件項目與資料不足原因。這是查核工作清單，不是投資、授信或交易建議。</p>
+<div class="notice"><strong>重要限制：</strong>你選擇的合作關係尚未由系統驗證；即使文件數值一致，也可能是同一發行人自報。系統不預測違約、舞弊或供應鏈中斷機率。</div>
+<section aria-labelledby="query-title">
+<h2 id="query-title">選擇要查核的企業</h2>
+<form id="dossierForm">
+<label for="ticker">企業代號<select id="ticker" required><option value="">載入公司中…</option></select></label>
+<label for="relation">與你的關係<select id="relation"><option value="potential_counterparty">潛在交易對手</option><option value="supplier">自述供應商</option><option value="customer">自述客戶</option><option value="partner">自述合作夥伴</option></select></label>
+<button id="submit" type="submit">產生查核清單</button>
+</form>
+<p id="status" class="muted" role="status" aria-live="polite">尚未開始查核。</p>
+</section>
+<div id="results" class="hidden" aria-live="polite">
+<section><h2>查核摘要</h2><div id="summary" class="result-grid"></div></section>
+<section><h2>建議向對方取得的文件</h2><ul id="requests"></ul></section>
+<section><h2>證據限制與缺漏</h2><ul id="missing"></ul></section>
+<section><h2>研究與使用限制</h2><ul id="limits"></ul></section>
+</div>
+</main>
+<footer>FinTrust · B2B read-only preview · 不會儲存合作對象清單</footer>
+<script src="b2b-due-diligence.js"></script>
+</body></html>
