@@ -32,10 +32,20 @@ def _instant(raw: Any) -> datetime | None:
 
 def _financial_fact(ticker: str, year: int, record: dict[str, Any]) -> GrowthEvidence:
     # The caller cannot turn a URL-only row into a verified document.
+    identity = al.mops_filing_identity(record.get("source_url"), ticker=ticker)
     verified = (
         record.get("source_trust") == "validated_mops_filing"
         and record.get("source_document_verified") is True
         and record.get("ticker") == ticker
+        and record.get("fiscal_period") == f"{year}FY"
+        and record.get("period_type") == "annual"
+        and record.get("concept") == "revenue"
+        and record.get("scope") == "consolidated"
+        and record.get("filing_policy") == "as_filed_own_year"
+        and identity.get("recognised") is True
+        and identity.get("filing_fiscal_year") == year
+        and identity.get("season") == 4
+        and identity.get("filing_version") == record.get("filing_version")
     )
     return GrowthEvidence(
         ticker=str(record.get("ticker") or ""),
@@ -160,7 +170,8 @@ def check_revenue_nfm_strict(
         )
         return fail(FindingStatus.not_comparable if is_identity else FindingStatus.not_computable, reason, latest)
 
-    assert result.financial_growth is not None and result.nonfinancial_growth is not None
+    if result.financial_growth is None or result.nonfinancial_growth is None:
+        return fail(FindingStatus.not_computable, "calculation_result_missing", latest)
     diff = result.financial_growth - result.nonfinancial_growth
     return fc._finding(
         fc.F4_ID, FindingFamily.financial_consistency,
