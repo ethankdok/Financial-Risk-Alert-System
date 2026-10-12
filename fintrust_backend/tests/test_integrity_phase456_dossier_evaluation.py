@@ -100,9 +100,20 @@ class CrossEvidenceTests(unittest.TestCase):
 
     def test_verified_independent_source_is_distinct(self):
         data = assessment()
+        data["evidence_records"].append({"evidence_id": "thirdparty:1", "independence": "independent_third_party",
+                                         "source_sha256": "b" * 64})
+        data["financial_findings"][0]["evidence_ids"].append("thirdparty:1")
+        result = compose_corroboration(data)
+        self.assertEqual(result["independent_third_party_family_count"], 2)
+        self.assertEqual(result["distinct_verified_third_party_source_artifacts"], 1)
+
+    def test_unanchored_independence_flag_does_not_count_as_verified_third_party(self):
+        data = assessment()
         data["evidence_records"].append({"evidence_id": "thirdparty:1", "independence": "independent_third_party"})
         data["financial_findings"][0]["evidence_ids"].append("thirdparty:1")
-        self.assertEqual(compose_corroboration(data)["independent_third_party_family_count"], 2)
+        result = compose_corroboration(data)
+        self.assertEqual(result["independent_third_party_family_count"], 0)
+        self.assertEqual(result["distinct_verified_third_party_source_artifacts"], 0)
 
 
 class B2BTests(unittest.TestCase):
