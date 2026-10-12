@@ -145,6 +145,11 @@ class FinTrustClient:
     def integrity_preview(self, body: dict[str, Any]) -> Any:
         return self.request("POST", "/api/v1/integrity/assessments/preview", json_body={**body, "persist": False})
 
+    def b2b_dossier_preview(self, body: dict[str, Any]) -> Any:
+        """New read-only B2B facade, separate from the Phase 1.1 workbench."""
+        return self.request("POST", "/api/v1/b2b/dossiers/preview",
+                            json_body={**body, "persist": False})
+
     def integrity_research_case(self, ticker: str, version_policy: str) -> Any:
         """Read-only retrospective case view (RETROSPECTIVE_CASE); never persisted."""
         return self.request("GET", f"/api/v1/integrity/research-cases/{ticker}/summary",
