@@ -185,7 +185,8 @@ class FactsAdapter:
 
 
 def public_record(record: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in record.items() if key not in ("is_demo", "analysis_type", "source_rejection_reason")}
+    return {key: value for key, value in record.items()
+            if key not in ("is_demo", "analysis_type", "source_rejection_reason", "source_document_verified")}
 
 
 # ---------------------------------------------------------------------------------------- literature
