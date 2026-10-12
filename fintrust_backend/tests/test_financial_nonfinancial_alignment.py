@@ -121,6 +121,11 @@ class FinancialNonfinancialGrowthTests(unittest.TestCase):
         x.append(replace(x[1], source_sha256="b" * 64, filing_version_id="restated"))
         self.assertIn("ambiguous_filing_versions:revenue:2025", assess(x).reasons)
 
+    def test_conflicting_publication_time_cannot_be_silently_deduplicated(self):
+        x = rows()
+        x.append(replace(x[1], published_at=datetime(2026, 3, 2, tzinfo=timezone.utc)))
+        self.assertIn("ambiguous_filing_versions:revenue:2025", assess(x).reasons)
+
     def test_pit_unknown_publication_time_is_rejected(self):
         x = rows()
         x[1] = replace(x[1], published_at=None)
