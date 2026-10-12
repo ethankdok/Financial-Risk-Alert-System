@@ -129,7 +129,7 @@ class B2BTests(unittest.TestCase):
 class PITExperimentTests(unittest.TestCase):
     def test_valid_holdout_confusion_matrix_descriptive_only(self):
         result = evaluate()
-        self.assertEqual(result["status"], "descriptive_holdout_ready")
+        self.assertEqual(result["status"], "descriptive_cohort_computable_not_preregistered")
         self.assertEqual(result["confusion_matrix"], {"tp": 1, "fp": 0, "fn": 0, "tn": 1})
         self.assertEqual(result["descriptive_metrics"]["precision"], "1")
         self.assertFalse(result["fraud_prediction_validated"])
@@ -163,6 +163,21 @@ class PITExperimentTests(unittest.TestCase):
         rows = cohort()
         rows.append(deepcopy(rows[0]))
         self.assertEqual(evaluate(rows)["exclusions"][0]["reason"], "duplicate_company_cutoff")
+
+    def test_threshold_identifier_does_not_prove_preregistration(self):
+        result = evaluate()
+        self.assertFalse(result["threshold_pre_registered"])
+        self.assertEqual(result["preregistration_status"], "unverified_identifier_only")
+        self.assertFalse(result["outcome_source_authenticity_independently_verified"])
+
+    def test_invalid_duplicate_does_not_block_a_later_valid_observation(self):
+        rows = cohort()
+        invalid = deepcopy(rows[0])
+        invalid["event_at"] = None
+        rows.insert(0, invalid)
+        result = evaluate(rows)
+        self.assertEqual(result["sample_size_admitted"], 2)
+        self.assertEqual(result["exclusions"][0]["reason"], "event_not_verified_in_future_horizon")
 
     def test_rejects_unregistered_threshold(self):
         with self.assertRaises(ValueError):
