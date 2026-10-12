@@ -51,3 +51,4 @@
 - Stage 0 唯讀鑑識已完成：`INTEGRITY_PHASE1_1_INCIDENT_FORENSIC_ASSESSMENT.md`，結論為 `no_exact_backup_found`。
 - 使用者明確核准 **Option B**，以 `8734fb68…` 作為新的本機核准基線；此檔仍屬「已修改」，不得描述為未修改。
 - 結案與防範措施：`INTEGRITY_PHASE1_1_INCIDENT_CLOSURE.md`。
+- 更正：第 6 節 B 選項寫「原有資料不變」屬過度陳述。正確說法：只有 77／148 筆 facts 與 22 張規則卡經逐欄位證實相同；其餘內容只有列數相同，**無法證明未變**（見結案報告）。
