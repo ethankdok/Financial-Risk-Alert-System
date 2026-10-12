@@ -57,7 +57,7 @@
     statistic("查核優先順序", d.investigation_queue.queue || "資料不足");
     statistic("最新財報年度", d.latest_fiscal_year ? d.latest_fiscal_year + "FY" : "未取得");
     statistic("證據群組數", d.cross_evidence.distinct_evidence_family_count);
-    statistic("獨立第三方證據群組", d.cross_evidence.independent_third_party_family_count);
+    statistic("不重複第三方來源檔案", d.cross_evidence.distinct_verified_third_party_source_artifacts);
     if (!d.document_requests.length) {
       line(requests, "目前沒有可列出的具體補件項目。這不代表沒有風險。");
     } else {
