@@ -239,14 +239,9 @@
     var inputs = el("ul", {className: "plain"});
     Object.keys(f.inputs || {}).forEach(function (key) {
       var value = f.inputs[key];
-      if (key === "nfm_sources" && Array.isArray(value)) {
-        value.forEach(function (source) {
-          inputs.appendChild(el("li", {text: "非財務來源 " + source.year + " 年；單位 " + source.unit +
-            "；版本 " + source.filing_version_id + "；SHA-256 " + source.source_sha256}));
-        });
-      } else if (value && typeof value === "object" && !Array.isArray(value) && value.value_twd !== undefined) {
+      if (value && typeof value === "object") {
         inputs.appendChild(el("li", {text: key + "：" + money(value.value_twd) + "（" + value.fiscal_period + "，原始 " + value.value + " " + value.unit + "，" + value.scope + "）"}));
-      } else if (value != null && typeof value !== "object") {
+      } else if (value != null) {
         inputs.appendChild(el("li", {text: key + "：" + value}));
       }
     });
@@ -275,14 +270,6 @@
         (rec.locator && rec.locator.page ? "；第 " + rec.locator.page + " 頁" : "") + "；獨立性 " + rec.independence + " ";
       sources.appendChild(el("li", null, text, safeLink(rec.source_url, "來源")));
     });
-    if (Array.isArray(f.inputs && f.inputs.nfm_sources)) {
-      f.inputs.nfm_sources.forEach(function (source) {
-        sources.appendChild(el("li", null,
-          source.year + " 年非財務文件；版本 " + source.filing_version_id +
-          "；SHA-256 " + source.source_sha256 + "；公告 " + (source.published_at || "未記錄") + " ",
-          safeLink(source.source_url, "官方來源")));
-      });
-    }
     steps.appendChild(el("div", {className: "step"}, el("b", {text: "4. 來源／SHA／頁碼"}), sources.childNodes.length ? sources : el("span", {className: "muted", text: "無可用來源"})));
     var limits = el("ul", {className: "plain"});
     f.limitations.concat(f.legitimate_explanations.map(function (x) { return "可能的正常原因：" + x; })).forEach(function (x) { limits.appendChild(el("li", {text: x})); });
