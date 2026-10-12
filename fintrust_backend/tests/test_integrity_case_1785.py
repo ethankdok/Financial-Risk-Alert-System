@@ -7,7 +7,6 @@ research archive — counts, run ids, withdrawn cells, strict pre-event status a
 
 from __future__ import annotations
 
-import copy
 import hashlib
 import io
 import json

@@ -243,8 +243,9 @@ class RetrospectiveCaseService:
             "inventory_turnover_readiness": turnover, "crosswalk": crosswalk_rows(),
             "strict_pre_event": {"cutoff_at": STRICT_CUTOFF, "status": strict_models.get("status"),
                                  "counts": strict_models.get("counts"), "note": strict_models.get("strict_note"),
-                                 "run_id": strict["run_id"], "conclusion": "事件公開前（2016-05-13 截點）沒有任何可驗證的文獻模型分數；"
-                                                                           "因此不能宣稱模型曾在事前預警。"},
+                                 "run_id": strict["run_id"],
+                                 "conclusion": "事件公開前（2016-05-13 截點）沒有任何可驗證的文獻模型分數；"
+                                               "因此不能宣稱模型曾在事前預警。"},
             "events": self.events(timeline), "event_registry": self._registry_meta(),
             "restatement_evidence": {"restatement_comparisons": (overview.get("coverage") or {}).get("restatement_comparisons"),
                                      "research_view": "historical-research.html#bridge",
