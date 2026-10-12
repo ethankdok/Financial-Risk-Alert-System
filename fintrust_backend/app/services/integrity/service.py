@@ -107,7 +107,12 @@ class IntegrityWorkbench:
         self.claims = ad.ClaimsAdapter(conference_repository, claim_service)
         self.sources = ad.OfficialSourcesAdapter(repository)
         self.conference_repository = conference_repository
-        self.nfm_records = nfm_records or []  # no verified non-financial measure source exists in Phase 1
+        self.nfm_records = nfm_records or []  # default is empty until official document review
+
+    def _nfm_for_ticker(self, ticker: str) -> list[dict[str, Any]]:
+        """The shared archive can hold many companies; the strict checker receives one company only."""
+        return [record for record in self.nfm_records
+                if isinstance(record, dict) and record.get("ticker") == ticker]
 
     # ------------------------------------------------------------------------------------- companies
     @staticmethod
@@ -139,7 +144,7 @@ class IntegrityWorkbench:
         years = sorted({y for _m, y in index})
         f1 = fc.check_revenue_receivables(index)
         f2 = fc.check_net_income_cfo(index)
-        f4 = nfm.check_revenue_nfm_strict(index, self.nfm_records, ticker=ticker)
+        f4 = nfm.check_revenue_nfm_strict(index, self._nfm_for_ticker(ticker), ticker=ticker)
         count, store_problem = self.literature.frozen_observation_count(ticker)
         registry = [s for s in ad.load_registry(self.claims.registry_path).get("statements", [])
                     if s.get("ticker") == ticker]
@@ -190,7 +195,7 @@ class IntegrityWorkbench:
         findings: list[dict[str, Any]] = []
         if Section.financial_checks in sections:
             findings += [fc.check_revenue_receivables(index), fc.check_net_income_cfo(index),
-                         nfm.check_revenue_nfm_strict(index, self.nfm_records, ticker=request.ticker)]
+                         nfm.check_revenue_nfm_strict(index, self._nfm_for_ticker(request.ticker), ticker=request.ticker)]
             findings += cp.data_quality_findings(facts)
             for finding in findings:
                 if finding["status"] in ("not_computable", "not_comparable", "unavailable"):
