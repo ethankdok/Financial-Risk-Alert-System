@@ -59,7 +59,7 @@ Details, hashes and per-document quality are in [`../data/HISTORICAL_1785_CONFER
 
 ## 3. Replacement packages (same directory)
 
-`C:\Users\samue\Documents\GitHub\Financial-Risk-Alert-System\fintrust_backend\data\historical_audit\packages\`
+`<REPO>\fintrust_backend\data\historical_audit\packages\`
 
 | File | Bytes | SHA-256 | Mode / content_digest |
 |---|---|---|---|
