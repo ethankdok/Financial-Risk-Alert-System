@@ -93,7 +93,7 @@ class StrictF4Tests(unittest.TestCase):
         self.assertEqual(run(nfm=nfm)["reasons"], ["unsupported_nonfinancial_period_basis"])
         nfm = nonfinancial()
         nfm[1]["unit"] = "FTE"
-        self.assertEqual(run(nfm=nfm)["status"], "not_computable")
+        self.assertEqual(run(nfm=nfm)["status"], "not_comparable")
 
     def test_missing_document_attestation_is_not_trusted(self):
         for flag in ("verified_source", "source_document_verified",
