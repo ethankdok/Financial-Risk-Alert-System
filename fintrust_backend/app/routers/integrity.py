@@ -18,6 +18,7 @@ from app.services.analysis_repository import AnalysisRepository
 from app.routers.historical_research import get_research_service
 from app.services.integrity.adapters import IntegrityDataUnavailable
 from app.services.integrity.nfm_reviewed_release import load_approved_nfm_release
+from app.services.integrity.financial_source_release import load_approved_financial_source_release
 from app.services.integrity.case_study import RetrospectiveCaseService, UnsupportedResearchCase
 from app.services.integrity.contracts import AssessmentRequest
 from app.services.integrity.service import IntegrityWorkbench, ReviewModeNotSupported, UnsupportedTicker
@@ -65,10 +66,34 @@ def get_integrity_workbench(
                 "error_code": "nfm_release_unavailable",
                 "message": f"approved nonfinancial release rejected: {type(exc).__name__}",
             }) from exc
+    financial_config = {
+        "manifest": os.getenv("FINTRUST_FINANCIAL_REVIEW_MANIFEST", "").strip(),
+        "sha256": os.getenv("FINTRUST_FINANCIAL_APPROVED_RELEASE_SHA256", "").strip(),
+        "archive_root": os.getenv("FINTRUST_FINANCIAL_ARCHIVE_ROOT", "").strip(),
+    }
+    financial_records = []
+    if any(financial_config.values()):
+        if not all(financial_config.values()):
+            raise HTTPException(status_code=503, detail={
+                "error_code": "financial_release_unavailable",
+                "message": "optional approved financial source settings are incomplete",
+            })
+        try:
+            financial_records = load_approved_financial_source_release(
+                financial_config["manifest"],
+                approved_manifest_sha256=financial_config["sha256"],
+                archive_root=financial_config["archive_root"],
+            )["records"]
+        except (ValueError, OSError, TypeError, RuntimeError) as exc:
+            raise HTTPException(status_code=503, detail={
+                "error_code": "financial_release_unavailable",
+                "message": f"approved financial source release rejected: {type(exc).__name__}",
+            }) from exc
     return IntegrityWorkbench(repository, jsd_bridge=jsd_bridge, conference_repository=conference_repository,
                               claim_service=claim_service,
                               literature_database=ResearchConfig.from_env().literature_database,
-                              nfm_records=nfm_records)
+                              nfm_records=nfm_records,
+                              financial_source_records=financial_records)
 
 
 def _call(fn, *args):
