@@ -397,10 +397,182 @@
     target.appendChild(el("p", {className: "muted", text: "方法核准狀態：DRAFT_PENDING_METHOD_OWNER_REVIEW。F1／F2 為財務一致性篩檢，與 Beneish／Dechow 共用底層變數，不可視為獨立佐證。"}));
   }
 
+
+  // Historical 1785 research is not a CURRENT_REVIEW assessment.  Reuse the existing
+  // verified retrospective endpoint without injecting its scores into F1/F3/B2B.
+  var HISTORICAL_TICKER = "1785";
+  var historicalPolicy = "latest_available";
+
+  function renderHistoricalCells(data, target, showDetail) {
+    var years = [], first = data.fiscal_years.start, last = data.fiscal_years.end;
+    for (var y = first; y <= last; y++) { years.push(y); }
+    var head = el("tr", null, el("th", {text: "文獻模型"}));
+    years.forEach(function (year) { head.appendChild(el("th", {text: String(year)})); });
+    var body = el("tbody");
+    Object.keys(data.models).forEach(function (model) {
+      var tr = el("tr", null, el("th", {text: data.models[model]}));
+      years.forEach(function (year) {
+        var cell = data.cells.find(function (item) { return item.model_id === model && item.fiscal_year === year; });
+        if (!cell) { tr.appendChild(el("td", {text: "—"})); return; }
+        var display = cell.status === "computed" ? String(cell.score) : "不可計算";
+        var td = el("td", {className: "num"});
+        if (showDetail) {
+          var button = el("button", {type: "button", className: "fi-historical-cell", text: display,
+            "aria-label": data.models[model] + " FY" + year + " " + display});
+          button.addEventListener("click", function () { renderHistoricalDetail(data, cell); });
+          td.appendChild(button);
+        } else {
+          td.textContent = display;
+        }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    target.appendChild(el("div", {className: "table-wrap"}, el("table", null, el("thead", null, head), body)));
+    target.appendChild(el("p", {className: "muted",
+      text: "數字為文獻模型原始分數，並非舞弊機率；不可計算不代表低風險。"}));
+  }
+
+  function renderHistoricalDetail(data, cell) {
+    var target = document.getElementById("histCellDetail");
+    if (!target) { return; }
+    clear(target);
+    var reasons = cell.missing_reasons || [];
+    target.appendChild(el("h3", {text: data.models[cell.model_id] + " FY" + cell.fiscal_year +
+      "：" + (cell.status === "computed" ? "已計算（" + cell.score + "）" : "不可計算")}));
+    if (reasons.length) {
+      target.appendChild(el("p", {className: "state error", text: reasons.join("、")}));
+    }
+    var body = el("tbody");
+    (cell.components || []).forEach(function (component) {
+      var refs = el("ul", {className: "plain"});
+      (component.observations || []).forEach(function (o) {
+        refs.appendChild(el("li", null, (o.metric || "科目") + "（" + (o.relative_period || "—") + "） " +
+          (o.published_value || "—") + " " + (o.published_unit || ""), " ", safeLink(o.source_url, "官方來源")));
+      });
+      body.appendChild(el("tr", null, el("td", {text: component.variable}),
+        el("td", {text: component.status}),
+        el("td", {text: component.value == null ? "—" : String(component.value)}),
+        el("td", {text: (component.reasons || []).join("、") || "—"}),
+        el("td", null, refs)));
+    });
+    target.appendChild(el("div", {className: "table-wrap"},
+      el("table", null, el("thead", null, el("tr", null,
+        el("th", {text: "元件"}), el("th", {text: "狀態"}), el("th", {text: "數值"}),
+        el("th", {text: "說明"}), el("th", {text: "來源"}))), body)));
+  }
+
+  function renderHistoricalCase(data) {
+    var summary = document.getElementById("summaryBody"),
+      overview = document.getElementById("overviewBody"),
+      models = document.getElementById("modelsBody");
+    clear(summary); clear(overview); clear(models);
+    var counts = data.counts[data.version_policy];
+    var baseline = data.baseline_check;
+    summary.appendChild(el("div", {className: "disclaimer", text:
+      "RETROSPECTIVE_CASE｜1785 光洋科：事後研究，包含可能於事件後公開的申報資料。" +
+      "與 CURRENT_REVIEW 完全分開，不代表事前成功預警或現行風險評等。"}));
+    summary.appendChild(el("div", {className: "summary"},
+      el("div", {className: "stat"}, el("span", {text: "研究案例"}), el("strong", {text: "1785 光洋科"}),
+        el("small", {text: "歷史財報／申報版本比較"})),
+      el("div", {className: "stat"}, el("span", {text: "目前申報版本"}),
+        el("strong", {text: data.version_policy === "latest_available" ? "含後續重編" : "原始申報"}),
+        el("small", {text: data.version_policy})),
+      el("div", {className: "stat"}, el("span", {text: "文獻模型年度結果"}),
+        el("strong", {text: counts.computed + "／" + counts.cells + " 格已計算"}),
+        el("small", {text: counts.not_computable + " 格不可計算"})),
+      el("div", {className: "stat"}, el("span", {text: "兩版本合計驗收"}),
+        el("strong", {text: baseline.matches ? "60／60 一致" : "需要重新核對"}),
+        el("small", {text: "26 已計算、34 不可計算；非預測準確率"}))));
+    overview.appendChild(el("h2", {text: "1785 光洋科｜歷史財報研究結果"}));
+    overview.appendChild(el("p", {className: "muted",
+      text: "已收錄財報重編與歷史模型研究，分析期間 FY" + data.fiscal_years.start +
+        "–FY" + data.fiscal_years.end + "；研究狀態：DRAFT_PENDING_METHOD_OWNER_REVIEW。"}));
+    var policyLabel = el("label", null, "申報版本：");
+    var policy = el("select", {"aria-label": "歷史研究申報版本"});
+    policy.appendChild(el("option", {value: "latest_available", text: "latest_available（含後續重編）"}));
+    policy.appendChild(el("option", {value: "original_only", text: "original_only（原始申報）"}));
+    policy.value = data.version_policy;
+    policy.addEventListener("change", function () { historicalPolicy = policy.value; runHistorical(); });
+    policyLabel.appendChild(policy);
+    overview.appendChild(el("div", {className: "controls"}, policyLabel));
+    overview.appendChild(el("h3", {text: "Beneish／Dechow 歷史年度模型"}));
+    renderHistoricalCells(data, overview, false);
+    overview.appendChild(el("p", {className: "state",
+      text: data.strict_pre_event.conclusion}));
+    models.appendChild(el("h2", {text: "模型計算結果與逐格來源證據"}));
+    models.appendChild(el("p", {className: "muted",
+      text: "點選年度分數可查看變數、缺漏原因及官方來源；不會存入正式企業健檢。"}));
+    renderHistoricalCells(data, models, true);
+    models.appendChild(el("div", {id: "histCellDetail", className: "state",
+      text: "點選任一年度與模型查看計算組成及來源。"}));
+    var cross = document.getElementById("crossBody"), b2b = document.getElementById("b2bBody");
+    clear(cross); clear(b2b);
+    cross.appendChild(el("h2", {text: "光洋科歷史申報版本與財報重編"}));
+    cross.appendChild(el("p", {className: "muted",
+      text: "此案例採 RETROSPECTIVE_CASE；不得把其他公司的現行 F3／JSD 主張查核結果套用到光洋科。"}));
+    cross.appendChild(el("p", null, el("a", {href: "historical-research.html#bridge",
+      text: "查看光洋科歷史財務重編比較與來源"})));
+    b2b.appendChild(el("h2", {text: "歷史案例不提供 B2B 合作風險評級"}));
+    b2b.appendChild(el("p", {className: "state",
+      text: "光洋科事後研究分數不能替代任何公司的 CURRENT_REVIEW／B2B 查核；本模式不產生合作方評級。"}));
+  }
+
+  function runHistorical() {
+    var button = document.getElementById("runBtn");
+    button.disabled = true;
+    state.result = null;
+    selectTab("overview");
+    ["summaryBody", "overviewBody", "modelsBody", "crossBody", "b2bBody"].forEach(function (id) {
+      setState(document.getElementById(id), "光洋科歷史研究載入中…");
+    });
+    announce("光洋科歷史研究載入中");
+    request("GET", "/api/integrity/research-cases/1785/summary?version_policy=" + encodeURIComponent(historicalPolicy))
+      .then(function (data) {
+        if (data.status !== "available") {
+          var unavailable = "光洋科研究資料不可用：" + (data.reason || "研究資料庫尚未設定") +
+            "。請確認兩份唯讀歷史 SQLite 資料庫已連接。";
+          ["summaryBody", "overviewBody", "modelsBody", "crossBody", "b2bBody"].forEach(function (id) {
+            setState(document.getElementById(id), unavailable, true);
+          });
+          announce(unavailable);
+          return;
+        }
+        renderHistoricalCase(data);
+        announce("光洋科歷史案例載入完成");
+      }).catch(function (error) {
+        ["summaryBody", "overviewBody", "modelsBody", "crossBody", "b2bBody"].forEach(function (id) {
+          setState(document.getElementById(id), errorText(error), true);
+        });
+        announce(errorText(error));
+      }).then(function () { button.disabled = false; });
+  }
+
+  function updateSelectionMode() {
+    var historical = document.getElementById("tickerSelect").value === HISTORICAL_TICKER;
+    document.getElementById("runBtn").textContent = historical ?
+      "查看光洋科歷史分析（不儲存）" : "產生健檢（預覽，不儲存）";
+    document.getElementById("pickNote").textContent = historical ?
+      "光洋科為已登錄的事後歷史研究案例；會顯示 Beneish／Dechow 年度模型，不是 CURRENT_REVIEW 或舞弊風險判定。" :
+      "只列出已登錄的公司；尚無已歸檔財報快照的公司仍可查詢，但會顯示資料不足。";
+    var mode = document.getElementById("reviewModeBadge");
+    var hint = document.getElementById("reviewModeHint");
+    if (mode) { mode.textContent = historical ? "RETROSPECTIVE_CASE" : "CURRENT_REVIEW"; }
+    if (hint) { hint.textContent = historical ?
+      "（事後歷史研究，非事件前預警）" : "（目前已歸檔資訊，不是歷史時點重建）"; }
+  }
+
+  function addHistoricalOption(select) {
+    var group = el("optgroup", {label: "歷史研究案例（不屬於目前企業健檢）"});
+    group.appendChild(el("option", {value: HISTORICAL_TICKER, text: "1785 光洋科｜歷史財報研究（事後）"}));
+    select.appendChild(group);
+  }
+
   // ------------------------------------------------------------------------------------------ flow
   function run() {
     var ticker = document.getElementById("tickerSelect").value;
     if (!/^\d{4,6}$/.test(ticker)) { return; }
+    if (ticker === HISTORICAL_TICKER) { runHistorical(); return; }
     var button = document.getElementById("runBtn");
     button.disabled = true;
     ["overviewBody", "modelsBody", "crossBody", "b2bBody", "summaryBody"].forEach(function (id) { setState(document.getElementById(id), "載入中…"); });
@@ -422,16 +594,28 @@
       while (select.firstChild) { select.removeChild(select.firstChild); }
       select.appendChild(el("option", {value: "", text: "請選擇"}));
       data.companies.forEach(function (c) {
+        if (c.ticker === HISTORICAL_TICKER) { return; } // historical case has a different review_mode
         select.appendChild(el("option", {value: c.ticker, text: c.ticker + " " + c.name + (c.persisted_snapshot ? "" : "（尚無已歸檔財報：會顯示資料不足）")}));
       });
+      addHistoricalOption(select);
       var wanted = new URLSearchParams(window.location.search).get("ticker");
       if (wanted && /^\d{4,6}$/.test(wanted)) { select.value = wanted; }
       document.getElementById("runBtn").disabled = !select.value;
+      updateSelectionMode();
       if (select.value) { run(); }
     }).catch(function (error) {
       while (select.firstChild) { select.removeChild(select.firstChild); }
-      select.appendChild(el("option", {value: "", text: "無法載入公司清單"}));
-      setState(document.getElementById("summaryBody"), errorText(error), true);
+      select.appendChild(el("option", {value: "", text: "現行健檢公司清單暫時無法載入"}));
+      addHistoricalOption(select);
+      var wanted = new URLSearchParams(window.location.search).get("ticker");
+      if (wanted === HISTORICAL_TICKER) {
+        select.value = HISTORICAL_TICKER;
+        document.getElementById("runBtn").disabled = false;
+        updateSelectionMode();
+        runHistorical();
+      } else {
+        setState(document.getElementById("summaryBody"), errorText(error), true);
+      }
     });
   }
 
@@ -441,6 +625,7 @@
     });
     document.getElementById("tickerSelect").addEventListener("change", function (event) {
       document.getElementById("runBtn").disabled = !event.target.value;
+      updateSelectionMode();
     });
     document.getElementById("runBtn").addEventListener("click", run);
     var params = new URLSearchParams(window.location.search);
