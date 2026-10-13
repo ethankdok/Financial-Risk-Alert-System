@@ -1,0 +1,119 @@
+/* Shared user-facing navigation for standalone FinTrust pages.
+ * Scoped to .site-header so the existing Workbench and research layouts stay intact.
+ * Mirrors the main site's style.css + ui-humanize.css navbar.
+ */
+.site-header{
+  --fintrust-nav-navy:#203447;
+  --fintrust-nav-line:#d7dde2;
+  position:sticky;
+  top:0;
+  z-index:30;
+  padding:0;
+  margin:0;
+  background:#fff;
+  border-bottom:1px solid var(--fintrust-nav-line);
+  color:#1f2a33;
+  font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Segoe UI",sans-serif;
+  line-height:1.6;
+}
+.site-header,.site-header *{box-sizing:border-box}
+.site-header .nav-wrap{
+  max-width:1180px;
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 24px;
+  gap:20px;
+}
+.site-header .brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+  text-decoration:none;
+  color:inherit;
+}
+.site-header .brand-mark{
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  border-radius:6px;
+  background:var(--fintrust-nav-navy);
+  color:#fff;
+  display:grid;
+  place-items:center;
+  font-weight:800;
+  box-shadow:none;
+}
+.site-header .brand-text strong{
+  display:block;
+  font-size:16px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:440px;
+}
+.site-header .brand-text span{
+  display:block;
+  font-size:12px;
+  color:#7a838b;
+}
+.site-header .nav-links{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.site-header .nav-links a{
+  padding:9px 12px;
+  border-radius:5px;
+  text-decoration:none;
+  font-size:14px;
+  color:#4d5963;
+  font-weight:400;
+}
+.site-header .nav-links a:hover,
+.site-header .nav-links a.active{
+  background:#f0f2f3;
+  color:var(--fintrust-nav-navy);
+  font-weight:700;
+}
+.site-header .nav-links .login-link{
+  border:1px solid var(--fintrust-nav-line);
+  background:#fff;
+}
+.site-header .nav-links .register-link{
+  background:var(--fintrust-nav-navy);
+  color:#fff;
+}
+.site-header .nav-links a:focus-visible{
+  outline:3px solid #c58b00;
+  outline-offset:2px;
+}
+.fintrust-related-links{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px 15px;
+  margin:0 0 12px;
+  font-size:13px;
+  color:#596b7b;
+}
+.fintrust-related-links a{
+  color:#1847a8;
+  font-weight:700;
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+@media(max-width:980px){
+  .site-header .nav-links a:not(.login-link):not(.register-link){display:none}
+}
+@media(max-width:640px){
+  .site-header .nav-wrap{padding-left:16px;padding-right:16px;gap:8px}
+  .site-header .brand-text strong{max-width:220px}
+  .site-header .brand-text span{display:none}
+  .site-header .nav-links{gap:4px}
+  .site-header .nav-links a{padding:7px 8px;font-size:13px}
+}
