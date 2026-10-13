@@ -73,7 +73,8 @@ class IntegrityHostTests(unittest.TestCase):
     def test_page_calls_only_same_origin_flask_routes(self) -> None:
         script = (ROOT / "financial-integrity.js").read_text(encoding="utf-8")
         urls = set(re.findall(r'"(/api/[^"]+)"', script))
-        self.assertEqual(urls, {"/api/integrity/companies", "/api/integrity/assessments/preview"})
+        self.assertEqual(urls, {"/api/integrity/companies", "/api/integrity/assessments/preview",
+                                "/api/integrity/research-cases/1785/summary?version_policy="})
         self.assertNotRegex(script, r"https?://(?!doi\.org)[a-z]")
         self.assertNotIn("persist: true", script)
 
