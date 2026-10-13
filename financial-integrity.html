@@ -63,6 +63,9 @@
     .state.error{color:#9b1c1c;border-color:#f2b8b8;background:#fff7f7}
     ul.plain{margin:6px 0;padding-left:20px;line-height:1.7}
     .method-drawer{margin-top:8px}
+    .fi-historical-cell{font:inherit;color:#1847a8;border:1px solid #ccd8e8;background:#f3f7ff;border-radius:4px;padding:5px 7px;min-width:66px;cursor:pointer}
+    .fi-historical-cell:hover,.fi-historical-cell:focus-visible{background:#e8eefc;outline:2px solid #f0a500;outline-offset:1px}
+    .fi-historical-cell:active{background:#dce8fa}
     .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
     @media (max-width:900px){.summary{grid-template-columns:1fr 1fr}}
     @media (max-width:620px){.summary{grid-template-columns:1fr}}
@@ -75,7 +78,7 @@
     <div class="eyebrow">Financial Integrity Workbench · Phase 1</div>
     <h1>企業財務可信度健檢</h1>
     <p class="lead">輸入已收錄上市公司，彙整目前已歸檔的官方財務資料、可解釋的財務一致性篩檢、文獻模型可計算性、官方文件文字差異與發行人主張比對，並產生合作前應確認的查核清單。
-      分析範圍：<span class="badge ok">CURRENT_REVIEW</span>（目前已歸檔資訊，不是歷史時點重建）。</p>
+      分析範圍：<span id="reviewModeBadge" class="badge ok">CURRENT_REVIEW</span><span id="reviewModeHint">（目前已歸檔資訊，不是歷史時點重建）</span>。</p>
     <div class="disclaimer" role="note">本頁是查核輔助（screening / due diligence support），不是舞弊認定，也不輸出舞弊機率或風險等級。所有數字為發行人自行申報；「不可計算」「資料不足」「未觸發」都不代表低風險。研究方法仍待方法負責人審核（DRAFT_PENDING_METHOD_OWNER_REVIEW）。</div>
 
     <section class="panel" aria-labelledby="pickTitle">
