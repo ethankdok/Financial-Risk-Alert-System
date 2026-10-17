@@ -96,6 +96,32 @@ class TestOfficialBatch(unittest.TestCase):
         self.assertEqual(rows[0]['quality_notes'], '["review_alias"]')
         self.assertEqual(one['normal_labels_created'], 0)
 
+    def test_existing_raw_reconstructs_legacy_field_notes_without_refetch(self):
+        f = FakeFetcher()
+        def old_processor(content, ticker, year):
+            return {
+                'status': 'validated', 'statement_scope': 'consolidated',
+                'filing_version_type': 'unknown_revision',
+                'validation_status': 'validated_with_warnings',
+                'accounting_framework': 'TIFRS',
+                'facts': [{'metric_code': 'revenue', 'value': '100',
+                           'unit': 'TWD', 'quality_status': 'warning',
+                           'taxonomy_concept': 'tifrs:Revenue'}],
+            }
+        def updated_processor(content, ticker, year):
+            result = old_processor(content, ticker, year)
+            result['facts'][0]['quality_notes'] = ['alternate_concept_disagrees']
+            return result
+        asyncio.run(acquire(self.plan(), self.root / 'legacy', execute=True,
+                            fetcher=f, processor=old_processor))
+        updated = asyncio.run(acquire(self.plan(), self.root / 'legacy', execute=True,
+                              fetcher=f, processor=updated_processor))
+        self.assertEqual(updated['network_requests'], 0)
+        self.assertEqual(len(f.calls), 1)
+        with (self.root / 'legacy' / 'candidate_facts.csv').open() as fp:
+            rows = list(csv.DictReader(fp))
+        self.assertEqual(rows[0]['quality_notes'], '["alternate_concept_disagrees"]')
+
     def test_failed_download_does_not_fabricate_facts(self):
         f = FakeFetcher('source_unavailable')
         report = asyncio.run(acquire(self.plan(), self.root / 'fail', execute=True, fetcher=f))
