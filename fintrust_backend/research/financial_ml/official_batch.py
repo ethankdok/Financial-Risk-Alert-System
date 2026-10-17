@@ -16,7 +16,7 @@ from pathlib import Path
 MAX_REQUESTS = 12
 FIELDS = ["ticker", "fiscal_year", "period", "metric_code", "value", "unit",
           "statement_scope", "filing_version_id", "filing_version_type",
-          "quality_status", "validation_status", "point_in_time_eligible",
+          "quality_status", "quality_notes", "validation_status", "point_in_time_eligible",
           "effective_available_at", "source_kind", "accounting_framework",
           "source_url", "retrieved_at", "content_hash", "taxonomy_concept"]
 
@@ -105,6 +105,7 @@ def parse_candidate(content, ticker, year):
     result["facts"] = [{
         "metric_code": f.metric_code, "value": decimal_text(f.value),
         "unit": f.unit, "quality_status": f.quality_status,
+        "quality_notes": list(f.quality_notes),
         "taxonomy_concept": f.taxonomy_concept} for f in normalized.facts]
     return result
 
@@ -125,6 +126,7 @@ def export_facts(outcomes, target):
                     "filing_version_id": item["filing_version_id"],
                     "filing_version_type": item["filing_version_type"],
                     "quality_status": fact["quality_status"],
+                    "quality_notes": json.dumps(fact.get("quality_notes", []), ensure_ascii=False),
                     "validation_status": item["validation_status"],
                     "point_in_time_eligible": "false", "effective_available_at": "",
                     "source_kind": item["source_kind"],
