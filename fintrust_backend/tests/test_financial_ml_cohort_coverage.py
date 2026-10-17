@@ -42,6 +42,12 @@ class CohortCoverageTests(unittest.TestCase):
         self.assertEqual(next(r for r in rows if r['ticker'] == '2454' and r['fiscal_year'] == 2013)['annual_fact_rows'], 0)
         self.assertNotIn('9999', str(rows))
 
+    def test_market_filter_can_include_tpex_with_explicit_scope(self):
+        rows, report = assess(self.path, self.path, start_year=2013, end_year=2013,
+                              markets=("TWSE", "TPEX"), industry_codes=("24",))
+        self.assertEqual(report["candidate_companies"], 3)
+        self.assertEqual({r["ticker"] for r in rows}, {"2330", "2454", "3333"})
+
     def test_no_master_table_does_not_substitute_seed_companies(self):
         with sqlite3.connect(self.path) as db:
             db.execute('DROP TABLE companies')
