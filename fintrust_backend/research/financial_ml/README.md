@@ -46,3 +46,67 @@ Baseline dependencies: `scikit-learn` (plus its standard numerical dependencies)
 - For original source facts, the historical export must be fully populated; this pilot does not download documents or authenticate external events. Training results on any retrospective/revised sources are not evidence of historical prediction.
 - The baseline is deliberately only a pipeline smoke test. It does not yet implement grouped time-series validation, confidence intervals, feature selection, PR-AUC-first hyperparameter search, neural networks, LSTM, Transformer, or paper-specific variable enrichment.
 - **Do not commit real research datasets, labels containing sensitive evidence, downloaded financial documents, or trained checkpoints without an explicit data publication review.** Put outputs under ignored local `data/` directories.
+
+## Phase 2 — Normal-only anomaly research (2026-10-17)
+
+**Research hypothesis:** establish a robust normal-company financial-behavior reference distribution from audited/curated company-year observations; detect outliers including a completely held-out case (`1785`). The core training design is **one-class/unsupervised**, not supervised fraud-vs-nonfraud classification. All companies' XBRL may enter the **candidate pool**, but only explicitly reviewed reference-normal company-years enter normal model fitting. This review is *not* an assertion that no undetected irregularity ever occurred.
+
+### What has been implemented
+
+* Offline CLI `research.financial_ml.source_inventory` checks aggregate table counts, firm counts and year ranges in *existing* local research/production SQLite files using `mode=ro`; does not query Cloud SQL or Firestore or export financial values. Missing local files are not proof that cloud data do not exist.
+* Offline CLI `research.financial_ml.anomaly` provides `audit`, `scaffold-ledger`, `train`.
+* `scaffold-ledger` emits **`unreviewed`** for all rows; absence of official restatement is never automatically mapped to `reviewed_normal`.
+* Reviewed-normal evidence CSV is explicitly provided by the research team after checking the source and observation horizon; fields: `ticker,fiscal_year,review_status,review_source,reviewed_at,followup_through`. Accepted `review_status` values: `reviewed_normal`, `excluded`, `unreviewed`, `suspected`. Training uses *only* `reviewed_normal`, with `followup_through >= Dec 31 of fiscal_year + 2` (configurable). `reviewed_by` prevents use of reviews unknown by an intended historical reconstruction date. The code checks metadata but cannot certify the truth of external evidence.
+* Two independent baselines: scikit-learn `IsolationForest` (tree-based) and `MLPRegressor` used as a reconstruction-error neural autoencoder proxy; **neither is a PyTorch Transformer**. Fits median imputation, robust normalization and models on *train normal only*, with validation normal data exclusively setting the threshold (default 95th percentile). Does not use labels or cases in training, preprocessing or threshold calibration.
+* Strict chronological train year / normal validation year / future test years, and optional `company_disjoint` hash-group split for firm-level robustness. Independent reserved-case set (`1785`) never fitted or threshold-tuned. Reporting includes cutoff parameters, sample/group counts, selected feature list, case/test score CSVs, false-positive reference threshold and retrospective warnings.
+* Accuracy, positive-class F1, PR-AUC are reported only for test data carrying **independent** labels for both classes; no outcome label is invented to make the score look good. F1 targets ≥ 0.95 are aspirational and cannot be evaluated until external labels are verified.
+* All data and research outputs remain under ignored `fintrust_backend/data/` and are never automatically pushed to GitHub. Production FastAPI / Flask / Firestore / Cloud SQL / website unchanged.
+
+### Run now (from `fintrust_backend/`; no change of Git branch is needed for read-only inspection)
+
+```powershell
+# Requires only Python standard library. Safe on current Python 3.14 / ml-env.
+python -m research.financial_ml.source_inventory --output data/financial_ml/local_source_inventory.json
+```
+
+If a multi-company `historical_audit_case export` CSV is available, generate a feature pilot first:
+
+```powershell
+python -m research.financial_ml.pilot --csv data/1785_research_export.csv --mode retrospective --output data/financial_ml/pilot
+python -m research.financial_ml.anomaly audit --dataset data/financial_ml/pilot/financial_ml_pilot.csv --output data/financial_ml/audit
+python -m research.financial_ml.anomaly scaffold-ledger --dataset data/financial_ml/pilot/financial_ml_pilot.csv --output data/financial_ml/normal_review_candidates.csv
+```
+
+**Do not mark rows normal just to make training run.** `normal_review_candidates.csv` is a review template, not model training labels. Once a multi-firm feature dataset and defensible `reviewed_normal` ledger exist, training is:
+
+```powershell
+# Example year windows; alter to match the *actual* multi-company year coverage.
+python -m research.financial_ml.anomaly train `
+ --dataset data/financial_ml/pilot/financial_ml_pilot.csv `
+ --normal-ledger data/financial_ml/reviewed_normal_ledger.csv `
+ --train-through 2013 --val-from 2014 --val-through 2014 --test-from 2015 `
+ --model isolation_forest --split-policy temporal `
+ --reserve-ticker 1785 --output data/financial_ml/experiments/iforest
+
+# Neural reconstruction baseline: add --model mlp_autoencoder and change --output.
+# Separately run --split-policy company_disjoint for firm-disjoint robustness.
+# For strict as-of evaluation, use `pilot --mode strict --cutoffs ...` and supply
+# `anomaly train --reviewed-by <historical ISO timestamp>` with legally reviewable
+# normal evidence available by that date; otherwise report is retrospective.
+```
+
+Failure to obtain minimum normal training/validation coverage intentionally raises `NORMAL_REFERENCE_INSUFFICIENT`; current `1785`-only database must fail this gate. The first real cohort needs many independent companies and years. `train_through` and `test_from` should be selected *before* test labels or case outcomes are inspected.
+
+### Optional external pretraining — evidence-led plan, **not implemented/trained**
+
+**Best official candidate:** U.S. SEC [Financial Statement Data Sets](https://www.sec.gov/dera/data/financial-statement-data-sets.html) publish as-filed XBRL financial statement numbers from 2009 onward with SIC sector identifiers. They are not ready-made fraud/normal labels and they follow US GAAP, unlike Taiwan TIFRS. Never concatenate raw USD financial values and TWD figures; the adapted features must be currency-invariant ratios with identical accounting definitions.
+
+Before claiming transfer learning: (1) download bounded SEC periods with saved source metadata, and inspect terms/availability; (2) harmonize to documented shared ratios with per-field mapping and fiscal-period semantics; (3) split U.S. **and** Taiwan entities/years before any fit; (4) pretrain a sufficiently regularized neural autoencoder/sequence encoder only on a defensible reference cohort; (5) fine-tune using Taiwan normal training data; (6) compare **Taiwan-only**, **US-only zero-shot** and **US-pretrained + Taiwan fine-tuned** using the same untouched Taiwan validation and test sets, and a separately held-out 1785; (7) ablate each feature group and report domain shift/negative transfer. Isolation Forest is **not** a neural model to fine-tune across domains. No public dataset of normal-only, Taiwan-specific, period-correct financial reports with verified controls has been validated in this stage.
+
+### Implementation limits and review gates
+
+1. Existing `pilot.py` uses **15 exploratory/descriptive** tabular features, NOT the eight authoritative Beneish plus seven Dechow literature variables. The next integration must call the existing source-locked literature engines, preserve `not_computable`, and avoid aliases/proxies masquerading as paper variables.
+2. Current local audited historical SQLite reported by user has only 1 company (1785), FY2011–2025; this is *not* enough to train an industry normal distribution. Cloud/other local sources still need to be inventoried.
+3. Annual time series of only three years per company do not justify a large sequence Transformer. A future GRU/TCN/Transformer experiment requires sufficient companies, sequence length and leakage-safe holdouts; compare with nonsequence tree and reconstruction baselines.
+4. Missing or restated original 1785 statements preclude claiming pre-disclosure prediction. Case scores on post-restatement values have a retrospective-forensics label only.
+5. Threshold estimated from a normal validation quantile targets the *empirical* normal false-positive reference rate; it does not guarantee precision, recall, or 95% accuracy. External confirmed anomalies belong to evaluation, never the normal-model fit.
