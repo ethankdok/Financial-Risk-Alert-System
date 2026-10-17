@@ -36,7 +36,8 @@ def _columns(db: sqlite3.Connection, table: str) -> set[str]:
     return {r[1] for r in db.execute(f'PRAGMA table_info("{table}")')}
 
 
-def _universe(db: sqlite3.Connection) -> tuple[list[dict], int, str]:
+def _universe(db: sqlite3.Connection, *, markets: tuple[str, ...],
+              industry_codes: tuple[str, ...]) -> tuple[list[dict], int, str]:
     cols = _columns(db, "companies")
     required = {"ticker", "market", "industry_code", "listing_status"}
     if not required.issubset(cols):
@@ -48,7 +49,7 @@ def _universe(db: sqlite3.Connection) -> tuple[list[dict], int, str]:
     records = []
     for r in db.execute(sql):
         d = dict(r)
-        if (d["market"] == "TWSE" and str(d["industry_code"]) == "24"
+        if (d["market"] in markets and str(d["industry_code"]) in industry_codes
                 and d["listing_status"] == "listed" and str(d["ticker"]).strip()):
             records.append(d)
     unique = {str(r["ticker"]).strip(): r for r in records}
@@ -95,10 +96,15 @@ def _fact_counts(db: sqlite3.Connection) -> tuple[dict[tuple[str, int], int], st
 
 
 def assess(master_db: str | Path, facts_db: str | Path, *, start_year: int = 2011,
-           end_year: int = 2015, reserve_ticker: str = "1785") -> tuple[list[dict], dict]:
+           end_year: int = 2015, reserve_ticker: str = "1785",
+           markets: tuple[str, ...] = ("TWSE",),
+           industry_codes: tuple[str, ...] = ("24",)) -> tuple[list[dict], dict]:
     if start_year > end_year or not 1990 <= start_year <= 2100 or not 1990 <= end_year <= 2100:
         raise ValueError("Invalid fiscal year range")
-    report = {"scope": "local_TWSE_industry_24_currently_listed_candidate_universe",
+    if not markets or not industry_codes:
+        raise ValueError("At least one market and one industry code are required")
+    report = {"scope": "local_currently_listed_candidate_universe",
+              "markets": list(markets), "industry_codes": list(industry_codes),
               "start_year": start_year, "end_year": end_year,
               "reserved_case": reserve_ticker, "source_master": str(master_db),
               "source_facts": str(facts_db), "read_only": True,
@@ -114,7 +120,8 @@ def assess(master_db: str | Path, facts_db: str | Path, *, start_year: int = 201
                       candidate_companies=0, company_years=0)
         return [], report
     try:
-        universe, master_count, source = _universe(master)
+        universe, master_count, source = _universe(master, markets=markets,
+                                                   industry_codes=industry_codes)
         report["company_master_rows"] = master_count
         report["master_status"] = source
     finally:
@@ -193,10 +200,14 @@ def main(argv=None):
     p.add_argument("--start-year", type=int, default=2011)
     p.add_argument("--end-year", type=int, default=2015)
     p.add_argument("--reserve-ticker", default="1785")
+    p.add_argument("--market", action="append", help="TWSE or TPEX; repeat to include both (default TWSE)")
+    p.add_argument("--industry-code", action="append", help="Repeat for each official industry code (default 24)")
     p.add_argument("--output-dir", default="data/financial_ml/industry_coverage")
     a = p.parse_args(argv)
     plan, summary = assess(a.master_db, a.facts_db, start_year=a.start_year,
-                           end_year=a.end_year, reserve_ticker=a.reserve_ticker)
+                           end_year=a.end_year, reserve_ticker=a.reserve_ticker,
+                           markets=tuple(a.market or ("TWSE",)),
+                           industry_codes=tuple(a.industry_code or ("24",)))
     paths = save(plan, summary, a.output_dir)
     print(json.dumps({"outputs": [str(x) for x in paths], **summary}, ensure_ascii=False, indent=2))
     return 0 if summary["status"] == "local_gap_plan_created" else 2
