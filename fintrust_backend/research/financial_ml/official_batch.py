@@ -168,6 +168,15 @@ async def acquire(plan, output_dir, execute=False, fetcher=None, processor=None)
             try:
                 raw = archive.read(previous["archive_path"])
                 if hashlib.sha256(raw).hexdigest() == previous.get("content_hash"):
+                    # Old manifests predate per-fact quality_notes; rebuild them
+                    # from immutable local raw bytes without an HTTP request.
+                    if any("quality_notes" not in f for f in previous.get("facts", [])):
+                        refreshed = processor(raw, ticker, year)
+                        if refreshed.get("status") == "validated":
+                            previous.update(refreshed)
+                            outcomes[key] = previous
+                            atomic_json(manifest, {"outcomes": outcomes,
+                                "note": "No ex-ante/PIT or normal labels."})
                     continue
             except (OSError, ValueError, RuntimeError):
                 pass
