@@ -1,0 +1,4 @@
+# Research-only: install only when actual normal cohorts are ready for training.
+numpy>=1.26
+scikit-learn>=1.4
+# torch/transformers/catboost are deliberately NOT required for the offline audit.
