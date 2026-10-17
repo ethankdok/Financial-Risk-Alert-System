@@ -80,6 +80,7 @@ class TestOfficialBatch(unittest.TestCase):
                 'accounting_framework': 'TIFRS',
                 'facts': [{'metric_code': 'revenue', 'value': '100',
                            'unit': 'TWD', 'quality_status': 'accepted',
+                           'quality_notes': ['review_alias'],
                            'taxonomy_concept': 'tifrs:Revenue'}],
             }
         one = asyncio.run(acquire(self.plan(), self.root / 'run', execute=True, fetcher=f, processor=process))
@@ -92,6 +93,7 @@ class TestOfficialBatch(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]['point_in_time_eligible'], 'false')
         self.assertEqual(rows[0]['filing_version_type'], 'unknown_revision')
+        self.assertEqual(rows[0]['quality_notes'], '["review_alias"]')
         self.assertEqual(one['normal_labels_created'], 0)
 
     def test_failed_download_does_not_fabricate_facts(self):
