@@ -66,6 +66,10 @@ class TaiwanUnlabeledPilotTests(unittest.TestCase):
             w.writerows(self.rows)
         self.report.write_text(json.dumps(self.info),encoding="utf-8")
 
+    def test_experimental_source_requires_deliberate_opt_in(self):
+        with self.assertRaisesRegex(ValueError,"experimental_unverified"):
+            run(self.register,self.report,self.root/"out")
+
     def test_real_company_and_time_split_does_not_leak(self):
         samples,stats=read_audited_data(self.register,self.report)
         self.assertIsNotNone(samples)
@@ -82,7 +86,7 @@ class TaiwanUnlabeledPilotTests(unittest.TestCase):
         self.assertTrue(all(s[1]>=2023 for s in samples["test"]))
 
     def test_four_distinct_unsupervised_estimators_fit_without_labels(self):
-        result=run(self.register,self.report,self.root/"out")
+        result=run(self.register,self.report,self.root/"out",experimental_allow_unverified_data=True)
         self.assertEqual(result["status"],
                          "PROXY_MODEL_FAMILIES_FIT_NOT_FINANCIAL_MISSTATEMENT_DETECTION")
         self.assertEqual(result["unsupervised_fit_only_technical_models_trained"],4)
@@ -155,7 +159,7 @@ class TaiwanUnlabeledPilotTests(unittest.TestCase):
     def test_strict_split_insufficient_samples_gracefully_stops_no_fit(self):
         self.rows=self.rows[:5]
         self.save()
-        res=run(self.register,self.report,self.root/"out")
+        res=run(self.register,self.report,self.root/"out",experimental_allow_unverified_data=True)
         self.assertEqual(res["status"],"UNLABELED_PROXY_BLOCKED_INSUFFICIENT_STRICT_SPLIT_COVERAGE")
         self.assertFalse((self.root/"out"/"unknown_label_holdout_proxy_scores.csv").exists())
 
