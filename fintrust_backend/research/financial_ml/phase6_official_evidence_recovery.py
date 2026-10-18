@@ -109,13 +109,20 @@ def http_get(url, *, timeout=18):
 
 
 def visible_document(raw):
-    # The bytes and digest remain authoritative; decoded text is review help only.
-    html=raw.decode("utf-8",errors="replace")
-    parser=PageText()
-    parser.feed(html)
-    text=" ".join(parser.fragments) if parser.fragments else html
-    return unicodedata.normalize("NFKC",re.sub(r"\s+"," ",text)).strip()
-
+    """Decode official pages with UTF-8 or traditional Big5/CP950; preserve bytes."""
+    charset_match = re.search(rb"charset\s*=\s*['\"]?([A-Za-z0-9_-]+)",raw[:8192],re.I)
+    declared = charset_match.group(1).decode("ascii") if charset_match else None
+    candidates = ([declared] if declared else [])+["utf-8-sig","utf-8","cp950","big5"]
+    for encoding in candidates:
+        try:
+            html=raw.decode(encoding,"strict")
+        except (UnicodeError,LookupError):
+            continue
+        parser=PageText()
+        parser.feed(html)
+        body=" ".join(parser.fragments) if parser.fragments else html
+        return unicodedata.normalize("NFKC",re.sub(r"\s+"," ",body)).strip()
+    return ""
 
 
 def company_mentioned(text, case):
