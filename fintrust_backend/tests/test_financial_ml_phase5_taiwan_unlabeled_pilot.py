@@ -122,9 +122,10 @@ class TaiwanUnlabeledPilotTests(unittest.TestCase):
             read_audited_data(self.register,self.report)
 
     def test_issue_missing_never_zero_even_as_proxy(self):
-        vector=json.loads(self.rows[0]["feature_vector_json"])
+        item=next(x for x in self.rows if x["ticker"]=="2401" and x["fiscal_year"]=="2016")
+        vector=json.loads(item["feature_vector_json"])
         vector["d_issue"]="0"
-        self.rows[0]["feature_vector_json"]=json.dumps(vector)
+        item["feature_vector_json"]=json.dumps(vector)
         self.save()
         with self.assertRaisesRegex(ValueError,"unverified_issue"):
             read_audited_data(self.register,self.report)
@@ -142,10 +143,11 @@ class TaiwanUnlabeledPilotTests(unittest.TestCase):
             read_audited_data(self.register,self.report)
 
     def test_partial_financial_sources_do_not_autofill_missing_financial_items(self):
-        one=json.loads(self.rows[0]["feature_vector_json"])
+        item=next(x for x in self.rows if x["ticker"]=="2401" and x["fiscal_year"]=="2016")
+        one=json.loads(item["feature_vector_json"])
         for i,f in enumerate(FEATURES):
             one[f]=str(i) if i<MIN_REQUIRED_INPUTS-1 else ""
-        self.rows[0]["feature_vector_json"]=json.dumps(one)
+        item["feature_vector_json"]=json.dumps(one)
         self.save()
         sampled,stats=read_audited_data(self.register,self.report)
         self.assertGreater(stats["excluded"].get("fewer_than_4_observed_paper_features",0),0)
