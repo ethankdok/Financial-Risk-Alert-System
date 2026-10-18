@@ -38,7 +38,8 @@ DISPUTE_COLUMNS = (
     "q4_relative_difference","sum_relative_difference",
     "q4_within_0_1_percent","sum_within_0_1_percent",
     "other_same_year_account_comparisons","possible_causes_to_check",
-    "provider_archive_sha256","mops_raw_sha256","resolution_status",
+    "provider_archive_sha256","mops_raw_sha256","provider_statement_context",
+    "resolution_status",
 )
 
 
@@ -161,7 +162,58 @@ def audited_evidence_rows(provider_csv,official_csv,cohort,case_ids,seed):
     return all_rows,counts
 
 
-def disputes(cross_csv,out):
+def statement_context(raw_root,row):
+    """Inspect independent Q4 provider accounts without changing official mismatches.
+
+    Vendor-internal Assets = Liabilities + Equity consistency helps prioritize
+    investigation; it never proves that source matches the correct filed version.
+    """
+    if raw_root is None:
+        return "RAW_SOURCE_NOT_SUPPLIED"
+    from .phase3_literature_bridge import family_archive
+    family=row["statement"]
+    if family not in ("balance","cashflow","income"):
+        return "UNKNOWN_STATEMENT_FAMILY"
+    try:
+        source,status,sha=family_archive(raw_root,row["ticker"],family)
+    except (OSError,ValueError) as exc:
+        return "RAW_SOURCE_INVALID:"+type(exc).__name__
+    if status!="raw_present":
+        return "RAW_SOURCE_"+status.upper()
+    if sha!=row["provider_archive_sha256"]:
+        raise ValueError("crosscheck_provider_source_sha_mismatch")
+    year=row["year"]
+    period=f"{year}-12-31"
+    if family=="balance":
+        asset=source.get(("TotalAssets",period))
+        debt=source.get(("Liabilities",period))
+        equity=source.get(("Equity",period))
+        if equity is None:
+            equity=source.get(("TotalEquity",period))
+        if any(v is None for v in (asset,debt,equity)):
+            return json.dumps({"balance_identity":"UNVERIFIABLE_PROVIDER_TOTALS_NOT_ALL_PRESENT",
+                               "asset_found":asset is not None,
+                               "liabilities_found":debt is not None,
+                               "equity_found":equity is not None},sort_keys=True)
+        residual=asset-debt-equity
+        return json.dumps({
+            "balance_identity":"INTERNAL_PROVIDER_IDENTITY_ONLY",
+            "provider_total_assets":format(asset,"f"),
+            "provider_liabilities":format(debt,"f"),
+            "provider_equity":format(equity,"f"),
+            "assets_minus_liabilities_minus_equity":format(residual,"f"),
+            "warning":"INTERNAL_IDENTITY_DOES_NOT_APPROVE_VENDOR_VS_MOPS_VERSION"
+        },sort_keys=True)
+    if family=="cashflow":
+        matches={typ:format(amount,"f") for (typ,day),amount in source.items()
+                 if day==period and "operat" in typ.lower()
+                 and "cash" in typ.lower()}
+        return json.dumps({"q4_operating_cashflow_type_candidates":dict(sorted(matches.items())[:25]),
+                           "source_identity":"NO_AUTOMATIC_ALIAS_MAPPING"},sort_keys=True)
+    return "PERIOD_POLICY_REQUIRES_DOCUMENTED_FILING_REVIEW"
+
+
+def disputes(cross_csv,out,*,raw_root=None):
     """Resolve NO_MATCH triage numerically, WITHOUT inventing its cause."""
     if not Path(cross_csv).is_file():
         return {"status":"OFFICIAL_COMPARISON_FILE_NOT_FOUND","disputes":0},[]
@@ -215,6 +267,7 @@ def disputes(cross_csv,out):
             "possible_causes_to_check":suggestions,
             "provider_archive_sha256":row["provider_archive_sha256"],
             "mops_raw_sha256":row["mops_raw_sha256"],
+            "provider_statement_context":statement_context(raw_root,row),
             "resolution_status":"UNRESOLVED_DO_NOT_AUTO_APPROVE"
         })
     return {
@@ -334,7 +387,8 @@ def build(data_root,out,*,seed=20261019):
         "official_retrospective","signed_difference","comparison_status"),
         cross_source)
     dispute_path=data_root/"phase12_integrated_verification"/"phase2"/"official"/"finmind_mops_annual_crosscheck.csv"
-    mismatch_info,mismatches=disputes(dispute_path,out)
+    mismatch_info,mismatches=disputes(dispute_path,out,
+        raw_root=data_root/"finmind_cross_industry_raw")
     save_csv(out/"mops_source_discrepancy_diagnostics.csv",DISPUTE_COLUMNS,mismatches)
     stats=Counter((row["evidence_tier"],row["joint_strict_split"]) for row in rows)
     completeness=Counter((row["evidence_tier"],row["full_15_features"]) for row in rows)
