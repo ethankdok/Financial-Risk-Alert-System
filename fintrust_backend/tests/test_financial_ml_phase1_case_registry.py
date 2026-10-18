@@ -39,6 +39,18 @@ class Phase1CaseRegistryTests(unittest.TestCase):
         self.assertNotIn("1785", {r["ticker"] for r in rows})
         self.assertEqual({int(r["fiscal_year"]) for r in rows if r["ticker"] == "3027"}, {2015, 2016})
 
+    def test_8299_supreme_civil_remand_is_not_treated_as_final(self):
+        entry = next(c for c in self.seed["candidates"] if c["ticker"] == "8299")
+        self.assertEqual(
+            entry["legal_status"],
+            "SUPREME_CIVIL_REMAND_WITH_SEPARATE_FINAL_CRIMINAL_CASE_REFERENCED")
+        self.assertEqual(entry["legal_evidence_document_date"], "2025-11-19")
+        self.assertTrue(any(
+            x["source_id"] == "judicial_8299_supreme_remand_20251119"
+            for x in entry["sources"]))
+        self.assertFalse(entry["first_public_disclosure_primary_archived"])
+        self.assertFalse(entry["review"]["label_method_owner_approved"])
+
     def test_asof_known_time_is_not_auto_certified_as_earliest(self):
         extract(self.seed_path, self.root)
         with (self.root / "taiwan_case_year_candidates.csv").open(encoding="utf-8", newline="") as f:
