@@ -39,7 +39,7 @@ FIELDS = (
     "incident_type", "legal_status", "mechanism",
     "affected_reporting_period_description",
     "candidate_outcome_state", "supervised_label", "candidate_first_public_notice_at",
-    "first_public_disclosure_primary_archived", "legal_evidence_public_at",
+    "first_public_disclosure_primary_archived", "legal_evidence_document_date",
     "source_document_dates", "source_ids", "review_missing",
     "original_filing_pit_verified", "source_text_archived",
     "admitted_into_model_training", "admitted_into_model_validation",
@@ -126,7 +126,12 @@ def validate(seed):
         notice = case.get("initial_disclosure_candidate_at")
         if notice is not None:
             _aware_datetime(notice, "first_notice_candidate")
-        _aware_datetime(case.get("legal_evidence_public_at"), "legal_evidence_public_at")
+        try:
+            date.fromisoformat(case["legal_evidence_document_date"])
+        except (KeyError, TypeError, ValueError):
+            raise ValueError("bad_legal_evidence_document_date") from None
+        if case.get("legal_evidence_online_publication_time_verified") is not False:
+            raise ValueError("judgment_document_date_is_not_a_public_timestamp")
         if case.get("first_public_disclosure_primary_archived") is not False:
             raise ValueError("unverified_first_disclosure_must_not_be_promoted")
         review = case.get("review")
@@ -194,7 +199,7 @@ def extract(seed_file, output):
                 "supervised_label": "UNKNOWN",
                 "candidate_first_public_notice_at": case["initial_disclosure_candidate_at"] or "",
                 "first_public_disclosure_primary_archived": "false",
-                "legal_evidence_public_at": case["legal_evidence_public_at"],
+                "legal_evidence_document_date": case["legal_evidence_document_date"],
                 "source_document_dates": "|".join(s["source_document_date"] for s in case["sources"]),
                 "source_ids": "|".join(s["source_id"] for s in case["sources"]),
                 "review_missing": "|".join(sorted(missing)),
