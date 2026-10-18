@@ -209,12 +209,15 @@ def run(data_root,output,*,execute_download=False,max_rounds=5,batch_size=12):
         annual=panel=schema={"status":"BLOCKED_ALL_ISSUERS_QUARANTINED"}
         official={"status":"BLOCKED"}
     result={
-        "status":"PHASE1_CASE_SCHEMA_BUILT_PHASE2_INTEGRATED_PROCESSING_COMPLETED",
+        "status":("PHASE1_EVIDENCE_REVIEW_OPEN_PHASE2_RAW_ACQUISITION_FINISHED_RESEARCH_APPROVAL_PENDING"
+                  if phase2["missing_archives"]==0 and not phase2["quarantined_issuers"] else
+                  "PHASE1_EVIDENCE_REVIEW_OPEN_PHASE2_RAW_ACQUISITION_PARTIAL"),
         "phase1_case_candidates":phase1["candidate_cases"],
         "phase1_candidate_company_years":phase1["candidate_company_years"],
         "phase1_approved_positive_labels":phase1["approved_positive_labels"],
         "phase1_approved_negative_labels":phase1["approved_negative_labels"],
         "phase1_evidence_complete":False,
+        "phase1_evidence_refs":phase1["evidence_reference_count"],
         "phase1_remaining":["archive_primary_source_bytes","verify_first_public_revelation",
                             "review_exact_affected_filing_periods_and_legal_findings",
                             "method_owner_approval","review_negative_cohort"],
@@ -227,6 +230,7 @@ def run(data_root,output,*,execute_download=False,max_rounds=5,batch_size=12):
         "phase2_schema_alias_statuses":schema.get("statuses",{}),
         "phase2_official_check":official,
         "phase2_all_requested_sources_present":phase2["missing_archives"]==0,
+        "phase2_end_to_end_code_executed":bool(phase2["safe_companies"]),
         "phase2_original_filing_pit_verified":False,
         "phase2_vendor_mapping_certified":False,
         "phase2_complete_for_trusted_15_features":False,
