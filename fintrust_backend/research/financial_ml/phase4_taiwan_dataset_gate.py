@@ -113,6 +113,8 @@ def audited_evidence_rows(provider_csv,official_csv,cohort,case_ids,seed):
                         or row["complete_15_paper_features_training_approved"].lower()!="false"
                         or row["label_status"]!="UNKNOWN"):
                     raise ValueError("unapproved_provider_label_or_feature_promotion")
+                if row["d_issue"].strip() or int(row["candidate_components_with_values"])>14:
+                    raise ValueError("unverified_dechow_issue_cannot_be_imputed_or_computed")
                 version="UNKNOWN_FINMIND_SOURCE_VINTAGE"
                 raw_hash=""
             else:
