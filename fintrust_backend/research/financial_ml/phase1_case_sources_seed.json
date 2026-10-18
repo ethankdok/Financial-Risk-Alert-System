@@ -1,0 +1,155 @@
+{
+  "schema_version": "tw_financial_misstatement_case_registry_v1",
+  "study_goal": "retrospective_documented_issuer_period_financial_misstatement_risk_not_stock_selection",
+  "reserved_final_holdout": {
+    "ticker": "1785",
+    "name": "光洋科",
+    "existing_case_labels_module": "app.services.financial_research.case_labels",
+    "role": "FINAL_HISTORICAL_ASOF_HOLDOUT",
+    "in_any_training_or_hyperparameter_selection": false,
+    "note": "Existing 2011-2015 affected case evidence is maintained in dedicated case_labels and case_knowledge; do not copy into developmental dataset."
+  },
+  "candidates": [
+    {
+      "case_id": "TW-3027-2015-2016",
+      "ticker": "3027",
+      "company": "盛達電業",
+      "country": "TW",
+      "role": "DEVELOPMENT_CANDIDATE",
+      "incident_type": "MATERIAL_FINANCIAL_MISSTATEMENT_COURT_FINDING",
+      "legal_status": "FIRST_INSTANCE_CRIMINAL_JUDGMENT_NOT_FINALITY_VERIFIED",
+      "mechanism": "gross_vs_net_revenue_recognition",
+      "statement_scope": "consolidated",
+      "affected_fiscal_years": [
+        2015,
+        2016
+      ],
+      "affected_reporting_period_description": "FY2015/FY2016 annual and relevant interim filings; exact quarterly entries require page-by-page appendix review",
+      "initial_disclosure_candidate_at": "2017-06-08T23:58:00+08:00",
+      "first_public_disclosure_primary_archived": false,
+      "legal_evidence_public_at": "2025-04-30T00:00:00+08:00",
+      "sources": [
+        {
+          "source_id": "judicial_3027_trial_2025",
+          "kind": "JUDICIAL_JUDGMENT",
+          "url": "https://judgment.judicial.gov.tw/FJUD/printData.aspx?id=TPDM%2C113%2C%E9%87%91%E8%A8%B4%2C29%2C20250430%2C1",
+          "source_document_date": "2025-04-30",
+          "archive_sha256": null,
+          "support": "Court finds FY104/FY105 gross recognized revenue for agent trade; describes 2017-06-08 23:58 and 2017-06-23 correction notices. First-instance, appeal finality not independently checked.",
+          "source_text_location": "主文；事實三；理由㈧"
+        }
+      ],
+      "review": {
+        "first_notice_archived": false,
+        "affected_period_reviewed": false,
+        "judgment_paragraph_checked": false,
+        "original_filing_availability_verified": false,
+        "label_method_owner_approved": false
+      }
+    },
+    {
+      "case_id": "TW-8299-2014",
+      "ticker": "8299",
+      "company": "群聯電子",
+      "country": "TW",
+      "role": "DEVELOPMENT_CANDIDATE",
+      "incident_type": "REPORTED_MISSTATEMENT_AND_REQUIRED_RESTATEMENT",
+      "legal_status": "APPELLATE_COURT_FINDINGS_REQUIRE_EXACT_PERIOD_AND_FINALITY_REVIEW",
+      "mechanism": "related_party_consolidation_and_disclosure",
+      "statement_scope": "consolidated",
+      "affected_fiscal_years": [
+        2014
+      ],
+      "affected_reporting_period_description": "FY2014 Q3 and Q4 reported as affected in civil litigation; broader 2009-2016 period must not be auto labelled",
+      "initial_disclosure_candidate_at": null,
+      "first_public_disclosure_primary_archived": false,
+      "legal_evidence_public_at": "2025-01-15T00:00:00+08:00",
+      "sources": [
+        {
+          "source_id": "judicial_8299_appeal_2025",
+          "kind": "JUDICIAL_JUDGMENT",
+          "url": "https://judgment.judicial.gov.tw/FJUD/printData.aspx?id=TPHV%2C113%2C%E9%87%91%E4%B8%8A%E6%9B%B4%E4%B8%80%2C2%2C20250115%2C1",
+          "source_document_date": "2025-01-15",
+          "archive_sha256": null,
+          "support": "Appeals-court text discusses material false reports in pre-2016 years, but exact FY2014 reports and basis are not fully parsed into registry.",
+          "source_text_location": "財報不實之爭點與法院判斷"
+        },
+        {
+          "source_id": "public_8299_2016_press",
+          "kind": "SECONDARY_NEWS_CONTEXT_NOT_LABEL_EVIDENCE",
+          "url": "https://news.pts.org.tw/article/331084",
+          "source_document_date": "2016-08-07",
+          "archive_sha256": null,
+          "support": "2016-08-05 investigation referenced. This is not archival MOPS proof or confirmed first public discovery.",
+          "source_text_location": "報導內文"
+        }
+      ],
+      "review": {
+        "first_notice_archived": false,
+        "affected_period_reviewed": false,
+        "judgment_paragraph_checked": false,
+        "original_filing_availability_verified": false,
+        "label_method_owner_approved": false
+      }
+    },
+    {
+      "case_id": "TW-6452-2017-2020",
+      "ticker": "6452",
+      "company": "康友-KY",
+      "country": "TW",
+      "role": "DEVELOPMENT_CANDIDATE",
+      "incident_type": "OFFICIALLY_DOCUMENTED_ALLEGED_FINANCIAL_MISSTATEMENT",
+      "legal_status": "OFFICIAL_CIVIL_CLAIM_NOT_ADJUDICATED_FOR_ALL_AFFECTED_PERIODS",
+      "mechanism": "bank_deposit_existence_and_subsidiary_asset_pledge_disclosure",
+      "statement_scope": "consolidated",
+      "affected_fiscal_years": [
+        2017,
+        2018,
+        2019,
+        2020
+      ],
+      "affected_reporting_period_description": "Investment protection center cites allegedly false consolidated FY2017 Q2–FY2020 Q1 reports; do not equate this claim to four adjudicated positive fiscal years",
+      "initial_disclosure_candidate_at": null,
+      "first_public_disclosure_primary_archived": false,
+      "legal_evidence_public_at": "2023-05-12T00:00:00+08:00",
+      "sources": [
+        {
+          "source_id": "sfipc_6452_civil_claim_2023",
+          "kind": "INVESTOR_PROTECTION_CENTER_STATEMENT",
+          "url": "https://www.sfipc.org.tw/News_Content.aspx?n=7458&s=571",
+          "source_document_date": "2023-05-12",
+          "archive_sha256": null,
+          "support": "SFIPC: FY2017 Q2–FY2020 Q1 financial reports allegedly contained false omissions; this passage describes ongoing group litigation in 2023, not a final court adjudication of every report.",
+          "source_text_location": "新聞稿第二段"
+        }
+      ],
+      "review": {
+        "first_notice_archived": false,
+        "affected_period_reviewed": false,
+        "judgment_paragraph_checked": false,
+        "original_filing_availability_verified": false,
+        "label_method_owner_approved": false
+      }
+    }
+  ],
+  "transfer_policy": {
+    "taiwan_target_dataset": "TAIWAN_COMPANY_ISSUER_PERIOD_WITH_ORIGINAL_ASOF",
+    "allowed_auxiliary_origins": [
+      "US_SEC_REAL",
+      "SYNTHETIC_SCENARIO",
+      "TAIWAN_UNREVIEWED_SELF_SUPERVISED"
+    ],
+    "usage": "AUXILIARY_PRETRAINING_OR_ENGINEERING_ONLY_PENDING_TAIWAN_DOMAIN_VALIDATION",
+    "required_before_claiming_transfer_success": [
+      "Harmonize GAAP_IFRS_TIFRS accounting items and definitions at each period",
+      "Match issuer size, industry, period and industry-cycle distributions, handle KY status",
+      "Compare shared paper-feature missingness and distribution distance with Taiwan, stratified by sector and year",
+      "Taiwan-only real-outcome validation and untouched test must outperform or robustly match Taiwan-only baseline",
+      "Show ablation with versus without US pretraining and synthetic auxiliary tasks",
+      "Never use synthetic assigned outcomes as confirmed Taiwan misstatement labels",
+      "Maintain strict outcome-known-at, original filing public-time, company separation and 1785 holdout"
+    ],
+    "auto_admit_foreign_examples": false,
+    "auto_admit_synthetic_labels": false
+  }
+}
