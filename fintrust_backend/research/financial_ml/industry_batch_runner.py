@@ -50,8 +50,37 @@ def _previous_verified(folder: Path) -> set[tuple[str, int]]:
     return seen
 
 
+def _previous_unavailable(folder: Path) -> set[tuple[str, int]]:
+    """Defer already-failed official requests until a user explicitly retries them.
+
+    A failed archive request is not proof that the historical filing does not
+    exist. We keep its unresolved status and allow explicit retry.
+    """
+    p = folder / 'acquisition_results.json'
+    if not p.is_file():
+        return set()
+    try:
+        outcomes = json.loads(p.read_text(encoding='utf-8')).get('outcomes', {})
+        if not isinstance(outcomes, dict):
+            return set()
+    except (ValueError, OSError, TypeError):
+        return set()
+    skipped = set()
+    for key, item in outcomes.items():
+        if not isinstance(item, dict) or item.get('status') != 'source_unavailable':
+            continue
+        try:
+            ticker, year = key.split(':', 1)
+            year = int(year)
+            if ticker == str(item.get('ticker')) and year == int(item.get('fiscal_year')) and year in ALLOWED_YEARS:
+                skipped.add((ticker, year))
+        except (AttributeError, TypeError, ValueError):
+            continue
+    return skipped
+
+
 def select(candidates: dict, *, years=ALLOWED_YEARS, output_dir='data/financial_ml/official_batch',
-           max_company_years=12, tickers=None) -> tuple[list[dict], dict]:
+           max_company_years=12, tickers=None, retry_unavailable=False) -> tuple[list[dict], dict]:
     if max_company_years < 1 or max_company_years > HARD_RUN_CAP:
         raise ValueError(f'max_company_years must be 1..{HARD_RUN_CAP}')
     if len(set(years)) != len(years) or any(year not in ALLOWED_YEARS for year in years):
@@ -63,14 +92,20 @@ def select(candidates: dict, *, years=ALLOWED_YEARS, output_dir='data/financial_
     universe = sorted({t for t, _ in candidates if t != '1785' and (allowed is None or t in allowed)})
     available = [(ticker, year) for ticker in universe for year in sorted(years) if (ticker, year) in candidates]
     missing = [key for key in available if key not in prior]
-    chosen = missing[:max_company_years]
+    deferred = set() if retry_unavailable else (_previous_unavailable(Path(output_dir)) & set(missing))
+    eligible = [key for key in missing if key not in deferred]
+    chosen = eligible[:max_company_years]
     plan=[]
     for ticker, year in chosen:
         # Existing validation checks for candidate inventory and 1785 holdout.
         plan += request_plan(candidates, [ticker], [year])
     info = {'status':'candidate_acquisition_plan_only', 'universe_company_years':len(available),
             'verified_archives_reused':len(set(available)&prior),
-            'remaining_before_run':len(missing), 'selected':len(plan),
+            'remaining_before_run':len(missing),
+            'deferred_source_unavailable':len(deferred),
+            'remaining_eligible_before_run':len(eligible),
+            'retry_unavailable':bool(retry_unavailable),
+            'selected':len(plan),
             'remaining_after_selected':max(0, len(missing)-len(plan)),
             'years':sorted(years), 'max_company_years':max_company_years,
             'network_requests':0, 'normal_labels_created':0, 'production_database_writes':0,
@@ -106,10 +141,12 @@ def main(argv=None):
     p.add_argument('--ticker',action='append')
     p.add_argument('--max-company-years',type=int,default=12)
     p.add_argument('--execute',action='store_true',help='Explicitly allow official network download to research archive')
+    p.add_argument('--retry-unavailable',action='store_true',help='Explicitly retry previous source_unavailable requests')
     args=p.parse_args(argv)
     candidates=load_candidates(args.candidate_csv)
     plan,info=select(candidates, years=tuple(args.year or ALLOWED_YEARS),
-                     output_dir=args.output_dir, max_company_years=args.max_company_years,tickers=args.ticker)
+                     output_dir=args.output_dir, max_company_years=args.max_company_years,tickers=args.ticker,
+                     retry_unavailable=args.retry_unavailable)
     print(json.dumps(asyncio.run(run(plan,info,folder=args.output_dir,execute=args.execute)),ensure_ascii=False,indent=2))
 
 if __name__=='__main__':
