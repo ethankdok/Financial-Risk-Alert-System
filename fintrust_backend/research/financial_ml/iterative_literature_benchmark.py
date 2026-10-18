@@ -196,7 +196,10 @@ def run(dataset, output, *, rounds=10, seed=42, policy="temporal"):
             "test_rank_stability_mean_spearman": cor,
             "test_rank_stability_min_spearman": minimum,
             "mean_score_sd_over_rounds": round(float(np.mean(np.std(test_runs, axis=0))), 8)})
-        combined.append(np.mean([percentile(a,b) for a,b in zip(validation_runs, test_runs)], axis=0))
+        # Do not fuse a reconstruction model that failed all convergence checks.
+        # The guard uses fit-time information only, never the holdout.
+        if sum(convergences) > 0:
+            combined.append(np.mean([percentile(a,b) for a,b in zip(validation_runs, test_runs)], axis=0))
     ensemble = np.mean(combined, axis=0)
     for i, value in zip(test, ensemble):
         predictions.append({"model": "equal_weight_validation_percentile_ensemble", "round": "aggregated",
