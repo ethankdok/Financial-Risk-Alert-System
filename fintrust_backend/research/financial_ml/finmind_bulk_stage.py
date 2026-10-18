@@ -130,6 +130,8 @@ def run(source_csv, output, *, start="2013-01-01", end="2025-12-31",
                 log.update(status="blocked_existing_unverified_archive")
                 halted = True
             results.append(log)
+            print(f"[FinMind {len(results)}/{len(jobs)}] {ticker} {dataset}: "
+                  f"{log['status']}", flush=True)
             if halted:
                 break
             continue
@@ -155,6 +157,8 @@ def run(source_csv, output, *, start="2013-01-01", end="2025-12-31",
         except (OSError, ValueError, RuntimeError, urllib.error.URLError):
             log.update(status="failed_to_download_or_verify")
         results.append(log)
+        print(f"[FinMind {len(results)}/{len(jobs)}] {ticker} {dataset}: "
+              f"{log['status']} (rows={log.get('records', 0)})", flush=True)
         if halted:
             break
         if getter is fetch_dataset:
