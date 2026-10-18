@@ -45,3 +45,30 @@ Run offline tests:
 If a ticker remains quarantined, compare the differing dated records in
 the quarantine CSV against the original snapshot or official listing sources
 before resolving. Do not silently override a same-date discrepancy.
+
+## Empirical correction from the 2026-10-18 uploaded outputs
+
+The earlier deduplicator quarantined 605 stock IDs / 1,227 same-date rows.
+Inspection of the actual quarantine CSV found:
+- 604 IDs: **identical latest date, company name and market**, but two or
+  three industry tags. All 604 have precisely one specific tag after removing
+  the three explicit broad/segment tags: `電子工業`, `化學生技醫療`, `創新板股票`.
+- One ID (`8908`): the same latest date / name / industry appears with
+  different market values (TWSE and TPEx), so it stays quarantined.
+- Most common multiple taxonomies: 電子工業 + 電子零組件業 (105),
+  電子工業 + 半導體業 (103), 電子工業 + 光電業 (78), and
+  電子工業 + 電腦及週邊設備業 (70).
+
+The revised program records every source tag in
+`taiwan_stock_info_industry_memberships.csv`, selects the unique **specific**
+industry, and excludes only genuinely unresolved ID/market/name or
+incomparable-industry conflicts. Given the reported earlier 1,482 valid
+candidate IDs plus 604 industry-tag-reconciled IDs, the **expected** count is
+2,086 non-financial candidates before further real-world listing validation.
+
+Source rows and raw snapshot remain unchanged. Same-day market differences,
+including ticker 8908, are **not** auto-corrected. Review using a dated
+authoritative listing source before making historical membership claims.
+
+For a rerun use the original cached `TaiwanStockInfo_snapshot.json` and
+`--source-json`, not `--fetch`; inspect the report and memberships sidecar.
