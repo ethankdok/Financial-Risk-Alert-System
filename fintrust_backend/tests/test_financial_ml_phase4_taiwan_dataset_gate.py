@@ -47,8 +47,8 @@ class Phase4TaiwanDatasetGateTests(unittest.TestCase):
                     "ticker":ticker,"fiscal_year":year,
                     "component_source":"FINMIND_UNAPPROVED_CANDIDATE_ONLY",
                     "complete_15_paper_features_training_approved":"false",
-                    "label_status":"UNKNOWN","candidate_components_with_values":15,
-                    **{name:"0" if name=="d_issue" else "1.2" for name in FEATURES}
+                    "label_status":"UNKNOWN","candidate_components_with_values":14,
+                    **{name:"" if name=="d_issue" else "1.2" for name in FEATURES}
                 })
         self.oentries.append({
             "ticker":"2000","fiscal_year":2019,"raw_sha256":"a"*64,
@@ -112,6 +112,13 @@ class Phase4TaiwanDatasetGateTests(unittest.TestCase):
         self.oentries[0]["training_label"]="1"
         self.save()
         with self.assertRaisesRegex(ValueError,"unapproved_official"):
+            m.build(self.root,self.root/"out")
+
+    def test_finmind_provisional_d_issue_must_not_be_fabricated(self):
+        self.pentries[0]["d_issue"]="0"
+        self.pentries[0]["candidate_components_with_values"]=15
+        self.save()
+        with self.assertRaisesRegex(ValueError,"dechow_issue"):
             m.build(self.root,self.root/"out")
 
     def test_unsafe_provider_full_paper_approval_rejected(self):
