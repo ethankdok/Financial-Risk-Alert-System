@@ -176,6 +176,20 @@ class Phase4TaiwanDatasetGateTests(unittest.TestCase):
         self.assertEqual(lines[1]["absolute_q4_discrepancy"],"8412000")
         self.assertFalse(r["threshold_changed"])
 
+    def test_temporal_sequence_windows_do_not_impute_or_look_ahead(self):
+        report=m.build(self.root,self.root/"phase4")
+        self.assertEqual(report["sequence_window_training_admitted"],0)
+        p=self.root/"phase4"/"taiwan_sequence_window_admission.csv"
+        with p.open(encoding="utf-8",newline="") as f:
+            rows=list(csv.DictReader(f))
+        self.assertTrue(rows)
+        for row in rows:
+            self.assertLessEqual(int(row["start_year"]),int(row["target_year"]))
+            self.assertEqual(row["approved_for_training"],"false")
+            self.assertEqual(row["asof_publication_verified"],"false")
+            self.assertEqual(row["complete_15_window"],"false")
+        self.assertTrue(any(row["missing_years"] for row in rows))
+
     def test_provider_and_official_same_issuer_year_not_coalesced(self):
         r=m.build(self.root,self.root/"phase4")
         self.assertTrue(r["source_tiers_not_fused"])
