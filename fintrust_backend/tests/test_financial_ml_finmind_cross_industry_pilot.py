@@ -83,6 +83,24 @@ class FinMindCrossIndustryPilotTests(unittest.TestCase):
                             for r in rows))
         self.assertFalse((self.root/'audit'/'annual_features.csv').exists())
 
+    def test_http_success_but_no_rows_is_reported_as_empty(self):
+        pilot(self.source,self.root/'sample',size=9,semiconductor=2)
+        candidates=self.root/'sample'/'finmind_pilot_candidates.csv'
+        ticker=read_universe(candidates)[0]['ticker']
+        stage=self.root/'stage'/ticker
+        stage.mkdir(parents=True)
+        for dataset in DATASETS:
+            (stage/(dataset+'.json')).write_text(json.dumps({
+                'source': URL, 'ticker':ticker, 'dataset':dataset,
+                'period':['2013-01-01','2025-12-31'], 'records':[]
+            }),encoding='utf-8')
+        result=audit(candidates,self.root/'stage',self.root/'audit',
+                     mapping={'sales':('Revenue',)})
+        self.assertEqual(result['statuses']['raw_empty_response'],3)
+        self.assertEqual(result['statuses']['raw_schema_review_only'] if
+                         'raw_schema_review_only' in result['statuses'] else 0, 0)
+        self.assertFalse(result['fiscal_year_annual_values_built'])
+
     def test_invalid_cached_source_is_quarantined_not_imputed(self):
         pilot(self.source,self.root/'sample',size=9,semiconductor=2)
         csv_path=self.root/'sample'/'finmind_pilot_candidates.csv'
