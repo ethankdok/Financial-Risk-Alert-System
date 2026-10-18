@@ -55,13 +55,13 @@
       "country": "TW",
       "role": "DEVELOPMENT_CANDIDATE",
       "incident_type": "REPORTED_MISSTATEMENT_AND_REQUIRED_RESTATEMENT",
-      "legal_status": "APPELLATE_COURT_FINDINGS_REQUIRE_EXACT_PERIOD_AND_FINALITY_REVIEW",
+      "legal_status": "SUPREME_CIVIL_REMANT_WITH_SEPARATE_FINAL_CRIMINAL_CASE_REFERENCED",
       "mechanism": "related_party_consolidation_and_disclosure",
       "statement_scope": "consolidated",
       "affected_fiscal_years": [
         2014
       ],
-      "affected_reporting_period_description": "FY2014 Q3 and Q4 reported as affected in civil litigation; broader 2009-2016 period must not be auto labelled",
+      "affected_reporting_period_description": "FY2014 is a screened candidate (court describes ROC 98–103 [2009–2014]); exact quarter and filing-version per-period claims not yet reviewed. A separate final criminal judgment is referenced; the 2025 civil director-removal judgment was vacated/remanded on different procedural grounds.",
       "initial_disclosure_candidate_at": null,
       "first_public_disclosure_primary_archived": false,
       "sources": [
@@ -82,6 +82,15 @@
           "archive_sha256": null,
           "support": "2016-08-05 investigation referenced. This is not archival MOPS proof or confirmed first public discovery.",
           "source_text_location": "報導內文"
+        },
+        {
+          "source_id": "judicial_8299_supreme_remand_20251119",
+          "kind": "JUDICIAL_JUDGMENT",
+          "url": "https://judgment.judicial.gov.tw/FJUD/printData.aspx?id=TPSV%2C114%2C%E5%8F%B0%E4%B8%8A%2C859%2C20251119%2C1",
+          "source_document_date": "2025-11-19",
+          "archive_sha256": null,
+          "support": "Supreme Court 114 Tai-Shang 859 VACATED and REMANDED the 2025 director-removal civil ruling on procedural/legal-timing issues; text separately reports high court criminal financial-misstatement judgment 111 Jin-Shang-Su 11 is FINAL. These are different cases; latest civil ruling must NOT be described as final.",
+          "source_text_location": "主文、理由一、四、五"
         }
       ],
       "review": {
@@ -91,7 +100,7 @@
         "original_filing_availability_verified": false,
         "label_method_owner_approved": false
       },
-      "legal_evidence_document_date": "2025-01-15",
+      "legal_evidence_document_date": "2025-11-19",
       "legal_evidence_online_publication_time_verified": false
     },
     {
