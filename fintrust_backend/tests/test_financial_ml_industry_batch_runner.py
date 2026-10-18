@@ -80,5 +80,25 @@ class TestRunner(unittest.TestCase):
         self.assertEqual(meta['verified_archives_reused'],0)
 
 
+    def test_source_unavailable_is_deferred_until_explicit_retry(self):
+        import json
+        manifest = {'outcomes': {'2303:2014': {
+            'ticker': '2303', 'fiscal_year': 2014,
+            'status': 'source_unavailable', 'source_status': 'source_unavailable'
+        }}}
+        (self.dir/'acquisition_results.json').write_text(
+            json.dumps(manifest), encoding='utf-8')
+        plan, meta = select(self.candidates, output_dir=self.dir, max_company_years=9)
+        self.assertEqual(meta['deferred_source_unavailable'], 1)
+        self.assertEqual(meta['remaining_eligible_before_run'], 8)
+        self.assertNotIn(('2303', 2014), [(p['ticker'], p['fiscal_year']) for p in plan])
+        retry_plan, retry_meta = select(
+            self.candidates, output_dir=self.dir,
+            max_company_years=9, retry_unavailable=True)
+        self.assertEqual(retry_meta['deferred_source_unavailable'], 0)
+        self.assertIn(('2303', 2014), [(p['ticker'], p['fiscal_year']) for p in retry_plan])
+
+
+
 if __name__=='__main__':
     unittest.main()
