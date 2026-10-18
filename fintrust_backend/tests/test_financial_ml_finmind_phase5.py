@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import csv
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from research.financial_ml import finmind_universe as u
@@ -196,6 +198,23 @@ class FinMindStageTests(unittest.TestCase):
         self.assertEqual(second["reused_cached"], 3)
         self.assertEqual(len(calls), 3)
         self.assertEqual(second["normal_labels_created"], 0)
+
+    def test_execute_streams_safe_progress_without_token(self):
+        u.build(self._universe(), self.root / "universe")
+        source = self.root / "universe" / "taiwan_nonfinancial_current_candidates.csv"
+        progress = io.StringIO()
+        def fetch(dataset, ticker, start, end, *, token=None):
+            return [{"stock_id": ticker, "date": "2015-12-31",
+                     "type": "Assets", "value": 42}]
+        with redirect_stdout(progress):
+            result = b.run(source, self.root / "raw_progress",
+                           max_tickers=1, execute=True, getter=fetch)
+        self.assertEqual(result["requests_sent"], 3)
+        out = progress.getvalue()
+        self.assertIn("[FinMind 1/3]", out)
+        self.assertIn("[FinMind 3/3]", out)
+        self.assertNotIn("Authorization", out)
+        self.assertNotIn("Bearer", out)
 
     def test_rate_limit_halts_without_fake_success(self):
         u.build(self._universe(), self.root / "universe")
