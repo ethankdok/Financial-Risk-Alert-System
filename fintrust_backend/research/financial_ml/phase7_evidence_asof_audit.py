@@ -174,6 +174,10 @@ def audit(data_root,output,*,retrieve=False,imports=None,fetcher=None,pace_secon
             loc=output/"official_case_bytes"/case["case_id"]/(ref+".html")
             receipt=loc.with_suffix(".json")
             state=per_source[ref]
+            if state["collection_status"] in (
+                "ARCHIVE_TAMPER_OR_IDENTITY_CONFLICT",
+                "BROKEN_PRIOR_ARCHIVE_REQUIRES_REVIEW"):
+                raise ValueError("existing_source_archive_digest_or_url_conflict:"+ref)
             result={"company_mentioned":False,"expected_marker_mentioned":False,
                     "identity_supported_by_document":False}
             digest=""
