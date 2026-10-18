@@ -15,7 +15,7 @@ User requested: develop a **complete phase at a time**, then give one local vali
 
 ## New implementation
 
-New: research/financial_ml/phase4_taiwan_dataset_gate.py, test_financial_ml_phase4_taiwan_dataset_gate.py (11 hermetic tests), verify_phase4.ps1 (single offline acceptance run).
+New: research/financial_ml/phase4_taiwan_dataset_gate.py, test_financial_ml_phase4_taiwan_dataset_gate.py (13 hermetic tests), verify_phase4.ps1 (single offline acceptance run).
 
 The Phase4 gate consumes **existing local Phase3 outputs** (all the raw files stay private on the user's Windows machine):
 
@@ -29,7 +29,7 @@ The program writes:
 - **taiwan_research_split_register.csv** — 15 component input values as structured JSON per issuer/FY/source tier; strict unique key by (source tier, issuer, year); source-file SHA; full-15 availability; first-public-time = false; original-vintage-verified = false; unknown outcomes; no supervised admission. Official vs provider rows stay in different tiers even for the same issuer/year (NOT coalesced).
 - **taiwan_sequence_window_admission.csv** — genuine chronological 3- and 5-fiscal-year paper feature windows, observed/missing cells, no filling zero for missing feature inputs, t only follows prior years (never future values); no model fit allowed until as-of/time/label gates pass.
 - **cross_source_paper_feature_review.csv** — compare provider-conditional source candidate components and official retrospective component values only where issuer, FY and variable name match; **comparison is advisory** because original revisions and vendor mapping may differ.
-- **mops_source_discrepancy_diagnostics.csv** — each NO_MATCH and BOTH_AGREE_AMBIGUOUS official annual comparison, Q4 and 4Q sums, official value, signed/absolute deltas, relative difference, same-year balance peer comparison, existing SHA hashes, plausible causes to review, and unresolved status.
+- **mops_source_discrepancy_diagnostics.csv** — each NO_MATCH and BOTH_AGREE_AMBIGUOUS official annual comparison, Q4 and 4Q sums, official value, signed/absolute deltas, relative difference, same-year balance peer comparison, existing SHA hashes, the source's own FY-end Assets = Liabilities + Equity residual (where all three vendor concepts exist), alternate FY-end operating-cashflow provider types (not automatically substituted), plausible causes to review, and unresolved status. Source SHA mismatch fails closed.
 - **phase4_dataset_integrated_report.json** — deterministic issuer-group and time splits, source tiers, full15 counts, the overlapping-source conflicts, no fake approved labels, original/public time gates, historical holdout and open scientific blockers.
 
 ### Two separate partition experiments, both from Taiwan data
