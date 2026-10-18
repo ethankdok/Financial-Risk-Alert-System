@@ -96,6 +96,8 @@ def verified_archive_references(data_root,ticker,year):
     if not isinstance(entry,dict):
         return {"status":"NO_OFFICIAL_HISTORICAL_ARCHIVE_FOR_CASE_PERIOD",
                 "matched_archives":0,"hash_verified_archives":0}
+    if str(entry.get("ticker"))!=ticker or int(entry.get("fiscal_year",0))!=year:
+        raise ValueError("archive_identity_mismatch_with_requested_case_year")
     if entry.get("status")!="validated":
         return {"status":"OFFICIAL_ARCHIVE_STATUS_UNVERIFIED",
                 "matched_archives":1,"hash_verified_archives":0}
