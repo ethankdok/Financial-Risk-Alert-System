@@ -146,7 +146,7 @@ def import_saved_official(manifest,seed,root):
     return results
 
 
-def audit(data_root,output,*,retrieve=False,imports=None,fetcher=None):
+def audit(data_root,output,*,retrieve=False,imports=None,fetcher=None,pace_seconds=0.0):
     output=Path(output)
     output.mkdir(parents=True,exist_ok=True)
     seed=json.loads(ROOT_SEED.read_text(encoding="utf-8"))
@@ -154,7 +154,9 @@ def audit(data_root,output,*,retrieve=False,imports=None,fetcher=None):
     # If manual import is provided, preserve it without overwriting; Phase6
     # reuse checks its bytes and provenance metadata.
     imported=import_saved_official(imports,seed,output) if imports else []
-    call_opts={"retrieve":retrieve,"pace_seconds":0}
+    if not 0<=pace_seconds<=60:
+        raise ValueError("invalid_official_source_request_interval")
+    call_opts={"retrieve":retrieve,"pace_seconds":pace_seconds}
     if fetcher is not None:
         call_opts["fetcher"]=fetcher
     previous=phase6_run(ROOT_SEED,output,**call_opts)
@@ -267,10 +269,12 @@ def main(argv=None):
     p.add_argument("--output",required=True)
     p.add_argument("--retrieve-official",action="store_true")
     p.add_argument("--manual-import-manifest",default="")
+    p.add_argument("--pace-seconds",type=float,default=2.0)
     options=p.parse_args(argv)
     print(json.dumps(audit(options.data_root,options.output,
                           retrieve=options.retrieve_official,
-                          imports=options.manual_import_manifest or None),
+                          imports=options.manual_import_manifest or None,
+                          pace_seconds=options.pace_seconds),
                      ensure_ascii=False,indent=2))
 
 
