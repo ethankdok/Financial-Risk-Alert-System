@@ -49,3 +49,13 @@
 - 特徵重要性分為：（A）目前無標籤的模型分數擾動敏感度，**不可**解讀為影響舞弊的因果／預測重要性；（B）有獨立標籤後之 permutation importance、SHAP 等預測解釋，避免相關特徵誤讀。
 - 保留現有 Phase1–5 的官方 MOPS/XBRL、SHA256 封存、15 變數文獻引擎、FinMind 蒐集／對映、readiness、安全 Worktree 和 reserved 1785 case；只是本階段研究優先順序改為**擴大資料、校正缺值、完成多輪模型比較**，Pipeline/網站/排程在後期處理。
 - 最新 Phase5A: 64 公司年度，22 家公司，完全 15 變數僅 11 筆；Beneish 8 變數完整 17 筆、Dechow 7 變數完整 17 筆；TATA/RSST/Issue/LVGI 缺值是擴充首要標的。切勿填 UNKNOWN Issue 為 0。
+
+## 2026-10-18 研究偏好再次釐清：跨架構比較，以時間序列深度學習為主
+- 使用者強調「多輪模型訓練與比較」主要指**比較多種不同機器學習／深度學習架構**，對每種架構再進行多組超參數與必要的 epoch / seed 實驗；不應變成只做 Isolation Forest 反覆 10 次。
+- **主要研究方向為公司多年財務時間序列 + 類神經網路**。建立公司 × 財報年度 × 文獻 15 變數 panel，在已核對年度口徑及歷史 t−2 資料後，採 3–5 年滑動視窗，保留序列缺失 mask 與計算理由，絕不將 UNKNOWN 發行證據當成觀測零。
+- 第一批需實作／比較 **GRU/LSTM 序列自編碼器（重建式）**、**Temporal Convolutional Network (TCN) 自編碼器或預測器**、**Transformer encoder 型序列重建或遮罩預訓練**；以一般 **MLP/Denoising Autoencoder、Isolation Forest、LOF** 為對照。模型清單應依資料規模與資料完整度調整，不能沒有足夠訓練序列就報告神經網路成效。
+- 表格模型 **Random Forest、XGBoost、CatBoost** 應納入模型家族比較；在尚無獨立異常 outcome 標籤時，可先作自監督的財務指標預測／重建，但不得把代理任務分數或偽標籤稱為舞弊預測準確率；取得標籤後再比較正式分類表現。
+- **模型融合**可將序列自編碼器的重建誤差、TCN/Transformer 的自監督預測殘差與 Isolation Forest / LOF 異常分數，在驗證集上尺度對齊後做融合／stacking；若做 stacking 必須防止使用測試集或未審核標籤調整權重。
+- 真正的特徵重要性：有標籤時用保留資料的 Permutation Importance / SHAP、跨年度穩定性；沒有標籤時只能量測 reconstruction/score sensitivity、sequence occlusion 或 temporal attribution，**不代表舞弊相關的重要性**。需拆分文獻變數間共線性。
+- GNN 僅在有可驗證且隨時間變動的供應鏈、持股、企業關係邊後加入候選；不要從 15 個欄位人工發明企業關係。
+- 實驗核心是可靠的大型年度 panel、同一評估契約下跨架構比較、時間及公司不重疊驗證、模型檔和特徵解釋。**不是**先完成自動調度、持續在線更新或產品部署。光洋科仍保留最後外部案例評估。
