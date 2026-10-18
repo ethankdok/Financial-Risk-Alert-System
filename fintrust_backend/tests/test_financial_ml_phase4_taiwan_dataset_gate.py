@@ -144,6 +144,50 @@ class Phase4TaiwanDatasetGateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"reserved"):
             m.build(self.root,self.root/"out")
 
+    def test_provider_balance_sheet_identity_is_diagnostic_only(self):
+        import hashlib
+        from research.financial_ml.finmind_bulk_stage import DATASETS, URL
+        raw=self.root/"finmind_cross_industry_raw"
+        path=raw/"2330"/(DATASETS[1]+".json")
+        path.parent.mkdir(parents=True,exist_ok=True)
+        rows=[
+            {"stock_id":"2330","date":"2014-12-31","type":name,"value":amount}
+            for name,amount in (("TotalAssets",1000),("Liabilities",900),("Equity",100))]
+        path.write_text(json.dumps({
+            "source":URL,"ticker":"2330","dataset":DATASETS[1],
+            "period":["2013-01-01","2025-12-31"],
+            "period_semantics":"QUARTERLY_UNVERIFIED_ANNUAL_AGGREGATION",
+            "original_filing_vintage":"UNKNOWN","records":rows}),encoding="utf-8")
+        record={"ticker":"2330","year":"2014","statement":"balance",
+                "provider_archive_sha256":hashlib.sha256(path.read_bytes()).hexdigest()}
+        data=json.loads(m.statement_context(raw,record))
+        self.assertEqual(data["assets_minus_liabilities_minus_equity"],"0")
+        self.assertIn("DOES_NOT_APPROVE",data["warning"])
+        record["provider_archive_sha256"]="a"*64
+        with self.assertRaisesRegex(ValueError,"sha_mismatch"):
+            m.statement_context(raw,record)
+
+    def test_operating_cash_flow_alt_aliases_are_not_auto_substituted(self):
+        import hashlib
+        from research.financial_ml.finmind_bulk_stage import DATASETS, URL
+        raw=self.root/"finmind_cross_industry_raw"
+        path=raw/"2458"/(DATASETS[2]+".json")
+        path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_text(json.dumps({
+            "source":URL,"ticker":"2458","dataset":DATASETS[2],
+            "period":["2013-01-01","2025-12-31"],
+            "period_semantics":"QUARTERLY_UNVERIFIED_ANNUAL_AGGREGATION",
+            "original_filing_vintage":"UNKNOWN",
+            "records":[{"stock_id":"2458","date":"2013-12-31",
+                        "type":"NetCashFlowsFromUsedInOperatingActivities","value":100}]}
+        ),encoding="utf-8")
+        record={"ticker":"2458","year":"2013","statement":"cashflow",
+                "provider_archive_sha256":hashlib.sha256(path.read_bytes()).hexdigest()}
+        result=json.loads(m.statement_context(raw,record))
+        self.assertEqual(result["q4_operating_cashflow_type_candidates"],
+                         {"NetCashFlowsFromUsedInOperatingActivities":"100"})
+        self.assertEqual(result["source_identity"],"NO_AUTOMATIC_ALIAS_MAPPING")
+
     def test_mops_two_real_disagreements_are_not_approved(self):
         p=self.root/"crosscheck.csv"
         fields=("ticker","year","statement","finmind_type","mops_metric",
