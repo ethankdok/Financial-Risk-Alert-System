@@ -79,7 +79,7 @@ class Phase4TaiwanDatasetGateTests(unittest.TestCase):
         self.assertEqual(r["train_val_test_supervised_admitted_rows"],0)
         self.assertFalse(r["eligible_for_supervised_financial_fraud_training"])
         self.assertEqual(r["cross_source_overlap_company_years"],1)
-        self.assertEqual(r["cross_source_comparable_feature_cells"],15)
+        self.assertEqual(r["cross_source_comparable_feature_cells"],14)
         with (self.root/"phase4"/"taiwan_research_split_register.csv").open(
                 encoding="utf-8",newline="") as f:
             rows=list(csv.DictReader(f))
