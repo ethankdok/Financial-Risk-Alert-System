@@ -53,6 +53,73 @@ class FinMindStageTests(unittest.TestCase):
             self.assertEqual(reasons["superseded_historical_rows"],1)
             self.assertEqual(quarantined,[])
 
+    def test_same_day_multilevel_semiconductor_taxonomy_is_not_identity_conflict(self):
+        rows = [
+            {"stock_id":"2337","stock_name":"示意晶圓公司",
+             "industry_category":"電子工業","type":"twse","date":"2026-10-18"},
+            {"stock_id":"2337","stock_name":"示意晶圓公司",
+             "industry_category":"半導體業","type":"twse","date":"2026-10-18"},
+        ]
+        for entries in (rows, rows[::-1]):
+            selected, counts, issues, membership = u.current_nonfinancial_candidates(
+                entries, include_memberships=True)
+            self.assertEqual(len(selected),1)
+            self.assertEqual(selected[0]["industry_category"],"半導體業")
+            self.assertEqual(counts["multi_category_tickers_reconciled"],1)
+            self.assertEqual(issues,[])
+            self.assertEqual({x["source_industry_category"] for x in membership},
+                             {"電子工業","半導體業"})
+
+    def test_chemical_sector_parent_and_child_are_reconciled(self):
+        rows=[{"stock_id":"1707","stock_name":"示意生技",
+               "industry_category":tag,"type":"twse","date":"2026-10-18"}
+              for tag in ("化學生技醫療","生技醫療業")]
+        selected,counts,issues=u.current_nonfinancial_candidates(rows,include_conflicts=True)
+        self.assertEqual(selected[0]["industry_category"],"生技醫療業")
+        self.assertEqual(counts["multi_category_tickers_reconciled"],1)
+        self.assertEqual(issues,[])
+
+    def test_innovation_listing_segment_is_not_industry(self):
+        rows=[{"stock_id":"3150","stock_name":"示意公司-創",
+               "industry_category":tag,"type":"twse","date":"2026-10-18"}
+              for tag in ("創新板股票","電子工業","半導體業")]
+        selected,counts,issues=u.current_nonfinancial_candidates(rows,include_conflicts=True)
+        self.assertEqual(selected[0]["industry_category"],"半導體業")
+        self.assertEqual(counts["multi_category_tickers_reconciled"],1)
+        self.assertEqual(issues,[])
+
+    def test_incomparable_specific_industry_remains_quarantined(self):
+        rows=[{"stock_id":"3001","stock_name":"示意公司",
+               "industry_category":tag,"type":"twse","date":"2026-10-18"}
+              for tag in ("半導體業","生技醫療業")]
+        selected,counts,issues=u.current_nonfinancial_candidates(rows,include_conflicts=True)
+        self.assertEqual(selected,[])
+        self.assertEqual(counts["tickers_quarantined_ambiguous_industry"],1)
+        self.assertEqual({x["reason"] for x in issues},{"incomparable_or_missing_specific_industry"})
+
+    def test_multilevel_category_sidecar_preserves_source(self):
+        rows=[
+            {"stock_id":"1707","stock_name":"示意生技","industry_category":"化學生技醫療",
+             "type":"twse","date":"2026-10-18"},
+            {"stock_id":"1707","stock_name":"示意生技","industry_category":"生技醫療業",
+             "type":"twse","date":"2026-10-18"}
+        ]
+        path=self.root/"finmind_taxonomy.json"
+        path.write_text(json.dumps({"status":200,"data":rows},ensure_ascii=False),encoding="utf-8")
+        original=path.read_bytes()
+        result=u.build(path,self.root/"out_taxonomy")
+        self.assertEqual(result["nonfinancial_candidate_tickers"],1)
+        self.assertEqual(result["reconciled_multi_category_tickers"],1)
+        self.assertEqual(result["industry_membership_rows"],2)
+        self.assertEqual(path.read_bytes(),original)
+        with (self.root/"out_taxonomy"/"taiwan_stock_info_industry_memberships.csv").open(
+                encoding="utf-8",newline="") as fp:
+            memberships=list(csv.DictReader(fp))
+        self.assertEqual({m["source_industry_category"] for m in memberships},
+                         {"化學生技醫療","生技醫療業"})
+        self.assertEqual({m["primary_industry_category"] for m in memberships},
+                         {"生技醫療業"})
+
     def test_latest_financial_or_emerging_not_resurrected(self):
         old = {"stock_id":"6165","stock_name":"示意公司","industry_category":"電子業",
                "type":"twse","date":"2024-01-01"}
@@ -84,7 +151,7 @@ class FinMindStageTests(unittest.TestCase):
         with (self.root/"audit"/"taiwan_stock_info_quarantined.csv").open(encoding="utf-8",newline="") as fp:
             quarantine=list(csv.DictReader(fp))
         self.assertEqual(len(quarantine),2)
-        self.assertTrue(all(x["reason"]=="same_date_conflicting_company_identity" for x in quarantine))
+        self.assertTrue(all(x["reason"]=="latest_date_market_or_name_conflict" for x in quarantine))
         ids=b.tickers_from_csv(self.root/"audit"/"taiwan_nonfinancial_current_candidates.csv")
         self.assertEqual(ids,["2330"])
 
