@@ -117,7 +117,8 @@ def archive_official(case,source,folder,*,retrieve=False,fetcher=http_get):
     source_id=source["source_id"]
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}",source_id):
         raise ValueError("unsafe_source_id")
-    safe_url(source["url"])
+    if source["kind"]!="SECONDARY_NEWS_CONTEXT_NOT_LABEL_EVIDENCE":
+        safe_url(source["url"])
     path=Path(folder)/case["case_id"]
     dest=path/(source_id+".html")
     receipt=path/(source_id+".json")
