@@ -174,7 +174,9 @@ def audit(pilot_csv, raw_root, output, *, mapping=None):
                                   non_quarter_end_rows=non_quarter,
                                   duplicate_type_period_collisions=sum(len(x)>1 for x in seen.values()),
                                   invalid_raw_rows=invalid)
-                    if invalid:
+                    if not body['records']:
+                        record['status'] = 'raw_empty_response'
+                    elif invalid:
                         record['status'] = 'raw_has_invalid_rows'
                 except (ValueError, TypeError, KeyError, OSError):
                     record['status'] = 'raw_archive_invalid'
