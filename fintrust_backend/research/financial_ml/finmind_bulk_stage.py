@@ -134,9 +134,9 @@ def run(source_csv, output, *, start="2013-01-01", end="2025-12-31",
                 break
             continue
         try:
-            rows = getter(dataset, ticker, start, end, token=token)
             result["requests_sent"] += 1
-            result["network_performed"] = True
+            result["network_performed"] = getter is fetch_dataset
+            rows = getter(dataset, ticker, start, end, token=token)
             data = {
                 "source": URL, "dataset": dataset, "ticker": ticker,
                 "period": [start, end], "retrieved_at": datetime.now(timezone.utc).isoformat(),
