@@ -29,7 +29,7 @@ if (-not (Test-Path $register)) { throw "Missing Phase4 register: $register" }
 if (-not (Test-Path $report)) { throw "Missing Phase4 audit report: $report" }
 
 Write-Host "Phase5: four separate unlabeled paper-feature model families on Taiwan cohort"
-python -m research.financial_ml.phase5_taiwan_unlabeled_pilot --register $register --phase4-report $report --output $output
+python -m research.financial_ml.phase5_taiwan_unlabeled_pilot --register $register --phase4-report $report --output $output --experimental-allow-unverified-data
 Confirm-Exit "Phase5 exploratory machine learning"
 
 $summary=Get-Content (Join-Path $output "phase5_exploratory_report.json") -Raw -Encoding UTF8 | ConvertFrom-Json
