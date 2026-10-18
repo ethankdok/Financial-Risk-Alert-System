@@ -200,8 +200,11 @@ def fit_score(name,est,fit_x,x):
     return -est.score_samples(x)
 
 
-def run(register,report_path,output,*,seed=20261019):
+def run(register,report_path,output,*,seed=20261019,
+        experimental_allow_unverified_data=False):
     import numpy as np
+    if not experimental_allow_unverified_data:
+        raise ValueError("experimental_unverified_financial_data_opt_in_required")
     root=Path(output)
     root.mkdir(parents=True,exist_ok=True)
     splits,entry=read_audited_data(register,report_path)
@@ -291,8 +294,10 @@ def main(argv=None):
     parser.add_argument("--phase4-report",required=True)
     parser.add_argument("--output",required=True)
     parser.add_argument("--seed",type=int,default=20261019)
+    parser.add_argument("--experimental-allow-unverified-data",action="store_true",required=True)
     opt=parser.parse_args(argv)
-    print(json.dumps(run(opt.register,opt.phase4_report,opt.output,seed=opt.seed),
+    print(json.dumps(run(opt.register,opt.phase4_report,opt.output,seed=opt.seed,
+                         experimental_allow_unverified_data=opt.experimental_allow_unverified_data),
                      ensure_ascii=False,indent=2))
 
 
