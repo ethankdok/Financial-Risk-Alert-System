@@ -116,6 +116,20 @@ class Phase3LiteratureBridgeTests(unittest.TestCase):
         earlier={x["feature"]:x for x in m.needed_features(2014,account_index)}
         self.assertIn("outside_source_range",earlier["d_ch_cs"]["candidate_requirements_missing"])
 
+    def test_original_beneish_ratio_formula_runs_only_on_unverified_inputs(self):
+        # Numeric candidate of revenue FY2015=200, FY2014=100 -> SGI=2.
+        index={}
+        for year,value in ((2014,"100"),(2015,"200")):
+            index[(year,"sales")]={"status":"candidate_amount_only_unapproved",
+                                   "candidate_annual_value":value}
+        row=m.provisional_paper_components("2330",2015,index)
+        self.assertEqual(row["b_SGI"],"2")
+        self.assertEqual(row["d_issue"],"")
+        self.assertEqual(row["complete_15_paper_features_training_approved"],"false")
+        self.assertEqual(row["label_status"],"UNKNOWN")
+        self.assertEqual(row["b_DSRI"],"")
+        self.assertIn("d_issue",json.loads(row["missing_reasons_json"]))
+
     def test_end_to_end_without_official_mops_data_never_returns_verified_15(self):
         reportdir=self.root/"phase12_integrated_verification"
         reportdir.mkdir()
@@ -127,6 +141,8 @@ class Phase3LiteratureBridgeTests(unittest.TestCase):
         self.assertEqual(report["account_evidence_rows"],2*len(MAPPINGS))
         self.assertEqual(report["component_feasibility_rows"],30)
         self.assertEqual(report["finmind_training_15_feature_rows_admitted"],0)
+        self.assertEqual(report["provisional_paper_component_company_year_rows"],2)
+        self.assertTrue((self.root/"result"/"finmind_provisional_paper_component_values.csv").is_file())
         self.assertEqual(report["official_xbrl_feature_report"]["company_year_rows"],0)
         self.assertTrue((self.root/"result"/"finmind_15_feature_feasibility.csv").is_file())
 
