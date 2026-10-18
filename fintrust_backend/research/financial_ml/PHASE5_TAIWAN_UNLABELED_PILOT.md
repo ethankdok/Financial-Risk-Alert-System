@@ -35,7 +35,7 @@ Output in phase5_taiwan_unlabeled_pilot directory:
 - unlabeled_method_comparison.csv when fitting is permitted
 - unknown_label_holdout_proxy_scores.csv when fitting is permitted
 
-No network requests. No changes to production SQL, Cloud Run, Flask or FastAPI. The 2023–2025 holdout scores are purely exploratory, and must NOT be used for parameter selection.
+An explicit experimental-allow-unverified-data opt-in is mandatory; the Phase4 formal-ML scaler-admission flag remains false and this is a segregated technical pilot, never an approved production train run. No network requests. No changes to production SQL, Cloud Run, Flask or FastAPI. The 2023–2025 holdout scores are purely exploratory, and must NOT be used for parameter selection.
 
 ## One terminal command
 
@@ -43,7 +43,7 @@ From clean dedicated Windows ML worktree after checking out feature/financial-ml
 
 powershell -ExecutionPolicy Bypass -File .\research\financial_ml\verify_phase5.ps1
 
-It executes the 10 new Phase5 unit tests and Phase4/3/1 regression tests and then tries the offline four-architecture research pilot on the already acquired Phase4 data. If source coverage is insufficient, the resulting report explicitly explains the scientific block. The program has not been run on the user's actual CSV in this GitHub development environment: local acceptance is still required.
+It executes the 11 new Phase5 unit tests and Phase4/3/1 regression tests and then tries the offline four-architecture research pilot on the already acquired Phase4 data. If source coverage is insufficient, the resulting report explicitly explains the scientific block. The program has not been run on the user's actual CSV in this GitHub development environment: local acceptance is still required.
 
 Return only the phase5_exploratory_report.json, plus terminal failures if any.
 
