@@ -224,6 +224,55 @@ def disputes(cross_csv,out):
     },triage
 
 
+WINDOW_COLUMNS=(
+    "ticker","evidence_tier","start_year","target_year","window_years",
+    "observed_feature_cells","required_feature_cells","missing_years",
+    "complete_15_window","issuer_split","temporal_split","joint_strict_split",
+    "asof_publication_verified","approved_for_training"
+)
+
+
+def sequence_windows(rows,spans=(3,5)):
+    """No temporal lookahead or source-tier merge. Windows remain unapproved."""
+    groups=defaultdict(dict)
+    for item in rows:
+        key=(item["ticker"],item["evidence_tier"])
+        year=item["fiscal_year"]
+        if year in groups[key]:
+            raise ValueError("duplicate_period_in_sequence_source")
+        groups[key][year]=item
+    windows=[]
+    for (ticker,tier),years in sorted(groups.items()):
+        for end in sorted(years):
+            for span in spans:
+                first=end-span+1
+                if first<2013:
+                    continue
+                observed=0
+                missing=[]
+                for yr in range(first,end+1):
+                    entry=years.get(yr)
+                    if entry is None:
+                        missing.append(yr)
+                    else:
+                        observed+=entry["available_feature_count"]
+                needed=span*len(FEATURES)
+                target=years[end]
+                windows.append({
+                    "ticker":ticker,"evidence_tier":tier,
+                    "start_year":first,"target_year":end,"window_years":span,
+                    "observed_feature_cells":observed,"required_feature_cells":needed,
+                    "missing_years":"|".join(map(str,missing)),
+                    "complete_15_window":str(observed==needed and not missing).lower(),
+                    "issuer_split":target["issuer_split"],
+                    "temporal_split":target["temporal_split"],
+                    "joint_strict_split":target["joint_strict_split"],
+                    "asof_publication_verified":"false",
+                    "approved_for_training":"false"
+                })
+    return windows
+
+
 def save_csv(path,fieldnames,rows):
     with Path(path).open("w",encoding="utf-8",newline="") as fh:
         w=csv.DictWriter(fh,fieldnames=fieldnames)
@@ -251,6 +300,8 @@ def build(data_root,out,*,seed=20261019):
     rows,counts=audited_evidence_rows(provider,official,cohort,case_ids,seed)
     out.mkdir(parents=True,exist_ok=True)
     save_csv(out/"taiwan_research_split_register.csv",SPLIT_COLUMNS,rows)
+    seq=sequence_windows(rows)
+    save_csv(out/"taiwan_sequence_window_admission.csv",WINDOW_COLUMNS,seq)
     source_pairs=defaultdict(set)
     all_assignments=defaultdict(set)
     for row in rows:
@@ -295,6 +346,9 @@ def build(data_root,out,*,seed=20261019):
         "Taiwan_issuer_count":len(all_assignments),
         "cohort_issuer_count":len(cohort),
         "evidence_rows":len(rows),
+        "sequence_window_counts":{str(span):sum(x["window_years"]==span for x in seq) for span in (3,5)},
+        "complete15_candidate_sequence_windows":{str(span):sum(x["window_years"]==span and x["complete_15_window"]=="true" for x in seq) for span in (3,5)},
+        "sequence_window_training_admitted":0,
         "official_retrospective_rows":sum(r["evidence_tier"]=="MOPS_OFFICIAL_RETROSPECTIVE" for r in rows),
         "finmind_candidate_rows":sum(r["evidence_tier"]=="FINMIND_PROVISIONAL" for r in rows),
         "complete15_by_source":{a:{v:completeness[(a,v)] for v in ("true","false")} for a in
