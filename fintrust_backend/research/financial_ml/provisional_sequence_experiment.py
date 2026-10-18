@@ -287,6 +287,7 @@ def run(dataset, output, *, history=3, epochs=40, seed=42, models=MODELS,
             raise ValueError('nonfinite_model_predictions')
         val_loss = float(np.mean((val_pred - val_y) ** 2))
         test_loss = float(np.mean((test_pred - test_y) ** 2))
+        print(f'[Temporal pilot] {name} completed; validation_scaled_MSE={val_loss:.6f}; holdout_scaled_MSE={test_loss:.6f}', flush=True)
         records.append({
             'model': name, 'backend': model['backend'],
             'validation_scaled_mse': round(val_loss, 8),
