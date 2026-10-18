@@ -26,6 +26,11 @@ ROOT_SEED = Path(__file__).with_name("phase1_case_sources_seed.json")
 MAX_BYTES = 12_000_000
 OFFICIAL_HOSTS = frozenset({"judgment.judicial.gov.tw", "www.sfipc.org.tw"})
 FINAL_HOLDOUT = "1785"
+CASE_NAME_ALIASES = {
+ "3027": ("盛達電業","盛達公司"),
+ "8299": ("群聯電子","群聯公司"),
+ "6452": ("康友公司","康友-KY","康友製藥"),
+}
 REVIEW_COLUMNS = (
     "case_id", "ticker", "company", "fiscal_year", "event_evidence_status",
     "official_sources_total", "official_sources_archived",
@@ -112,6 +117,15 @@ def visible_document(raw):
     return unicodedata.normalize("NFKC",re.sub(r"\s+"," ",text)).strip()
 
 
+
+def company_mentioned(text, case):
+    """Document identities use explicit aliases, not only the stock display name."""
+    normalized = re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
+    alternatives = CASE_NAME_ALIASES.get(str(case["ticker"]), (case["company"],))
+    return any(re.sub(r"\s+", "", unicodedata.normalize("NFKC",name)) in normalized
+               for name in alternatives)
+
+
 def archive_official(case,source,folder,*,retrieve=False,fetcher=http_get):
     """Fail closed; never replace an existing official-looking archive."""
     source_id=source["source_id"]
@@ -150,7 +164,7 @@ def archive_official(case,source,folder,*,retrieve=False,fetcher=http_get):
                      raw_sha256=digest,raw_file=str(dest),bytes=len(raw),
                      fetched_at_utc=meta.get("fetched_at_utc",""))
         state["company_name_visible_in_document"]=str(
-            unicodedata.normalize("NFKC",case["company"]) in visible_document(raw)
+            company_mentioned(visible_document(raw),case)
         ).lower()
         return state
     if not retrieve:
@@ -164,7 +178,7 @@ def archive_official(case,source,folder,*,retrieve=False,fetcher=http_get):
             raise ValueError("unexpected_official_redirect")
         readable=visible_document(body)
         # Reject generic anti-bot/login/result-not-found pages masquerading as proof.
-        present=unicodedata.normalize("NFKC",case["company"]) in readable
+        present=company_mentioned(readable,case)
         if not present:
             return {**state,"collection_status":"DOCUMENT_IDENTITY_UNVERIFIED_NOT_SAVED",
                     "error_category":"company_name_absent_from_visible_text"}
@@ -269,6 +283,9 @@ def run(seed_file,output,*,retrieve=False,pace_seconds=2.0,fetcher=http_get):
             s["kind"]!="SECONDARY_NEWS_CONTEXT_NOT_LABEL_EVIDENCE"
             for c in cases for s in c["sources"]),
         "source_collection_statuses":dict(sorted(status_counts.items())),
+        "per_source_diagnostics":[{"ticker":r["ticker"],"source_id":r["source_id"],
+          "collection_status":r["collection_status"],
+          "error_category":r.get("error_category","")} for r in states],
         "official_source_bytes_archived":sum(bool(s["raw_sha256"]) for s in states),
         "original_pre_restatement_filing_count_verified":0,
         "earliest_public_revelation_times_verified":0,
