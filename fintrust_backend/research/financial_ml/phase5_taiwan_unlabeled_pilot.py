@@ -46,6 +46,9 @@ def read_audited_data(register,phase4_report):
         if needed-set(reader.fieldnames or []):
             raise ValueError("phase4_split_register_schema_mismatch")
         incoming=list(reader)
+    case_ids=set(report.get("case_development_candidate_ids") or [])
+    if not case_ids or "1785" in case_ids:
+        raise ValueError("missing_or_corrupted_development_case_registry")
     seen=set()
     values={"fit":[],"validation":[],"test":[]}
     excluded=Counter()
@@ -68,6 +71,8 @@ def read_audited_data(register,phase4_report):
                 or r["first_filing_publication_verified"].lower()!="false"
                 or r["original_vintage_verified"].lower()!="false"):
             raise ValueError("unapproved_label_or_asof_promotion")
+        if (r["development_event_candidate"].lower()=="true")!=(ticker in case_ids):
+            raise ValueError("development_candidate_flag_conflicts_with_locked_case_registry")
         if r["evidence_tier"]!=SOURCE:
             excluded["separate_official_retrospective_tier"]+=1
             continue
