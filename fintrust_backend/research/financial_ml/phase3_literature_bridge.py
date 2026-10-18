@@ -16,7 +16,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from app.services.financial_research import beneish_1999, dechow_2011
-from app.services.financial_research.literature_inputs import MAPPINGS, MAPPING_VERSION
+from app.services.financial_research import literature_common as lc
+from app.services.financial_research.literature_inputs import MAPPINGS, MAPPING_VERSION, PanelValue
 from .finmind_bulk_stage import DATASETS, URL
 from .finmind_cross_industry_pilot import read_universe
 from .phase12_integrated_gate import inspect_archive
@@ -203,6 +204,66 @@ def needed_features(year, account_index):
     return result
 
 
+
+class ProvisionalPanel:
+    """Adapter for the ORIGINAL paper arithmetic only, not an approved filing.
+
+    Each value remains an unapproved FinMind one-of source candidate. Missing
+    multi-line sources never become inferred zeros. No approved M/F-Score.
+    """
+    def __init__(self,year,account_index):
+        self.year=year
+        self.index=account_index
+
+    def value(self,metric,relative):
+        offset={"t":0,"t-1":1,"t-2":2}[relative]
+        target=self.year-offset
+        item=self.index.get((target,metric))
+        status=item["status"] if item else "year_not_available"
+        good=(status=="candidate_amount_only_unapproved")
+        val=Decimal(item["candidate_annual_value"]) if good else None
+        return PanelValue(metric,relative,target,val,
+            "computed" if good else "missing_input",None,
+            f"UNVERIFIED_FINMIND_FY:{target}",[],[],
+            [] if good else [status],
+            ["UNVERIFIED_PERIOD_MAPPING",
+             "NO_ORIGINAL_FILING_PUBLICATION_DATE",
+             "NO_TAIWAN_ACCOUNTING_METHOD_APPROVAL"],
+            evidence_type="unverified_provider_candidate_only")
+
+
+def provisional_paper_components(ticker,year,account_index):
+    """Actually execute published 14 continuous component formulas when inputs
+    permit, without ever manufacturing Issue or calling the M/F-Score function.
+    """
+    panel=ProvisionalPanel(year,account_index)
+    b=lc.evaluate_components(panel,beneish_1999.COMPONENTS)
+    d=lc.evaluate_components(panel,dechow_2011.COMPONENTS)
+    values={}
+    missing={}
+    for prefix,result in (("b_",b),("d_",d)):
+        for entry in result["components"]:
+            key=prefix+entry["variable"]
+            if entry["status"]=="computed":
+                values[key]=entry["value_exact"]
+            else:
+                values[key]=""
+                missing[key]="|".join(sorted({
+                    str(r.get("metric",r.get("code","unknown"))) for r in entry["reasons"]
+                }))
+    values["d_issue"]=""
+    missing["d_issue"]="issuance_evidence_not_originally_verified"
+    return {
+        "ticker":ticker,"fiscal_year":year,
+        "candidate_components_with_values":sum(bool(v) for v in values.values()),
+        "component_source":"FINMIND_UNAPPROVED_CANDIDATE_ONLY",
+        "complete_15_paper_features_training_approved":"false",
+        "label_status":"UNKNOWN",
+        "missing_reasons_json":json.dumps(missing,ensure_ascii=False,sort_keys=True),
+        **values
+    }
+
+
 def reconcile_conflicts(cross_csv,output):
     """Keep official mismatches as review tickets (not self-approval)."""
     if not Path(cross_csv).is_file():
@@ -242,7 +303,7 @@ def run(data_root,output,*,start_year=2013,end_year=2025):
     if stage2["cohort_companies"]!=len(companies):
         raise ValueError("phase2_company_count_conflicts_with_cohort")
     raw=root/"finmind_cross_industry_raw"
-    accounts=[];feasibility=[];count_status=Counter();fstatus=Counter()
+    accounts=[];feasibility=[];candidate_components=[];count_status=Counter();fstatus=Counter()
     for position,company in enumerate(companies,1):
         ticker=company["ticker"]
         source={family:family_archive(raw,ticker,family) for family in DATASET}
@@ -258,12 +319,17 @@ def run(data_root,output,*,start_year=2013,end_year=2025):
                 record["ticker"]=ticker
                 feasibility.append(record)
                 fstatus[record["readiness"]]+=1
+            candidate_components.append(provisional_paper_components(ticker,year,per_company))
         if position%20==0:
             print(f"[Phase3 coverage] {position}/{len(companies)} issuers",flush=True)
     write_table(out/"finmind_24_account_candidate_coverage.csv",
                 ACCOUNT_COLUMNS,accounts)
     write_table(out/"finmind_15_feature_feasibility.csv",
                 FEATURE_COLUMNS,feasibility)
+    write_table(out/"finmind_provisional_paper_component_values.csv",
+                ("ticker","fiscal_year","candidate_components_with_values",
+                 "component_source","complete_15_paper_features_training_approved",
+                 "label_status","missing_reasons_json",*FEATURES),candidate_components)
 
     xbrl_manifest=root/"official_batch"/"acquisition_results.json"
     if xbrl_manifest.exists():
@@ -283,6 +349,9 @@ def run(data_root,output,*,start_year=2013,end_year=2025):
         "paper_features":len(FEATURES),
         "account_evidence_rows":len(accounts),
         "component_feasibility_rows":len(feasibility),
+        "provisional_paper_component_company_year_rows":len(candidate_components),
+        "provisional_components_computable_total":sum(r["candidate_components_with_values"] for r in candidate_components),
+        "provisional_full15_training_approved_rows":0,
         "account_statuses":dict(sorted(count_status.items())),
         "feature_readiness_statuses":dict(sorted(fstatus.items())),
         "official_xbrl_feature_report":official,
