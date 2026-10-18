@@ -14,18 +14,22 @@ A repeated stock ID is therefore not necessarily a source data error.
    ID is undated, quarantine the entire ID (cannot prove which record is latest).
 4. Choose the **greatest date** per stock ID before testing current market/type,
    current non-financial industry, and instrument eligibility.
-5. Several identical latest-date entries are harmless; if latest-date market,
-   stock name or industry differs, quarantine **that ID only** and continue.
-   Do not choose arbitrarily or fabricate a historical classification.
-6. Preserve a readable quarantine CSV and counts/examples in the coverage JSON.
-   The output company CSV schema is unchanged for `finmind_bulk_stage.py`.
+5. Several identical latest-date entries are harmless. If latest-date
+   market or name differs, quarantine that ID. Multiple industry tags can be
+   hierarchical: remove only the three known parent/segment categories and
+   require exactly one remaining specific industry. Preserve every original
+   tag in the industry-memberships sidecar. If several incomparable specific
+   industries remain, quarantine rather than choosing arbitrarily.
+6. Preserve a readable quarantine CSV, a source-tag membership CSV, and
+   counts/examples in the coverage JSON. The candidate CSV schema remains
+   compatible with `finmind_bulk_stage.py`.
 7. Do not infer historical 2013–2025 listing membership, normality or company
    financial-data correctness from a 2026 current-company snapshot.
 
 ## Resume without re-fetching (separate ML worktree)
 
 ```powershell
-$branch = "feature/financial-ml-iterative-literature-benchmark-20261018"
+$branch = "feature/financial-ml-finmind-taxonomy-reconciliation-20261018"
 git fetch origin "refs/heads/${branch}:refs/remotes/origin/${branch}"
 git switch --detach "origin/$branch"
 $mlRoot = (git rev-parse --show-toplevel).Trim()
