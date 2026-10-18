@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from one_shot_train import FEATURES, read_data, run
+from research.financial_ml.one_shot_train import FEATURES, read_data, run
 
 class OneShotTests(unittest.TestCase):
     def setUp(self):
