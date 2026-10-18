@@ -27,7 +27,6 @@
       "affected_reporting_period_description": "FY2015/FY2016 annual and relevant interim filings; exact quarterly entries require page-by-page appendix review",
       "initial_disclosure_candidate_at": "2017-06-08T23:58:00+08:00",
       "first_public_disclosure_primary_archived": false,
-      "legal_evidence_public_at": "2025-04-30T00:00:00+08:00",
       "sources": [
         {
           "source_id": "judicial_3027_trial_2025",
@@ -45,7 +44,9 @@
         "judgment_paragraph_checked": false,
         "original_filing_availability_verified": false,
         "label_method_owner_approved": false
-      }
+      },
+      "legal_evidence_document_date": "2025-04-30",
+      "legal_evidence_online_publication_time_verified": false
     },
     {
       "case_id": "TW-8299-2014",
@@ -63,7 +64,6 @@
       "affected_reporting_period_description": "FY2014 Q3 and Q4 reported as affected in civil litigation; broader 2009-2016 period must not be auto labelled",
       "initial_disclosure_candidate_at": null,
       "first_public_disclosure_primary_archived": false,
-      "legal_evidence_public_at": "2025-01-15T00:00:00+08:00",
       "sources": [
         {
           "source_id": "judicial_8299_appeal_2025",
@@ -90,7 +90,9 @@
         "judgment_paragraph_checked": false,
         "original_filing_availability_verified": false,
         "label_method_owner_approved": false
-      }
+      },
+      "legal_evidence_document_date": "2025-01-15",
+      "legal_evidence_online_publication_time_verified": false
     },
     {
       "case_id": "TW-6452-2017-2020",
@@ -111,7 +113,6 @@
       "affected_reporting_period_description": "Investment protection center cites allegedly false consolidated FY2017 Q2–FY2020 Q1 reports; do not equate this claim to four adjudicated positive fiscal years",
       "initial_disclosure_candidate_at": null,
       "first_public_disclosure_primary_archived": false,
-      "legal_evidence_public_at": "2023-05-12T00:00:00+08:00",
       "sources": [
         {
           "source_id": "sfipc_6452_civil_claim_2023",
@@ -129,7 +130,9 @@
         "judgment_paragraph_checked": false,
         "original_filing_availability_verified": false,
         "label_method_owner_approved": false
-      }
+      },
+      "legal_evidence_document_date": "2023-05-12",
+      "legal_evidence_online_publication_time_verified": false
     }
   ],
   "transfer_policy": {
