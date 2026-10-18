@@ -12,13 +12,15 @@ import csv
 import hashlib
 import json
 import re
+import ssl
 import time
 import unicodedata
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
-from urllib.request import Request, build_opener, HTTPRedirectHandler
+from urllib.request import Request, build_opener, HTTPRedirectHandler, HTTPSHandler
+from urllib.error import URLError
 
 from .phase1_case_registry import validate
 
@@ -85,14 +87,48 @@ class SafeRedirect(HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+def judiciary_verified_context(*, compatibility=False):
+    """Keep CA chain and hostname verification; only relax RFC strictness.
+
+    Python 3.13+ turns on VERIFY_X509_STRICT. Some older government
+    certificates fail on a missing legacy Subject. This compatibility flag
+    cannot be used as a replacement for peer authentication, and only the
+    judiciary endpoint can trigger it after a specific strict failure.
+    """
+    context=ssl.create_default_context()
+    if compatibility and hasattr(ssl,"VERIFY_X509_STRICT"):
+        context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    if context.verify_mode != ssl.CERT_REQUIRED or not context.check_hostname:
+        raise ValueError("unsafe_tls_context_never_allowed")
+    return context
+
+
+def _open_verified(req, timeout, *, compatibility=False):
+    context=judiciary_verified_context(compatibility=compatibility)
+    handler=HTTPSHandler(context=context)
+    return build_opener(handler,SafeRedirect()).open(req,timeout=timeout)
+
+
 def http_get(url, *, timeout=18):
     safe_url(url)
-    opener = build_opener(SafeRedirect())
     req = Request(url, headers={
-        "User-Agent": "FinancialMLAcademicEvidenceAudit/1.0 (offline-source-vintage-research)",
+        "User-Agent": "FinancialMLAcademicEvidenceAudit/1.0 (academic evidence provenance)",
         "Accept": "text/html,application/xhtml+xml,text/plain"
     })
-    with opener.open(req, timeout=timeout) as response:
+    tls_mode="DEFAULT_STRICT_CA_CHAIN_AND_HOSTNAME"
+    try:
+        response=_open_verified(req,timeout,compatibility=False)
+    except URLError as failure:
+        if not (urlparse(url).hostname=="judgment.judicial.gov.tw"
+                and isinstance(failure.reason,ssl.SSLCertVerificationError)
+                and "Missing Subject" in str(failure.reason)
+                and hasattr(ssl,"VERIFY_X509_STRICT")):
+            raise
+        # This is deliberately NOT CERT_NONE/verify=False. If the certificate
+        # chain or hostname is invalid, compatibility verification still fails.
+        response=_open_verified(req,timeout,compatibility=True)
+        tls_mode="JUDICIARY_RFC5280_STRICT_ONLY_RELAXED_CHAIN_AND_HOSTNAME_VERIFIED"
+    with response:
         safe_url(response.geturl())
         if response.status != 200:
             raise ValueError("http_non_200")
@@ -103,9 +139,10 @@ def http_get(url, *, timeout=18):
         if not 500<=len(body)<=MAX_BYTES:
             raise ValueError("source_undersize_or_oversize")
         content_type=response.headers.get("Content-Type","").lower()
-        if not any(kind in content_type for kind in ("text/html","text/plain","application/xhtml+xml")):
+        if not any(kind in content_type for kind in (
+                "text/html","text/plain","application/xhtml+xml")):
             raise ValueError("unexpected_official_content_type")
-        return body, response.geturl(), content_type
+        return body,response.geturl(),content_type,tls_mode
 
 
 def visible_document(raw):
@@ -177,7 +214,14 @@ def archive_official(case,source,folder,*,retrieve=False,fetcher=http_get):
     if not retrieve:
         return state
     try:
-        body,final_url,content_type=fetcher(source["url"])
+        fetched=fetcher(source["url"])
+        if len(fetched)==3:
+            body,final_url,content_type=fetched
+            tls_policy="TEST_OR_CUSTOM_FETCHER_UNATTESTED"
+        elif len(fetched)==4:
+            body,final_url,content_type,tls_policy=fetched
+        else:
+            raise ValueError("unsupported_source_fetcher_result")
         safe_url(final_url)
         if final_url!=source["url"]:
             # Court print URLs should be stable; redirects are recorded for
@@ -199,6 +243,7 @@ def archive_official(case,source,folder,*,retrieve=False,fetcher=http_get):
             "source_id":source_id,"case_id":case["case_id"],
             "url":source["url"],"final_url":final_url,
             "content_type":content_type,"fetched_at_utc":fetched,
+            "tls_policy":tls_policy,
             "sha256":checksum,"bytes":len(body),
             "method":"HTTPS_RETRIEVED_BUT_DOCUMENT_FACTS_UNREVIEWED",
             "source_publication_at":None,
