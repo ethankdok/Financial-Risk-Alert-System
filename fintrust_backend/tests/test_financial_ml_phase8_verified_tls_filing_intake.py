@@ -96,6 +96,24 @@ class Phase8VerifiedTLSAndFilingTests(unittest.TestCase):
         self.assertIn("STRICT_ONLY_RELAXED",mode)
         self.assertTrue(len(raw)>500)
 
+    def test_verified_tls_compatibility_policy_is_recorded_in_receipt(self):
+        source_case=next(v for v in self.cases if v["ticker"]=="3027")
+        source=source_case["sources"][0]
+        body=("<html><body>盛達電業" + "官方文件取得後仍需法律審核。"*35 +
+              "</body></html>").encode("utf-8")
+        policy="JUDICIARY_RFC5280_STRICT_ONLY_RELAXED_CHAIN_AND_HOSTNAME_VERIFIED"
+        def transport(url):
+            return body,url,"text/html; charset=utf-8",policy
+        result=c.archive_official(source_case,source,self.root/"verified",
+                                  retrieve=True,fetcher=transport)
+        self.assertEqual(result["collection_status"],
+                         "HTTPS_ARCHIVED_WITH_SHA_NEEDS_FACT_REVIEW")
+        receipt=Path(result["raw_file"]).with_suffix(".json")
+        doc=json.loads(receipt.read_text(encoding="utf-8"))
+        self.assertEqual(doc["tls_policy"],policy)
+        self.assertFalse(doc["period_specific_label_approved"])
+        self.assertIsNone(doc["source_publication_at"])
+
     def test_other_certificate_errors_never_downgrade(self):
         url="https://judgment.judicial.gov.tw/FJUD/printData.aspx?id=test"
         calls=[]
