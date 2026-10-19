@@ -33,7 +33,7 @@ def fake_facts(*,period="2016-11-13T21:26:22+08:00",revision="restated",
     return rows
 
 
-def create_fake_zip(path, rows):
+def create_fake_zip(path, rows, *, as_of='2016-11-14'):
     root="fintrust_historical_research_dataset/"
     buff=io.StringIO()
     writer=csv.DictWriter(buff,fieldnames=list(rows[0]))
@@ -43,7 +43,7 @@ def create_fake_zip(path, rows):
         z.writestr(root+"manifest.json",json.dumps({
             "mode":"strict_point_in_time",
             "case":{"ticker":"1785"},
-            "parameters":{"as_of":"2016-11-14"}}))
+            "parameters":{"as_of":as_of}}))
 
 
 class Final1785Tests(unittest.TestCase):
@@ -113,7 +113,7 @@ class Final1785Tests(unittest.TestCase):
     def test_early_strict_original_package_can_unlock_only_originals(self):
         source=fake_facts(period="2016-03-25T16:00:00+08:00",
                           revision="original",n_per_year=12)
-        create_fake_zip(self.zip,source)
+        create_fake_zip(self.zip,source,as_of="2016-05-12")
         # ONLY mock the separate verifier in this hermetic unit test. The
         # production call always runs the full original semantic validator.
         with patch.object(study,"verify_package",return_value={
@@ -134,7 +134,7 @@ class Final1785Tests(unittest.TestCase):
         source=fake_facts(period="2016-03-25T16:00:00+08:00",
                           revision="original",n_per_year=12)
         source.append(dict(source[0]))
-        create_fake_zip(self.zip,source)
+        create_fake_zip(self.zip,source,as_of="2016-05-12")
         with patch.object(study,"verify_package",return_value={
                 "status":"verified","mode":"strict_point_in_time"}):
             with self.assertRaisesRegex(ValueError,"duplicate_same_grain"):
