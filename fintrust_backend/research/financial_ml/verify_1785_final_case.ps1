@@ -15,6 +15,7 @@ $main=Join-Path (Split-Path $git -Parent) "Financial-Risk-Alert-System"
 $base=Join-Path $main "fintrust_backend\data"
 $ml=Join-Path $base "financial_ml"
 $package=Join-Path $base "historical_audit\packages\fintrust_1785_asof_2016-11-14.zip"
+$preEvent=Join-Path $base "historical_audit\packages\fintrust_1785_asof_2016-05-12.zip"
 $round3=Join-Path $ml "round3_real_model_evaluation_retry_01"
 $round4=Join-Path $ml "round4_explainability_handoff\round4_research_handoff_report.json"
 $bridge=Join-Path $ml "round2_closure_round3_preflight"
@@ -40,13 +41,17 @@ try {
     Require-Success "1785 case regression"
 
     Write-Host "1785: verify actual archived strict ZIP, frozen models, full literature scores"
-    python -m research.financial_ml.final_1785_case_replay `
-        --data-root $ml `
-        --round2-bridge-root $bridge `
-        --round3-root $round3 `
-        --round4-report $round4 `
-        --strict-zip $package `
-        --output $output
+    $caseArgs=@(
+        "-m","research.financial_ml.final_1785_case_replay",
+        "--data-root",$ml,"--round2-bridge-root",$bridge,
+        "--round3-root",$round3,"--round4-report",$round4,
+        "--strict-zip",$package,"--output",$output
+    )
+    if (Test-Path -LiteralPath $preEvent) {
+        $caseArgs+=@("--pre-event-zip",$preEvent)
+        Write-Host "A pre-event 1785 strict archive is present; its independent semantic and PIT gates will be verified."
+    }
+    python @caseArgs
     Require-Success "1785 source pinned final case execution"
 
     $report=Join-Path $output "1785_case_final_report.json"
