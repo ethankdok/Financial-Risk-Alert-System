@@ -165,9 +165,77 @@ def read_annual_amounts(data,cohort):
     return sorted(result,key=lambda r:(r["ticker"],r["fiscal_year"])),index,path
 
 
+
+def verify_annual_source_stage(data,index):
+    """No staged-value substitutions are allowed in the derived 12-wide panel."""
+    path=data/"finmind_scaled_annual_candidates"/"finmind_annual_candidate_lines.csv"
+    rows=csv_rows(path,(
+        "ticker","fiscal_year","candidate_mops_metric","candidate_annual_value",
+        "source_family","status","source_sha256","training_admitted",
+        "publication_asof_verified","label_status"
+    ))
+    seen=set()
+    for r in rows:
+        t=safe_ticker(r["ticker"]);y=int(r["fiscal_year"]);name=r["candidate_mops_metric"]
+        if name not in METRICS or (t,y) not in index:
+            raise ValueError("annual_candidate_stage_unknown_issuer_year_metric")
+        key=(t,y,name)
+        if key in seen:
+            raise ValueError("duplicate_original_annual_candidate_stage_metric")
+        seen.add(key)
+        if (not has_false(r["training_admitted"]) or
+            not has_false(r["publication_asof_verified"]) or
+            r["label_status"]!="UNREVIEWED"):
+            raise ValueError("original_finmind_staged_metric_falsely_approved")
+        status=r["status"]
+        if status=="candidate_annual_value":
+            if not re.fullmatch("[0-9a-f]{64}",r["source_sha256"]):
+                raise ValueError("missing_raw_source_sha_for_annual_staged_amount")
+            original=amount(r["candidate_annual_value"])
+            if not original:
+                raise ValueError("staged_annual_source_missing_real_value")
+        else:
+            if status not in ("empty_provider_response","missing_december_value",
+                              "missing_income_quarter","archive_missing"):
+                raise ValueError("invalid_annual_finmind_staging_status")
+            if r["candidate_annual_value"].strip():
+                raise ValueError("missing_annual_stage_contains_invented_amount")
+            original=""
+        if original!=index[(t,y)][name]:
+            raise ValueError("annual_12_panel_does_not_match_staged_original_finmind_data")
+    expected={(t,y,name) for (t,y) in index for name in METRICS}
+    if seen!=expected:
+        raise ValueError("annual_stage_missing_metric_cells_from_frozen_120_panel")
+    return path
+
+
+def paper_original_evidence_index(data,phase4):
+    files={
+      "FINMIND_PROVISIONAL":(
+        data/"phase3_literature_integrated"/
+        "finmind_provisional_paper_component_values.csv",
+        phase4["source_hashes"]["provider_candidate"]),
+      "MOPS_OFFICIAL_RETROSPECTIVE":(
+        data/"phase3_literature_integrated"/"mops_official_15_features"/
+        "literature_15_features.csv",
+        phase4["source_hashes"]["official_retrospective"]),
+    }
+    result={}
+    for tier,(path,expected) in files.items():
+        if digest(path)!=expected:
+            raise ValueError("original_15_paper_input_csv_source_hash_changed")
+        original=csv_rows(path,("ticker","fiscal_year",*FEATURES))
+        for r in original:
+            key=(tier,r["ticker"],int(r["fiscal_year"]))
+            if key in result:
+                raise ValueError("duplicate_original_paper_feature_source")
+            result[key]=r
+    return result
+
 def read_paper_features(data,cohort,phase4):
     path=data/"phase4_taiwan_research_dataset"/"taiwan_research_split_register.csv"
     rows=csv_rows(path,SPLIT_COLUMNS)
+    original=paper_original_evidence_index(data,phase4)
     registered={}
     paper=[]
     seen=set()
@@ -198,6 +266,9 @@ def read_paper_features(data,cohort,phase4):
         if set(vec)!=set(FEATURES):
             raise ValueError("incorrect_original_Beneish_Dechow_paper_features")
         feat={n:amount(vec[n]) for n in FEATURES}
+        source=original.get(key)
+        if source is None or any(feat[n]!=amount(source[n]) for n in FEATURES):
+            raise ValueError("paper_15_feature_vector_differs_from_original_source")
         count=sum(bool(x) for x in feat.values())
         if count!=int(r["available_feature_count"]) or (
                 r["full_15_features"].lower()=="true")!=(count==len(FEATURES)):
@@ -227,8 +298,8 @@ def read_paper_features(data,cohort,phase4):
         }
         paper.append(row)
         registered[key]=row
-    if len(rows)!=int(phase4["evidence_rows"]):
-        raise ValueError("original_phase4_register_count_changed")
+    if len(rows)!=int(phase4["evidence_rows"]) or seen!=set(original):
+        raise ValueError("original_phase4_register_count_or_source_coverage_changed")
     return sorted(paper,key=lambda r:(r["evidence_tier"],r["ticker"],r["fiscal_year"])),path
 
 
@@ -315,6 +386,7 @@ def read_official_quarterly_sources(data,cohort):
         if (r["source_status"]!="QUARTER_CONTEXT_VALIDATED_VINTAGE_UNKNOWN"
             or not has_false(r["admitted_for_model_training"])
             or not has_false(r["historical_first_publication_verified"])
+            or not has_false(r["historical_first_original_version_verified"])
             or r["independently_verified_fraud_outcome"]!="UNKNOWN"):
             raise ValueError("case_period_fraud_outcome_must_remain_unknown")
         result.append({
@@ -438,6 +510,7 @@ def run(data_root,output):
         or phase4["source_hashes"]["cohort"]!=digest(cohort_file)):
         raise ValueError("phase4_research_source_split_not_frozen_or_label_leak")
     annual,annual_idx,annual_path=read_annual_amounts(data,cohort)
+    staged_path=verify_annual_source_stage(data,annual_idx)
     paper,paper_path=read_paper_features(data,cohort,phase4)
     quarters,qroot,case_root=read_official_quarterly_sources(data,cohort)
     windows=annual_window_register(annual_idx)
@@ -455,7 +528,7 @@ def run(data_root,output):
                  r["all_12_amounts_present"]) for r in windows)
     qstat=Counter((r["data_role"],r["financial_issuer_quarter_observation"]) for r in quarters)
     qcoverage=Counter((r["source_tier"],r["quarters_observed"]==12) for r in qdensity)
-    input_paths=[cohort_file,phase4_file,annual_path,paper_path,
+    input_paths=[cohort_file,phase4_file,annual_path,staged_path,paper_path,
         qroot/"multiissuer_official_quarter_sources.csv",
         qroot/"quarterly_acquisition_results.json",
         case_root/"quarterly_case_official_source_index.csv",
