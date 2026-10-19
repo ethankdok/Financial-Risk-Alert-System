@@ -9,20 +9,18 @@ from pathlib import Path
 
 from research.financial_ml import round2_closeout_round3_bridge as bridge
 from research.financial_ml import round2_evidence_review as first
-from test_financial_ml_round2_evidence_review import (
-    Round2EvidenceReviewTests, read_csv, write_csv,
-)
+import test_financial_ml_round2_evidence_review as fixture_module
 
 
 def add_row_fields(path, fn):
-    rows = read_csv(path)
+    rows = fixture_module.read_csv(path)
     new = [fn(dict(r), i) for i, r in enumerate(rows)]
-    write_csv(path, new)
+    fixture_module.write_csv(path, new)
 
 
 class Round2CloseoutTests(unittest.TestCase):
     def setUp(self):
-        fixture = Round2EvidenceReviewTests(
+        fixture = fixture_module.Round2EvidenceReviewTests(
             "test_offline_review_packet_all_sample_grains_no_fake_labels")
         fixture.setUp()
         self.addCleanup(fixture.tmp.cleanup)
@@ -85,8 +83,8 @@ class Round2CloseoutTests(unittest.TestCase):
             })
         self.annual_path = frozen / "annual_12_amount_candidate_index.csv"
         self.annual_paper_path = frozen / "annual_original_15_paper_candidate_index.csv"
-        write_csv(self.annual_path, annual)
-        write_csv(self.annual_paper_path, paper)
+        fixture_module.write_csv(self.annual_path, annual)
+        fixture_module.write_csv(self.annual_paper_path, paper)
         add_row_fields(self.fixture.sparse_path, lambda r, i: {
             **r, "sample_key": f"COMP:{r['ticker']}:{r['reporting_period']}",
             "issuer_split": "fit", "time_split": "fit",
@@ -101,7 +99,7 @@ class Round2CloseoutTests(unittest.TestCase):
             "fit_distinct_issuers": "5", "supervised_training_admitted": "false"
         } for n in range(1,25)]
         self.dict_path = frozen / "quarterly_fit_selected_feature_dictionary.csv"
-        write_csv(self.dict_path, dict_rows)
+        fixture_module.write_csv(self.dict_path, dict_rows)
         report = json.loads(self.fixture.baseline_path.read_text(encoding="utf-8"))
         report.update({
             "annual_12_amount_full_12_company_years": 535,
@@ -125,7 +123,7 @@ class Round2CloseoutTests(unittest.TestCase):
         self.assertFalse(release["supervised_fraud_train_allowed"])
         self.assertFalse(release["literature_baseline_fraud_auc_allowed"])
         self.assertTrue(release["unlabeled_anomaly_diagnostics_allowed"])
-        manifest = read_csv(self.out / "round3_research_source_manifest.csv")
+        manifest = fixture_module.read_csv(self.out / "round3_research_source_manifest.csv")
         self.assertEqual(len(manifest), 3)
         self.assertTrue(all(x["fraud_supervised_use"] == "BLOCKED" for x in manifest))
 
@@ -204,9 +202,9 @@ class Round2CloseoutTests(unittest.TestCase):
             (self.out / "round2_closure_and_round3_preflight.json").read_bytes())
 
     def test_missing_critical_quarter_feature_is_rejected(self):
-        rows = read_csv(self.dict_path)
+        rows = fixture_module.read_csv(self.dict_path)
         rows[0]["feature_id"] = "qf_99"
-        write_csv(self.dict_path, rows)
+        fixture_module.write_csv(self.dict_path, rows)
         with self.assertRaisesRegex(ValueError, "feature_dictionary_not_fit_only_or_not_in_matrix"):
             self.run_bridge()
 
