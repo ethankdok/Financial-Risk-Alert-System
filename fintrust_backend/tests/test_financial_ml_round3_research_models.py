@@ -96,6 +96,14 @@ class Round3EvaluationTests(unittest.TestCase):
         self.assertIsNone(report["fraud_pr_auc"])
         annual=report["annual_numeric_study"]
         self.assertEqual(annual["sample_count"],399)
+        strict = report["annual_strict_issuer_and_time_study"]
+        self.assertEqual(strict["status"], "STRICT_DUAL_SPLIT_NUMERIC_PROXY")
+        self.assertEqual(len(strict["models"]), 3)
+        self.assertTrue(strict["no_issuer_overlap"])
+        self.assertTrue(strict["test_never_used_for_model_selection"])
+        self.assertGreaterEqual(strict["counts"]["fit"], 30)
+        self.assertGreaterEqual(strict["counts"]["validation"], 5)
+        self.assertGreaterEqual(strict["counts"]["holdout"], 5)
         self.assertTrue(annual["holdout_not_used_to_pick_model"])
         self.assertFalse(annual["historical_issuer_disjoint"])
         self.assertEqual(set(annual["time_partition_counts"]),{"fit","validation","holdout"})
@@ -114,6 +122,16 @@ class Round3EvaluationTests(unittest.TestCase):
             self.output/"annual_numeric_prediction_per_financial_field.csv")),3*2*12)
         self.assertEqual(len(old.fixture_module.read_csv(
             self.output/"quarter_unlabeled_model_comparison.csv")),4)
+
+    def test_strict_issuer_and_time_must_skip_when_no_real_holdout(self):
+        from unittest.mock import patch
+        with patch.object(stage, "annual_windows", return_value=[]):
+            result=stage.issuer_and_time_disjoint_regression(
+                self.frozen,self.output,seed=2)
+        self.assertEqual(
+            result["status"], "STRICT_DUAL_SPLIT_INSUFFICIENT_COMPLETE_WINDOWS")
+        self.assertEqual(result["models"],[])
+        self.assertTrue(result["no_fraud_labels"])
 
     def test_no_supervised_fraud_training_if_release_gate_forged(self):
         p=self.bridge/"round3_release_gates.json"
