@@ -39,6 +39,43 @@ DATA LAYER D: Official quarter comparison cohort and separate 6452 development-c
 
 ACTUAL INTEGRATION REPORT: final_round1_integrated_ml_dataset/round1_dataset_readiness_report.json. This gives actual annual full amount vectors, source-separated original paper 15-feature coverage, strict time+issuer-disjoint 3yr/5yr candidate windows, 156 issuer/quarter positions separated by comparison/case, yearly label/history holdout gate, source-status errors and original input SHA manifests. All source labels remain UNKNOWN and training_admitted false. No HTTP, no external model fitting, no production SQL/Firestore/API writes and no 1785 final holdout access.
 
+## 2026-10-19 consolidated closeout Stage1 hardening
+
+This branch incorporates the distinctive **fit-only sparse quarterly model-input view**
+from the parallel Stage1 readiness work without duplicating its 600-line annual,
+paper, and official-quarter ingestion procedures. Original Round1 remains the
+single source-of-truth verifier for original paper feature CSV hashes, the 13
+known development-case annual records, and the separate 6452 quarterly archive.
+
+- Fixed an integration error: distinct `other_duration` facts with different
+  duration starts are legitimate XBRL observations but cannot be collapsed
+  to a unique quarter feature. They are excluded **before** duplicate-concept
+  checks; distinct standard-grain duplicates still fail closed.
+- Reuse the existing quarterly source-index and SHA verification, and reuse
+  the same quarterly candidate read pass. Select up to 24 distinct
+  exact-QName + accounting-grain features on **fit issuers and fit
+  2017Q2-2018Q4 periods only**, with at least 3 fit issuers per feature.
+  No taxonomy-name guessing, mixed year/quarter measurement, imputation,
+  legal outcome labels, or model fitting.
+- New files from the existing consolidated execution:
+  `quarterly_fit_selected_feature_dictionary.csv` and
+  `quarterly_sparse_feature_matrix.csv`. The matrix has 144 planned
+  comparison company-quarter positions, not 22,055 independent labels.
+  Each feature has an explicit `_observed` mask; actual numeric zero stays
+  an observed zero while missing values stay blank. The 6452 case and
+  3027/8299/1785 are excluded from the comparison matrix.
+- Added four focused hermetic regression scenarios to the existing Round1
+  test module: nonstandard-duration repeats, test-only taxonomy exclusion,
+  observed zero, and exact QName identity disagreement.
+- The prior Stage1 alternate branch is kept untouched for audit, not
+  merged as another parallel duplicate production path.
+
+**Acceptance status:** code committed to the remote research feature branch.
+The new regressions and user-local source integration have **not been executed**
+in this ChatGPT session. Do not report this as real-data PASS until the
+Windows verification command below returns success and the JSON report is
+reviewed. No production, release, or teammate branch was modified.
+
 ## One execution on user's actual environment
 
 In clean Financial-Risk-Alert-System-ML/fintrust_backend using existing ml-env, fetch/check out this branch and run:
