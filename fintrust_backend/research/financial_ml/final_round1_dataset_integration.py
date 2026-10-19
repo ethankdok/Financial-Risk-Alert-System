@@ -23,6 +23,7 @@ from pathlib import Path
 from .annual_panel_readiness import METRICS
 from .finmind_cross_industry_pilot import read_universe
 from .literature_dataset import FEATURES
+from .phase10_case_literature_vintage_audit import CASE_COLUMNS as CASE_PAPER_ORIGINAL_COLUMNS
 from .phase4_taiwan_dataset_gate import (
     SPLIT_COLUMNS, issuer_partition, temporal_partition,
 )
@@ -303,6 +304,84 @@ def read_paper_features(data,cohort,phase4):
     return sorted(paper,key=lambda r:(r["evidence_tier"],r["ticker"],r["fiscal_year"])),path
 
 
+
+def read_case_paper_features(data):
+    """Separate 2012 legacy and FY2013+ development case annual XBRL sources.
+
+    This is a different report/file provenance tier from Phase4 MOPS and
+    cannot be promoted to paper fit data, even if 15/15 columns happen to exist.
+    """
+    folder=data/"phase10_case_official_paper_audit"
+    path=folder/"phase10_case_official_paper_features.csv"
+    report=json.loads((folder/"phase10_integrated_report.json").read_text(encoding="utf-8"))
+    if (report.get("source_issuer_year_rows")!=13
+        or report.get("original_pre_correction_versions_verified")!=0
+        or report.get("verified_positive_labels")!=0
+        or report.get("verified_negative_labels")!=0
+        or report.get("historical_asof_training_rows_admitted")!=0
+        or report.get("final_holdout_1785_excluded") is not True):
+        raise ValueError("development_case_paper_vintage_or_labels_unapproved")
+    manifest_path=data/"phase9_case_mops_xbrl_candidates"/"acquisition_results.json"
+    manifest=json.loads(manifest_path.read_text(encoding="utf-8")).get("outcomes",{})
+    rows=csv_rows(path,CASE_PAPER_ORIGINAL_COLUMNS)
+    if len(rows)!=13:
+        raise ValueError("development_case_13_year_original_source_register_incomplete")
+    result=[];seen=set()
+    for r in rows:
+        t=safe_ticker(r["ticker"]);y=int(r["fiscal_year"])
+        if t not in {"3027","6452","8299"} or (t,y) in seen or not 2012<=y<=2020:
+            raise ValueError("development_case_official_year_identity_or_duplicate")
+        seen.add((t,y))
+        if (r["outcome_label"]!="UNKNOWN"
+            or not all(has_false(r[k]) for k in (
+               "approved_positive_label","approved_negative_label",
+               "admitted_for_supervised_learning",
+               "original_filing_vintage_verified",
+               "historical_filing_publication_at_verified",
+               "original_notice_publication_at_verified"))):
+            raise ValueError("development_case_outcome_or_original_vintage_false_promotion")
+        vec=json.loads(r["feature_values_json"])
+        if set(vec)!=set(FEATURES):
+            raise ValueError("case_paper_feature_vector_schema_not_original15")
+        feat={f:amount(vec[f]) for f in FEATURES}
+        count=sum(bool(v) for v in feat.values())
+        if count!=int(r["components_computed"]):
+            raise ValueError("case_paper_feature_count_not_reproducible")
+        good=r["official_xbrl_status"]=="validated"
+        if good:
+            evidence=manifest.get(f"{t}:{y}")
+            if (evidence is None or evidence.get("status")!="validated"
+                or evidence.get("content_hash")!=r["source_sha256"]
+                or not re.fullmatch("[0-9a-f]{64}",r["source_sha256"])
+                or r["official_statement_scope"]!="consolidated"):
+                raise ValueError("case_paper_official_sha_or_scope_not_same_source")
+        elif count or r["source_sha256"]:
+            raise ValueError("case_missing_or_legacy_source_not_valid_feature_year")
+        if y==2012 and (good or count):
+            raise ValueError("FY2012_legacy_not_approved_TIFRS_paper_data")
+        issuer=issuer_partition(t)
+        temporal=temporal_partition(y) if y>=2013 else "legacy_pre_TIFRS"
+        joint=issuer if issuer==temporal else "outside_joint_evaluation"
+        result.append({
+            "sample_key":f"MOPS_CASE_RETROSPECTIVE:{t}:{y}",
+            "ticker":t,"fiscal_year":y,
+            "evidence_tier":"MOPS_DEVELOPMENT_CASE_RETROSPECTIVE",
+            "source_kind":"CASE_ORIGINAL_15_PAPER_CANDIDATES_SEPARATE",
+            "observed_feature_count":count,
+            "candidate_feature_count":15,
+            "complete_candidate_vector":str(count==15).lower(),
+            "issuer_split":issuer,"temporal_split":temporal,
+            "joint_strict_split":joint,
+            "source_sha256":r["source_sha256"],
+            "original_publication_verified":"false",
+            "original_filing_vintage_verified":"false",
+            "label_status":"UNKNOWN","training_admitted":"false",**feat
+        })
+    if sum(bool(x["source_sha256"]) for x in result)!=report["official_archived_xbrl_years"]:
+        raise ValueError("case_paper_actual_source_count_mismatch")
+    return sorted(result,key=lambda r:(r["ticker"],r["fiscal_year"])),path,manifest_path
+
+
 def read_official_quarterly_sources(data,cohort):
     """Validate source index, per-quarter SHA and separate 6452 development case."""
     folder=data/"phase14_multiissuer_quarterly_comparison"
@@ -512,12 +591,14 @@ def run(data_root,output):
     annual,annual_idx,annual_path=read_annual_amounts(data,cohort)
     staged_path=verify_annual_source_stage(data,annual_idx)
     paper,paper_path=read_paper_features(data,cohort,phase4)
+    case_paper,case_paper_path,phase9_manifest=read_case_paper_features(data)
     quarters,qroot,case_root=read_official_quarterly_sources(data,cohort)
     windows=annual_window_register(annual_idx)
     density=measure_feature_density(paper)
     qdensity=quarter_feature_density(data,quarters)
     dump_csv(out/"annual_12_amount_candidate_index.csv",ANNUAL_COLUMNS,annual)
     dump_csv(out/"annual_original_15_paper_candidate_index.csv",PAPER_COLUMNS,paper)
+    dump_csv(out/"case_official_15_paper_candidate_separate.csv",PAPER_COLUMNS,case_paper)
     dump_csv(out/"annual_12_amount_sequence_windows.csv",WINDOW_COLUMNS,windows)
     dump_csv(out/"quarterly_issuer_period_source_index.csv",QUARTER_COLUMNS,quarters)
     dump_csv(out/"paper_feature_fit_coverage.csv",FIT_FEATURE_COLUMNS,density)
@@ -534,6 +615,7 @@ def run(data_root,output):
                           for group in ("fit","validation","test")}
     quarter_status=Counter((r["data_role"],r["source_status"]) for r in quarters)
     input_paths=[cohort_file,phase4_file,annual_path,staged_path,paper_path,
+        case_paper_path,phase9_manifest,
         qroot/"multiissuer_official_quarter_sources.csv",
         qroot/"quarterly_acquisition_results.json",
         case_root/"quarterly_case_official_source_index.csv",
@@ -558,6 +640,12 @@ def run(data_root,output):
                   "full_15":paper_st[(tier,"true")]} for tier in
             ("FINMIND_PROVISIONAL","MOPS_OFFICIAL_RETROSPECTIVE")},
         "annual_source_tiers_never_silently_fused":True,
+        "development_case_annual_source_years_separate_from_noncase_fit":len(case_paper),
+        "development_case_annual_official_XBRL_source_years":sum(
+            bool(r["source_sha256"]) for r in case_paper),
+        "development_case_full_15_retrospective_years":sum(
+            r["complete_candidate_vector"]=="true" for r in case_paper),
+        "FY2012_legacy_GAAP_not_converted_to_TIFRS":True,
         "annual_12_amount_is_NOT_Beneish_Dechow_15":True,
         "three_year_history_windows_with_target":sum(r["lookback_years"]==3 for r in windows),
         "three_year_history_complete_12_amount_windows":sum(
