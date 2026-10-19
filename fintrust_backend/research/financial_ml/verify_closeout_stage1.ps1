@@ -12,7 +12,7 @@ if (-not $repo.EndsWith("Financial-Risk-Alert-System-ML")) {
 }
 Write-Host "Closeout S1: annual, paper and quarterly source QA regression"
 python -m unittest discover -s tests -p "test_financial_ml_closeout_stage1_dataset_readiness.py" -v
-Assert-Good "Stage1 new QA regression"
+Assert-Good "Stage1 14 new QA regressions"
 python -m unittest discover -s tests -p "test_financial_ml_phase14_multiissuer_quarterly_cohort.py" -v
 Assert-Good "Phase14 multi-company regression"
 python -m unittest discover -s tests -p "test_financial_ml_phase13_quarterly_temporal_features.py" -v
