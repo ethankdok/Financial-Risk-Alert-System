@@ -330,6 +330,12 @@ def quarter_view(cohort,phase14,seed,max_features,cohort_sha):
         name=r["concept_key"]
         if not name or "|" not in name:
             raise ValueError("missing_exact_taxonomy_concept_identity")
+        # Other-duration contexts can legitimately use multiple different
+        # starts within the same issuer/quarter/concept. They have no single
+        # comparable measurement grain; retain their original Phase14 raw
+        # observation table but never flatten them into a unique model cell.
+        if r["period_grain"]=="other_duration":
+            continue
         key=(k[0],k[1],name,r["period_grain"])
         if key in observed:
             raise ValueError("same_issuer_quarter_concept_grain_duplicated")
