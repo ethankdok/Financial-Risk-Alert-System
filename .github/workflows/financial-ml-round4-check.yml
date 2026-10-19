@@ -1,0 +1,29 @@
+name: Financial ML Round4 Explainability CI
+
+on:
+  push:
+    branches:
+      - feature/financial-ml-round4-explainability-handoff-20261020
+    paths:
+      - "fintrust_backend/research/financial_ml/round4_research_handoff.py"
+      - "fintrust_backend/tests/test_financial_ml_round4_research_handoff.py"
+      - ".github/workflows/financial-ml-round4-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  round4-explainability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Numeric research test dependencies
+        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib
+      - name: Validation-only permutation and unlabeled novelty agreement tests
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_round4_research_handoff.py -v
