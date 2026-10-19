@@ -169,6 +169,64 @@ def package_data(path):
     return check,manifest,cleaned
 
 
+def pre_event_original_zip(path):
+    """Independently verify a future 2016-05-12 source package. The caller
+    cannot self-assert official publication: package_verify must attest the
+    package's strict disclosure and no future-data semantic contracts.
+    """
+    check=verify_package(path)
+    if check.get("status")!="verified" or check.get("mode")!="strict_point_in_time":
+        raise ValueError("1785_pre_event_package_not_semantically_verified")
+    with zipfile.ZipFile(path) as z:
+        root="fintrust_historical_research_dataset/"
+        manifest=json.loads(z.read(root+"manifest.json").decode("utf-8"))
+        if (manifest.get("mode")!="strict_point_in_time"
+            or str(manifest.get("case",{}).get("ticker"))!="1785"
+            or manifest.get("parameters",{}).get("as_of")!="2016-05-12"):
+            raise ValueError("1785_pre_event_zip_wrong_case_or_asof")
+        rows=list(csv.DictReader(io.StringIO(z.read(
+            root+"data/financial_facts.csv").decode("utf-8-sig"))))
+    selected=[]
+    duplicates=set()
+    for row in rows:
+        if not set(FACT_COLS).issubset(row):
+            raise ValueError("1785_pre_event_original_fact_schema_missing")
+        year=int(row["fiscal_year"])
+        if row.get("ticker") not in ("1785",""):
+            raise ValueError("1785_pre_event_package_foreign_issuer")
+        if year not in (2013,2014,2015):
+            continue
+        if (row["statement_scope"]!="consolidated"
+            or row["accounting_framework"]!="TIFRS"
+            or row["filing_version_type"]!="original"
+            or row["unit"]!="TWD"
+            or row["point_in_time_eligible"].lower()!="true"):
+            # These cannot be original 1785 inputs; do not force them in.
+            continue
+        at=row["effective_available_at"]
+        if not at:
+            continue
+        ts=datetime.fromisoformat(at.replace("Z","+00:00"))
+        if ts.tzinfo is None or ts>datetime.fromisoformat(EVENT_PRE_DISCLOSURE):
+            raise ValueError("1785_pre_event_package_contaminated_after_cutoff")
+        if row["metric_code"] not in METRICS:
+            continue
+        value=float(row["value"])
+        if not math.isfinite(value):
+            raise ValueError("1785_pre_event_original_nonfinite_amount")
+        key=(year,row["metric_code"])
+        if key in duplicates:
+            raise ValueError("1785_pre_event_original_duplicate_same_grain")
+        duplicates.add(key)
+        selected.append(row)
+    return {
+        "verified_package_sha256":digest(path),
+        "verified_original_fact_count":len(selected),
+        "cutoff":"2016-05-12",
+        "strict_semantics_verified":True,
+    },selected
+
+
 def gate_features_for_event(facts,*, asof=EVENT_PRE_DISCLOSURE):
     """Each value must itself have been public before prediction day, and
     come from an original SAME-scope SAME-accounting period source."""
@@ -259,7 +317,7 @@ def predict_2016_frozen_numeric(history, model_root, report):
 
 
 def audit_and_report(*, data_root,bridge_root,round3_root,round4_report,
-                     strict_zip,output,literature_doc=LITERATURE_DOC):
+                     strict_zip,output,pre_event_zip=None,literature_doc=LITERATURE_DOC):
     droot=Path(data_root);out=Path(output)
     if out.exists() and any(out.iterdir()):
         raise FileExistsError("1785_final_case_output_is_immutable")
@@ -275,7 +333,11 @@ def audit_and_report(*, data_root,bridge_root,round3_root,round4_report,
     method_text=Path(literature_doc).read_text(encoding="utf-8")
     historical=literature_scores(method_text)
     check,manifest,facts=package_data(strict_zip)
-    original,missing=gate_features_for_event(facts)
+    prior_source=None
+    eligible_source_facts=facts
+    if pre_event_zip is not None:
+        prior_source,eligible_source_facts=pre_event_original_zip(pre_event_zip)
+    original,missing=gate_features_for_event(eligible_source_facts)
     forecast=(predict_2016_frozen_numeric(original,round3_root,model_report)
               if original is not None else {
                   "status":"PRE_EVENT_FROZEN_INFERENCE_NOT_INPUT_ELIGIBLE",
@@ -303,6 +365,9 @@ def audit_and_report(*, data_root,bridge_root,round3_root,round4_report,
             "interpretation":"RETROSPECTIVE_FILING_VERSION_DEPENDENT_UNCALIBRATED",
         },
         "historical_score_rows":historical,
+        "independently_verified_pre_event_original_package":prior_source,
+        "original_source_for_frozen_numeric_forecast":
+            "pre_event_original_verified_strict_zip" if prior_source else "none",
         "frozen_round3_case_numeric_inference":forecast,
         "frozen_round3_training_test_1785_excluded":True,
         "case_used_to_select_features_models_thresholds":False,
@@ -343,11 +408,14 @@ def main(argv=None):
     for arg in ("data-root","round2-bridge-root","round3-root",
                 "round4-report","strict-zip","output"):
         p.add_argument("--"+arg,required=True)
+    p.add_argument("--pre-event-zip",default=None,
+                   help="Optional separately verified strict case ZIP as-of 2016-05-12")
     a=p.parse_args(argv)
     r=audit_and_report(data_root=a.data_root,bridge_root=a.round2_bridge_root,
                        round3_root=Path(a.round3_root),
                        round4_report=a.round4_report,
-                       strict_zip=a.strict_zip,output=a.output)
+                       strict_zip=a.strict_zip,output=a.output,
+                       pre_event_zip=a.pre_event_zip)
     print(json.dumps({
         "status":r["status"],"literature_scores":r["historical_score_rows"],
         "frozen_round3_numeric":r["frozen_round3_case_numeric_inference"],
