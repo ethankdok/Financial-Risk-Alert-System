@@ -376,6 +376,61 @@ class Round1DataIntegrationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"source_hash_changed"):
             m.read_paper_features(self.data,set(self.tickers),phase4)
 
+    def test_missing_source_value_does_not_turn_into_financial_zero(self):
+        self.make_annual()
+        panel=m.csv_rows(self.annual_panel,("ticker","fiscal_year",*m.METRICS))
+        panel[0]["net_income"]=""
+        panel[0]["candidate_observed"]="11"
+        panel[0]["complete_12_candidate_metrics"]="False"
+        save(self.annual_panel,list(panel[0]),panel)
+        staged=m.csv_rows(self.staged,(
+            "ticker","fiscal_year","candidate_mops_metric","candidate_annual_value",
+            "source_family","status","source_sha256","training_admitted",
+            "publication_asof_verified","label_status"))
+        changed=next(r for r in staged if r["ticker"]=="4000"
+                     and r["fiscal_year"]=="2013"
+                     and r["candidate_mops_metric"]=="net_income")
+        changed["status"]="missing_income_quarter"
+        changed["candidate_annual_value"]=""
+        save(self.staged,list(staged[0]),staged)
+        items,index,_=m.read_annual_amounts(self.data,set(self.tickers))
+        m.verify_annual_source_stage(self.data,index)
+        self.assertEqual(index[("4000",2013)]["net_income"],"")
+        self.assertEqual(index[("4000",2013)]["complete_candidate_vector"],"false")
+        self.assertEqual(index[("4000",2013)]["observed_feature_count"],11)
+
+    def test_unavailable_official_quarter_is_not_a_normal_case_or_fabricated_sample(self):
+        self.make_quarters()
+        folder=self.data/"phase14_multiissuer_quarterly_comparison"
+        p=folder/"multiissuer_official_quarter_sources.csv"
+        rows=m.csv_rows(p,m.SOURCE_COLUMNS)
+        previous=rows[0]
+        sha_before=previous["raw_sha256"]
+        previous["source_status"]="filing_not_found"
+        previous["raw_sha256"]=""
+        previous["archive_relative_path"]=""
+        save(p,m.SOURCE_COLUMNS,rows)
+        manifest=folder/"quarterly_acquisition_results.json"
+        obj=json.loads(manifest.read_text(encoding="utf-8"))
+        item=obj["outcomes"][previous["ticker"]+":"+previous["reporting_period"]]
+        item["source_status"]="filing_not_found"
+        item["raw_sha256"]=""
+        item["raw_path"]=""
+        manifest.write_text(json.dumps(obj),encoding="utf-8")
+        report=folder/"phase14_integrated_report.json"
+        j=json.loads(report.read_text(encoding="utf-8"))
+        j["official_quarters_context_and_primary_TWD_validated"]=143
+        report.write_text(json.dumps(j),encoding="utf-8")
+        indexed,_,_=m.read_official_quarterly_sources(self.data,set(self.tickers))
+        missing=[r for r in indexed if r["data_role"]==
+                 "UNLABELED_MULTIISSUER_COMPARISON"
+                 and r["financial_issuer_quarter_observation"]=="false"]
+        self.assertEqual(len(missing),1)
+        self.assertEqual(missing[0]["label_status"],"UNKNOWN")
+        self.assertEqual(missing[0]["negative_label_approved"],"false")
+        self.assertEqual(missing[0]["source_sha256"],"")
+        self.assertTrue(sha_before)
+
     def test_source_path_escape_and_missing_archive_are_blocked(self):
         path=self.data/"root"
         path.mkdir()
