@@ -76,7 +76,13 @@ def selection(cohort_csv, *, seed=143):
                 key=lambda r:sha_token(seed,r["ticker"]))
     if len(semi)<SEMICONDUCTOR_QUOTA:
         raise ValueError("not_enough_actual_semiconductor_issuers")
-    picked=semi[:SEMICONDUCTOR_QUOTA]
+    # Prefer the existing 2330 MOPS/FinMind method-check anchor when the
+    # *frozen* cohort actually includes it, without adding an outside issuer.
+    anchor=next((r for r in semi if r["ticker"]=="2330"),None)
+    picked=([anchor] if anchor else [])
+    picked.extend(r for r in semi if r["ticker"] not in {
+        x["ticker"] for x in picked})
+    picked=picked[:SEMICONDUCTOR_QUOTA]
     sectors=defaultdict(list)
     for row in eligible:
         if row["industry_category"]!="半導體業":
@@ -116,7 +122,7 @@ def plan(cohort_csv,output):
         ],
         "fixed_quarters":list(FROZEN_PERIODS),
         "source_jobs_planned":EXPECTED_JOBS,
-        "selection_method":"frozen_120_cohort_3_semi_plus_9_distinct_other_industries_seed143",
+        "selection_method":"frozen_120_cohort_TSMC_anchor_if_present_3_semi_plus_9_distinct_industries_seed143",
         "all_company_outcomes":"UNKNOWN",
         "all_original_vintages":"UNVERIFIED",
         "final_1785_untouched":True,
