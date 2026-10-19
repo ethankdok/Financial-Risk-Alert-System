@@ -102,6 +102,19 @@ class Phase14MultiCompanyQuarterTests(unittest.TestCase):
         self.assertTrue({x["ticker"] for x in selected}.isdisjoint(m.CASE_OR_HOLDOUT))
         self.assertEqual(selected,m.selection(self.cohort))
 
+    def test_tsmc_method_anchor_preserved_when_in_frozen_cohort(self):
+        with self.cohort.open(encoding="utf-8",newline="") as file:
+            rows=list(csv.DictReader(file))
+        rows[0]["ticker"]="2330"
+        with self.cohort.open("w",encoding="utf-8",newline="") as file:
+            w=csv.DictWriter(file,fieldnames=FIELDS)
+            w.writeheader();w.writerows(rows)
+        selected=m.selection(self.cohort)
+        self.assertIn("2330",{row["ticker"] for row in selected})
+        self.assertEqual(sum(row["industry_category"]=="半導體業"
+                             for row in selected),3)
+        self.assertEqual(len(selected),12)
+
     def test_public_source_allowlist_and_time_range_contract(self):
         for ticker in ("2330","1558"):
             for p in m.FROZEN_PERIODS:
