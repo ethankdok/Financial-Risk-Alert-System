@@ -316,6 +316,21 @@ class Stage1DatasetIntegrityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"financial_fact_source_sha_not_matching_quarter"):
             self.run_stage()
 
+    def test_nonstandard_duration_multiple_starts_are_not_comparable_model_cells(self):
+        rows=load_csv(self.qobservations)
+        original=dict(rows[0])
+        one={**original,"concept_key":"http://example.com/ifrs-full|OtherDurationMetric",
+             "source_local_name":"OtherDurationMetric",
+             "period_grain":"other_duration",
+             "source_period_start":"2017-02-01"}
+        two={**one,"source_period_start":"2017-02-05"}
+        rows.extend((one,two))
+        dump_csv(self.qobservations,OBS_FIELDS,rows)
+        report=self.run_stage()
+        self.assertEqual(report["quarterly"]["fit_only_feature_candidates"],2)
+        selected=load_csv(self.out/"quarterly_fit_selected_feature_dictionary.csv")
+        self.assertNotIn("OtherDurationMetric",{x["source_local_name"] for x in selected})
+
     def test_source_row_forged_healthy_label_refused(self):
         rows=load_csv(self.qsources)
         rows[0]["normal_label_approved"]="true"
