@@ -163,7 +163,9 @@ class Stage1DatasetIntegrityTests(unittest.TestCase):
                 manifest[f"{ticker}:{period}"]={
                     "ticker":ticker,"reporting_period":period,
                     "source_status":m.Q_VALID,
-                    "raw_sha256":h
+                    "raw_sha256":h,"raw_path":path,
+                    "outcome_label":"UNKNOWN","normal_label_approved":False,
+                    "original_asof_verified":False
                 }
                 for concept,grain in (
                         ("Assets","instant"),("Revenue","quarter_duration"),
