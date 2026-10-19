@@ -31,6 +31,14 @@ class Round2CloseoutTests(unittest.TestCase):
         self.review = fixture.output
         self.out = self.data / "round2_closeout"
         self.prepare_round1_extra_tables()
+        seed = json.loads(Path(first.__file__).with_name(
+            "phase1_case_sources_seed.json").read_text(encoding="utf-8"))
+        linked = {source["source_id"]: (case["case_id"], source["url"])
+                  for case in seed["candidates"] for source in case["sources"]}
+        add_row_fields(fixture.official_path, lambda r, i: {
+            **r, "case_id": linked[r["source_id"]][0],
+            "source_url": linked[r["source_id"]][1]
+        })
         fixture.run_gate()
         self.report_path = self.review / "round2_evidence_review_report.json"
 
