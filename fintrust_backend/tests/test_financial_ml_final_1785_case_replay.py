@@ -143,7 +143,7 @@ class Final1785Tests(unittest.TestCase):
     def test_preevent_package_rejects_postevent_backfilled_fact(self):
         source=fake_facts(period="2016-12-25T16:00:00+08:00",
                           revision="original",n_per_year=12)
-        create_fake_zip(self.zip,source)
+        create_fake_zip(self.zip,source,as_of="2016-05-12")
         with patch.object(study,"verify_package",return_value={
                 "status":"verified","mode":"strict_point_in_time"}):
             with self.assertRaisesRegex(ValueError,"contaminated_after_cutoff"):
