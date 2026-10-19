@@ -68,7 +68,9 @@ class Final1785Tests(unittest.TestCase):
         text=study.LITERATURE_DOC.read_text(encoding="utf-8")
         # Inject exactly one forbidden positive 2015 F score.
         line=next(l for l in text.splitlines() if l.startswith("| 2015 | restated XBRL"))
-        fake=line.replace("null: `cross_filing_overlap_mismatch`", "1.123456")
+        cells=line.split("|")
+        cells[5]=" 1.123456 "
+        fake="|".join(cells)
         self.assertNotEqual(line,fake)
         with self.assertRaisesRegex(ValueError,"invalid_incomplete_dechow_score"):
             study.literature_scores(text.replace(line,fake))
