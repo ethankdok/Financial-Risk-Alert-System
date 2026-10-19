@@ -26,7 +26,26 @@ if (-not (Test-Path -LiteralPath (Join-Path $bridge "round3_release_gates.json")
     throw "Round2 accepted release gates missing"
 }
 if (Test-Path -LiteralPath $out) {
-    throw "Round3 result folder already exists. Preserve evidence, review results; do NOT overwrite."
+    $prior = Join-Path $out "round3_real_data_model_report.json"
+    if (Test-Path -LiteralPath $prior) {
+        throw "Previous Round3 report already exists: $prior. Review results; do NOT overwrite."
+    }
+    # Round3 failures can leave annual checkpoints before quarterly checks.
+    # Retain ALL artifacts from previous attempts and choose a clean retry.
+    $baseOut = $out
+    $found = $false
+    for ($index = 1; $index -le 30; $index++) {
+        $candidate = "{0}_retry_{1:D2}" -f $baseOut, $index
+        if (-not (Test-Path -LiteralPath $candidate)) {
+            $out = $candidate
+            $found = $true
+            break
+        }
+    }
+    if (-not $found) {
+        throw "No unused Round3 retry output folder available; preserve existing research artifacts."
+    }
+    Write-Host "Previous Round3 partial result kept intact. Writing only to: $out"
 }
 
 Push-Location (Join-Path $root "fintrust_backend")
