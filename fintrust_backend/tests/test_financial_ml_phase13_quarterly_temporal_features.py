@@ -67,7 +67,7 @@ class Phase13SameGrainQuarterTests(unittest.TestCase):
 
     def test_q1_ytd_overlap_is_single_record_not_two_revenue_values(self):
         rows,_,n,issues=m.extract_source(synthetic_xbrl("2018Q1"),"2018Q1","b"*64)
-        self.assertEqual(n,4)  # two identical source contexts, later deduped
+        self.assertEqual(n,3)  # asset + two overlapping Q1 duration values, later deduped
         revenue=[r for r in rows if r["source_local_name"]=="Revenue"]
         self.assertEqual(len(revenue),1)
         self.assertEqual(revenue[0]["period_grain"],"quarter_duration")
