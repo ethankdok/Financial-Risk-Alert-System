@@ -63,7 +63,10 @@ class Round3EvaluationTests(unittest.TestCase):
             issuer=stage.issuer_partition(ticker)
             clock=("fit" if period<="2018Q4"
                    else "validation" if period<"2019Q3" else "test")
-            n=16 if i<72 else 15
+            n=(18 if i<72 else 17 if i<90 else 15 if i<132 else 0)
+            if i >= 132:
+                r["source_status"] = (
+                    "filing_not_found" if i < 141 else "source_invalid_content")
             r["issuer_split"]=issuer
             r["time_split"]=clock
             r["joint_strict_split"]=issuer if issuer==clock else "outside_joint_evaluation"
