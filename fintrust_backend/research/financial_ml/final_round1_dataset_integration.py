@@ -528,6 +528,11 @@ def run(data_root,output):
                  r["all_12_amounts_present"]) for r in windows)
     qstat=Counter((r["data_role"],r["financial_issuer_quarter_observation"]) for r in quarters)
     qcoverage=Counter((r["source_tier"],r["quarters_observed"]==12) for r in qdensity)
+    annual_splits=Counter((r["joint_strict_split"],r["complete_candidate_vector"]) for r in annual)
+    annual_issuer_splits={group:len({r["ticker"] for r in annual
+                                  if r["issuer_split"]==group})
+                          for group in ("fit","validation","test")}
+    quarter_status=Counter((r["data_role"],r["source_status"]) for r in quarters)
     input_paths=[cohort_file,phase4_file,annual_path,staged_path,paper_path,
         qroot/"multiissuer_official_quarter_sources.csv",
         qroot/"quarterly_acquisition_results.json",
@@ -542,6 +547,11 @@ def run(data_root,output):
         "annual_12_amount_candidate_company_years":len(annual),
         "annual_12_amount_full_12_company_years":annual_st["true"],
         "annual_12_amount_missing_or_partial_company_years":annual_st["false"],
+        "annual_12_amount_strict_issuer_and_target_year_split":{
+            group:{"complete_candidate_company_years":annual_splits[(group,"true")],
+                   "incomplete_candidate_company_years":annual_splits[(group,"false")]}
+            for group in ("fit","validation","test","outside_joint_evaluation")},
+        "annual_issuer_disjoint_company_counts":annual_issuer_splits,
         "annual_paper_15_source_tier_rows":len(paper),
         "annual_paper_15_source_tiers":{
             tier:{"total":sum(r["evidence_tier"]==tier for r in paper),
@@ -558,6 +568,10 @@ def run(data_root,output):
             r["lookback_years"]==5 and r["all_12_amounts_present"]=="true" for r in windows),
         "quarter_issuer_period_source_rows":len(quarters),
         "quarter_research_issuer_count":len({r["ticker"] for r in quarters}),
+        "quarter_sources_by_role_and_status":{
+            role:dict(sorted((status,count) for (r,status),count in quarter_status.items()
+                             if r==role)) for role in
+            ("UNLABELED_MULTIISSUER_COMPARISON","ALLEGED_EVENT_PERIOD_NOT_CONFIRMED_POSITIVE")},
         "quarter_comparison_source_period_validated":qstat[("UNLABELED_MULTIISSUER_COMPARISON","true")],
         "quarter_known_case_source_period_validated":qstat[("ALLEGED_EVENT_PERIOD_NOT_CONFIRMED_POSITIVE","true")],
         "distinct_quarter_concept_and_grain_per_issuer":len(qdensity),
@@ -570,6 +584,10 @@ def run(data_root,output):
         "last_event_holdout_1785_excluded":True,
         "original_first_filing_versions_verified":0,
         "first_publication_times_verified":0,
+        "annual_model_usable_independent_company_years_with_certified_original_and_labels":0,
+        "quarterly_model_usable_independent_company_quarters_with_certified_original_and_labels":0,
+        "total_financial_account_rows_are_NOT_independent_ml_training_samples":True,
+        "selected_quarter_cohort_has_current_listing_survivorship_bias_not_corrected":True,
         "approved_positive_labels":0,"approved_negative_labels":0,
         "fraud_supervised_training_rows_admitted":0,
         "no_ml_model_fitting_in_dataset_round":True,
