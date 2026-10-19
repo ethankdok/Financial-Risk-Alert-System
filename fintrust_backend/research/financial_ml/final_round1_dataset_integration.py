@@ -52,6 +52,18 @@ WINDOW_COLUMNS=(
     "all_12_amounts_present","issuer_split","time_split","joint_strict_split",
     "outcome_label","approved_for_supervised_training"
 )
+QUARTER_MATRIX_BASE=(
+    "sample_key","ticker","reporting_period","issuer_split","time_split",
+    "joint_strict_split","source_status","source_sha256",
+    "observed_selected_feature_count","selected_feature_count",
+    "historical_publication_verified","original_filing_vintage_verified",
+    "label_status","negative_label_approved","training_admitted"
+)
+QUARTER_FEATURE_DICTIONARY=(
+    "feature_id","concept_key","period_grain","fit_issuer_quarters",
+    "fit_distinct_issuers","candidate_source_tier",
+    "supervised_training_admitted"
+)
 DENSE_COLUMNS=(
     "ticker","feature_name","period_grain","source_tier","quarters_observed",
     "quarters_expected","earliest_period","latest_period",
@@ -531,7 +543,7 @@ def measure_feature_density(paper):
     return output
 
 
-def quarter_feature_density(data,quarter_index):
+def quarter_feature_density(data,quarter_index,*,include_values=False):
     approved={(r["ticker"],r["reporting_period"]):r for r in quarter_index}
     files=[
         (data/"phase14_multiissuer_quarterly_comparison"/
@@ -540,6 +552,7 @@ def quarter_feature_density(data,quarter_index):
          "quarterly_twd_source_observations.csv","MOPS_DEV_CASE_QUARTER"),
     ]
     grouped=defaultdict(set)
+    comparison_values={}
     for path,tier in files:
         records=csv_rows(path,("ticker","reporting_period","concept_key",
             "period_grain","source_unit","reconciliation_status",
@@ -553,16 +566,23 @@ def quarter_feature_density(data,quarter_index):
                 raise ValueError("quarterly_raw_observation_or_source_SHA_not_registered")
             if source["financial_issuer_quarter_observation"]!="true":
                 raise ValueError("unvalidated_quarterly_source_cannot_create_metric")
+            # Different source starts may share one other_duration concept.
+            # They are valid XBRL facts, but NOT one comparable quarter cell.
+            if row["period_grain"]=="other_duration":
+                continue
             key=(t,p,row["concept_key"],row["period_grain"])
             if key in encountered:
                 raise ValueError("duplicate_quarter_concept_grain_candidate")
             encountered.add(key)
-            if (row["reconciliation_status"]!="CANDIDATE_CONSISTENT_REPETITIONS"
-                or row["period_grain"]=="other_duration"):
+            if row["reconciliation_status"]!="CANDIDATE_CONSISTENT_REPETITIONS":
                 continue
             if row["source_unit"]!="TWD" or not amount(row["value_decimal"]):
                 raise ValueError("qualified_quarter_value_missing_or_non_TWD")
             grouped[(t,tier,row["concept_key"],row["period_grain"])].add(p)
+            if tier=="MOPS_QUARTER_COMPARISON":
+                if row["concept_key"]!=row["source_namespace"]+"|"+row["source_local_name"]:
+                    raise ValueError("quarter_source_exact_concept_identity_changed")
+                comparison_values[key]=amount(row["value_decimal"])
     output=[]
     for (t,tier,concept,grain),periods in sorted(grouped.items()):
         output.append({
@@ -573,7 +593,79 @@ def quarter_feature_density(data,quarter_index):
             "retrospective_not_original_publication":"true",
             "approved_for_supervised_learning":"false"
         })
-    return output
+    return (output,comparison_values) if include_values else output
+
+
+def quarter_sparse_matrix(quarter_index,comparison_values,*,limit=24):
+    """Reuse validated official quarters; select features using FIT rows only.
+
+    Distinct company-quarter rows, never account-fact rows. 6452 and all
+    development cases remain outside this comparison matrix. Historical
+    original filing versions, outcome labels and negative controls stay unknown.
+    """
+    comparison=sorted((
+        row for row in quarter_index
+        if row["data_role"]=="UNLABELED_MULTIISSUER_COMPARISON"
+    ),key=lambda r:(r["ticker"],r["reporting_period"]))
+    if len(comparison)!=144 or len({r["ticker"] for r in comparison})!=12:
+        raise ValueError("quarter_sparse_matrix_requires_frozen_12_by_12_comparison")
+    lookup={(r["ticker"],r["reporting_period"]):r for r in comparison}
+    fit_positions={
+        key for key,r in lookup.items()
+        if r["source_status"]==VALID
+        and issuer_partition(key[0])=="fit"
+        and key[1]<="2018Q4"
+    }
+    counts=defaultdict(set)
+    issuers=defaultdict(set)
+    for (ticker,period,concept,grain),value in comparison_values.items():
+        source=lookup.get((ticker,period))
+        if (source is None or source["source_status"]!=VALID
+            or not amount(value) or grain=="other_duration"):
+            raise ValueError("quarter_sparse_value_without_valid_official_source")
+        if (ticker,period) in fit_positions:
+            feature=(concept,grain)
+            counts[feature].add((ticker,period))
+            issuers[feature].add(ticker)
+    chosen=sorted(
+        (feat for feat in counts if len(issuers[feat])>=3),
+        key=lambda feat:(-len(counts[feat]),-len(issuers[feat]),feat)
+    )[:limit]
+    dictionary=[]
+    for n,(concept,grain) in enumerate(chosen,1):
+        dictionary.append({
+            "feature_id":f"qf_{n:02d}","concept_key":concept,
+            "period_grain":grain,"fit_issuer_quarters":len(counts[concept,grain]),
+            "fit_distinct_issuers":len(issuers[concept,grain]),
+            "candidate_source_tier":"MOPS_OFFICIAL_RETROSPECTIVE_QUARTER",
+            "supervised_training_admitted":"false",
+        })
+    matrix=[]
+    for r in comparison:
+        ticker=r["ticker"];period=r["reporting_period"]
+        issuer=issuer_partition(ticker)
+        temporal=("fit" if period<="2018Q4" else
+                  "validation" if period<="2019Q3" else "test")
+        selected={}
+        for row in dictionary:
+            fid=row["feature_id"]
+            v=comparison_values.get((ticker,period,row["concept_key"],row["period_grain"]),"")
+            selected[fid]=v if r["source_status"]==VALID else ""
+            selected[fid+"_observed"]=str(bool(selected[fid])).lower()
+        matrix.append({
+            "sample_key":r["sample_key"],"ticker":ticker,"reporting_period":period,
+            "issuer_split":issuer,"time_split":temporal,
+            "joint_strict_split":issuer if issuer==temporal else "outside_joint_evaluation",
+            "source_status":r["source_status"],"source_sha256":r["source_sha256"],
+            "observed_selected_feature_count":sum(
+                bool(selected[d["feature_id"]]) for d in dictionary),
+            "selected_feature_count":len(dictionary),
+            "historical_publication_verified":"false",
+            "original_filing_vintage_verified":"false",
+            "label_status":"UNKNOWN","negative_label_approved":"false",
+            "training_admitted":"false",**selected,
+        })
+    return matrix,dictionary
 
 
 def run(data_root,output):
@@ -597,7 +689,8 @@ def run(data_root,output):
     quarters,qroot,case_root=read_official_quarterly_sources(data,cohort)
     windows=annual_window_register(annual_idx)
     density=measure_feature_density(paper)
-    qdensity=quarter_feature_density(data,quarters)
+    qdensity,qvalues=quarter_feature_density(data,quarters,include_values=True)
+    qmatrix,qfeatures=quarter_sparse_matrix(quarters,qvalues)
     dump_csv(out/"annual_12_amount_candidate_index.csv",ANNUAL_COLUMNS,annual)
     dump_csv(out/"annual_original_15_paper_candidate_index.csv",PAPER_COLUMNS,paper)
     dump_csv(out/"case_official_15_paper_candidate_separate.csv",PAPER_COLUMNS,case_paper)
@@ -605,6 +698,10 @@ def run(data_root,output):
     dump_csv(out/"quarterly_issuer_period_source_index.csv",QUARTER_COLUMNS,quarters)
     dump_csv(out/"paper_feature_fit_coverage.csv",FIT_FEATURE_COLUMNS,density)
     dump_csv(out/"quarterly_feature_coverage_by_issuer.csv",DENSE_COLUMNS,qdensity)
+    dump_csv(out/"quarterly_fit_selected_feature_dictionary.csv",QUARTER_FEATURE_DICTIONARY,qfeatures)
+    matrix_fields=QUARTER_MATRIX_BASE+tuple(
+        col for f in qfeatures for col in (f["feature_id"],f["feature_id"]+"_observed"))
+    dump_csv(out/"quarterly_sparse_feature_matrix.csv",matrix_fields,qmatrix)
     annual_st=Counter(r["complete_candidate_vector"] for r in annual)
     paper_st=Counter((r["evidence_tier"],r["complete_candidate_vector"]) for r in paper)
     win=Counter((r["lookback_years"],r["joint_strict_split"],
@@ -669,6 +766,12 @@ def run(data_root,output):
             qcoverage[("MOPS_QUARTER_COMPARISON",True)],
         "quarter_exact_concepts_present_all_12_quarters_case":
             qcoverage[("MOPS_DEV_CASE_QUARTER",True)],
+        "quarter_sparse_comparison_company_quarters":len(qmatrix),
+        "quarter_fit_only_selected_exact_concept_grain_features":len(qfeatures),
+        "quarter_sparse_observed_selected_feature_cells":sum(
+            int(row["observed_selected_feature_count"]) for row in qmatrix),
+        "quarter_feature_selection_uses_only_fit_issuers_and_fit_quarters":True,
+        "quarter_missing_values_remain_missing_not_zero":True,
         "known_case_firms_not_verified_positive":True,
         "unreviewed_comparison_issuers_not_verified_negative":True,
         "last_event_holdout_1785_excluded":True,
