@@ -132,6 +132,56 @@ class Round1DataIntegrationTests(unittest.TestCase):
         path.write_bytes(bytes_data)
         return h,relative
 
+    def make_case_paper(self):
+        folder=self.data/"phase10_case_official_paper_audit"
+        path=folder/"phase10_case_official_paper_features.csv"
+        self.case_paper_file=path
+        rows=[];outcomes={}
+        yearset=[("3027",year) for year in range(2013,2017)]+[
+            ("8299",year) for year in range(2012,2015)]+[
+            ("6452",year) for year in range(2015,2021)]
+        self.assertEqual(len(yearset),13)
+        for t,y in yearset:
+            good=(t,y) not in (("8299",2012),("6452",2020))
+            status=("validated" if good else
+                "LEGACY_ORIGINAL_PDF_REQUIRES_SEPARATE_SOURCE"
+                if y==2012 else "filing_not_found")
+            hash_value=sha(f"case official {t}/{y}".encode()) if good else ""
+            vector={f:("1.5" if i<15 and good else "")
+                    for i,f in enumerate(m.FEATURES)}
+            if good and (t,y)!=("3027",2013):
+                vector["d_issue"]=""
+            count=sum(bool(v) for v in vector.values())
+            row={key:"" for key in m.CASE_PAPER_ORIGINAL_COLUMNS}
+            row.update(ticker=t,fiscal_year=y,official_xbrl_status=status,
+                       source_sha256=hash_value,
+                       official_statement_scope="consolidated" if good else "",
+                       components_computed=count,
+                       original_filing_vintage_verified="false",
+                       historical_filing_publication_at_verified="false",
+                       original_notice_publication_at_verified="false",
+                       outcome_label="UNKNOWN",approved_positive_label="false",
+                       approved_negative_label="false",
+                       admitted_for_supervised_learning="false",
+                       feature_values_json=json.dumps(vector))
+            rows.append(row)
+            if y>=2013:
+                outcomes[f"{t}:{y}"]={
+                    "ticker":t,"fiscal_year":y,
+                    "status":status,"content_hash":hash_value}
+        save(path,m.CASE_PAPER_ORIGINAL_COLUMNS,rows)
+        (folder/"phase10_integrated_report.json").write_text(json.dumps({
+            "source_issuer_year_rows":13,
+            "original_pre_correction_versions_verified":0,
+            "verified_positive_labels":0,"verified_negative_labels":0,
+            "historical_asof_training_rows_admitted":0,
+            "final_holdout_1785_excluded":True,
+            "official_archived_xbrl_years":11,
+        }),encoding="utf-8")
+        manifest=self.data/"phase9_case_mops_xbrl_candidates"/"acquisition_results.json"
+        manifest.parent.mkdir(parents=True,exist_ok=True)
+        manifest.write_text(json.dumps({"outcomes":outcomes}),encoding="utf-8")
+
     def make_quarters(self):
         root=self.data/"phase14_multiissuer_quarterly_comparison"
         official=[]; manifest={};observations=[]
@@ -221,7 +271,8 @@ class Round1DataIntegrationTests(unittest.TestCase):
             "reconciliation_status":"CANDIDATE_CONSISTENT_REPETITIONS"}
 
     def make_all(self):
-        self.make_annual();self.make_paper();self.make_quarters()
+        self.make_annual();self.make_paper()
+        self.make_case_paper();self.make_quarters()
 
     def test_full_synthetic_source_linkage_yields_real_unit_counts_not_fake_labels(self):
         self.make_all()
@@ -229,6 +280,9 @@ class Round1DataIntegrationTests(unittest.TestCase):
         self.assertEqual(report["annual_12_amount_candidate_company_years"],1560)
         self.assertEqual(report["annual_12_amount_full_12_company_years"],1560)
         self.assertEqual(report["annual_paper_15_source_tier_rows"],2)
+        self.assertEqual(report["development_case_annual_source_years_separate_from_noncase_fit"],13)
+        self.assertEqual(report["development_case_annual_official_XBRL_source_years"],11)
+        self.assertEqual(report["development_case_full_15_retrospective_years"],1)
         self.assertEqual(report["quarter_issuer_period_source_rows"],156)
         self.assertEqual(report["quarter_research_issuer_count"],13)
         self.assertEqual(report["quarter_comparison_source_period_validated"],144)
@@ -272,6 +326,15 @@ class Round1DataIntegrationTests(unittest.TestCase):
         phase4=json.loads(self.phase4_file.read_text(encoding="utf-8"))
         with self.assertRaisesRegex(ValueError,"paper_15_feature_vector_differs"):
             m.read_paper_features(self.data,set(self.tickers),phase4)
+
+    def test_case_paper_source_sha_tampering_never_promotes_positive(self):
+        self.make_case_paper()
+        rows=m.csv_rows(self.case_paper_file,m.CASE_PAPER_ORIGINAL_COLUMNS)
+        row=next(r for r in rows if r["official_xbrl_status"]=="validated")
+        row["source_sha256"]="0"*64
+        save(self.case_paper_file,m.CASE_PAPER_ORIGINAL_COLUMNS,rows)
+        with self.assertRaisesRegex(ValueError,"case_paper_official_sha"):
+            m.read_case_paper_features(self.data)
 
     def test_no_forged_normal_label_from_quarter_comparison(self):
         self.make_quarters()
