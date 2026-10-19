@@ -124,6 +124,9 @@ def assess(planned,legacy,manifest,*,execute=False):
         ticker,year=item["ticker"],item["fiscal_year"]
         source=outcomes.get(f"{ticker}:{year}",{})
         status=source.get("status","not_requested")
+        if status=="source_unavailable" and source.get("source_status") in (
+                "filing_not_found","source_invalid_content","source_unavailable"):
+            status=source["source_status"]
         counters[status]+=1
         reports.append({
             "ticker":ticker,"fiscal_year":year,"accounting_regime":"TIFRS_RETRIEVAL_CANDIDATE",
@@ -192,6 +195,7 @@ async def run(data_root,*,execute=False,fetcher=None,processor=None):
         "xbrl_archived_with_sha_verified":sum(bool(r["source_raw_sha256"]) for r in records),
         "xbrl_parsed_validated":sum(r["acquisition_status"]=="validated" for r in records),
         "pre_restated_original_filing_versions_approved":approved,
+        "original_company_years_still_unverified":len(records)-approved,
         "original_source_publication_times_verified":0,
         "first_public_disclosure_times_verified":0,
         "material_misstatement_positive_labels_approved":0,
