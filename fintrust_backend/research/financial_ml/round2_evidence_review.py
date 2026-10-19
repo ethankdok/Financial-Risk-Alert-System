@@ -42,13 +42,6 @@ CASE_QUARTERS = (
     "2017Q2", "2017Q3", "2017Q4", "2018Q1", "2018Q2", "2018Q3",
     "2018Q4", "2019Q1", "2019Q2", "2019Q3", "2019Q4", "2020Q1",
 )
-ROUND1_HASH_KEYS = {
-    "case_official_15_paper_candidate_separate.csv": None,
-    "phase10_case_official_paper_features.csv":
-        "phase10_case_official_paper_features.csv:5",
-    "quarterly_issuer_period_source_index.csv": None,
-}
-
 
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -327,8 +320,8 @@ def build(data_root, output_root):
 
     review = []
     for row in case_year_rows + case_quarters + controls:
-        proposal = ("REVIEW_POSITIVE_ONLY" if row.get("case_id")
-                    else "REVIEW_NORMAL_ONLY")
+        proposal = ("CASE_EVENT_REVIEW_REQUIRED" if row.get("case_id")
+                    else "CONTROL_NORMAL_SCREENING_REQUIRED")
         key = row["ticker"] + ":" + row["reporting_period"]
         review.append({
             "sample_key": key, "ticker": row["ticker"],
