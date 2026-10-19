@@ -363,8 +363,9 @@ def quarters(frozen, out, *, seed):
         raise ValueError("round3_duplicate_quarter_feature_id")
     for feature in dictionary:
         require_unapproved(feature, ("supervised_training_admitted",))
-        if int(feature["fit_distinct_issuers"]) < 3:
-            raise ValueError("round3_unfitted_feature_selection")
+        if (int(feature["fit_distinct_issuers"]) < 3
+            or feature["candidate_source_tier"] != "MOPS_OFFICIAL_RETROSPECTIVE_QUARTER"):
+            raise ValueError("round3_unfitted_or_wrong_source_tier_feature_selection")
     splits = {"fit": [], "validation": [], "test": []}
     coverage = Counter()
     keys = set()
