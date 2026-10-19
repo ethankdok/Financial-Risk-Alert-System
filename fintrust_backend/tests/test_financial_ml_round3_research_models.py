@@ -79,6 +79,10 @@ class Round3EvaluationTests(unittest.TestCase):
             seen+=n
         self.assertEqual(seen,2232)
         old.fixture_module.write_csv(self.parent.fixture.sparse_path,rows)
+        dictionary = old.fixture_module.read_csv(self.parent.dict_path)
+        for feature in dictionary:
+            feature["candidate_source_tier"] = "MOPS_OFFICIAL_RETROSPECTIVE_QUARTER"
+        old.fixture_module.write_csv(self.parent.dict_path, dictionary)
 
     def test_full_annual_regression_and_quarter_novelty_metrics(self):
         report=stage.run(self.data,self.bridge,self.output,
