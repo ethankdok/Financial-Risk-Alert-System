@@ -446,10 +446,14 @@ def quarters(frozen, out, *, seed):
                               "original_filing_vintage_verified"))
         part = r["joint_strict_split"]
         issuer = issuer_partition(ticker)
-        clock = "fit" if period <= "2018Q4" else "validation" if period < "2019Q3" else "test"
+        clock = "fit" if period <= "2018Q4" else "validation" if period <= "2019Q3" else "test"
         if (r["issuer_split"] != issuer or r["time_split"] != clock
             or part != (issuer if issuer==clock else "outside_joint_evaluation")):
-            raise ValueError("round3_quarter_leakage_partition_changed")
+            raise ValueError("round3_quarter_leakage_partition_changed:"
+                             f"{ticker}:{period}:"
+                             f"stored={r['issuer_split']}/{r['time_split']}/{part}:"
+                             f"expected={issuer}/{clock}/"
+                             f"{issuer if issuer==clock else 'outside_joint_evaluation'}")
         values, masks = [], []
         for fid in fids:
             raw = r[fid].strip()
