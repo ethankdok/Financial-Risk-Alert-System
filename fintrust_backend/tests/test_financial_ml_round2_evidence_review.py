@@ -223,6 +223,14 @@ class Round2EvidenceReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source_approval_forged"):
             self.run_gate()
 
+    def test_existing_human_review_packet_is_not_overwritten(self):
+        self.run_gate()
+        template = self.output / "round2_independent_review_template.csv"
+        original = template.read_bytes()
+        with self.assertRaisesRegex(FileExistsError, "preserve_reviewers"):
+            self.run_gate()
+        self.assertEqual(template.read_bytes(), original)
+
     def test_duplicate_review_sources_fail_closed(self):
         quarter = read_csv(self.quarters_path)
         quarter.append(dict(quarter[0]))
