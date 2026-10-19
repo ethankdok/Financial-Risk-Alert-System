@@ -150,3 +150,20 @@ adjudication requirement**. Software/integrity closeout is a separate
 achievable milestone; verified positive/negative labels cannot be
 invented from a case list, and a finance audit manager must not see
 unsourced classification claims.
+
+## CI engineering validation
+
+On the new isolated branch, the GitHub Actions job
+[Round2 closeout / Round3 preflight](https://github.com/ethankdok/Financial-Risk-Alert-System/actions/runs/39291134479)
+completed successfully on 2026-10-19 (UTC):
+
+- Previous Round2 synthetic regression: **13/13 PASS**.
+- New Round2 archived-document and Round3 blocked-fit synthetic regression:
+  **12/12 PASS**.
+- No actual user's original archived MOPS/Judiciary data were mounted into
+  the GitHub Actions job. Final real-data audit must be performed by the
+  independent worktree's one-command acceptance and must not be called PASS
+  before its generated reports are checked.
+
+CI uses synthetic fixtures exclusively. The human research signoff remains
+an explicitly separate unmet release requirement.
