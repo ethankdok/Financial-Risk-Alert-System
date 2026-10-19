@@ -62,7 +62,7 @@ class Round3EvaluationTests(unittest.TestCase):
             ticker,period=r["ticker"],r["reporting_period"]
             issuer=stage.issuer_partition(ticker)
             clock=("fit" if period<="2018Q4"
-                   else "validation" if period<"2019Q3" else "test")
+                   else "validation" if period<="2019Q3" else "test")
             n=(18 if i<72 else 17 if i<90 else 15 if i<132 else 0)
             if i >= 132:
                 r["source_status"] = (
@@ -179,6 +179,20 @@ class Round3EvaluationTests(unittest.TestCase):
         with self.assertRaisesRegex(FileExistsError,"experiment_must_remain_immutable"):
             stage.run(self.data,self.bridge,self.output,models=("persistence","ridge"),epochs=5)
         self.assertEqual(p.read_bytes(),contents)
+
+    def test_exact_2019q3_validation_boundary_is_preserved(self):
+        matrix = old.fixture_module.read_csv(self.parent.fixture.sparse_path)
+        q3 = [r for r in matrix if r["reporting_period"] == "2019Q3"]
+        q4 = [r for r in matrix if r["reporting_period"] == "2019Q4"]
+        self.assertEqual(len(q3),12)
+        self.assertEqual(len(q4),12)
+        self.assertEqual({r["time_split"] for r in q3}, {"validation"})
+        self.assertEqual({r["time_split"] for r in q4}, {"test"})
+        # The full evaluator still performs the source+group split audit.
+        result = stage.quarters(self.frozen, self.output,seed=42)
+        self.assertIn(result["status"], (
+            "OFFICIAL_RETROSPECTIVE_QUARTER_UNLABELED_NOVELTY_ONLY",
+            "QUARTER_STRICT_ISSUER_TIME_SPLIT_INSUFFICIENT_OBSERVATIONS"))
 
     def test_mismatched_frozen_round1_quarter_timing_is_rejected(self):
         p=self.parent.fixture.sparse_path
