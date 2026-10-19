@@ -152,7 +152,7 @@ class Stage1DatasetIntegrityTests(unittest.TestCase):
                     "ticker":ticker,
                     "industry_category":firm["industry_category"],
                     "market":"twse","reporting_period":period,
-                    "source_status":m.Q_VALID,"official_url":f"https://mopsov.twse.com.tw/{ticker}/{period}",
+                    "source_status":m.Q_VALID,"official_url":m.url_for(ticker,period),
                     "raw_sha256":h,"archive_relative_path":path,
                     "original_filing_version_verified":"false",
                     "first_publication_verified":"false",
@@ -164,6 +164,7 @@ class Stage1DatasetIntegrityTests(unittest.TestCase):
                     "ticker":ticker,"reporting_period":period,
                     "source_status":m.Q_VALID,
                     "raw_sha256":h,"raw_path":path,
+                    "official_url":m.url_for(ticker,period),
                     "outcome_label":"UNKNOWN","normal_label_approved":False,
                     "original_asof_verified":False
                 }
