@@ -1,0 +1,29 @@
+name: Financial ML Round2 Review Gate Tests
+
+on:
+  push:
+    branches:
+      - feature/financial-ml-round2-review-gate-20261020
+    paths:
+      - "fintrust_backend/research/financial_ml/round2_evidence_review.py"
+      - "fintrust_backend/research/financial_ml/phase1_case_registry.py"
+      - "fintrust_backend/research/financial_ml/phase1_case_sources_seed.json"
+      - "fintrust_backend/tests/test_financial_ml_round2_evidence_review.py"
+      - ".github/workflows/financial-ml-round2-review-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hermetic-review-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Round2 synthetic evidence and provenance regression only
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_round2_evidence_review.py -v
