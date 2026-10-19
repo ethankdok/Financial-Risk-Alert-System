@@ -1,0 +1,29 @@
+name: Financial ML Round3 Numeric and Unlabeled Models
+
+on:
+  push:
+    branches:
+      - feature/financial-ml-round3-model-evaluation-20261020
+    paths:
+      - "fintrust_backend/research/financial_ml/round3_research_models.py"
+      - "fintrust_backend/tests/test_financial_ml_round3_research_models.py"
+      - ".github/workflows/financial-ml-round3-model-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  round3-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install numerical research CI dependencies
+        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib
+      - name: Round3 source-gated numeric and anomaly research regressions
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_round3_research_models.py -v
