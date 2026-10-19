@@ -94,3 +94,31 @@ powershell -ExecutionPolicy Bypass -File .\\research\\financial_ml\\verify_1785_
 
 簡報：維持 20 頁，**第 19 頁**直接放上述 Beneish／Dechow 真實分數、
 財報版本、2016 事件時間線及 frozen-Round3 准入狀態；無假造機率。
+
+
+## 完整終端推論的追加路徑（與現有歷史結果分離）
+
+最終凍結推論模組另支援 `--pre-event-zip`，僅供獲得獨立來源驗證後使用：
+
+- 原始歷史 ZIP 必須使用專案內 `verify_package` 的 **strict point-in-time**
+  語義驗證，並明確為 1785、`parameters.as_of=2016-05-12`；
+- 只收 FY2013–2015 的合併報表、TIFRS、TWD、
+  `original`、`point_in_time_eligible=true`，
+  且每筆 `effective_available_at` 早於保守的 2016-05-13 00:00；
+- 相同年度／財務科目重複、非有限數值、沒有可信的原始資訊、
+  時間晚於截止均拒絕；
+- 36 格齊備，才讀取已選定的 frozen Round3 scaler 與模型，
+  依訓練時**相同**的 signed-log／RobustScaler 管線，
+  輸出 **FY2016 12 項財務金額**；不因單一光洋科更改模型。
+- 若主專案有 `fintrust_1785_asof_2016-05-12.zip`，
+  `verify_1785_final_case.ps1` 會自動偵測並額外進行以上驗證；
+  無此檔則輸出既有真實文獻分數及逐欄缺口。
+  **不會自動建造、偽造或下載不存在的事件前原始申報。**
+
+CI **16/16 PASS**：https://github.com/ethankdok/Financial-Risk-Alert-System/actions/runs/39320743343 。
+涵蓋文件表格解析、原始／重編版本、防回填時點、重複同口徑、
+輸入不完整時拒絕預測、完整 frozen persistence 推論、
+報告輸出與不可覆寫等情境。
+
+正式簡報已更新為 **20 頁**。第 19 頁呈現本次真實回溯模型分數，
+沒有把不同版本拼為單一特徵序列、沒有虛構 Precision / F1。
