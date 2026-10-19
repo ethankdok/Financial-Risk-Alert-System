@@ -323,6 +323,70 @@ def regression(frozen, out, *, models, epochs, seed):
     }
 
 
+def issuer_and_time_disjoint_regression(frozen, out, *, seed):
+    """Independent-company + forward-time numeric proxy, if enough rows exist.
+
+    The much stricter intersection may have very few complete outcomes in
+    the real cohort. Never force an estimate or relax the split silently.
+    """
+    import numpy as np
+    all_windows = annual_windows(frozen / SOURCE_MAP["FINMIND_PROVISIONAL_ANNUAL_AMOUNTS"])
+    splits = {"fit": [], "validation": [], "holdout": []}
+    for row in all_windows:
+        who, target_year = issuer_partition(row[0]), temporal_partition(row[1])
+        part = (who if who == target_year else "outside_joint_evaluation")
+        if part in ("fit", "validation"):
+            splits[part].append(row)
+        elif part == "test":
+            splits["holdout"].append(row)
+    counts = {part:len(rows) for part,rows in splits.items()}
+    issuers = {part:{r[0] for r in rows} for part,rows in splits.items()}
+    if any(issuers[a]&issuers[b] for a,b in
+           (("fit","validation"),("fit","holdout"),("validation","holdout"))):
+        raise ValueError("round3_issuer_overlap_in_strict_comparison")
+    report = {
+        "status":"STRICT_DUAL_SPLIT_NUMERIC_PROXY",
+        "counts":counts,"unique_issuer_counts":{k:len(v) for k,v in issuers.items()},
+        "no_issuer_overlap":True,
+        "historical_original_vintage_verified":False,
+        "no_fraud_labels":True,
+        "models":[],
+    }
+    if counts["fit"] < 30 or counts["validation"] < 5 or counts["holdout"] < 5:
+        report["status"] = "STRICT_DUAL_SPLIT_INSUFFICIENT_COMPLETE_WINDOWS"
+        report["reason"] = "Require >=30/5/5 complete company-year target windows, never resplit"
+        return report
+    scaled,scaler=prepare_scaled(splits)
+    results=[]
+    for name in ("persistence","ridge","random_forest"):
+        if name=="persistence":
+            prediction={"val_prediction":scaled["validation"][0][:,-1,:],
+                        "test_prediction":scaled["holdout"][0][:,-1,:]}
+        else:
+            prediction=fit_model(name,scaled,seed=seed,output=None)
+        val = metrics(scaled["validation"][1],prediction["val_prediction"],scaler)
+        test = metrics(scaled["holdout"][1],prediction["test_prediction"],scaler)
+        results.append({
+            "model":name,
+            "validation_signed_log_mae":val["signed_log_mae"],
+            "test_signed_log_mae":test["signed_log_mae"],
+            "validation_scaled_rmse":val["scaled_rmse"],
+            "test_scaled_rmse":test["scaled_rmse"],
+            "validation_scaled_r2":val["scaled_r2"],
+            "test_scaled_r2":test["scaled_r2"],
+            "validation_smape":val["smape"],
+            "test_smape":test["smape"],
+            "fraud_positive_labels":0,"fraud_negative_labels":0,
+        })
+    report["models"]=results
+    report["model_chosen_by_validation_only"]=min(
+        results,key=lambda x:x["validation_signed_log_mae"])["model"]
+    report["test_never_used_for_model_selection"]=True
+    dump(out/"annual_strict_joint_split_numeric_baseline.csv",
+         tuple(results[0]),results)
+    return report
+
+
 def ks_distance(x, y):
     import numpy as np
     a, b = np.sort(x), np.sort(y)
@@ -502,12 +566,14 @@ def run(data_root,bridge_root,output,*,models=ANNUAL_MODELS,
         raise FileExistsError("round3_previous_experiment_must_remain_immutable")
     out.mkdir(parents=True,exist_ok=True)
     annually = regression(frozen,out,models=models,epochs=epochs,seed=seed)
+    strict = issuer_and_time_disjoint_regression(frozen,out,seed=seed)
     quarter = quarters(frozen,out,seed=seed)
     report = {
         "status":"ROUND3_NUMERIC_REGRESSION_AND_UNLABELED_ANOMALY_RESEARCH_ONLY",
         "experiment_seed":seed,"epochs_requested":epochs,
         "source_gate_sha256":hashes,
         "annual_numeric_study":annually,
+        "annual_strict_issuer_and_time_study":strict,
         "quarter_unlabeled_study":quarter,
         "fraud_supervised_training_allowed":False,
         "fraud_precision":None,"fraud_recall":None,"fraud_f1":None,
