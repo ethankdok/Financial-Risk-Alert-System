@@ -82,7 +82,8 @@ class Round1DataIntegrationTests(unittest.TestCase):
         official=base/"mops_official_15_features"/"literature_15_features.csv"
         cols=("ticker","fiscal_year",*m.FEATURES)
         save(provider,cols,[{"ticker":"4000","fiscal_year":2014,
-                             **{x:"1.25" for x in m.FEATURES}}])
+                             **{x:("1.25" if x!="d_issue" else "")
+                                for x in m.FEATURES}}])
         save(official,cols,[{"ticker":"5001","fiscal_year":2014,
                              **{x:"2.25" for x in m.FEATURES}}])
         register=[]
@@ -96,7 +97,8 @@ class Round1DataIntegrationTests(unittest.TestCase):
                 issuer_split=group,temporal_split=time,
                 joint_strict_split=group if group==time else "outside_joint_evaluation",
                 development_event_candidate="false",
-                full_15_features="true",available_feature_count="15",
+                full_15_features="false" if tier=="FINMIND_PROVISIONAL" else "true",
+                available_feature_count="14" if tier=="FINMIND_PROVISIONAL" else "15",
                 source_raw_sha256="d"*64 if tier=="MOPS_OFFICIAL_RETROSPECTIVE" else "",
                 dataset_sha256=m.digest(official if tier=="MOPS_OFFICIAL_RETROSPECTIVE" else provider),
                 first_filing_publication_verified="false",original_vintage_verified="false",
@@ -105,7 +107,9 @@ class Round1DataIntegrationTests(unittest.TestCase):
                 approved_supervised_training="false",
                 approved_supervised_validation="false",
                 approved_supervised_test="false",
-                feature_vector_json=json.dumps({x:val for x in m.FEATURES}),
+                feature_vector_json=json.dumps({
+                    x:(val if tier!="FINMIND_PROVISIONAL" or x!="d_issue" else "")
+                    for x in m.FEATURES}),
             )
             register.append(row)
         self.paper_register=self.data/"phase4_taiwan_research_dataset"/"taiwan_research_split_register.csv"
@@ -366,6 +370,26 @@ class Round1DataIntegrationTests(unittest.TestCase):
         save(self.annual_panel,list(panel[0]),panel)
         with self.assertRaisesRegex(ValueError,"reserved_1785"):
             m.read_annual_amounts(self.data,set(self.tickers))
+
+    def test_unverified_issue_from_finmind_is_never_fabricated(self):
+        self.make_paper()
+        src=self.data/"phase3_literature_integrated"/"finmind_provisional_paper_component_values.csv"
+        rows=m.csv_rows(src,("ticker","fiscal_year",*m.FEATURES))
+        rows[0]["d_issue"]="1"
+        save(src,("ticker","fiscal_year",*m.FEATURES),rows)
+        p=json.loads(self.phase4_file.read_text(encoding="utf-8"))
+        p["source_hashes"]["provider_candidate"]=m.digest(src)
+        register=m.csv_rows(self.paper_register,m.SPLIT_COLUMNS)
+        r=next(x for x in register if x["evidence_tier"]=="FINMIND_PROVISIONAL")
+        r["dataset_sha256"]=m.digest(src)
+        v=json.loads(r["feature_vector_json"])
+        v["d_issue"]="1"
+        r["feature_vector_json"]=json.dumps(v)
+        r["available_feature_count"]="15"
+        r["full_15_features"]="true"
+        save(self.paper_register,m.SPLIT_COLUMNS,register)
+        with self.assertRaisesRegex(ValueError,"unverified_FinMind_d_issue"):
+            m.read_paper_features(self.data,set(self.tickers),p)
 
     def test_annual_paper_source_hash_file_swap_fails_closed(self):
         self.make_paper()
