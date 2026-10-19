@@ -136,3 +136,19 @@ and UNKNOWN fraud outputs. It uses artificial numbers solely for
 **software tests**, never reports them as real Taiwan model performance.
 
 GitHub Actions: https://github.com/ethankdok/Financial-Risk-Alert-System/actions/runs/39294234789 .
+
+## Final synthetic CI / debug checkpoint
+
+The final targeted
+[GitHub Actions Round3 run](https://github.com/ethankdok/Financial-Risk-Alert-System/actions/runs/39295169950)
+reported **9/9 PASS** on synthetic topology. Earlier defects found and
+repaired during CI: optional `httpx` leaked from the MOPS downloader
+module import into numeric-only evaluation; synthetic test dictionary
+omitted the real `candidate_source_tier`; full selected-feature
+missingness needed to match the accepted 2,232 observed facts; the
+already-frozen 2019Q3 quarter timing was confirmed and retained.
+All those changes are committed to the same feature branch.
+
+This result verifies executable model output formatting and intended
+safety/partition checks. **It is not actual Taiwan model performance**.
+Only the one real-data Windows command above produces those scores.
