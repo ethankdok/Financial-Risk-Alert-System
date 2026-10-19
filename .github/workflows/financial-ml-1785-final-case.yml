@@ -1,0 +1,29 @@
+name: Financial ML 1785 Final Case Replay
+
+on:
+  push:
+    branches:
+      - feature/financial-ml-1785-final-case-inference-20261020
+    paths:
+      - fintrust_backend/research/financial_ml/final_1785_case_replay.py
+      - fintrust_backend/tests/test_financial_ml_final_1785_case_replay.py
+      - .github/workflows/financial-ml-1785-final-case.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  strict-heldout-case:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scientific runtime for frozen inference tests
+        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib
+      - name: Verify original/restated evidence, provenance gate and final model behavior
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_final_1785_case_replay.py -v
