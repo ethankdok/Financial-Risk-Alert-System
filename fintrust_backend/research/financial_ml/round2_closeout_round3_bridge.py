@@ -146,7 +146,7 @@ def audit_official_legal_files(data, seed):
     return rows
 
 
-def build(data_root, round2_root, out_root):
+def build(data_root, round2_root, out_root, *, expected_report_sha256=None):
     data, current, out = map(Path, (data_root, round2_root, out_root))
     if out.resolve() == current.resolve():
         raise ValueError("round2_closeout_must_not_overwrite_original_review_packet")
@@ -155,6 +155,8 @@ def build(data_root, round2_root, out_root):
     report_path = current / "round2_evidence_review_report.json"
     if not report_path.is_file():
         raise ValueError("round2_accepted_report_missing")
+    if expected_report_sha256 is not None and digest(report_path) != expected_report_sha256:
+        raise ValueError("round2_accepted_report_sha_mismatch")
     report = json.loads(report_path.read_text(encoding="utf-8"))
     expected = {"candidate_case_company_years": 7,
                 "separate_alleged_case_quarters": 12,
@@ -385,8 +387,10 @@ def main(argv=None):
     parser.add_argument("--data-root", required=True)
     parser.add_argument("--round2-review-root", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--expected-round2-sha256", default="")
     args = parser.parse_args(argv)
-    result, release = build(args.data_root, args.round2_review_root, args.output)
+    result, release = build(args.data_root, args.round2_review_root, args.output,
+                            expected_report_sha256=args.expected_round2_sha256 or None)
     print(json.dumps({"round2": result, "round3": release},
                      ensure_ascii=False, indent=2))
 
