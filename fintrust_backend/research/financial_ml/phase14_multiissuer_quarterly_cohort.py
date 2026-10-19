@@ -156,12 +156,14 @@ def verify_candidate_archive(row,archive):
     raw=archive.read(row["raw_path"])
     if hashlib.sha256(raw).hexdigest()!=row.get("raw_sha256"):
         raise ValueError("prior_quarter_raw_digest_changed")
+    if row.get("source_status")!=VALID:
+        # A quarantined official document remains permanently archived with
+        # its original SHA. Do not silently promote it or try to refetch over it.
+        return None
     observations,diagnostic,eligible,conflicts=extract_source(
         raw,row["reporting_period"],row["raw_sha256"],ticker=row["ticker"])
     if not diagnostic["matches_requested_period_and_scope"]:
         raise ValueError("prior_quarterly_comparison_scope_changed")
-    if row.get("source_status")!=VALID:
-        raise ValueError("prior_source_archive_status_conflicts_with_bytes")
     if row.get("source_fact_count")!=len(observations):
         raise ValueError("prior_source_archive_observation_count_changed")
     return observations,len(conflicts)
