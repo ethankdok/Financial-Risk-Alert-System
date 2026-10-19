@@ -16,7 +16,7 @@ if (-not $root.EndsWith("Financial-Risk-Alert-System-ML")) {
 
 Write-Host "Round1: source-linked dataset integration regression"
 python -m unittest discover -s tests -p "test_financial_ml_final_round1_dataset_integration.py" -v
-Assert-LastExit "Round1 nine evidence integration tests"
+Assert-LastExit "Round1 twelve evidence integration tests"
 
 Write-Host "Round1: Phase4 company/time & original paper feature provenance"
 python -m unittest discover -s tests -p "test_financial_ml_phase4_taiwan_dataset_gate.py" -v
@@ -45,6 +45,8 @@ $expected=@(
     "phase4_taiwan_research_dataset\taiwan_research_split_register.csv",
     "phase14_multiissuer_quarterly_comparison\multiissuer_official_quarter_sources.csv",
     "phase12_kangyou_quarterly_panel\quarterly_case_official_source_index.csv",
+    "phase10_case_official_paper_audit\phase10_case_official_paper_features.csv",
+    "phase9_case_mops_xbrl_candidates\acquisition_results.json",
     "phase13_kangyou_quarterly_temporal_features\quarterly_twd_source_observations.csv"
 )
 foreach ($relative in $expected) {
@@ -67,6 +69,8 @@ $r | Select-Object status,
     annual_12_amount_candidate_company_years,
     annual_12_amount_full_12_company_years,
     annual_paper_15_source_tier_rows,
+    development_case_annual_source_years_separate_from_noncase_fit,
+    development_case_annual_official_XBRL_source_years,
     three_year_history_complete_12_amount_windows,
     three_year_history_fit_issuer_and_time_disjoint_complete_candidates,
     quarter_issuer_period_source_rows,
