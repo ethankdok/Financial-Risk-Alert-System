@@ -347,6 +347,12 @@ def build(data_root, output_root):
     # and no holdout or duplicate annual/quarter key exists.
     if len({(r["sample_grain"], r["sample_key"]) for r in review}) != len(review):
         raise ValueError("round2_duplicate_review_sample_key")
+    # Never overwrite a human-edited review template or a previous audit run.
+    # Reprocessing must use a new output directory after archival/review.
+    if out.exists() and any(out.glob("round2_*.csv")):
+        raise FileExistsError("round2_existing_review_packet_preserve_reviewers")
+    if (out / "round2_evidence_review_report.json").exists():
+        raise FileExistsError("round2_existing_review_report_preserve_inputs")
     out.mkdir(parents=True, exist_ok=True)
     write_csv(out / "round2_case_year_review.csv", CASE_FIELDS, case_year_rows)
     write_csv(out / "round2_case_quarter_review.csv", CASE_FIELDS, case_quarters)
