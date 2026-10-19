@@ -110,6 +110,45 @@ class Final1785Tests(unittest.TestCase):
         self.assertIsNone(array)
         self.assertEqual(len(gaps),12)
 
+    def test_early_strict_original_package_can_unlock_only_originals(self):
+        source=fake_facts(period="2016-03-25T16:00:00+08:00",
+                          revision="original",n_per_year=12)
+        create_fake_zip(self.zip,source)
+        # ONLY mock the separate verifier in this hermetic unit test. The
+        # production call always runs the full original semantic validator.
+        with patch.object(study,"verify_package",return_value={
+                "status":"verified","mode":"strict_point_in_time"}):
+            meta,rows=study.pre_event_original_zip(self.zip)
+        self.assertEqual(meta["verified_original_fact_count"],36)
+        x,gaps=study.gate_features_for_event(rows)
+        self.assertEqual(len(gaps),0)
+        self.assertEqual(len(x),3)
+
+    def test_preevent_archive_rejects_wrong_cutoff_even_if_verified(self):
+        with patch.object(study,"verify_package",return_value={
+                "status":"verified","mode":"strict_point_in_time"}):
+            with self.assertRaisesRegex(ValueError,"wrong_case_or_asof"):
+                study.pre_event_original_zip(self.zip)
+
+    def test_preevent_archive_refuses_duplicate_filing_inputs(self):
+        source=fake_facts(period="2016-03-25T16:00:00+08:00",
+                          revision="original",n_per_year=12)
+        source.append(dict(source[0]))
+        create_fake_zip(self.zip,source)
+        with patch.object(study,"verify_package",return_value={
+                "status":"verified","mode":"strict_point_in_time"}):
+            with self.assertRaisesRegex(ValueError,"duplicate_same_grain"):
+                study.pre_event_original_zip(self.zip)
+
+    def test_preevent_package_rejects_postevent_backfilled_fact(self):
+        source=fake_facts(period="2016-12-25T16:00:00+08:00",
+                          revision="original",n_per_year=12)
+        create_fake_zip(self.zip,source)
+        with patch.object(study,"verify_package",return_value={
+                "status":"verified","mode":"strict_point_in_time"}):
+            with self.assertRaisesRegex(ValueError,"contaminated_after_cutoff"):
+                study.pre_event_original_zip(self.zip)
+
     def test_source_published_november_package_evidence_stays_separate(self):
         with patch.object(study,"STRICT_SHA",study.digest(self.zip)),patch.object(
                 study,"verify_package",return_value={
