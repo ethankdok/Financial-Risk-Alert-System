@@ -16,8 +16,24 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from .annual_panel_readiness import METRICS
-from .final_round1_dataset_integration import (
-    QUARTER_FEATURE_DICTIONARY, QUARTER_MATRIX_BASE, ANNUAL_COLUMNS,
+# Use the accepted Round1 CSV contract, without importing its acquisition
+# module (which also imports optional HTTP/MOPS clients not needed for ML).
+ANNUAL_COLUMNS = (
+    "ticker","fiscal_year","complete_candidate_vector",
+    "original_publication_verified","original_filing_vintage_verified",
+    "label_status","training_admitted",*METRICS,
+)
+QUARTER_MATRIX_BASE = (
+    "sample_key","ticker","reporting_period","issuer_split","time_split",
+    "joint_strict_split","source_status","source_sha256",
+    "observed_selected_feature_count","selected_feature_count",
+    "historical_publication_verified","original_filing_vintage_verified",
+    "label_status","negative_label_approved","training_admitted",
+)
+QUARTER_FEATURE_DICTIONARY = (
+    "feature_id","concept_key","period_grain","fit_issuer_quarters",
+    "fit_distinct_issuers","candidate_source_tier",
+    "supervised_training_admitted",
 )
 from .phase4_taiwan_dataset_gate import issuer_partition, temporal_partition
 from .provisional_sequence_experiment import (
