@@ -76,9 +76,11 @@ def period_grain(context,period):
     return "other_duration",context.start.isoformat(),end.isoformat()
 
 
-def extract_source(raw,period,sha):
+def extract_source(raw,period,sha,*,ticker=TICKER):
+    if not (ticker.isdigit() and len(ticker)==4) or ticker=="1785":
+        raise ValueError("unapproved_quarter_issuer_identity")
     doc=parse_xbrl_document(raw)
-    if doc.entity_identifiers and doc.entity_identifiers!={TICKER}:
+    if doc.entity_identifiers and doc.entity_identifiers!={ticker}:
         raise ValueError("quarterly_financial_fact_entity_mismatch")
     if doc.statement_scope()[0]!="consolidated":
         raise ValueError("quarterly_financial_fact_not_consolidated")
@@ -116,7 +118,7 @@ def extract_source(raw,period,sha):
             })
         namespace,name=key.rsplit("|",1)
         observations.append({
-            "ticker":TICKER,"reporting_period":period,
+            "ticker":ticker,"reporting_period":period,
             "concept_key":key,"source_namespace":namespace,
             "source_local_name":name,"period_grain":grain,
             "source_unit":"TWD",
@@ -165,7 +167,7 @@ def cached_documents(data_root):
         yield period,source,raw
 
 
-def derive_signals(observations):
+def derive_signals(observations,*,ticker=TICKER):
     """Keep only real same-taxonomy, same-currency, same-grain changes.
 
     For stocks and exact-quarter flows compare previous quarter and same
@@ -174,6 +176,8 @@ def derive_signals(observations):
     """
     rows={}
     for row in observations:
+        if row["ticker"]!=ticker:
+            raise ValueError("cross_company_quarter_signal_contamination")
         if row["reconciliation_status"]!="CANDIDATE_CONSISTENT_REPETITIONS":
             continue
         if row["period_grain"]=="other_duration":
@@ -200,7 +204,7 @@ def derive_signals(observations):
             # Abs denominator explicitly documents signed cashflows/equity.
             relative=str(delta/abs(prev)) if prev else ""
             output.append({
-                "ticker":TICKER,"reporting_period":period,
+                "ticker":ticker,"reporting_period":period,
                 "prior_period":previous,"comparison":comparison,
                 "concept_key":concept,"source_local_name":cur["source_local_name"],
                 "period_grain":grain,"source_unit":"TWD",
