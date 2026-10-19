@@ -270,6 +270,8 @@ def read_paper_features(data,cohort,phase4):
         source=original.get(key)
         if source is None or any(feat[n]!=amount(source[n]) for n in FEATURES):
             raise ValueError("paper_15_feature_vector_differs_from_original_source")
+        if tier=="FINMIND_PROVISIONAL" and feat["d_issue"]:
+            raise ValueError("unverified_FinMind_d_issue_must_remain_missing")
         count=sum(bool(x) for x in feat.values())
         if count!=int(r["available_feature_count"]) or (
                 r["full_15_features"].lower()=="true")!=(count==len(FEATURES)):
