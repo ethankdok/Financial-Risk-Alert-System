@@ -87,6 +87,70 @@ Send one report:
 Financial-Risk-Alert-System/fintrust_backend/data/financial_ml/final_round1_integrated_ml_dataset/round1_dataset_readiness_report.json
 If a test fails, add its error and traceback, not all original raw archives. The branch is remotely authored, not yet user-local tested.
 
+## Stage 1 acceptance from user's actual Windows data run (2026-10-19)
+
+Source of these figures: user-returned `verify_final_round1_dataset.ps1` terminal
+record and `round1_dataset_readiness_report.json`. This is **verified from
+the supplied run record**, not an independent rerun against private archives
+in the remote ChatGPT environment.
+
+**Engineering acceptance: PASS for offline dataset-integration QA**, subject
+to the research-readiness limitations below:
+
+| Acceptance check | Observed result |
+|---|---|
+| Focused updated hermetic regression | 17 / 17 PASS |
+| Offline real-source integrated run | Completed; status `FINALIZATION_ROUND1_REAL_TAIWAN_DATA_INTEGRATED_RESEARCH_TIERS_QA` |
+| Frozen cohort/years | 120 issuers, 1,560 FY2013-2025 company-years |
+| Provisional annual 12-amount full rows | 535 / 1,560 (34.29%) |
+| Company-disjoint plus year-disjoint full annual observations | fit 237; validation 18; test 6; outside joint evaluation 274 |
+| Source-separated Beneish/Dechow 15 | FinMind provisional full 0/1,560; MOPS retrospective full 11/64 |
+| Development-case annual evidence | 13 case company-years; 11 official XBRL; one 15-component complete |
+| Complete 3-year amount-plus-target windows | 399 overall; 147 fit with strict dual split |
+| Official comparison quarter reports | 132 valid / 144 attempted; 9 missing, 3 invalid |
+| Separate case-quarter reports | 12 source periods; no confirmed period label |
+| Quarter sparse candidate matrix | 144 planned company-quarters; 24 fit-only features; 2,232 observed / 3,456 possible cells (64.58%) |
+| Exact concept+grain available for all 12 quarters in one issuer | 0 in comparison; 0 in case |
+| Original first-filing / first-publication verified | 0 / 0 |
+| Independently reviewed fraud-positive / normal-negative | 0 / 0 |
+| Supervised fraud-training admissions | 0 |
+| Holdout / network / production writes | 1785 excluded; 0 calls; 0 writes |
+
+The terminal log contains an initial harmless `cd fintrust_backend` error
+because the shell was **already** under the `fintrust_backend` directory:
+the subsequent test runner and offline integration completed normally.
+
+**Qualification:** source hash and register checks passed within the existing
+offline pipeline; this does not itself certify every transformation against
+external issuers' first-published filing bytes. The quarter feature coverage
+counts describe observed numeric facts and candidate fields, **not**
+verified fraud labels, continuous 12-quarter model sequences, classifier
+accuracy, or historically authentic pre-disclosure predictions. The six
+full dual-split test annual observations are far too few to claim robust
+external classification testing.
+
+**No further Stage 1 acquisition or integration pass is requested.**
+Stage 1 dataset integration can be frozen as a reproducible research input
+view. Do not automatically approve fraud classification training.
+
+## Existing evidence components to reuse next, not reimplement
+
+For the separate Stage 2 evidence-and-outcome review, reuse:
+`phase1_case_registry.py`, `phase7_evidence_asof_audit.py`,
+`phase8_original_filing_intake.py`, `phase10_case_literature_vintage_audit.py`,
+and the already generated Stage 1 source-tier/separate case manifests.
+
+- Review original-as-first-published filing versions and independently
+  archived first public misstatement notices with publication timestamps.
+- Resolve 3027 / 8299 affected reporting periods with judgments,
+  announcements and explicit legal-case status; treat 6452 allegations
+  as candidate evidence rather than confirmed positive labels.
+- Establish genuinely reviewed normal comparison intervals with an
+  appropriate later follow-up window, not just lack of discovered allegations.
+- Keep `1785` frozen for the final case replay. Only after source,
+  vintage, independently reviewed outcome, leakage boundaries and a
+  method-owner gate pass can downstream supervised fit commence.
+
 ## Fixed next rounds and release gates
 
 Round2: reviewed true positive/negative/UNKNOWN affected periods, original-as-first-public filing and first-disclosure time, and credible original Beneish/Dechow source mapping for RSST, TATA, LVGI, Issue.
