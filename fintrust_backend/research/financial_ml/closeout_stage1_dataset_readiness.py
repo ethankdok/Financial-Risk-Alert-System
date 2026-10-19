@@ -290,8 +290,12 @@ def quarter_view(cohort,phase14,seed,max_features,cohort_sha):
         assert_unknown(r,"original_filing_version_verified","first_publication_verified",
                        "outcome_label","normal_label_approved","training_admitted")
         m=manifest_rows.get(f"{k[0]}:{k[1]}")
-        if m is None or m["source_status"]!=r["source_status"] or (
-            m["raw_sha256"]!=r["raw_sha256"]):
+        if (m is None or m["source_status"]!=r["source_status"]
+            or m["raw_sha256"]!=r["raw_sha256"]
+            or m.get("raw_path","")!=r["archive_relative_path"]
+            or m.get("outcome_label")!="UNKNOWN"
+            or m.get("normal_label_approved") is not False
+            or m.get("original_asof_verified") is not False):
             raise ValueError("quarterly_manifest_source_index_disagreement")
         if r["industry_category"]!=selected[k[0]]["industry_category"]:
             raise ValueError("quarter_issuer_metadata_changed")
