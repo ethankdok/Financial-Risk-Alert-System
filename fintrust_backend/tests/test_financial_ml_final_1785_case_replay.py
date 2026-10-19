@@ -191,6 +191,55 @@ class Final1785Tests(unittest.TestCase):
         for j,f in enumerate(study.METRICS):
             self.assertAlmostEqual(out["predicted_twd"][f],x[2,j])
 
+    def test_entire_documented_case_report_is_generated_fail_closed(self):
+        staging=Path(self.tmp.name)
+        round3=staging/"round3";round3.mkdir()
+        r3=round3/"round3_real_data_model_report.json"
+        r3.write_text('{"source":"synthetic_only"}',encoding="utf-8")
+        r4=staging/"round4.json";r4.write_text('{"source":"synthetic_only"}',encoding="utf-8")
+        output=staging/"case_final_output"
+        with patch.object(study,"ROUND3_SHA",study.digest(r3)),patch.object(
+                study,"ROUND4_SHA",study.digest(r4)),patch.object(
+                study,"read_round3",return_value={
+                    "annual_numeric_study":{
+                        "selected_model_by_validation_only":"persistence"}
+                }),patch.object(study,"package_data",return_value=(
+                    {"status":"verified","mode":"strict_point_in_time"},
+                    {"parameters":{"as_of":"2016-11-14"}},fake_facts())):
+            report=study.audit_and_report(
+                data_root=staging,
+                bridge_root=staging,
+                round3_root=round3,
+                round4_report=r4,
+                strict_zip=self.zip,
+                output=output)
+        self.assertTrue(report["frozen_round3_training_test_1785_excluded"])
+        self.assertEqual(report["strict_package_financial_fact_count"],27)
+        self.assertEqual(len(report["historical_score_rows"]),5)
+        self.assertEqual(
+            report["frozen_round3_case_numeric_inference"]["status"],
+            "PRE_EVENT_FROZEN_INFERENCE_NOT_INPUT_ELIGIBLE")
+        self.assertEqual(
+            report["frozen_round3_case_numeric_inference"]["blocked_feature_slots"],36)
+        self.assertIsNone(report["classifier_accuracy_precision_recall_f1_auc"])
+        self.assertTrue((output/"1785_case_final_report.json").exists())
+        self.assertEqual(len(list(csv.DictReader(
+            (output/"1785_historical_model_scores.csv").open(encoding="utf-8-sig")))),5)
+        self.assertEqual(len(list(csv.DictReader(
+            (output/"1785_pre_event_input_gaps.csv").open(encoding="utf-8-sig")))),36)
+        with self.assertRaisesRegex(FileExistsError,"output_is_immutable"):
+            with patch.object(study,"ROUND3_SHA",study.digest(r3)),patch.object(
+                    study,"ROUND4_SHA",study.digest(r4)),patch.object(
+                    study,"read_round3",return_value={
+                        "annual_numeric_study":{
+                            "selected_model_by_validation_only":"persistence"}}),patch.object(
+                    study,"package_data",return_value=(
+                        {"status":"verified","mode":"strict_point_in_time"},
+                        {},fake_facts())):
+                study.audit_and_report(
+                    data_root=staging,bridge_root=staging,round3_root=round3,
+                    round4_report=r4,strict_zip=self.zip,output=output)
+
     def test_no_forged_literature_scores_by_missing_table(self):
         text=study.LITERATURE_DOC.read_text(encoding="utf-8")
         with self.assertRaisesRegex(ValueError,"literature_source_sections_missing"):
