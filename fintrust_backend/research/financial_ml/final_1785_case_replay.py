@@ -84,7 +84,9 @@ def literature_scores(text):
     for year in range(2011,2016):
         selection=originals if year<=2012 else current
         candidates=[x.split("|")[1:-1] for x in selection.splitlines()
-                    if re.match(r"^\|\s*"+str(year)+r"\s*\|",x)]
+                    if re.match(r"^\|\s*"+str(year)+r"\s*\|",x)
+                    and ("original A02" in x if year<=2012
+                         else "restated XBRL" in x)]
         if len(candidates)!=1:
             raise ValueError(f"1785_literature_year_missing_or_duplicate:{year}")
         cells=[x.strip() for x in candidates[0]]
