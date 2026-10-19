@@ -472,9 +472,22 @@ def quarters(frozen, out, *, seed):
             splits[part].append((ticker,period,np.asarray(values,dtype=float),
                                  np.asarray(masks,dtype=float)))
     counts = {part:len(v) for part,v in splits.items()}
-    for part, minimum in (("fit",12),("validation",2),("test",2)):
-        if counts[part] < minimum:
-            raise ValueError("round3_strict_joint_quarter_split_too_sparse:"+part)
+    short = [part for part, minimum in (("fit",12),("validation",2),("test",2))
+             if counts[part] < minimum]
+    if short:
+        # A sparse frozen dual split is a research constraint, not permission
+        # to leak a test issuer into fit or label unknown quarters as normal.
+        dump(out/"quarter_unlabeled_model_comparison.csv",QUARTER_MODEL_FIELDS,[])
+        dump(out/"quarter_unlabeled_validation_test_scores.csv",QUARTER_SCORE_FIELDS,[])
+        return {
+            "status":"QUARTER_STRICT_ISSUER_TIME_SPLIT_INSUFFICIENT_OBSERVATIONS",
+            "raw_company_quarters":len(matrix),"quarter_source_statuses":dict(coverage),
+            "training_selected_exact_fields":fids,"feature_count":len(fids),
+            "strict_issuer_and_time_sample_counts":counts,
+            "insufficient_partitions":short,
+            "models":[],"fraud_classification_metrics":None,
+            "source_not_first_publication_version":True,
+        }
     a = np.stack([r[2] for r in splits["fit"]])
     medians = np.nanmedian(a, axis=0)
     if not np.isfinite(medians).all():
