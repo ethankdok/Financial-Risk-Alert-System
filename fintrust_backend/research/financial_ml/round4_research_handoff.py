@@ -161,7 +161,7 @@ def permutation_validation(report_root, data_root, *, seed=20261020, repeats=5):
         or not np.allclose(scaler.scale_,derived_scaler.scale_)):
         raise ValueError("round4_preprocessor_checkpoint_disagrees_with_frozen_training_data")
     X,Y=scaled["validation"]
-    if len(X)!=82 or len(METRICS)!=12 or repeats<2:
+    if len(X)!=len(partitions["validation"]) or len(METRICS)!=12 or repeats<2:
         raise ValueError("round4_wrong_validation_or_repeats")
     rows=[]
     for name in ("ridge","random_forest"):
