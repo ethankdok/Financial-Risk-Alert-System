@@ -27,9 +27,7 @@ from .literature_dataset import FEATURES
 from .official_batch import atomic_json
 from .phase4_taiwan_dataset_gate import SPLIT_COLUMNS, issuer_partition
 from .phase13_quarterly_temporal_features import FROZEN_PERIODS, OBS_FIELDS
-from .phase14_multiissuer_quarterly_cohort import (
-    SOURCE_COLUMNS, VALID as Q_VALID, selection as frozen_selection,
-)
+from .phase14_multiissuer_quarterly_cohort import SOURCE_COLUMNS, VALID as Q_VALID
 
 BANNED = frozenset({"1785", "3027", "6452", "8299"})
 ANNUAL_COLUMNS = (
@@ -255,7 +253,7 @@ def paper_view(register,report_path,seed):
     return sorted(output,key=lambda r:(r["evidence_tier"],r["ticker"],int(r["fiscal_year"])))
 
 
-def quarter_view(cohort,phase14,seed,max_features):
+def quarter_view(cohort,phase14,seed,max_features,cohort_sha):
     root=Path(phase14)
     report=json.loads((root/"phase14_integrated_report.json").read_text(encoding="utf-8"))
     if (report.get("selected_issuers")!=12
@@ -265,6 +263,13 @@ def quarter_view(cohort,phase14,seed,max_features):
         or report.get("supervised_ml_rows_admitted")!=0
         or report.get("final_holdout_1785_excluded") is not True):
         raise ValueError("phase14_unapproved_outcome_or_source_plan")
+    manifest_path=root/"quarterly_acquisition_results.json"
+    if digest(manifest_path)!=report["primary_source_assembly_SHA256"]:
+        raise ValueError("phase14_manifest_sha_changed_after_acceptance")
+    manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("holdout_1785") is not True or manifest.get("positive_labels")!=0 or manifest.get("negative_labels")!=0:
+        raise ValueError("phase14_manifest_forged_label_or_holdout")
+    manifest_rows=manifest.get("outcomes",{})
     sources=read_csv(root/"multiissuer_official_quarter_sources.csv",SOURCE_COLUMNS)
     raw_obs=read_csv(root/"multiissuer_quarter_twd_observations.csv",OBS_FIELDS)
     saved_plan=json.loads((root/"frozen_phase14_plan.json").read_text(encoding="utf-8"))
@@ -272,7 +277,8 @@ def quarter_view(cohort,phase14,seed,max_features):
     if (len(selected)!=12
         or set(selected)&BANNED
         or not set(selected).issubset(cohort)
-        or saved_plan["source_cohort_sha256"]!=report["source_cohort_SHA256"]):
+        or saved_plan["source_cohort_sha256"]!=report["source_cohort_SHA256"]
+        or saved_plan["source_cohort_sha256"]!=cohort_sha):
         raise ValueError("phase14_frozen_cohort_selection_not_reproducible")
     allowed={(ticker,period) for ticker in selected for period in FROZEN_PERIODS}
     index={}
@@ -283,6 +289,10 @@ def quarter_view(cohort,phase14,seed,max_features):
             raise ValueError("quarter_source_duplicated_or_outside_selection")
         assert_unknown(r,"original_filing_version_verified","first_publication_verified",
                        "outcome_label","normal_label_approved","training_admitted")
+        m=manifest_rows.get(f"{k[0]}:{k[1]}")
+        if m is None or m["source_status"]!=r["source_status"] or (
+            m["raw_sha256"]!=r["raw_sha256"]):
+            raise ValueError("quarterly_manifest_source_index_disagreement")
         if r["industry_category"]!=selected[k[0]]["industry_category"]:
             raise ValueError("quarter_issuer_metadata_changed")
         if r["source_status"]==Q_VALID:
@@ -447,6 +457,34 @@ def statistics(annual,paper,matrix,feature_ids):
     return views
 
 
+
+
+def annual_sequence_opportunities(annual, history):
+    """Prospective next-year NUMERIC forecast windows, not fraud labels."""
+    byfirm=defaultdict(dict)
+    for r in annual:
+        byfirm[r["ticker"]][int(r["fiscal_year"])]=r
+    by_split=Counter()
+    firms=defaultdict(set)
+    for ticker,years in byfirm.items():
+        for target in sorted(years):
+            if target-history<2013:
+                continue
+            required=range(target-history,target+1)
+            if not all(y in years and years[y]["full_12_metric_observation"]=="true"
+                       for y in required):
+                continue
+            split=years[target]["strict_joint_split"]
+            by_split[split]+=1
+            firms[split].add(ticker)
+    return {"historical_window_years":history,
+            "total_complete_financial_numeric_forecast_windows":sum(by_split.values()),
+            "candidate_windows_by_strict_split":dict(sorted(by_split.items())),
+            "unique_companies_by_strict_split":{
+                split:len(firms[split]) for split in
+                ("fit","validation","test","outside_joint_evaluation")},
+            "approved_fraud_supervised_windows":0}
+
 def make_report(data_root,output,max_features=24,seed=20261019):
     root=Path(data_root)
     out=Path(output)
@@ -475,11 +513,14 @@ def make_report(data_root,output,max_features=24,seed=20261019):
     if len(frozen)!=120:
         raise ValueError("expected_exact_120_frozen_cohort")
     cohort={r["ticker"] for r in frozen}
-    if cohort&BANNED:
-        raise ValueError("known_case_accidentally_used_as_comparison_cohort")
+    if "1785" in cohort:
+        raise ValueError("final_holdout_in_frozen_universe")
+    # Development case issuers may occur in the 120-row universe, but are
+    # never promoted to normal controls or included in the quarter cohort.
     annual=annual_view(cohort,panel_path,lines_path,seed)
     paper=paper_view(inputs["phase4_paper_register"],inputs["phase4_paper_report"],seed)
-    quarter,mapping,quality,qt=quarter_view(cohort,phase14,seed,max_features)
+    quarter,mapping,quality,qt=quarter_view(
+        cohort,phase14,seed,max_features,digest(cohort_path))
     metrics=statistics(annual,paper,quarter,[x["feature_id"] for x in mapping])
     write_csv(out/"annual_12_provisional_metric_matrix.csv",ANNUAL_COLUMNS,annual)
     write_csv(out/"paper_15_source_tier_matrix.csv",PAPER_COLUMNS,paper)
@@ -508,6 +549,8 @@ def make_report(data_root,output,max_features=24,seed=20261019):
         "paper_15_possible_cells":len(paper)*len(FEATURES),
         "quarterly":qt,
         "annual_joint_splits":dict(Counter(r["strict_joint_split"] for r in annual)),
+        "three_year_history_numeric_forecast_opportunities":annual_sequence_opportunities(annual,3),
+        "five_year_history_numeric_forecast_opportunities":annual_sequence_opportunities(annual,5),
         "model_ready_supervised_positive_labels":0,
         "model_ready_supervised_negative_labels":0,
         "model_ready_supervised_training_rows":0,
