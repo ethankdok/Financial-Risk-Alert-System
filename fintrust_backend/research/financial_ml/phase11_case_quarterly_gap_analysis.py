@@ -232,6 +232,12 @@ async def run(data_root,*,execute=False,fetcher=None):
     seed=json.loads(ROOT_SEED.read_text(encoding="utf-8"))
     periods=case_reporting_periods(seed)
     gaps=yearly_missing_reasons(source)
+    phase10=json.loads((source/"phase10_integrated_report.json").read_text(encoding="utf-8"))
+    paper_missing=sum(row["case_years_missing"] for row in gaps)
+    annual_missing=phase10["missing_literature_feature_cells"]
+    unavailable_years=len(phase10["missing_official_years"])
+    if paper_missing+15*unavailable_years!=annual_missing:
+        raise ValueError("phase10_missing_feature_grain_accounting_conflict")
     table(dest/"case_precise_reporting_period_candidates.csv",PERIOD_COLUMNS,periods)
     table(dest/"paper_feature_missing_reason_priority.csv",ISSUE_COLUMNS,gaps)
     quarter=await acquire_6452_2020q1(dest/"official_quarterly_source",execute=execute,fetcher=fetcher)
@@ -243,7 +249,9 @@ async def run(data_root,*,execute=False,fetcher=None):
         "6452_2020Q1_not_FY2020_annual":True,
         "year_2020_annual_filing_not_found_not_interpreted_as_2020Q1_not_filed":True,
         "separately_required_8299_TW_GAAP_FY2012":True,
-        "phase10_official_15_feature_cells_missing":sum(row["case_years_missing"] for row in gaps),
+        "phase10_total_15_feature_cells_missing":annual_missing,
+        "phase10_missing_from_11_parsed_xbrl_years":paper_missing,
+        "phase10_missing_from_two_unavailable_annual_source_years":annual_missing-paper_missing,
         "unresolved_paper_features_by_year_missing":{
             row["feature"]:row["case_years_missing"] for row in gaps
         },
