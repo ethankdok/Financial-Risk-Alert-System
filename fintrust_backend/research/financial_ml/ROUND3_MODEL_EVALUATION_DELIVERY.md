@@ -152,3 +152,7 @@ All those changes are committed to the same feature branch.
 This result verifies executable model output formatting and intended
 safety/partition checks. **It is not actual Taiwan model performance**.
 Only the one real-data Windows command above produces those scores.
+
+## 2019Q3 real-run bug and safe rerun
+
+The user's real run passed nine tests but stopped when checking the quarterly time split. Round1 assigns 2019Q3 to validation (inclusive) and 2019Q4 to test. Round3 had used the exclusive 2019Q3 cutoff. The code now uses the original inclusive cutoff and a targeted boundary regression; it keeps the source SHA and group/period leakage checks unchanged. The PowerShell runner preserves any partial annual artifacts left by the failing run and chooses an unused retry folder, rather than deleting or overwriting them. Fetch the latest commit and run the existing verify_round3_real_models.ps1 command again, then upload the JSON report from the printed retry folder. The supervised-fraud metrics remain unavailable without verified labels.
