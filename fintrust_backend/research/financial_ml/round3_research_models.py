@@ -432,6 +432,7 @@ def quarters(frozen, out, *, seed):
             raise ValueError("round3_unfitted_or_wrong_source_tier_feature_selection")
     splits = {"fit": [], "validation": [], "test": []}
     coverage = Counter()
+    observed_cells = 0
     keys = set()
     for r in matrix:
         ticker, period = r["ticker"], r["reporting_period"]
@@ -463,6 +464,7 @@ def quarters(frozen, out, *, seed):
         if (sum(masks) != int(r["observed_selected_feature_count"])
             or int(r["selected_feature_count"]) != 24):
             raise ValueError("round3_quarter_feature_observation_count_conflict")
+        observed_cells += sum(masks)
         coverage[r["source_status"]] += 1
         if r["source_status"] != "OFFICIAL_QUARTER_SAME_GRAIN_CANDIDATE_VINTAGE_UNKNOWN":
             if any(masks):
@@ -471,6 +473,12 @@ def quarters(frozen, out, *, seed):
         if part in splits and sum(masks)>=4:
             splits[part].append((ticker,period,np.asarray(values,dtype=float),
                                  np.asarray(masks,dtype=float)))
+    if (len(keys) != 144 or len({t for t,_ in keys}) != 12
+        or observed_cells != 2232
+        or coverage["OFFICIAL_QUARTER_SAME_GRAIN_CANDIDATE_VINTAGE_UNKNOWN"] != 132
+        or coverage["filing_not_found"] != 9
+        or coverage["source_invalid_content"] != 3):
+        raise ValueError("round3_frozen_144_source_and_2232_observed_facts_disagreement")
     counts = {part:len(v) for part,v in splits.items()}
     short = [part for part, minimum in (("fit",12),("validation",2),("test",2))
              if counts[part] < minimum]
