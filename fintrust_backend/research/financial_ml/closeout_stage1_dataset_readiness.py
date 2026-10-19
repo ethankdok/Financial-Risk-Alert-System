@@ -27,7 +27,7 @@ from .literature_dataset import FEATURES
 from .official_batch import atomic_json
 from .phase4_taiwan_dataset_gate import SPLIT_COLUMNS, issuer_partition
 from .phase13_quarterly_temporal_features import FROZEN_PERIODS, OBS_FIELDS
-from .phase14_multiissuer_quarterly_cohort import SOURCE_COLUMNS, VALID as Q_VALID
+from .phase14_multiissuer_quarterly_cohort import SOURCE_COLUMNS, VALID as Q_VALID, url_for
 
 BANNED = frozenset({"1785", "3027", "6452", "8299"})
 ANNUAL_COLUMNS = (
@@ -293,6 +293,8 @@ def quarter_view(cohort,phase14,seed,max_features,cohort_sha):
         if (m is None or m["source_status"]!=r["source_status"]
             or m["raw_sha256"]!=r["raw_sha256"]
             or m.get("raw_path","")!=r["archive_relative_path"]
+            or m.get("official_url")!=r["official_url"]
+            or r["official_url"]!=url_for(*k)
             or m.get("outcome_label")!="UNKNOWN"
             or m.get("normal_label_approved") is not False
             or m.get("original_asof_verified") is not False):
