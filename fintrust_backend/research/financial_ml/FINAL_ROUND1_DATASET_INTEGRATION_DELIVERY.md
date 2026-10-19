@@ -81,7 +81,7 @@ reviewed. No production, release, or teammate branch was modified.
 In clean Financial-Risk-Alert-System-ML/fintrust_backend using existing ml-env, fetch/check out this branch and run:
 powershell -ExecutionPolicy Bypass -File .\research\financial_ml\verify_final_round1_dataset.ps1
 
-The script executes thirteen new hermetic tests and relevant Phase4, Phase13, Phase14, financial temporal model and original Beneish/Dechow tests, then ONE real-data offline integration run. It fails closed if any previously derived source SHA or register disagrees with original records.
+Default: the script executes seventeen hermetic Round1 tests (the prior thirteen plus four focused regressions) and ONE real-data offline integration run. This avoids needlessly repeating earlier accepted Phase4/13/14/model suites. To rerun all those previous regression suites as well, pass -FullRegression. It fails closed if any previously derived source SHA or register disagrees with original records.
 
 Send one report:
 Financial-Risk-Alert-System/fintrust_backend/data/financial_ml/final_round1_integrated_ml_dataset/round1_dataset_readiness_report.json
