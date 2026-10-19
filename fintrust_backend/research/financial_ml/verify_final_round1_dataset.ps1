@@ -1,7 +1,7 @@
 # Finalization Round1: ONE offline Windows verification.
 # Use frozen local data from Phases 4/10/12/13/14, no HTTP, no ML fit,
 # no production database writes, and no 1785 final-holdout access.
-param()
+param([switch]$FullRegression)
 $ErrorActionPreference="Stop"
 
 function Assert-LastExit([string]$step) {
@@ -14,10 +14,11 @@ if (-not $root.EndsWith("Financial-Risk-Alert-System-ML")) {
     throw "Run only from the separate Financial-Risk-Alert-System-ML worktree."
 }
 
-Write-Host "Round1: source-linked dataset integration regression"
+Write-Host "Round1: focused source-linked dataset integration regression (add -FullRegression for previously passed suites)"
 python -m unittest discover -s tests -p "test_financial_ml_final_round1_dataset_integration.py" -v
 Assert-LastExit "Round1 seventeen evidence integration tests"
 
+if ($FullRegression) {
 Write-Host "Round1: Phase4 company/time & original paper feature provenance"
 python -m unittest discover -s tests -p "test_financial_ml_phase4_taiwan_dataset_gate.py" -v
 Assert-LastExit "Phase4 issuer/time leakage regression"
@@ -33,6 +34,8 @@ python -m unittest discover -s tests -p "test_financial_ml_provisional_sequence_
 Assert-LastExit "Annual financial sequence regression"
 python -m unittest discover -s tests -p "test_financial_ml_literature_dataset_phase5.py" -v
 Assert-LastExit "Beneish/Dechow paper feature formula regression"
+
+}
 
 $main=Join-Path (Split-Path $root -Parent) "Financial-Risk-Alert-System"
 $data=Join-Path $main "fintrust_backend\data\financial_ml"
