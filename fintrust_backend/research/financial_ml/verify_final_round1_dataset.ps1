@@ -16,7 +16,7 @@ if (-not $root.EndsWith("Financial-Risk-Alert-System-ML")) {
 
 Write-Host "Round1: source-linked dataset integration regression"
 python -m unittest discover -s tests -p "test_financial_ml_final_round1_dataset_integration.py" -v
-Assert-LastExit "Round1 thirteen evidence integration tests"
+Assert-LastExit "Round1 seventeen evidence integration tests"
 
 Write-Host "Round1: Phase4 company/time & original paper feature provenance"
 python -m unittest discover -s tests -p "test_financial_ml_phase4_taiwan_dataset_gate.py" -v
@@ -77,6 +77,9 @@ $r | Select-Object status,
     quarter_research_issuer_count,
     quarter_comparison_source_period_validated,
     quarter_known_case_source_period_validated,
+    quarter_sparse_comparison_company_quarters,
+    quarter_fit_only_selected_exact_concept_grain_features,
+    quarter_sparse_observed_selected_feature_cells,
     approved_positive_labels,approved_negative_labels,
     fraud_supervised_training_rows_admitted,
     last_event_holdout_1785_excluded,network_requests,production_db_writes | Format-List
@@ -86,5 +89,6 @@ Write-Host "15 original Beneish/Dechow paper candidates by evidence source:"
 $r.annual_paper_15_source_tiers | Format-List
 Write-Host "Validated/missing official company-quarter statuses:"
 $r.quarter_sources_by_role_and_status | Format-List
+Write-Host "New outputs: quarterly_sparse_feature_matrix.csv and quarterly_fit_selected_feature_dictionary.csv"
 Write-Host "Report to share: $reportPath"
 Write-Host "Do not report account/quarter fact counts as independent training sample counts."
