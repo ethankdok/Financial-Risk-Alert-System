@@ -289,6 +289,10 @@ class Round1DataIntegrationTests(unittest.TestCase):
         self.assertEqual(report["development_case_full_15_retrospective_years"],1)
         self.assertEqual(report["quarter_issuer_period_source_rows"],156)
         self.assertEqual(report["quarter_research_issuer_count"],13)
+        self.assertEqual(report["quarter_sparse_comparison_company_quarters"],144)
+        self.assertEqual(report["quarter_fit_only_selected_exact_concept_grain_features"],1)
+        self.assertEqual(len(m.csv_rows(self.out/"quarterly_sparse_feature_matrix.csv",
+                                           m.QUARTER_MATRIX_BASE)),144)
         self.assertEqual(report["quarter_comparison_source_period_validated"],144)
         self.assertEqual(report["quarter_known_case_source_period_validated"],12)
         self.assertEqual(report["quarter_exact_concepts_present_all_12_quarters_comparison"],12)
@@ -454,6 +458,72 @@ class Round1DataIntegrationTests(unittest.TestCase):
         self.assertEqual(missing[0]["negative_label_approved"],"false")
         self.assertEqual(missing[0]["source_sha256"],"")
         self.assertTrue(sha_before)
+
+    def test_nonstandard_period_same_concept_different_starts_are_allowed(self):
+        self.make_all()
+        # Original quarterly XBRL can carry several incomparable start dates
+        # for other_duration. These should stay in source evidence, not model.
+        p=self.data/"phase14_multiissuer_quarterly_comparison"/"multiissuer_quarter_twd_observations.csv"
+        rows=m.csv_rows(p,OBS_FIELDS)
+        for start in ("2017-02-01","2017-02-05"):
+            r=dict(rows[0])
+            r.update(concept_key="http://example.com/ifrs|OtherDuration",
+                     source_local_name="OtherDuration",
+                     source_period_start=start,period_grain="other_duration")
+            rows.append(r)
+        save(p,OBS_FIELDS,rows)
+        report=m.run(self.data,self.out)
+        self.assertEqual(report["quarter_sparse_comparison_company_quarters"],144)
+        dictionary=m.csv_rows(self.out/"quarterly_fit_selected_feature_dictionary.csv",
+                              m.QUARTER_FEATURE_DICTIONARY)
+        self.assertTrue(all("OtherDuration" not in r["concept_key"] for r in dictionary))
+
+    def test_quarter_fit_only_feature_dictionary_excludes_test_only_sources(self):
+        self.make_all()
+        p=self.data/"phase14_multiissuer_quarterly_comparison"/"multiissuer_quarter_twd_observations.csv"
+        rows=m.csv_rows(p,OBS_FIELDS)
+        fit_issuers=[ticker for ticker in self.tickers[:12]
+                     if m.issuer_partition(ticker)=="fit"][:3]
+        self.assertEqual(len(fit_issuers),3)
+        for ticker in fit_issuers:
+            original=next(r for r in rows if r["ticker"]==ticker
+                          and r["reporting_period"]=="2019Q4")
+            extra=dict(original)
+            extra.update(concept_key="http://example.com/ifrs|TestOnly",
+                         source_local_name="TestOnly")
+            rows.append(extra)
+        save(p,OBS_FIELDS,rows)
+        m.run(self.data,self.out)
+        dictionary=m.csv_rows(self.out/"quarterly_fit_selected_feature_dictionary.csv",
+                              m.QUARTER_FEATURE_DICTIONARY)
+        self.assertEqual([r["concept_key"] for r in dictionary],
+                         ["http://example.com/ifrs|Assets"])
+        matrix=m.csv_rows(self.out/"quarterly_sparse_feature_matrix.csv",m.QUARTER_MATRIX_BASE)
+        self.assertTrue(all(r["training_admitted"]=="false"
+                            and r["label_status"]=="UNKNOWN" for r in matrix))
+        self.assertNotIn("6452",{r["ticker"] for r in matrix})
+
+    def test_quarter_actual_numeric_zero_is_observed_not_missing(self):
+        self.make_all()
+        p=self.data/"phase14_multiissuer_quarterly_comparison"/"multiissuer_quarter_twd_observations.csv"
+        rows=m.csv_rows(p,OBS_FIELDS)
+        rows[0]["value_decimal"]="0"
+        save(p,OBS_FIELDS,rows)
+        m.run(self.data,self.out)
+        matrix=m.csv_rows(self.out/"quarterly_sparse_feature_matrix.csv",m.QUARTER_MATRIX_BASE)
+        item=next(r for r in matrix if r["ticker"]==rows[0]["ticker"]
+                  and r["reporting_period"]==rows[0]["reporting_period"])
+        self.assertEqual(item["qf_01"],"0")
+        self.assertEqual(item["qf_01_observed"],"true")
+
+    def test_quarter_exact_taxonomy_claim_mismatch_rejected(self):
+        self.make_all()
+        p=self.data/"phase14_multiissuer_quarterly_comparison"/"multiissuer_quarter_twd_observations.csv"
+        rows=m.csv_rows(p,OBS_FIELDS)
+        rows[0]["source_local_name"]="ForgedName"
+        save(p,OBS_FIELDS,rows)
+        with self.assertRaisesRegex(ValueError,"quarter_source_exact_concept_identity_changed"):
+            m.run(self.data,self.out)
 
     def test_source_path_escape_and_missing_archive_are_blocked(self):
         path=self.data/"root"
