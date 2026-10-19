@@ -16,7 +16,7 @@ if (-not $root.EndsWith("Financial-Risk-Alert-System-ML")) {
 
 Write-Host "Round1: source-linked dataset integration regression"
 python -m unittest discover -s tests -p "test_financial_ml_final_round1_dataset_integration.py" -v
-Assert-LastExit "Round1 twelve evidence integration tests"
+Assert-LastExit "Round1 thirteen evidence integration tests"
 
 Write-Host "Round1: Phase4 company/time & original paper feature provenance"
 python -m unittest discover -s tests -p "test_financial_ml_phase4_taiwan_dataset_gate.py" -v
