@@ -22,13 +22,35 @@ class Round4Tests(unittest.TestCase):
         self.report=r3.run(fixture.data,fixture.bridge,fixture.output,
                            models=("persistence","ridge","random_forest"),
                            epochs=5,seed=20261020)
+        # Artificial *method agreement* fixture only. It is deliberately
+        # separated from source generated financial amounts and true labels.
+        methods=("isolation_forest","lof_novelty",
+                 "one_class_svm","pca_reconstruction")
+        self.report["quarter_unlabeled_study"]["models"]=[
+            {"model":name,"test_anomaly_fraction_above_fit_p95":.5}
+            for name in methods]
+        synthetic=[]
+        for i in range(15):
+            period=("2019Q2" if i<9 else "2019Q4")
+            ticker=f"{2200+i:04d}"
+            for j,name in enumerate(methods):
+                synthetic.append({
+                    "ticker":ticker,"reporting_period":period,
+                    "joint_strict_split":"validation" if i<9 else "test",
+                    "model":name,"above_fit_score_p95":
+                        "true" if (i+j)%3==0 else "false",
+                    "verified_fraud_label":"UNKNOWN"})
+        r3_tests.old.fixture_module.write_csv(
+            self.source/"quarter_unlabeled_validation_test_scores.csv",
+            synthetic)
 
     def test_validation_permutation_is_numeric_not_fraud(self):
         p=r4.permutation_validation(self.source,self.fixture.data,
                                     repeats=3,seed=20261020)
         self.assertEqual(len(p),24)
         self.assertEqual({row["model"] for row in p},{"ridge","random_forest"})
-        self.assertEqual({row["n_validation_windows"] for row in p},{82})
+        self.assertEqual({row["n_validation_windows"] for row in p},
+                         {self.report["annual_numeric_study"]["time_partition_counts"]["validation"]})
         self.assertTrue(all(row["interpretation"].endswith("NOT_CAUSAL") for row in p))
         self.assertTrue(all(isinstance(row["mean_increase_validation_signed_log_mae"],float)
                             for row in p))
