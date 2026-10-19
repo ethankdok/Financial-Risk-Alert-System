@@ -164,6 +164,19 @@ class Round2CloseoutTests(unittest.TestCase):
                 first.validate(json.loads(Path(first.__file__).with_name(
                     "phase1_case_sources_seed.json").read_text(encoding="utf-8"))))
 
+    def test_user_returned_round2_report_can_be_pinned(self):
+        expected = bridge.digest(self.report_path)
+        result, release = bridge.build(self.data, self.review, self.out,
+                                       expected_report_sha256=expected)
+        self.assertTrue(result["round2_engineering_gates_passed"])
+        self.assertFalse(release["supervised_fraud_train_allowed"])
+
+    def test_wrong_user_returned_report_sha_fails_before_outputs(self):
+        with self.assertRaisesRegex(ValueError, "accepted_report_sha_mismatch"):
+            bridge.build(self.data, self.review, self.out,
+                         expected_report_sha256="0"*64)
+        self.assertFalse(self.out.exists())
+
     def test_round2_input_integrity_drift_fails_before_transfer(self):
         self.fixture.paper_path.write_text("tampered", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "prior_accepted_input_changed:2"):
