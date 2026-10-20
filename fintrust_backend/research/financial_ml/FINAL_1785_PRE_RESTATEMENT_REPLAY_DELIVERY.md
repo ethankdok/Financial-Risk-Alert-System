@@ -95,3 +95,55 @@ powershell -ExecutionPolicy Bypass -File .\\research\\financial_ml\\verify_1785_
 沒有真實封存包跑出的數值以前，不使用 CI 的合成資料填簡報。
 
 CI: [Round5 real-PRE model tests](https://github.com/ethankdok/Financial-Risk-Alert-System/actions/runs/39357602090)。
+
+
+## 2026-10-20 實際「重編前」資料回放與來源核對
+
+**當年公告的全文轉載（原報數字、不是後來重編版）**：
+https://news.cnyes.com/news/id/3615245 （鉅亨網轉載 2016-11-13
+光洋科官方合併年報重編公告）。此新聞來源的公開文字可獨立閱讀，
+但最後正式研究應再用使用者已封存的官方 ZIP/公告原始 SHA 比對。
+
+重編前的 FY2013/14/15 合併 TIFRS **實際數字**（單位：仟元）：
+
+| 欄位 | FY2013 PRE | FY2014 PRE | FY2015 PRE |
+|---|---:|---:|---:|
+| revenue | 34,241,550 | 53,305,891 | 61,372,337 |
+| cost_of_goods_sold | 32,256,578 | 51,680,276 | 61,122,755 |
+| gross_profit | 1,984,972 | 1,625,615 | 249,582 |
+| net_income | 408,817 | 416,617 | -1,060,607 |
+| current_assets | 9,803,059 | 11,251,855 | 9,674,248 |
+| total_assets | 19,637,440 | 20,863,396 | 19,592,292 |
+| current_liabilities | 5,300,506 | 4,866,286 | 8,357,583 |
+| total_liabilities | 10,264,696 | 11,389,910 | 11,666,628 |
+
+第九欄 **operating_income** 來自公告內同年度同口徑
+`營業毛利淨額 − 營業費用合計`（8 個直接揭露科目＋1 個推導）：
+FY2013 **702,974**；FY2014 **277,150**；FY2015 **-1,135,106**
+（單位仟元）。它是透明公式的衍生科目，而不是聲稱原公告直接列示。
+來源完整，不使用重編後輸入。
+
+此時已選定的 Frozen Persistence 數值模型，以 FY2014 PRE 預測
+FY2015：Gross Profit **1,625,615**（預測）對比 FY2015
+**249,582**（PRE 實際）；Net Income **416,617**（預測）
+對比 FY2015 **-1,060,607**（PRE 實際），單位仟元。
+這是一個可重現、確實使用重編前數字的回溯年度數值實驗，
+**並非 precision、recall、F1-score，也未證明事件前即收到警示**。
+
+程式支援由凍結 ZIP 計算同樣的八個直接財務科目，以及
+在 `gross_profit` + 原官方負數 `營業費用合計` 都存在時，
+生成第九個 derived `operating_income`。
+對比原始 DOC 及新聞轉載數值若有不一致，正式研究應以
+通過獨立 source-hash 驗證的官方存檔為準，而不是這份轉載。
+
+**最終 CI 11/11 PASS**：
+https://github.com/ethankdok/Financial-Risk-Alert-System/actions/runs/39358667278 。
+包含：模型輸入僅來自 PRE、重編後變動不影響預測、
+已申報的正式財報差額一致性、衍生營業利益僅由 PRE 推導、
+未披露特徵不補零、來源 SHA 固定、以前年度財務金額回測與
+CSV/JSON 輸出。
+
+演示 PPT 保持 20 頁，**第 19 頁現已使用真正 FY2013–2015 PRE
+金額重新設計**；原先 2013–2015 POST Beneish 分數已不作為
+該頁的「重編前預測成績」。PPT 的 web 公告抄錄版
+不取代可驗證官方歷史 ZIP 的最後接受測試。
