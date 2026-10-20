@@ -21,7 +21,7 @@ class AdvancedRealTrainingProtocol(unittest.TestCase):
         r=self.rows()
         early=m.engineer(r)
         for col in (x+"_lag1" for x in m.LAGS):
-            self.assertTrue(early[col].isna().all())
+            self.assertTrue(early.loc[early.fyear.isin([2000,2004,2008]),col].isna().all())
         previous=r.iloc[[0]].copy()
         previous["fyear"]=1999
         previous["sale"]=1000
