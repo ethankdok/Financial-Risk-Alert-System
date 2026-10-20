@@ -17,11 +17,12 @@ import hashlib
 import json
 import re
 from collections import Counter
-from datetime import datetime,timezone
+from datetime import datetime,timezone,timedelta
 from pathlib import Path
 from .annual_panel_readiness import METRICS
 from .fy2013_2015_stage1_freeze import YEARS,FIELDS as SOURCE_FIELDS
 from .round8_human_supervised_classifier import timestamp
+from .round10_disclosure_event_label_gate import cohort
 
 TARGET="MATERIAL_ANNUAL_RESTATEMENT_WITHIN_5_YEARS_OF_FIRST_REPORT"
 OUTCOME_TYPES=("OFFICIAL_SAME_YEAR_CONSOLIDATED_CORE_AMOUNT_RESTATEMENT",
@@ -132,13 +133,14 @@ def approve(review_csv,document_root,output,*,now=None):
     if len(rows)!=360:
         raise ValueError("fy1315_review_queue_must_cover_all_360_company_years")
     seen=set();accepted=[];states=Counter()
+    allowed=set(cohort())
     today=now or datetime.now(timezone.utc)
     for r in rows:
         year=int(r["fiscal_year"])
         ticker=r["ticker"]
         key=(ticker,year)
         if (key in seen or year not in YEARS or ticker=="1785"
-            or not ticker.isdecimal() or len(ticker)!=4):
+            or ticker not in allowed or not ticker.isdecimal() or len(ticker)!=4):
             raise ValueError("fy1315_duplicate_or_unauthorized_sample")
         seen.add(key)
         if r["human_label"] not in ("0","1"):
@@ -159,10 +161,16 @@ def approve(review_csv,document_root,output,*,now=None):
             raise ValueError("fy1315_not_real_pdf_bytes")
         first=timestamp(r["original_published_at"])
         horizon=add_five_years(first)
+        # Teacher's fixed annual as-of date: 31 March of FY+1 in Taiwan.
+        # A report first made public through an IPO in 2017 is NOT a
+        # contemporaneously observable FY2015 report for this experiment.
+        taiwan_tz=timezone(timedelta(hours=8))
+        asof_deadline=datetime(year+1,3,31,23,59,59,tzinfo=taiwan_tz)
         if not (first>datetime(year,12,31,tzinfo=timezone.utc)
-                and first.year<=year+2
+                and first<=asof_deadline
                 and horizon<=today):
-            states["REJECTED_ORIGINAL_RELEASE_DATE_OR_UNMATURED"]+=1;continue
+            states["REJECTED_NOT_PUBLIC_BY_FY_PLUS_ONE_MARCH31_OR_UNMATURED"]+=1
+            continue
         screening=safe_document(root,
             r["official_correction_search_archive_relative_path"],
             r["official_correction_search_archive_sha256"])
@@ -205,6 +213,8 @@ def approve(review_csv,document_root,output,*,now=None):
             "review_window_end":horizon.isoformat(),**vals,
         })
         states["APPROVED_1" if r["human_label"]=="1" else "APPROVED_0"]+=1
+    if seen!={(ticker,year) for ticker in allowed for year in YEARS}:
+        raise ValueError("fy1315_review_queue_missing_or_unlisted_issuer_year")
     out.mkdir(parents=True,exist_ok=True)
     accepted_path=out/"fy2013_15_approved_original_0_1.csv"
     save_csv(accepted_path,ACCEPTED_FIELDS,accepted)
