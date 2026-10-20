@@ -1,0 +1,62 @@
+name: FinTrust Enhanced Genuine AAER LGBM XGB CatBoost
+on:
+  push:
+    branches:
+      - feature/financial-ml-aaer-enhanced-20261020
+    paths:
+      - fintrust_backend/research/financial_ml/external_benchmark/enhanced_real_aaer_training.py
+      - .github/workflows/financial-ml-enhanced-aaer-training.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  new_disjoint_and_time_holdout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install advanced real supervised training libraries
+        run: python -m pip install --disable-pip-version-check 'numpy>=1.26,<3' 'pandas>=2.1,<3' 'scikit-learn>=1.5,<2' 'joblib>=1.4,<2' 'lightgbm>=4.1,<5' 'xgboost>=2.0,<4' 'catboost>=1.2,<2'
+      - name: Download SAME SHA-frozen Bao et al 2020 AAER financial records
+        run: |
+          mkdir -p "$RUNNER_TEMP/fintrust-aaer-v2"
+          curl --fail --location --retry 4 --connect-timeout 30 --max-time 180 \
+            https://raw.githubusercontent.com/JarFraud/FraudDetection/master/data_FraudDetection_JAR2020.csv \
+            --output "$RUNNER_TEMP/fintrust-aaer-v2/AAER.csv"
+          sha256sum "$RUNNER_TEMP/fintrust-aaer-v2/AAER.csv"
+      - name: Validate source SHA and train precommitted candidate models with no test selection
+        working-directory: fintrust_backend
+        env:
+          OMP_NUM_THREADS: '2'
+          OPENBLAS_NUM_THREADS: '2'
+          MKL_NUM_THREADS: '2'
+          NUMEXPR_NUM_THREADS: '2'
+          PYTHONUNBUFFERED: '1'
+        run: |
+          python -m research.financial_ml.external_benchmark.enhanced_real_aaer_training \
+            --source-csv "$RUNNER_TEMP/fintrust-aaer-v2/AAER.csv" \
+            --output-dir "$RUNNER_TEMP/fintrust-aaer-v2/outputs"
+      - name: Persist complete validation, two TEST protocols, predictions and frozen models
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fintrust-enhanced-aaer-real-supervised-results
+          path: ${{ runner.temp }}/fintrust-aaer-v2/outputs/
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Commit verified source SHA and real enhanced model metrics
+        if: success()
+        run: |
+          cp "$RUNNER_TEMP/fintrust-aaer-v2/outputs/enhanced_real_aaer_multimodel_results.json" \
+            fintrust_backend/research/financial_ml/external_benchmark/results/enhanced_real_aaer_multimodel_results.json
+          git config user.name 'fintrust-research-ci'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add fintrust_backend/research/financial_ml/external_benchmark/results/enhanced_real_aaer_multimodel_results.json
+          git commit -m 'research(ml): real advanced LGBM/XGB/CatBoost AAER independent test metrics' || true
+          git push origin HEAD || echo 'Research complete; detailed results retained in immutable Actions artifact.'
