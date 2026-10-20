@@ -3,8 +3,8 @@
 True published dataset, no invented Taiwan labels, no threshold tuning on test.
 Two TEST protocols:
   fresh COMPANY-heldout split seeded differently from baseline;
-  strict company-disjoint + out-of-time FY2008-2012 test (train <=2004,
-  validation FY2005-07), avoiding the FY2013-14 right-censored shortage
+  strict company-disjoint + out-of-time FY2009-2012 test (train <=2003,
+  validation FY2004-08), avoiding the FY2013-14 right-censored shortage
   of AAER positive labels. Lagged features are from prior year only.
 Neither protocol uses the old baseline test for hyperparameter selection.
 """
@@ -97,9 +97,9 @@ def select_split(df,mode):
         part=df[df["gvkey"].isin(ids)]
         if mode=="forward_year_and_issuer":
             date_lim={
-                "train":lambda x:x<=2004,
-                "validation":lambda x:(x>=2005)&(x<=2007),
-                "test":lambda x:(x>=2008)&(x<=2012)}
+                "train":lambda x:x<=2003,
+                "validation":lambda x:(x>=2004)&(x<=2008),
+                "test":lambda x:(x>=2009)&(x<=2012)}
             part=part.loc[date_lim[split](part["fyear"])]
         out[split]=part.copy()
         positives=int((part["misstate"]==1).sum())
