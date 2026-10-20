@@ -12,7 +12,7 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
-import fitz
+import pymupdf as fitz
 from research.financial_ml import round7_original_pdf_review as study
 
 
@@ -149,6 +149,26 @@ class OriginalPdfTests(unittest.TestCase):
             out=study.finalize(self.review,self.zip,self.base/"db3")
         self.assertEqual(out["double_reviewed_cells"],35)
         self.assertEqual(out["review_status_counts"]["REJECT_REVIEWER_DISAGREEMENT"],1)
+
+    def test_same_amount_different_page_is_not_silently_imported(self):
+        manifest=self.prepare()
+        fill(self.review/"original_review_A.csv","auditor_one",manifest)
+        fill(self.review/"original_review_B.csv","auditor_two",manifest)
+        second=self.review/"original_review_B.csv"
+        with second.open("r",encoding="utf-8-sig",newline="") as f:
+            records=list(csv.DictReader(f))
+        target=next(r for r in records
+                    if r["fiscal_year"]=="2014" and r["metric"]=="revenue")
+        target["pdf_page_1based"]="7"
+        with second.open("w",encoding="utf-8-sig",newline="") as f:
+            w=csv.DictWriter(f,fieldnames=study.REVIEW_FIELDS)
+            w.writeheader()
+            w.writerows(records)
+        with patch.object(study,"official_pre_pairs",return_value=({}, {}, {})):
+            out=study.finalize(self.review,self.zip,self.base/"db_pages")
+        self.assertEqual(out["double_reviewed_cells"],35)
+        self.assertEqual(
+            out["review_status_counts"]["REJECT_PDF_PAGE_DISAGREEMENT"],1)
 
     def test_self_review_not_certified(self):
         manifest=self.prepare()
