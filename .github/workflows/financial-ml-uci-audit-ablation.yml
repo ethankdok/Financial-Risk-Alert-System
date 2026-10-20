@@ -46,6 +46,9 @@ jobs:
           python -m research.financial_ml.external_benchmark.uci_india_audit_risk_ablation \
             --source-csv "$RUNNER_TEMP/fintrust-audit-uci/audit_risk.csv" \
             --out "$RUNNER_TEMP/fintrust-audit-uci/results"
+          cp "$RUNNER_TEMP/fintrust-audit-uci/audit_risk.csv" \
+            "$RUNNER_TEMP/fintrust-audit-uci/results/uci_official_audit_risk_original.csv"
+          sha256sum "$RUNNER_TEMP/fintrust-audit-uci/results/uci_official_audit_risk_original.csv"
       - name: Archive model, individual test predictions and target-construction report
         if: always()
         uses: actions/upload-artifact@v4
