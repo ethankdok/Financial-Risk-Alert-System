@@ -93,7 +93,7 @@ def originals_from_full_zip(archive):
 def render_originals(full_zip,output,*,max_pages=13,render=True):
     """Scanned Chinese statement tables require human transcription;
     rendering is *not* a model-derived numeric observation."""
-    import fitz
+    import pymupdf as fitz
     out=Path(output)
     if out.exists() and any(out.iterdir()):
         raise FileExistsError("original_1785_review_directory_must_be_new")
@@ -210,6 +210,11 @@ def finalize(review_dir,strict_zip,output):
                     status="REJECT_PAGE_EVIDENCE_MISSING"
                 elif int(pages[0])>13 or int(pages[1])>13:
                     status="REJECT_PAGE_BEYOND_REVIEWED_INVENTORY"
+                elif pages[0]!=pages[1]:
+                    # Two equal amounts from different page references are not
+                    # an independently verified observation of one statement.
+                    # Prevent blank pdf_page / downstream SQLite conversion.
+                    status="REJECT_PDF_PAGE_DISAGREEMENT"
                 elif money(v1)!=money(v2):
                     status="REJECT_REVIEWER_DISAGREEMENT"
                 else:
