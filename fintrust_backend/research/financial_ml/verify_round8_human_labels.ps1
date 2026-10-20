@@ -1,6 +1,6 @@
 # FinTrust Round8: create candidate human-label review queue or evaluate genuinely
 # approved original-filing issuer-years. Leaves all older model studies unchanged.
-param([switch]$Train)
+param([switch]$Train,[switch]$ScoreCase)
 $ErrorActionPreference="Stop"
 function Require-Success([string]$context){
   if($LASTEXITCODE -ne 0){throw "$context failed (exit $LASTEXITCODE)"}
@@ -17,14 +17,27 @@ $input=Join-Path $ml "final_round1_integrated_ml_dataset\annual_12_amount_candid
 $labels=Join-Path $ml "round8_human_review_packet"
 $evidence=Join-Path $ml "round8_independent_evidence"
 $panel=Join-Path $labels "round8_approved_original_supervised_panel.csv"
-if(-not $Train -and -not(Test-Path -LiteralPath $input)){
+if(-not $Train -and -not $ScoreCase -and -not(Test-Path -LiteralPath $input)){
   throw "Existing frozen Round1 annual index missing. Do not invent samples."
 }
 Push-Location (Join-Path $root "fintrust_backend")
 try{
   python -m unittest discover -s tests -p "test_financial_ml_round8_human_supervised.py" -v
   Require-Success "Round8 human-label classifier synthetic acceptance"
-  if($Train){
+  if($ScoreCase){
+      $modelDir=Join-Path $ml "round8_supervised_eval"
+      $originalDb=Join-Path $ml "round7_original_1785_verified_db\\original_1785_research.sqlite3"
+      $resultDir=Join-Path $ml "round8_blind_1785_original_case"
+      if(-not (Test-Path -LiteralPath $originalDb)){
+        throw "Original FY2013-15 1785 PDF amounts must first be independently double-reviewed."
+      }
+      python -m research.financial_ml.round8_human_supervised_classifier score-case `
+          --original-review-db $originalDb `
+          --approved-model-dir $modelDir `
+          --out $resultDir
+      Require-Success "Frozen approved classifier independently scores 1785 original amounts"
+      Write-Host "Case scores: $(Join-Path $resultDir 'round8_1785_original_blind_case_scores.json')"
+  }elseif($Train){
       $dest=Join-Path $ml "round8_supervised_eval"
       if(Test-Path -LiteralPath $dest){
           throw "Existing evaluation is immutable. Archive review it before any new approved-label round."
