@@ -39,6 +39,17 @@ class ThreeStages(unittest.TestCase):
                 rows.append(r)
         write(self.round1,ANNUAL_COLUMNS,rows)
 
+    def test_original_FY2015_disclosed_only_in_2017_must_fail_asof_gate(self):
+        from research.financial_ml.round8_human_supervised_classifier import timestamp
+        self.assertTrue(b.original_is_public_by_fixed_asof(
+            2015,timestamp("2016-03-31T23:59:59+08:00")))
+        self.assertFalse(b.original_is_public_by_fixed_asof(
+            2015,timestamp("2017-08-08T10:00:00+08:00")))
+        self.assertFalse(b.original_is_public_by_fixed_asof(
+            2015,timestamp("2016-04-01T00:00:00+08:00")))
+        self.assertFalse(b.original_is_public_by_fixed_asof(
+            2016,timestamp("2017-03-20T10:00:00+08:00")))
+
     def test_stage1_exact_three_year_360_data_not_13_years(self):
         report=a.locked_2013_15_candidate_panel(self.round1,self.root/"step1")
         self.assertEqual(report["issuer_year_rows"],360)
