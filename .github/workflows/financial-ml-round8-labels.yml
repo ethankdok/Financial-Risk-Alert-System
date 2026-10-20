@@ -1,0 +1,26 @@
+name: Financial ML Round8 Approved Human Labels
+on:
+  push:
+    branches:
+      - feature/financial-ml-round8-human-supervised-20261020
+    paths:
+      - fintrust_backend/research/financial_ml/round8_human_supervised_classifier.py
+      - fintrust_backend/tests/test_financial_ml_round8_human_supervised.py
+      - .github/workflows/financial-ml-round8-labels.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  adjudicated_classifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install numeric ML dependencies
+        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib
+      - name: Validate reviewer approval, source hashes, class counts, leakage and synthetic classifier reports
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_round8_human_supervised.py -v
