@@ -96,6 +96,23 @@ def case_timeline(ticker: str = TICKER, analysis_mode: str = MODE_QUERY, cutoff_
     return _call(service.timeline, ticker, context, evidence_tier=evidence_tier, limit=limit, offset=offset)
 
 
+@router.get("/external-aaer-benchmark")
+def external_aaer_human_curated_supervised_benchmark() -> dict[str, Any]:
+    """Published U.S. AAER external supervised research; NEVER Taiwan alert.
+    Users must see provenance and severe class-imbalance performance limits.
+    """
+    from pathlib import Path as FilePath
+    from app.services.financial_research.aaer_benchmark_reader import (
+        published_aaer_benchmark_summary,
+    )
+    report=(FilePath(__file__).resolve().parents[2] /
+        "research/financial_ml/external_benchmark/results/real_aaer_supervised_holdout_report.json")
+    try:
+        return published_aaer_benchmark_summary(report)
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.get("/cases/{ticker}/original-ai1-reviewed")
 def original_ai1_reviewed(
     ticker: str = TICKER,
