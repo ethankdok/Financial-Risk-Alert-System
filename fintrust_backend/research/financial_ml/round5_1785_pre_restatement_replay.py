@@ -24,7 +24,21 @@ from decimal import Decimal
 from pathlib import Path
 
 from app.services.financial_research.decimal_math import parse_decimal, to_twd, text as exact_text
-from app.services.historical_audit.evidence_export import COMPARISON_FIELDS, PRE_VALUE_SEMANTICS
+# Local copy of the official evidence-export CSV contract. Do not import
+# evidence_export here: that acquisition service depends on FastAPI/pydantic
+# and has no role in frozen offline model scoring.
+COMPARISON_FIELDS = (
+    "ticker","evidence_type","period","fiscal_year","statement_scope",
+    "accounting_framework","statement_type","pre_label","post_label",
+    "canonical_metric","sign_factor","pre_restatement_value",
+    "post_restatement_value","difference","published_unit","disclosed_at",
+    "availability_status","point_in_time_eligible","pre_value_semantics",
+    "source_url","announcement_key","content_hash",
+)
+PRE_VALUE_SEMANTICS = (
+    "as previously reported according to the company's 2016-11-13 restatement notice "
+    "(may differ from the first-published figure)"
+)
 from app.services.historical_audit.package_verify import verify_package
 from .annual_panel_readiness import METRICS
 from .final_1785_case_replay import STRICT_SHA, ROUND3_SHA, digest
