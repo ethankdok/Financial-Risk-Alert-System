@@ -156,6 +156,61 @@ class TestPreRestatementReplay(unittest.TestCase):
         self.assertFalse(any(x["metric"]==last and x["forecast_year"]==2016 for x in r))
         self.assertTrue(all(x["model_fitted_with_1785"]=="false" for x in r))
 
+    def test_derived_operating_income_uses_pre_expenses_not_post(self):
+        data=synthetic_rows(metric_count=4)
+        for row in data:
+            if (row["statement_scope"]=="consolidated"
+                and row["canonical_metric"]=="operating_income"):
+                row["canonical_metric"]=""
+                row["pre_label"]="營業費用合計"
+                row["post_label"]="營業費用合計"
+                row["sign_factor"]="1"
+                row["pre_restatement_value"]="-900"
+                row["post_restatement_value"]="-1100"
+                row["difference"]="-200"
+        fake_zip(self.zip,data)
+        a,b=self.audited()
+        with a,b:
+            pairs,sources,_=study.official_pre_pairs(self.zip)
+        self.assertEqual(len([k for k in pairs if k[1]=="operating_income"]),3)
+        gp_pre=Decimal(data[2]["pre_restatement_value"])*1000
+        self.assertEqual(pairs[(2013,"operating_income")][0],gp_pre-900000)
+        self.assertEqual(pairs[(2013,"operating_income")][1],
+                         Decimal(data[2]["post_restatement_value"])*1000-1100000)
+        self.assertIn("_derived_pre_formula",sources[(2013,"operating_income")])
+        results=study.replay(pairs,sources,self.bundle())
+        predict=next(x for x in results if x["forecast_year"]==2016 and x["metric"]=="operating_income")
+        self.assertEqual(predict["forecast_twd"],
+                         study.exact_text(pairs[(2015,"operating_income")][0]))
+        self.assertNotEqual(predict["forecast_twd"],
+                            study.exact_text(pairs[(2015,"operating_income")][1]))
+
+    def test_changing_post_only_cannot_change_2016_pre_prediction(self):
+        original=synthetic_rows(metric_count=5)
+        fake_zip(self.zip,original)
+        a,b=self.audited()
+        with a,b:
+            pr,source,_=study.official_pre_pairs(self.zip)
+        orig=[x for x in study.replay(pr,source,self.bundle())
+              if x["forecast_year"]==2016]
+        for row in original:
+            if (row["fiscal_year"]=="2015"
+                and row["statement_scope"]=="consolidated"
+                and row["canonical_metric"]=="revenue"):
+                row["post_restatement_value"]=str(
+                    Decimal(row["post_restatement_value"])+2000000)
+                row["difference"]=str(
+                    Decimal(row["post_restatement_value"])-
+                    Decimal(row["pre_restatement_value"]))
+        fake_zip(self.zip,original)
+        a,b=self.audited()
+        with a,b:
+            newp,news,_=study.official_pre_pairs(self.zip)
+        altered=[x for x in study.replay(newp,news,self.bundle())
+                 if x["forecast_year"]==2016]
+        self.assertEqual({x["metric"]:x["forecast_twd"] for x in orig},
+                         {x["metric"]:x["forecast_twd"] for x in altered})
+
     def test_round3_report_frozen_sha_required(self):
         artifact=self.root/"round3";artifact.mkdir()
         (artifact/"round3_real_data_model_report.json").write_text("{}",encoding="utf-8")
