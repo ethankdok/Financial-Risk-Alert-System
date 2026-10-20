@@ -42,6 +42,7 @@ FINAL_FIELDS=("ticker","fiscal_year","metric","value_twd","unit",
               "model_training_admitted","notice_pre_twd","notice_delta_twd",
               "original_vs_notice_status")
 SECTIONS=range(3,14)
+MIN_ORIGINAL_PDF_BYTES=100_000
 
 
 def checksum(data):
@@ -78,7 +79,7 @@ def originals_from_full_zip(archive):
                 raise ValueError("original_1785_unsafe_package_member")
             raw=z.read(root+raw_path)
             source_hash=checksum(raw)
-            if not raw.startswith(b"%PDF") or len(raw)<100_000:
+            if not raw.startswith(b"%PDF") or len(raw)<MIN_ORIGINAL_PDF_BYTES:
                 raise ValueError(f"original_1785_invalid_pdf_bytes:{year}")
             if not source_hash.startswith(prefix) or source_hash!=r["content_hash"]:
                 raise ValueError(f"original_1785_pdf_content_hash_changed:{year}")
