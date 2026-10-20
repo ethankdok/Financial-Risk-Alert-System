@@ -1,0 +1,28 @@
+name: Financial ML 1785 Real PRE-Restatement Replay
+on:
+  push:
+    branches:
+      - feature/financial-ml-1785-prerestatement-replay-20261020
+    paths:
+      - fintrust_backend/research/financial_ml/round5_1785_pre_restatement_replay.py
+      - fintrust_backend/tests/test_financial_ml_round5_1785_pre_restatement.py
+      - .github/workflows/financial-ml-1785-pre-restatement.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pre-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install numeric dependencies
+        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib
+      - name: Frozen model accepts PRE inputs only and cannot fit on 1785
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_round5_1785_pre_restatement.py -v
