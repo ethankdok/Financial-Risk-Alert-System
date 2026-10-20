@@ -150,8 +150,13 @@ def approve(review_csv,document_root,output,*,now=None):
             or r["original_is_consolidated_TIFRS_first_version"]!="true"
             or r["original_12_amounts_verified_and_double_reviewed"]!="true"):
             states["REJECTED_INCOMPLETE_DOUBLE_REVIEW"]+=1;continue
-        safe_document(root,r["original_first_filing_relative_path"],
-                      r["original_sha256"])
+        original_document=safe_document(
+            root,r["original_first_filing_relative_path"],r["original_sha256"])
+        if original_document.suffix.lower() not in (".pdf",".xml",".xhtml",".html"):
+            raise ValueError("fy1315_original_evidence_not_filing_format")
+        if (original_document.suffix.lower()==".pdf"
+            and not original_document.read_bytes().startswith(b"%PDF-")):
+            raise ValueError("fy1315_not_real_pdf_bytes")
         first=timestamp(r["original_published_at"])
         horizon=add_five_years(first)
         if not (first>datetime(year,12,31,tzinfo=timezone.utc)
