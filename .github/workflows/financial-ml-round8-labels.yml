@@ -4,6 +4,8 @@ on:
     branches:
       - feature/financial-ml-round8-human-supervised-20261020
     paths:
+      - fintrust_backend/research/financial_ml/round7_original_pdf_review.py
+      - fintrust_backend/tests/test_financial_ml_round7_original_pdf_review.py
       - fintrust_backend/research/financial_ml/round8_human_supervised_classifier.py
       - fintrust_backend/app/services/financial_research/original_ai1_research_reader.py
       - fintrust_backend/app/routers/historical_research.py
@@ -22,10 +24,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install numeric ML dependencies
-        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib
+        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib pymupdf
       - name: Validate reviewer approval, source hashes, class counts, leakage and synthetic classifier reports
         working-directory: fintrust_backend
         run: python -m unittest discover -s tests -p test_financial_ml_round8_human_supervised.py -v
+      - name: Validate original PDF review and page-level provenance
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_round7_original_pdf_review.py -v
       - name: Parse all new offline pipelines and existing research API route
         run: |
           python -m py_compile fintrust_backend/research/financial_ml/round7_original_pdf_review.py
