@@ -1,0 +1,100 @@
+{
+  "schema_version": "fintrust_manual_outcome_source_leads_v1",
+  "review_date": "2026-10-20",
+  "scope": "PRIMARY_OFFICIAL_SOURCE_LEADS_NOT_APPROVED_TRAINING_LABELS",
+  "important": "Source review flag != approved training label. Do NOT infer normal 0 from search silence. Labels must match issuer AND fiscal year, certified original historical input, and independently reviewed outcome. 1785 is reserved final holdout.",
+  "cases": [
+    {
+      "ticker": "3027",
+      "company_name": "盛達電業",
+      "affected_fiscal_years": [
+        2015,
+        2016
+      ],
+      "reviewed_issue": "Revenue inflated by gross recording of agency purchases instead of net accounting; court first instance found filing/public announcement misstatement in annual and quarterly statements; ruling 2025-04-30.",
+      "source_category": "JUDICIAL_FIRST_INSTANCE_CRIMINAL_JUDGMENT",
+      "judgment_finality": "NOT_CERTIFIED",
+      "primary_url": "https://judgment.judicial.gov.tw/FJUD/printData.aspx?id=TPDM%2C113%2C%E9%87%91%E8%A8%B4%2C29%2C20250430%2C1",
+      "period_evidence_locator": "事實一、附表四（二）；須逐筆對照 FY104 FY105 原始合併報表",
+      "proposed_positive_case_years": [
+        2015,
+        2016
+      ],
+      "review_status": "CANDIDATE_POSITIVE_PRIMARY_JUDGMENT_PERIOD_CONFIRMATION_PENDING",
+      "original_filing_vintage_verified": false,
+      "first_publication_verified": false,
+      "approved_supervised_training": false
+    },
+    {
+      "ticker": "8299",
+      "company_name": "群聯電子",
+      "affected_fiscal_years": [
+        2014
+      ],
+      "reviewed_issue": "Court documents describe 2014Q3 and 2014Q4 consolidated reports with related-party transaction and consolidation misstatements; distinct Supreme Court civil board removal remand does not undo referenced separate criminal ruling.",
+      "source_category": "JUDICIAL_COURT_FINDINGS_AND_REFERENCED_CRIMINAL_CASE",
+      "judgment_finality": "SEPARATE_CRIMINAL_REFERENCED_FINAL_CIVIL_REMANDED",
+      "primary_url": "https://judgment.judicial.gov.tw/FJUD/printData.aspx?id=SCDV%2C108%2C%E9%87%91%2C5%2C20240503%2C4",
+      "secondary_primary_url": "https://judgment.judicial.gov.tw/FJUD/printData.aspx?id=TPSV%2C114%2C%E5%8F%B0%E4%B8%8A%2C859%2C20251119%2C1",
+      "period_evidence_locator": "103年第3季與第4季合併財務報告；刑事判決及重編附表仍待逐項對照原始報表",
+      "proposed_positive_case_years": [
+        2014
+      ],
+      "review_status": "CANDIDATE_POSITIVE_COURT_EVIDENCE_ORIGINAL_FILING_PENDING",
+      "original_filing_vintage_verified": false,
+      "first_publication_verified": false,
+      "approved_supervised_training": false
+    },
+    {
+      "ticker": "6452",
+      "company_name": "康友-KY",
+      "affected_fiscal_years": [
+        2017,
+        2018,
+        2019,
+        2020
+      ],
+      "reviewed_issue": "Investor-protection center reports 2019Q3-2020Q1 disclosure omission (subsidiary equipment pledge) and first-instance civil award; additional alleged 2017Q2-2020Q1 reporting falsehood is a separate lawsuit that was pending in cited update.",
+      "source_category": "INVESTOR_PROTECTION_CENTER_LITIGATION_UPDATE",
+      "judgment_finality": "2019Q3_TO_2020Q1_FIRST_INSTANCE_CIVIL_NOT_FINAL_AT_SOURCED_2023_RELEASE; 2017_TO_2020_SEPARATE_ALLEGATION",
+      "primary_url": "https://www.sfipc.org.tw/News_Content.aspx?n=7458&s=567&sms=12288",
+      "secondary_primary_url": "https://www.sfipc.org.tw/News_Content.aspx?n=7458&s=571",
+      "period_evidence_locator": "108年第3季至109年第1季、另案106年第2季至109年第1季；特別留意2017/2018是否已獲確認，不可直接全標1",
+      "proposed_positive_case_years": [
+        2019,
+        2020
+      ],
+      "review_status": "CANDIDATE_PARTIAL_FIRST_INSTANCE_ONLY_PERIOD_ADJUDICATION_NEEDED",
+      "original_filing_vintage_verified": false,
+      "first_publication_verified": false,
+      "approved_supervised_training": false
+    },
+    {
+      "ticker": "1785",
+      "company_name": "光洋科",
+      "affected_fiscal_years": [
+        2011,
+        2012,
+        2013,
+        2014,
+        2015
+      ],
+      "reviewed_issue": "TPEx official notice records May 2016 management admission of false financial reporting and December 2016 completion of FY2011-2015 restatements; 1785 remains the reserved final blinded case and MUST NEVER be used in classifier training.",
+      "source_category": "TPEX_OFFICIAL_DISCLOSURE_RESTATEMENT",
+      "judgment_finality": "TPEX_OFFICIAL_RESTATEMENT_NOT_COURT_ADJUDICATION",
+      "primary_url": "https://www.tpex.org.tw/storage/eb_data/10512/10502015021.htm",
+      "period_evidence_locator": "櫃買公告民國105年12月29日：100–104 年度重編、105年5月財報不實說明；官方版本須配對",
+      "proposed_positive_case_years": [
+        2011,
+        2012,
+        2013,
+        2014,
+        2015
+      ],
+      "review_status": "FINAL_HELDOUT_POSITIVE_CONTEXT_NOT_TRAIN_OR_MODEL_SELECTION",
+      "original_filing_vintage_verified": false,
+      "first_publication_verified": false,
+      "approved_supervised_training": false
+    }
+  ]
+}
