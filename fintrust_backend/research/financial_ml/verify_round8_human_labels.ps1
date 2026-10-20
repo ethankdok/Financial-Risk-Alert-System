@@ -38,6 +38,9 @@ try{
       Require-Success "Frozen approved classifier independently scores 1785 original amounts"
       Write-Host "Case scores: $(Join-Path $resultDir 'round8_1785_original_blind_case_scores.json')"
   }elseif($Train){
+      if(-not(Test-Path -LiteralPath $panel)){
+        throw "No approved original-vintage 0/1 panel exists yet. Complete independent reviews first; do not run a fake classifier."
+      }
       $dest=Join-Path $ml "round8_supervised_eval"
       if(Test-Path -LiteralPath $dest){
           throw "Existing evaluation is immutable. Archive review it before any new approved-label round."
