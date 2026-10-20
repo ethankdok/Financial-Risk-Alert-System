@@ -348,6 +348,19 @@ def study(approved,output,*,persist=False):
                 joblib.dump(learner,out/(name+"_officially_reviewed_experiment.joblib"))
         win=max(comparisons,key=lambda d:(
             d["validation"]["pr_auc"],d["validation"]["f1_score"]))
+        selected=models[win["model"]].named_steps["classifier"]
+        weights=(abs(selected.coef_[0]) if hasattr(selected,"coef_")
+                 else selected.feature_importances_)
+        feature_names=list(METRICS)+[
+            "gross_profit_over_revenue","net_income_over_revenue",
+            "liabilities_over_assets","inventory_over_assets",
+            "current_assets_over_current_liabilities",
+            "operating_cash_flow_over_assets"]
+        importance=sorted((
+            {"feature":name,"weight":float(weight),
+             "meaning":"PREDICTIVE_ASSOCIATION_NOT_CAUSAL_OR_FRAUD_PROOF"}
+            for name,weight in zip(feature_names,weights)),
+            key=lambda x:x["weight"],reverse=True)
         summary.update(
             status="ROUND8_SUPERVISED_APPROVED_ORIGINAL_LABELLED_EXPERIMENT",
             real_supervised_f1=win["test_holdout"]["f1_score"],
@@ -357,6 +370,8 @@ def study(approved,output,*,persist=False):
             real_supervised_pr_auc=win["test_holdout"]["pr_auc"],
             selected_model=win["model"],comparisons=comparisons,
             feature_count=fitx.shape[1],
+            selected_model_feature_importance=importance,
+            label_definition_operational_not_absolute=True,
             labels_are_human_reviewed_still_require_external_audit=True,
         )
     out.mkdir(parents=True,exist_ok=True)
@@ -374,6 +389,7 @@ def run(panel,evidence_dir,out):
         records,adjudication=[],{"NO_APPROVED_PANEL":1}
     report=study(records,out,persist=True)
     report["human_label_acceptance_counts"]=adjudication
+    report["approved_panel_sha256"]=sha(p) if p.exists() else None
     (Path(out)/"round8_supervised_classification_report.json").write_text(
         json.dumps(report,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
     return report
