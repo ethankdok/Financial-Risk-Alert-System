@@ -12,10 +12,8 @@ from unittest.mock import patch
 import numpy as np
 from sklearn.preprocessing import RobustScaler
 
-from app.services.historical_audit.evidence_export import (
-    COMPARISON_FIELDS, PRE_VALUE_SEMANTICS,
-)
 from research.financial_ml import round5_1785_pre_restatement_replay as study
+COMPARISON_FIELDS, PRE_VALUE_SEMANTICS = study.COMPARISON_FIELDS, study.PRE_VALUE_SEMANTICS
 
 
 def synthetic_rows(metric_count=5,*,conflicting=False,missing_2014=False):
