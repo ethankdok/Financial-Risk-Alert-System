@@ -24,10 +24,30 @@ from app.services.historical_audit.sources import mops_annual_url
 from app.services.historical_audit.archive import RawEvidenceArchive
 
 MAX_SOURCE_ROWS=360
+ASOF_SOURCE_FINDINGS=Path(__file__).with_name("FY1315_OFFICIAL_ISSUER_ASOF_FINDINGS.json")
+
+def known_asof_exclusions():
+    """Only hard exclusions with a documented first-public official source.
+    All unverified tickers remain UNKNOWN, never automatically clean."""
+    sources=json.loads(ASOF_SOURCE_FINDINGS.read_text(encoding="utf-8"))
+    if sources.get("schema")!="FINTRUST_FY1315_OFFICIAL_ASOF_SOURCE_FINDINGS_V1":
+        raise ValueError("fy1315_unrecognized_official_issuer_asof_source")
+    result={}
+    for item in sources["findings"]:
+        if item["asof_FY_plus_one_March31"]!="NOT_PUBLIC_BY_CUTOFF":
+            continue
+        if not item["official_public_issuance_source"].startswith("https://www.twse.com.tw/"):
+            raise ValueError("fy1315_nonofficial_issuer_asof_exclusion")
+        for year in item["fiscal_years"]:
+            if year not in YEARS or (item["ticker"],year) in result:
+                raise ValueError("fy1315_asof_issue_identity_invalid")
+            result[item["ticker"],year]="NOT_PUBLIC_BY_ASOF_OFFICIAL_TWSE_EVIDENCE"
+    return result
 PREP_COLS=("ticker","fiscal_year","candidate_complete_12","current_mops_source_url",
            "retrieval_state","mops_parsed_financial_fields","mops_12_metric_coverage",
            "current_archive_sha256","raw_archive_relative_path",
-           "filing_scope","filing_version_type","current_archive_is_original_first_filing",
+           "filing_scope","filing_version_type","asof_public_issuance_status",
+           "current_archive_is_original_first_filing",
            "official_first_publication_verified","source_eligible_for_0_1_training")
 COMPARE_COLS=("ticker","fiscal_year","metric","finmind_candidate_twd",
               "mops_current_archival_twd","absolute_difference_twd","relative_difference",
@@ -102,6 +122,7 @@ def summarize_archived_outcomes(stage1_csv,download_root):
     root=Path(download_root)
     rows=fixed_panel(stage1_csv)
     by={(r["ticker"],int(r["fiscal_year"])):r for r in rows}
+    exclusions=known_asof_exclusions()
     stages=batches(stage1_csv)
     result={};source_cmp=[];statuses=Counter()
     for batch_no,plan in enumerate(stages,1):
@@ -181,6 +202,8 @@ def summarize_archived_outcomes(stage1_csv,download_root):
                     f"batch_{batch_no:03}/"+d["archive_path"] if d.get("archive_path") else ""),
                 "filing_scope":d.get("statement_scope",""),
                 "filing_version_type":d.get("filing_version_type",""),
+                "asof_public_issuance_status":exclusions.get(
+                    key,"UNKNOWN_NEEDS_HISTORICAL_OFFICIAL_ISSUER_VERIFICATION"),
                 "current_archive_is_original_first_filing":"false",
                 "official_first_publication_verified":"false",
                 "source_eligible_for_0_1_training":"false",
