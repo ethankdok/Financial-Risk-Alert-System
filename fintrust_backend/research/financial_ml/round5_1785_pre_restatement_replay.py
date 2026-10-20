@@ -54,7 +54,7 @@ FORECAST_COLS=(
 )
 RESTATEMENT_COLS=(
     "ticker","fiscal_year","metric","pre_twd","post_twd","delta_post_minus_pre_twd",
-    "pre_as_2016_notice_previous_report","announcement_key",
+    "pre_as_2016_notice_previous_report","derived_from_pre_gross_less_expense","announcement_key",
     "disclosed_at","source_sha256","statement_scope","accounting_framework",
 )
 COVERAGE_COLS=("fiscal_year","metric","has_pre_notice_value","source_status")
@@ -89,6 +89,7 @@ def official_pre_pairs(strict_zip):
         raise ValueError("1785_restatement_statement_scope_count_changed")
     results={}
     sources={}
+    official_expenses={}
     for row in all_rows:
         if (row["ticker"]!="1785" or row["evidence_type"]!="official_restatement_comparison"
             or row["statement_scope"] not in ("consolidated","individual")
@@ -105,7 +106,10 @@ def official_pre_pairs(strict_zip):
         if row["accounting_framework"]!="TIFRS":
             raise ValueError("1785_wrong_TIFRS_pre_accounting_regime")
         metric=row["canonical_metric"]
-        if metric not in METRICS:
+        is_operating_expense=(metric not in METRICS and
+                              row["pre_label"]=="營業費用合計" and
+                              row["post_label"]=="營業費用合計")
+        if metric not in METRICS and not is_operating_expense:
             continue
         if row["published_unit"]!="TWD_thousand":
             raise ValueError("1785_official_comparison_not_thousand_twd")
@@ -121,11 +125,33 @@ def official_pre_pairs(strict_zip):
             raise ValueError("1785_official_pre_post_difference_inconsistent")
         pre=to_twd(raw_pre,"TWD_thousand")*factor
         post=to_twd(raw_post,"TWD_thousand")*factor
+        if is_operating_expense:
+            # Unmapped *official* income-statement row: expense amounts are
+            # signed negative in the notice. Derive operating income from
+            # same-year PRE gross profit and PRE operating expenses alone.
+            # POST values are derived separately and NEVER enter prediction.
+            if year in official_expenses:
+                raise ValueError("1785_duplicate_official_operating_expense")
+            if pre>0 or post>0:
+                raise ValueError("1785_official_expense_sign_unexpected")
+            official_expenses[year]=(pre,post,row)
+            continue
         key=(year,metric)
         if key in results:
             raise ValueError(f"1785_duplicate_consolidated_year_metric:{year}:{metric}")
         results[key]=(pre,post)
         sources[key]=row
+    for year,(expense_pre,expense_post,expense_source) in official_expenses.items():
+        gp=results.get((year,"gross_profit"))
+        if gp is None or (year,"operating_income") in results:
+            continue
+        results[(year,"operating_income")]=(
+            gp[0]+expense_pre,gp[1]+expense_post)
+        sources[(year,"operating_income")]={
+            **expense_source,
+            "_derived_pre_formula":"PRE gross_profit + PRE signed operating_expenses",
+            "_derived_post_formula":"POST gross_profit + POST signed operating_expenses",
+        }
     if not results:
         raise ValueError("1785_no_pre_restatement_consolidated_amounts")
     return results,sources,{"archive":outcome,"source_scope_counts":dict(counts),
@@ -244,6 +270,7 @@ def run(*, strict_zip,data_root,round2_bridge_root,round3_root,output):
             "pre_twd":exact_text(pre),"post_twd":exact_text(post),
             "delta_post_minus_pre_twd":exact_text(post-pre),
             "pre_as_2016_notice_previous_report":"true",
+            "derived_from_pre_gross_less_expense":str(bool(row.get("_derived_pre_formula"))).lower(),
             "announcement_key":row["announcement_key"],
             "disclosed_at":row["disclosed_at"],
             "source_sha256":row["content_hash"],
@@ -274,6 +301,8 @@ def run(*, strict_zip,data_root,round2_bridge_root,round3_root,output):
         "scopes_used":["consolidated"],"accounting_regimes_used":["TIFRS"],
         "years_observed":[2013,2014,2015],
         "official_pre_post_metric_pairs":len(pairs),
+        "derived_pre_post_operating_income_years":sum(
+            bool(x.get("_derived_pre_formula")) for x in sources.values()),
         "forecast_record_count":len(forecasts),
         "2015_numeric_forecast_count":count_2015,
         "2016_three_year_same_feature_numeric_forecast_count":count_2016,
