@@ -227,6 +227,10 @@ def same_year_gate(records):
         matched_years=sorted(y for y,c in peryear.items() if c[1]>0 and c[0]>0)
         if not matched_years:
             eligible=False;issues.append(f"{partition}:NO_SAME_FY_POSITIVE_NEGATIVE_MATCH")
+        for fiscal_year,counts in peryear.items():
+            if not counts[1] or not counts[0]:
+                eligible=False
+                issues.append(f"{partition}:UNMATCHED_FISCAL_YEAR:{fiscal_year}")
     assigned={}
     for name,samples in partitions.items():
         for r in samples:
