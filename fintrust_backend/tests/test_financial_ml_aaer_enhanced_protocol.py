@@ -10,7 +10,7 @@ class AdvancedRealTrainingProtocol(unittest.TestCase):
         rs=[]
         for i in range(400):
             ticker=f"{i+5000}"
-            for y in (2000,2006,2010):
+            for y in (2000,2004,2005,2006,2008,2009,2010,2011,2012):
                 r={"gvkey":ticker,"fyear":y,
                    "misstate":int(i%4==0)}
                 r.update({c:float(i+y+20) for c in m.FEATURES})
@@ -41,9 +41,9 @@ class AdvancedRealTrainingProtocol(unittest.TestCase):
                 (x,y["gvkey"].unique()) for part,p in parts.items()
                 for x in p["gvkey"].unique()
                 for other,y in parts.items() if other!=part)))
-        self.assertLessEqual(int(parts["train"]["fyear"].max()),2004)
-        self.assertTrue(parts["validation"]["fyear"].between(2005,2007).all())
-        self.assertTrue(parts["test"]["fyear"].between(2008,2012).all())
+        self.assertLessEqual(int(parts["train"]["fyear"].max()),2003)
+        self.assertTrue(parts["validation"]["fyear"].between(2004,2008).all())
+        self.assertTrue(parts["test"]["fyear"].between(2009,2012).all())
         self.assertTrue(all(v["misstate"].isin([0,1]).all() for v in parts.values()))
 
     def test_no_oversampling_of_holdout_or_fabricated_metrics(self):
