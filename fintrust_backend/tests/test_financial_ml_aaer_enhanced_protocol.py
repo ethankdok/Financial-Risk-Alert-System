@@ -12,7 +12,7 @@ class AdvancedRealTrainingProtocol(unittest.TestCase):
             ticker=f"{i+5000}"
             for y in (2000,2007,2012):
                 r={"gvkey":ticker,"fyear":y,
-                   "misstate":int(i%4==0 and y>=2007)}
+                   "misstate":int(i%4==0)}
                 r.update({c:float(i+y+20) for c in m.FEATURES})
                 rs.append(r)
         return pd.DataFrame(rs)
