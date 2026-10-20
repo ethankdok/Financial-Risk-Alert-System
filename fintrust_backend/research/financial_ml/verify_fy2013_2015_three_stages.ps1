@@ -1,7 +1,9 @@
 # FinTrust FY2013-2015 ONLY — three stages, one stable branch.
 # Existing FY2016-2025 annual numeric research is READ only as Round1 source,
 # then FILTERED to FY2013-2015 BEFORE feature/label/model outputs.
-param([ValidateSet("Prepare","Approve","Train")][string]$Stage="Prepare")
+param([ValidateSet("Prepare","AcquireArchive","ReviewArchive","Approve","Train")][string]$Stage="Prepare",
+      [ValidateRange(1,30)][int]$BatchStart=1,
+      [ValidateRange(1,30)][int]$BatchCount=2)
 $ErrorActionPreference="Stop"
 function Check([string]$context){if($LASTEXITCODE -ne 0){throw "$context failed ($LASTEXITCODE)"}}
 $root=(git rev-parse --show-toplevel).Trim();Check "Git worktree"
@@ -17,6 +19,7 @@ $ml=Join-Path $main "fintrust_backend\data\financial_ml"
 $index=Join-Path $ml "final_round1_integrated_ml_dataset\annual_12_amount_candidate_index.csv"
 $work=Join-Path $ml "fy2013_2015_three_stage_research"
 $first=Join-Path $work "stage1_data"
+$archives=Join-Path $work "stage1_mops_current_archival_review"
 $second=Join-Path $work "stage2_review"
 $approved=Join-Path $work "stage2_approved"
 $third=Join-Path $work "stage3_model"
@@ -43,6 +46,27 @@ try{
         Check "FY2013-15 review queue creation"
         Write-Host "REVIEW THIS: $(Join-Path $second 'fy2013_15_360_manual_0_1_review_QUEUE.csv')"
         Write-Host "All numeric provisional sources are research-only, not original-verified inputs."
+    }elseif($Stage -eq "AcquireArchive"){
+        if(-not(Test-Path -LiteralPath $source)){
+            throw "Run Stage1 Prepare first. FY2013-15 exact source CSV missing."
+        }
+        Write-Host "Obtaining no more than $BatchCount batches of up to 12 MOPS FY2013-15 filings."
+        Write-Host "Original-as-first-filed claim remains FALSE until separately verified."
+        python -m research.financial_ml.fy2013_2015_official_archive_reconcile `
+            --stage1-csv $source --out $archives `
+            --execute --start-batch $BatchStart --max-batches $BatchCount
+        Check "FY2013-15 official archival source batch and comparison"
+        Write-Host "Source review: $(Join-Path $archives 'fy1315_360_official_archive_status.csv')"
+        Write-Host "Current-archive versus FinMind values: $(Join-Path $archives 'fy1315_4320_metric_reconciliation.csv')"
+        Write-Host "Run next batch with -Stage AcquireArchive -BatchStart <NEXT> -BatchCount 2."
+    }elseif($Stage -eq "ReviewArchive"){
+        if(-not(Test-Path -LiteralPath $source)){
+            throw "Run Stage1 Prepare first."
+        }
+        python -m research.financial_ml.fy2013_2015_official_archive_reconcile `
+            --stage1-csv $source --out $archives
+        Check "Existing official archive full-panel reconciliation only"
+        Write-Host "Report: $(Join-Path $archives 'fy1315_official_archival_reconciliation_report.json')"
     }elseif($Stage -eq "Approve"){
         if(-not(Test-Path -LiteralPath $filled)){
             throw "No independently reviewed 360-row FY2013-15 CSV: $filled"
