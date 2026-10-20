@@ -35,6 +35,13 @@ class TestActualOfficialArchivalBatch(unittest.TestCase):
             wr=csv.DictWriter(f,fieldnames=FIELDS)
             wr.writeheader();wr.writerows(self.source)
 
+    def test_TWSE_2243_2017_public_issuance_blocks_all_FY2013_15_early_replay(self):
+        excluded=target.known_asof_exclusions()
+        self.assertEqual({y for t,y in excluded if t=="2243"},set(YEARS))
+        self.assertEqual(excluded["2243",2015],
+                         "NOT_PUBLIC_BY_ASOF_OFFICIAL_TWSE_EVIDENCE")
+        self.assertNotIn(("1563",2014),excluded)
+
     def test_360_three_year_batches_and_missing_prioritized(self):
         chunks=target.batches(self.csv)
         self.assertEqual(len(chunks),30)
@@ -102,6 +109,8 @@ class TestActualOfficialArchivalBatch(unittest.TestCase):
         self.assertEqual(row["mops_12_metric_coverage"],2)
         self.assertEqual(row["current_archive_sha256"],entry.content_hash)
         self.assertEqual(row["current_archive_is_original_first_filing"],"false")
+        self.assertEqual(row["asof_public_issuance_status"],
+                         "UNKNOWN_NEEDS_HISTORICAL_OFFICIAL_ISSUER_VERIFICATION")
         self.assertEqual(row["source_eligible_for_0_1_training"],"false")
         record=next(r for r in comparison if r["ticker"]==ticker
                     and r["fiscal_year"]==year and r["metric"]=="revenue")
