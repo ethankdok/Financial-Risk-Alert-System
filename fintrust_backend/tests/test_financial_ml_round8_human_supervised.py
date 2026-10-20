@@ -169,6 +169,45 @@ class Round8Tests(unittest.TestCase):
         self.assertFalse(result["issuer_disjoint_and_time_ordered"])
         self.assertIsNone(result["real_supervised_accuracy"])
 
+    def test_local_original_api_reader_only_exposes_double_review(self):
+        import sqlite3
+        from app.services.financial_research.original_ai1_research_reader import get_1785_original_ai1
+        path=self.root/"research_case.sqlite3"
+        db=sqlite3.connect(path)
+        db.execute("""CREATE TABLE original_1785_financial_facts(
+            ticker TEXT,fiscal_year INTEGER,metric TEXT,value_twd TEXT,
+            unit TEXT,filing_version_type TEXT,source_pdf_sha256 TEXT,
+            pdf_page INTEGER,statement_scope TEXT,accounting_framework TEXT,
+            review_status TEXT,original_first_publication_verified INTEGER,
+            model_training_admitted INTEGER)""")
+        db.execute("INSERT INTO original_1785_financial_facts VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",(
+            "1785",2015,"revenue","123000","TWD","original","a"*64,6,
+            "consolidated","TIFRS","DOUBLE_REVIEWED_ORIGINAL_PDF",0,0))
+        db.commit();db.close()
+        result=get_1785_original_ai1(path)
+        self.assertEqual(result["observed_original_pdf_amount_cells"],1)
+        self.assertEqual(result["records"][0]["value_twd"],"123000")
+        self.assertFalse(result["historical_original_publication_time_certified"])
+        self.assertFalse(result["sample_admitted_to_fraud_training"])
+
+    def test_original_api_reader_fails_closed_on_production_promotion(self):
+        import sqlite3
+        from app.services.financial_research.original_ai1_research_reader import get_1785_original_ai1
+        path=self.root/"review.sqlite3"
+        db=sqlite3.connect(path)
+        db.execute("""CREATE TABLE original_1785_financial_facts(
+            ticker TEXT,fiscal_year INTEGER,metric TEXT,value_twd TEXT,
+            unit TEXT,filing_version_type TEXT,source_pdf_sha256 TEXT,
+            pdf_page INTEGER,statement_scope TEXT,accounting_framework TEXT,
+            review_status TEXT,original_first_publication_verified INTEGER,
+            model_training_admitted INTEGER)""")
+        db.execute("INSERT INTO original_1785_financial_facts VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",(
+            "1785",2015,"revenue","123000","TWD","original","a"*64,6,
+            "consolidated","TIFRS","DOUBLE_REVIEWED_ORIGINAL_PDF",0,1))
+        db.commit();db.close()
+        with self.assertRaisesRegex(ValueError,"data_quality_regressed"):
+            get_1785_original_ai1(path)
+
     def test_evidence_file_hash_is_checked(self):
         e,sha=self.evidence("report.pdf",b"%PDF mock original")
         with self.assertRaisesRegex(ValueError,"hash_changed"):
