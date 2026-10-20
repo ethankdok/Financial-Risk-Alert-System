@@ -1,0 +1,63 @@
+{
+  "source_review_date": "2026-10-20",
+  "ONLY_FINANCIAL_FISCAL_YEARS": [
+    2013,
+    2014,
+    2015
+  ],
+  "study_cohort_source": "round10_user_confirmed_120_tickers.txt",
+  "status": "INITIAL_OFFICIAL_SOURCE_RESEARCH_NO_CERTIFIED_0_OR_1",
+  "current_evidence_finding": [
+    {
+      "ticker": "2330",
+      "fiscal_year": 2014,
+      "issue": "2015 annual report presents FY2014 comparative figures as adjusted; explanation attributes changes to adoption of updated Taiwan-IFRS accounting standards. Adjusted comparative data alone does NOT establish fraud or material violation.",
+      "document_url": "https://investor.tsmc.com/static/annualReports/2015/chinese/c_6_1.html",
+      "source_type": "ISSUER_OFFICIAL_ANNUAL_REPORT",
+      "source_vintage": "2015 report gives 2014 adjusted comparative; not FY2014 original as-first-filed",
+      "material_restatement_5y_label": "UNKNOWN",
+      "adjudicated_financial_fraud_label": "UNKNOWN",
+      "reason_not_1": "accounting standard retrospective comparatives must not be treated as proved misstatement",
+      "reason_not_0": "absence of restatement/fraud evidence in this one document is not a complete official history search"
+    },
+    {
+      "ticker": "2330",
+      "fiscal_year": 2015,
+      "issue": "Issuer 2015 annual report displays FY2015 consolidated amounts; first-original version/filing timestamp and full correction history not independently certified in this round.",
+      "document_url": "https://investor.tsmc.com/static/annualReports/2015/chinese/c_6_2.html",
+      "source_type": "ISSUER_OFFICIAL_ANNUAL_REPORT",
+      "source_vintage": "2015 issuer annual report (retrieval is later than original release)",
+      "material_restatement_5y_label": "UNKNOWN",
+      "adjudicated_financial_fraud_label": "UNKNOWN"
+    },
+    {
+      "ticker": "1785",
+      "fiscal_year": 2015,
+      "issue": "Historical 2011-2015 financial statements were restated, but 1785 is NOT one of the user-selected 120 current companies and remains the reserved separate final case.",
+      "document_url": "https://www.tpex.org.tw/storage/eb_data/10512/10502015021.htm",
+      "source_type": "TPEX_ISSUER_HISTORICAL_OFFICIAL_ARCHIVE",
+      "material_restatement_5y_label": "OUT_OF_COHORT_RESERVED_CASE",
+      "adjudicated_financial_fraud_label": "NOT_TO_BE_USED_FOR_TRAINING"
+    }
+  ],
+  "official_source_locations": [
+    {
+      "type": "MOPS_HISTORICAL_CORRECTIONS",
+      "url": "https://mops.twse.com.tw/mops/web/t120sb02_q10",
+      "all_companies_and_fiscal_years_screened": false
+    },
+    {
+      "type": "MOPS_HISTORICAL_NOTICES",
+      "url": "https://mops.twse.com.tw/mops/web/t05st01",
+      "all_companies_and_fiscal_years_screened": false
+    },
+    {
+      "type": "MOPSFIN_DOCUMENTED_PERIOD_SCOPE",
+      "url": "https://mopsfin.twse.com.tw/terms",
+      "all_companies_and_fiscal_years_screened": false
+    }
+  ],
+  "verified_positive_labels": 0,
+  "verified_negative_labels": 0,
+  "explanation": "This index records actual accessed official source pages and why neither 'no news' nor retrospective accounting policy adjustments establish a certifiable normal or fraud binary label."
+}
