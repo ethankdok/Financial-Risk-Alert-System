@@ -120,6 +120,15 @@ def add_five_years(dt):
     try:return dt.replace(year=dt.year+5)
     except ValueError:return dt.replace(year=dt.year+5,day=28)
 
+def original_is_public_by_fixed_asof(fiscal_year,first_published):
+    """We evaluate all firms at March 31 of the year AFTER the target FY."""
+    if fiscal_year not in YEARS:
+        return False
+    taiwan_tz=timezone(timedelta(hours=8))
+    asof_deadline=datetime(fiscal_year+1,3,31,23,59,59,tzinfo=taiwan_tz)
+    return (datetime(fiscal_year,12,31,tzinfo=timezone.utc)
+            <first_published<=asof_deadline)
+
 def approve(review_csv,document_root,output,*,now=None):
     root=Path(document_root)
     out=Path(output)
@@ -161,13 +170,9 @@ def approve(review_csv,document_root,output,*,now=None):
             raise ValueError("fy1315_not_real_pdf_bytes")
         first=timestamp(r["original_published_at"])
         horizon=add_five_years(first)
-        # Teacher's fixed annual as-of date: 31 March of FY+1 in Taiwan.
-        # A report first made public through an IPO in 2017 is NOT a
-        # contemporaneously observable FY2015 report for this experiment.
-        taiwan_tz=timezone(timedelta(hours=8))
-        asof_deadline=datetime(year+1,3,31,23,59,59,tzinfo=taiwan_tz)
-        if not (first>datetime(year,12,31,tzinfo=timezone.utc)
-                and first<=asof_deadline
+        # The FY+1 3/31 source cutoff is essential for historical replay.
+        # Later IPO comparison figures cannot become FY2015 inputs.
+        if not (original_is_public_by_fixed_asof(year,first)
                 and horizon<=today):
             states["REJECTED_NOT_PUBLIC_BY_FY_PLUS_ONE_MARCH31_OR_UNMATURED"]+=1
             continue
