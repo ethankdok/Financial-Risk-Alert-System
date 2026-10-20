@@ -1,0 +1,29 @@
+name: FinTrust External Real AAER API Research Regression
+on:
+  push:
+    branches:
+      - feature/financial-ml-real-aaer-supervised-benchmark-20261020
+    paths:
+      - fintrust_backend/app/routers/historical_research.py
+      - fintrust_backend/app/services/financial_research/aaer_benchmark_reader.py
+      - fintrust_backend/tests/test_financial_ml_external_aaer_real_report.py
+      - .github/workflows/financial-ml-real-aaer-api.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  external_benchmark_no_fabrication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify actual report and prohibit Taiwan accuracy claims
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_external_aaer_real_report.py -v
+      - name: Compile research endpoint and reader
+        run: |
+          python -m py_compile fintrust_backend/app/routers/historical_research.py
+          python -m py_compile fintrust_backend/app/services/financial_research/aaer_benchmark_reader.py
