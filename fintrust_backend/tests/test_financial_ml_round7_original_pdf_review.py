@@ -64,6 +64,9 @@ def fill(path, reviewer, manifest, *, changed=None, empty=()):
 
 class OriginalPdfTests(unittest.TestCase):
     def setUp(self):
+        size_gate=patch.object(study,"MIN_ORIGINAL_PDF_BYTES",100)
+        size_gate.start()
+        self.addCleanup(size_gate.stop)
         self.tmp=tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.base=Path(self.tmp.name)
