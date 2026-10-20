@@ -201,7 +201,8 @@ def approve(review_csv,document_root,output,*,now=None):
         })
         states["APPROVED_1" if r["human_label"]=="1" else "APPROVED_0"]+=1
     out.mkdir(parents=True,exist_ok=True)
-    save_csv(out/"fy2013_15_approved_original_0_1.csv",ACCEPTED_FIELDS,accepted)
+    accepted_path=out/"fy2013_15_approved_original_0_1.csv"
+    save_csv(accepted_path,ACCEPTED_FIELDS,accepted)
     report={
         "status":"FY1315_HUMAN_REVIEW_GATE_COMPLETE",
         "reviewed_issuer_years":len(rows),
@@ -213,6 +214,7 @@ def approve(review_csv,document_root,output,*,now=None):
         "real_supervised_training_permitted":
             states["APPROVED_1"]>0 and states["APPROVED_0"]>0,
         "review_panel_sha256":sha(review_csv),
+        "approved_panel_sha256":sha(accepted_path),
         "source_evidence_root":str(root),
         "no_later_fy_financial_features":True,
     }
