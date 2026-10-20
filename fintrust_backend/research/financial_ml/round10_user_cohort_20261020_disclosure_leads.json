@@ -1,0 +1,239 @@
+{
+  "schema": "FINTRUST_ROUND10_EVENT_SCREENING_V1",
+  "as_of": "2026-10-20",
+  "basis": "Public company announcements republished by news sites; original MOPS filing SHA and original publication not independently verified. Re-statement is NOT equivalent to confirmed fraud. All supervised approved labels UNKNOWN.",
+  "events": [
+    {
+      "event_id": "S01",
+      "ticker": "6485",
+      "company": "點序",
+      "notice_date": "2025-05-27",
+      "candidate_fiscal_years": [
+        2023,
+        2024
+      ],
+      "candidate_quarters": [
+        "2023Q3",
+        "2024Q1",
+        "2024Q2",
+        "2024Q3"
+      ],
+      "event_class": "MAIN_STATEMENT_CORRECTION",
+      "finding": "2023Q3/2023FY/2024Q1-Q3/2024FY correction inventory COGS gross profit net income; not adjudicated fraud",
+      "document_url": "https://news.cnyes.com/news/id/5995322",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S02",
+      "ticker": "8487",
+      "company": "愛爾達",
+      "notice_date": "2023-04-27",
+      "candidate_fiscal_years": [
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "candidate_quarters": [
+        "2018Q2",
+        "2019Q2",
+        "2020Q2",
+        "2021Q2",
+        "2022Q2",
+        "2022Q3"
+      ],
+      "event_class": "QUARTER_RESTATEMENT_AND_OTHERS_CORRECTION",
+      "finding": "2018Q2 2019Q2 2022Q3 restatement; other FY/quarter financial appendices revised, not adjudicated fraud",
+      "document_url": "https://news.cnyes.com/news/id/5157953",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S03",
+      "ticker": "8487",
+      "company": "愛爾達",
+      "notice_date": "2022-04-28",
+      "candidate_fiscal_years": [
+        2021,
+        2022
+      ],
+      "candidate_quarters": [],
+      "event_class": "REVENUE_ANNOUNCEMENT_NOT_NET_PROFIT_CORRECTION",
+      "finding": "Monthly revenue 2021-Jul to 2022-Mar corrected; issuer says no profit impact",
+      "document_url": "https://news.cnyes.com/news/id/4861055",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S04",
+      "ticker": "7723",
+      "company": "築間",
+      "notice_date": "2024-09-10",
+      "candidate_fiscal_years": [
+        2022,
+        2023
+      ],
+      "candidate_quarters": [
+        "2023Q2"
+      ],
+      "event_class": "RELATED_PARTY_FILING_NOTE_CORRECTION",
+      "finding": "Related party notes in 2022FY 2023FY 2023Q2 filings amended",
+      "document_url": "https://news.cnyes.com/news/id/5713906",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S05",
+      "ticker": "1301",
+      "company": "台塑",
+      "notice_date": "2026-03-16",
+      "candidate_fiscal_years": [
+        2025
+      ],
+      "candidate_quarters": [],
+      "event_class": "INVESTMENT_DISCLOSURE_NOTE_CORRECTION",
+      "finding": "2025FY investment China disclosure notes typo corrections, not established fraud",
+      "document_url": "https://news.cnyes.com/news/id/6386127",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S06",
+      "ticker": "1104",
+      "company": "環泥",
+      "notice_date": "2026-03-27",
+      "candidate_fiscal_years": [
+        2025
+      ],
+      "candidate_quarters": [],
+      "event_class": "AFFILIATE_BUSINESS_REPORT_NON_TARGET",
+      "finding": "Related-company business report directorship information changed; not fiscal financial figures",
+      "document_url": "https://tw.stock.yahoo.com/quote/1104/announcement",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S07",
+      "ticker": "8411",
+      "company": "福貞-KY",
+      "notice_date": "2025-05-09",
+      "candidate_fiscal_years": [
+        2025
+      ],
+      "candidate_quarters": [],
+      "event_class": "BOARD_RESULTS_DISCLOSURE_NOT_RESTATEMENT",
+      "finding": "Corrected board approval quarterly result announcement, not independently identified statement restatement",
+      "document_url": "https://news.cnyes.com/news/id/5972212",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S08",
+      "ticker": "8271",
+      "company": "宇瞻",
+      "notice_date": "2024-07-24",
+      "candidate_fiscal_years": [
+        2024
+      ],
+      "candidate_quarters": [
+        "2024Q2"
+      ],
+      "event_class": "BOARD_MEETING_DATE_NON_TARGET",
+      "finding": "Financial report board meeting scheduled date changed for typhoon",
+      "document_url": "https://news.cnyes.com/news/id/5649860",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S09",
+      "ticker": "6697",
+      "company": "東捷資訊",
+      "notice_date": "2025-04-09",
+      "candidate_fiscal_years": [
+        2024
+      ],
+      "candidate_quarters": [
+        "2024Q4"
+      ],
+      "event_class": "MONTHLY_REVENUE_CORRECTION_NOT_FINANCIAL_STATEMENT",
+      "finding": "2024 Oct-Dec revenue updates; issuer says audited FY2024 statements unchanged",
+      "document_url": "https://news.cnyes.com/news/id/5931145",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S10",
+      "ticker": "6902",
+      "company": "GOGOLOOK",
+      "notice_date": "2025-08-25",
+      "candidate_fiscal_years": [
+        2025
+      ],
+      "candidate_quarters": [
+        "2025Q2"
+      ],
+      "event_class": "PRIOR_PERIOD_NOTE_CORRECTION",
+      "finding": "2025Q2 note comparative FY2024 figures and page numbers corrected; no fraud evidence",
+      "document_url": "https://news.cnyes.com/news/id/6125217",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S11",
+      "ticker": "8462",
+      "company": "柏文",
+      "notice_date": "2024-03-26",
+      "candidate_fiscal_years": [
+        2023
+      ],
+      "candidate_quarters": [],
+      "event_class": "IXBRL_TAG_CORRECTION",
+      "finding": "2023FY iXBRL treasury share count field correction; not earnings misstatement adjudication",
+      "document_url": "https://news.cnyes.com/news/id/5504195",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    },
+    {
+      "event_id": "S12",
+      "ticker": "6272",
+      "company": "驊陞",
+      "notice_date": "2025-05-15",
+      "candidate_fiscal_years": [
+        2022,
+        2023
+      ],
+      "candidate_quarters": [],
+      "event_class": "BALANCE_CASHFLOW_AND_NOTES_CORRECTION",
+      "finding": "2022/2023 statements BS and CFO & notes amendments; issuer states no impact on total assets, equity, profits",
+      "document_url": "https://news.cnyes.com/news/id/5981441",
+      "fraud_label": "UNKNOWN",
+      "approved_for_training": false,
+      "first_original_filing_verified": false,
+      "source_type": "MOPS company statement republication or market news"
+    }
+  ]
+}
