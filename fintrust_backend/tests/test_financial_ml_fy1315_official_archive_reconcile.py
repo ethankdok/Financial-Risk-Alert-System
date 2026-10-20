@@ -58,6 +58,22 @@ class TestActualOfficialArchivalBatch(unittest.TestCase):
         self.assertEqual(len(results),4320)
         self.assertEqual({int(x["fiscal_year"]) for x in results},set(YEARS))
 
+    def test_resume_only_requested_official_batch_without_network_in_fixture(self):
+        from unittest.mock import patch
+        calls=[]
+        async def fake_acquire(plan,output_dir,execute=False):
+            calls.append((plan[0]["ticker"],plan[0]["fiscal_year"],
+                          Path(output_dir).name,execute))
+            return {"mode":"execute","network_requests":0}
+        with patch.object(target,"acquire",side_effect=fake_acquire):
+            r=asyncio.run(target.run(self.csv,self.out,execute=True,
+                                     max_batches=2,start_batch=4))
+        self.assertEqual(len(calls),2)
+        self.assertEqual([x[2] for x in calls],["batch_004","batch_005"])
+        self.assertEqual(r["request_batches_executed_this_run"],2)
+        self.assertEqual(r["resume_batch_start"],4)
+        self.assertEqual(r["approved_supervised_labels_1"],0)
+
     def test_archived_2026_retrieval_not_proven_2014_original(self):
         chunks=target.batches(self.csv)
         selected=chunks[0][0]
