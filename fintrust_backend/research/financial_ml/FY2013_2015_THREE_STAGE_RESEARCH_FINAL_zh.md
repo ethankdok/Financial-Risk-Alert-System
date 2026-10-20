@@ -120,3 +120,62 @@ Stage2 生成 360 筆人工標註表。之後需要研究人員對
 和 supervised precision/recall/F1。不能因為老師急著看結果，
 就把 360 家年度全部標 0，或把法律判定不明的更正
 硬判 1。用不實標籤即使跑出模型指標，也沒有研究意義。
+
+
+## 2026-10-20：承接 Stage1 的實際官方 XBRL 資料回收與 4,320 格逐科目比對
+
+已新增 `fy2013_2015_official_archive_reconcile.py`，**不是另開研究年度或改模型**。
+源資料為本機已成功產出的
+`stage1_data/fy2013_2015_exact_360_financial_source_audit.csv`，
+包含 120 家 × 3 年，114 筆完整 FinMind **候選**及 246 筆不完整候選。
+
+- 預定從 TWSE 官方 MOPS（不是新聞）批次取得 FY2013–2015 年度 XBRL，
+  直接重用原有 `official_batch.acquire()`、
+  `mops_annual_url()`、`normalize_annual_filing()`、
+  `RawEvidenceArchive` 的現成程式。
+- 360 個公司年度分成 30 批、每批最多 12 件，先抓 FinMind
+  缺少完整12個金額的公司年度；可指定批次從中斷處恢復。
+- 逐件保留 TWSE URL、raw SHA-256、合併/個體辨識、
+  TIFRS 判定、XBRL 正規化品質及原始下載位元組。
+- 報表 `fy1315_360_official_archive_status.csv` 表示每個公司年度
+  是否**真正下載與完成正規化**；
+  `fy1315_4320_metric_reconciliation.csv` 比對 12 項同年度
+  財務數值與 FinMind 候選的缺值、差異。**只有取得成功的原始
+  位元組經 SHA 核對，才能視為有實際 XBRL 資料。**
+- 官方當前下載的「歷史 XBRL」仍可能已被重編/更正，
+  因此每筆 `current_archive_is_original_first_filing=false`，
+  `source_eligible_for_0_1_training=false`。
+  如此可實際推進資料清洗及核對，卻不偽稱已完成先驗時點驗證。
+- 全面維持 **FY2013/2014/2015**，不導入 FY2016+ 財務特徵；
+  FY2016+ 公告僅可在 Stage2 對原始 2013–2015 報表做後續事件標註。
+
+### 使用者已完成 Prepare，所以直接執行下一個 Stage
+
+在原先 ML worktree 的 `fintrust_backend`：
+
+```powershell
+git pull --ff-only
+powershell -ExecutionPolicy Bypass -File .\research\financial_ml\verify_fy2013_2015_three_stages.ps1 -Stage AcquireArchive -BatchStart 1 -BatchCount 2
+```
+
+確認第一輪取得成功及是否有來源存取限制後，
+可使用 `-Stage AcquireArchive -BatchStart 3 -BatchCount 28`
+取得餘下批次。每批最多12次外部請求，請勿高頻輪詢 TWSE。
+僅重新整理已存在的來源與 4,320 格比較而不新增下載，使用
+`-Stage ReviewArchive`。
+
+**停止條件：** 來源若回 403、驗證碼、非 XBRL 或要求身份認證，
+保留來源失敗證據並停止；不能人工猜測 XBRL 或改抓目前數據
+然後當作2013–15首份公告。有效原始首次申報仍須另外版本審核。
+
+新增合成測試已檢驗批次計畫 360、只採三年、SHA 篡改拒絕、
+分批續抓、比較 4,320 格與不當升級標籤禁止；
+這不是 360 筆 MOPS 實際下載成功的宣稱。
+
+### 目前真實人工 Label 與模型實證進度
+
+正式 0=0、1=0。沒有任何受監督、資料驗證通過之真實訓練分數。
+必須在 Stage2 取得原始首次申報及官方重編查詢完整紀錄、
+由不同審核者核准正負樣本，再跑 Stage3 的受監督分類器。
+模型源程式已能在合成審核資料上 E2E 訓練、測試，
+但**絕不把合成成績當作 FinTrust 財報重編的 Precision/Recall/F1**。
