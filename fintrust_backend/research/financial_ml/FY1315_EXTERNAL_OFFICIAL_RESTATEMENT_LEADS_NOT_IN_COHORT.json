@@ -1,0 +1,66 @@
+{
+  "schema": "FINTRUST_FY2013_15_OUTCOME_RESEARCH_SOURCE_LEADS_V1",
+  "time": "2026-10-20",
+  "target": "CANDIDATE_MATERIAL_ANNUAL_RESTATEMENT_IN_2013_2014_2015",
+  "key_warning": "Public announcement does not equal certified original-filing machine-learning sample; these issuers are NOT in user-frozen 120. Therefore none are approved for training or used to pad class 1.",
+  "noncohort_not_admitted": [
+    {
+      "ticker": "2305",
+      "company": "全友電腦",
+      "fiscal_year": 2015,
+      "disclosure_date": "2017-02-15",
+      "research_event": "2015 consolidated and stand-alone annual report restated due accounting of land and factory disposal",
+      "source_type": "ISSUER_MOPS_NOTICE_REPUBLICATION",
+      "source_url": "https://news.cnyes.com/news/id/3718617",
+      "proposed_label_1": "CANDIDATE_MATERIAL_RESTATEMENT",
+      "reasons_blocking": "Not in 120; original first-filed PDF/time, first/second adjudication and full 12 original fields not verified."
+    },
+    {
+      "ticker": "3662",
+      "company": "樂陞科技",
+      "fiscal_year": 2014,
+      "disclosure_date": "2016-10-27",
+      "research_event": "FSC correction/restatement directive named FY2014 and FY2015 in issuer notice",
+      "source_type": "ISSUER_MOPS_NOTICE_REPUBLICATION",
+      "source_url": "https://news.cnyes.com/news/id/3591117",
+      "proposed_label_1": "CANDIDATE_MATERIAL_RESTATEMENT",
+      "reasons_blocking": "Not in 120; exact original consolidated document and confirmed final revision comparison remain unverified."
+    },
+    {
+      "ticker": "3662",
+      "company": "樂陞科技",
+      "fiscal_year": 2015,
+      "disclosure_date": "2016-10-27",
+      "research_event": "FSC correction/restatement directive named FY2015 in issuer notice",
+      "source_type": "ISSUER_MOPS_NOTICE_REPUBLICATION",
+      "source_url": "https://news.cnyes.com/news/id/3591117",
+      "proposed_label_1": "CANDIDATE_MATERIAL_RESTATEMENT",
+      "reasons_blocking": "Not in 120; note says to correct OR restate, verification needed of the precise FY annual report affected."
+    },
+    {
+      "ticker": "2384",
+      "company": "勝華科技",
+      "fiscal_year": 2014,
+      "disclosure_date": "2018-07-06",
+      "research_event": "FSC allowed deadline extension to restate FY2014 consolidated financial statements",
+      "source_type": "ISSUER_MOPS_NOTICE_REPUBLICATION",
+      "source_url": "https://www.moneydj.com/kmdj/news/newsviewer.aspx?a=243f2ed4-3ab3-4c76-8186-84e3a5d2d342",
+      "proposed_label_1": "CANDIDATE_MATERIAL_RESTATEMENT",
+      "reasons_blocking": "Not in 120; regulator allowed extension, actual completed restatement official version must be certified."
+    },
+    {
+      "ticker": "2384",
+      "company": "勝華科技",
+      "fiscal_year": 2015,
+      "disclosure_date": "2018-07-06",
+      "research_event": "Regulator allowed extended period for FY2015 consolidated financial restatement",
+      "source_type": "ISSUER_MOPS_NOTICE_REPUBLICATION",
+      "source_url": "https://www.moneydj.com/kmdj/news/newsviewer.aspx?a=243f2ed4-3ab3-4c76-8186-84e3a5d2d342",
+      "proposed_label_1": "CANDIDATE_MATERIAL_RESTATEMENT",
+      "reasons_blocking": "Not in 120 and no original-as-filed evidence."
+    }
+  ],
+  "legal_source": "https://twse-regulation.twse.com.tw/TW/law/DOC01.aspx?FLCODE=FL007010&FLNO=6",
+  "finding": "Verified cases exist in the correct fiscal years outside the fixed cohort; training on the current 120 cannot use them unless cohort membership is explicitly changed. Searching more website hits does not create double-reviewed clean labels 0.",
+  "approved_training_rows": 0
+}
