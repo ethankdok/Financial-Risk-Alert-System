@@ -7,6 +7,8 @@ on:
       - fintrust_backend/research/financial_ml/fy2013_2015_stage1_freeze.py
       - fintrust_backend/research/financial_ml/fy2013_2015_stage2_labels.py
       - fintrust_backend/research/financial_ml/fy2013_2015_stage3_supervised.py
+      - fintrust_backend/research/financial_ml/fy2013_2015_official_archive_reconcile.py
+      - fintrust_backend/tests/test_financial_ml_fy1315_official_archive_reconcile.py
       - fintrust_backend/tests/test_financial_ml_fy2013_2015_three_stages.py
       - .github/workflows/financial-ml-fy2013-2015-three-stage.yml
   workflow_dispatch:
@@ -22,7 +24,10 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install scientific runtime
-        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib
+        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib httpx lxml pydantic
       - name: Source locked three fiscal years, verified two-class approval, leak-safe model holdout
         working-directory: fintrust_backend
         run: python -m unittest discover -s tests -p test_financial_ml_fy2013_2015_three_stages.py -v
+      - name: Verify bounded official archival fetch and raw SHA integrity
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_fy1315_official_archive_reconcile.py -v
