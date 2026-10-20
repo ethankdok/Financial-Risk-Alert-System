@@ -198,10 +198,12 @@ def write_csv(path,headers,rows):
         w.writeheader();w.writerows(rows)
 
 
-async def run(stage1_csv,output,*,execute=False,max_batches=None):
+async def run(stage1_csv,output,*,execute=False,max_batches=None,start_batch=1):
     path=Path(output)
     path.mkdir(parents=True,exist_ok=True)
     jobs=batches(stage1_csv)
+    if not 1<=start_batch<=len(jobs):
+        raise ValueError("fy1315_batch_start_outside_frozen_30")
     atomic_json(path/"fy1315_official_archive_request_plan.json",{
         "periods":list(YEARS),"company_years":360,"number_of_batches":len(jobs),
         "each_batch_max":MAX_REQUESTS,"execute":bool(execute),
@@ -214,6 +216,8 @@ async def run(stage1_csv,output,*,execute=False,max_batches=None):
     completed=0
     if execute:
         for n,plan in enumerate(jobs,1):
+            if n<start_batch:
+                continue
             if max_batches is not None and completed>=max_batches:
                 break
             folder=path/f"batch_{n:03}"
@@ -231,6 +235,7 @@ async def run(stage1_csv,output,*,execute=False,max_batches=None):
         "finmind_missing_amounts_now_found_in_mops":newly["CANDIDATE_MISSING_CURRENT_FOUND"],
         "candidate_current_archive_amount_disagreements":newly["AMOUNTS_DIFFER_NEED_VERSION_GRAIN_REVIEW"],
         "download_status_counts":stats,"request_batches_executed_this_run":completed,
+        "resume_batch_start":start_batch,
         "approved_supervised_labels_0":0,"approved_supervised_labels_1":0,
         "input_sha256":hashlib.sha256(Path(stage1_csv).read_bytes()).hexdigest(),
         "financial_features_not_ready_for_original_training":True,
@@ -248,10 +253,14 @@ def main(argv=None):
     p.add_argument("--out",required=True)
     p.add_argument("--execute",action="store_true")
     p.add_argument("--max-batches",type=int)
+    p.add_argument("--start-batch",type=int,default=1)
     a=p.parse_args(argv)
     if a.max_batches is not None and not 1<=a.max_batches<=30:
         p.error("max-batches 1..30")
+    if not 1<=a.start_batch<=30:
+        p.error("start-batch 1..30")
     print(json.dumps(asyncio.run(run(a.stage1_csv,a.out,
-        execute=a.execute,max_batches=a.max_batches)),ensure_ascii=False,indent=2))
+        execute=a.execute,max_batches=a.max_batches,
+        start_batch=a.start_batch)),ensure_ascii=False,indent=2))
 if __name__=="__main__":
     main()
