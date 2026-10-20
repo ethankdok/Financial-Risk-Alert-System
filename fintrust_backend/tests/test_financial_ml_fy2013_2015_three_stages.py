@@ -69,7 +69,8 @@ class ThreeStages(unittest.TestCase):
         evidence=self.root/"evidence";evidence.mkdir()
         def doc(name):
             p=evidence/name
-            p.write_bytes((b"SIMULATED TEST EVIDENCE DO NOT USE FOR REAL TRAINING "+name.encode())*2)
+            prefix=b"%PDF-1.4\\n" if name.endswith(".pdf") else b""
+            p.write_bytes(prefix+(b"SIMULATED TEST EVIDENCE DO NOT USE FOR REAL TRAINING "+name.encode())*2)
             return name,hashlib.sha256(p.read_bytes()).hexdigest()
         for idx,label in ((0,"1"),(1,"0")):
             r=rows[idx]
