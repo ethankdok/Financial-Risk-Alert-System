@@ -190,6 +190,61 @@ class Round8Tests(unittest.TestCase):
         self.assertFalse(result["historical_original_publication_time_certified"])
         self.assertFalse(result["sample_admitted_to_fraud_training"])
 
+    def test_1785_blind_scoring_requires_training_completion(self):
+        modeldir=self.root/"not_trained";modeldir.mkdir()
+        (modeldir/"round8_supervised_classification_report.json").write_text(
+            '{"status":"ROUND8_SUPERVISED_LABELS_PENDING_SUFFICIENT_APPROVAL"}')
+        with self.assertRaisesRegex(ValueError,"requires_approved_frozen_classifier"):
+            study.score_reserved_1785(self.root/"not_ready.sqlite3",modeldir,
+                                      self.root/"case_output")
+
+    def test_complete_1785_original_stays_out_of_fit_but_scores(self):
+        import sqlite3
+        import numpy as np
+        import joblib
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.preprocessing import RobustScaler
+        from sklearn.pipeline import Pipeline
+        data=self.root/"original_1785.sqlite3"
+        con=sqlite3.connect(data)
+        con.execute("""CREATE TABLE original_1785_financial_facts(
+            ticker TEXT,fiscal_year INTEGER,metric TEXT,value_twd TEXT,
+            unit TEXT,filing_version_type TEXT,source_pdf_sha256 TEXT,
+            pdf_page INTEGER,statement_scope TEXT,accounting_framework TEXT,
+            review_status TEXT,original_first_publication_verified INTEGER,
+            model_training_admitted INTEGER)""")
+        for year in (2013,2014,2015):
+            for k,metric in enumerate(study.METRICS):
+                con.execute("INSERT INTO original_1785_financial_facts VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",(
+                    "1785",year,metric,str((year-2010)*10000+k*300),
+                    "TWD","original","a"*64,6,"consolidated","TIFRS",
+                    "DOUBLE_REVIEWED_ORIGINAL_PDF",0,0))
+        con.commit();con.close()
+        modeldir=self.root/"trained";modeldir.mkdir()
+        x=np.vstack([np.arange(18)+20,np.arange(18)+200,
+                     np.arange(18)+50,np.arange(18)+500])
+        y=np.array([0,1,0,1])
+        pipe=Pipeline([("scaler",RobustScaler()),
+                       ("classifier",LogisticRegression())])
+        pipe.fit(x,y)
+        joblib.dump(pipe,modeldir/"logistic_regression_officially_reviewed_experiment.joblib")
+        (modeldir/"round8_supervised_classification_report.json").write_text(
+            json.dumps({
+                "status":"ROUND8_SUPERVISED_APPROVED_ORIGINAL_LABELLED_EXPERIMENT",
+                "final_holdout_1785_excluded":True,
+                "selected_model":"logistic_regression",
+                "comparisons":[{"model":"logistic_regression",
+                                "decision_threshold_validation_selected":0.4}]
+            }))
+        result=study.score_reserved_1785(data,modeldir,self.root/"score")
+        self.assertEqual(len(result["periods"]),3)
+        self.assertEqual({r["fiscal_year"] for r in result["periods"]},
+                         {2013,2014,2015})
+        self.assertTrue(all(0<=r["supervised_misstatement_score"]<=1
+                            for r in result["periods"]))
+        self.assertFalse(result["supervised_training_included_1785"])
+        self.assertFalse(result["historical_asof_alert_claim_allowed"])
+
     def test_original_api_reader_fails_closed_on_production_promotion(self):
         import sqlite3
         from app.services.financial_research.original_ai1_research_reader import get_1785_original_ai1
