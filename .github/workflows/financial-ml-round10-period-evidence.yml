@@ -1,0 +1,28 @@
+name: Financial ML Round10 120 Company Period Evidence Gate
+on:
+  push:
+    branches:
+      - feature/financial-ml-round10-120-period-disclosure-audit-20261020
+    paths:
+      - fintrust_backend/research/financial_ml/round10_disclosure_event_label_gate.py
+      - fintrust_backend/research/financial_ml/round10_user_confirmed_120_tickers.txt
+      - fintrust_backend/research/financial_ml/round10_user_cohort_20261020_disclosure_leads.json
+      - fintrust_backend/tests/test_financial_ml_round10_120_period_audit.py
+      - .github/workflows/financial-ml-round10-period-evidence.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check_source_and_labels:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install required existing Round8 imports
+        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib
+      - name: Assert complete cohort, source year mapping and no false fraud labels
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_round10_120_period_audit.py -v
