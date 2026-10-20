@@ -1,0 +1,27 @@
+{
+  "schema": "FINTRUST_FY1315_OFFICIAL_ASOF_SOURCE_FINDINGS_V1",
+  "reviewed_on": "2026-10-20",
+  "reason": "Protect model from using IPO prospectus FY2015 comparative XBRL retrospectively as of 2016-03-31.",
+  "findings": [
+    {
+      "ticker": "2243",
+      "fiscal_years": [
+        2013,
+        2014,
+        2015
+      ],
+      "first_public_issuance_at": "2017-08-08",
+      "first_listed_at": "2017-09-27",
+      "asof_FY_plus_one_March31": "NOT_PUBLIC_BY_CUTOFF",
+      "official_public_issuance_source": "https://www.twse.com.tw/zh/listed/listed/ipo-seo.html",
+      "official_ipo_financial_statement_source": "https://www.twse.com.tw/staticFiles/product/publication/0001002613.pdf",
+      "label_training_status": "EXCLUDE_ASOF",
+      "notes": "IPO summary in 2017 includes prior FY2014-FY2015 comparative values, not evidence they were publicly available on the prior March31 prediction dates."
+    }
+  ],
+  "non_conclusions": [
+    "1563 2014/15 current archive is retrievable and its shares traded emerging market earlier; original as-first-filed FY documents and 2015 cutoff must still be verified.",
+    "2928 2015 current archive retrievable; its FY2015 first publication time still unverified.",
+    "No clean or fraud label is inferred from a company’s public offering date."
+  ]
+}
