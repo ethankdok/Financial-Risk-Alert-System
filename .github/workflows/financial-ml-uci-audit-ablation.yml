@@ -1,0 +1,56 @@
+name: FinTrust Audit Risk 0-1 Real UCI Honest Ablation
+on:
+  push:
+    branches:
+      - feature/fintrust-independent-audit-risk-benchmark-20261020
+    paths:
+      - fintrust_backend/research/financial_ml/external_benchmark/uci_india_audit_risk_ablation.py
+      - .github/workflows/financial-ml-uci-audit-ablation.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reproduce_real_uci_india_risk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check 'pandas>=2.1,<3' 'numpy>=1.26,<3' 'scikit-learn>=1.5,<2' 'joblib>=1.4,<2'
+      - name: Download official UCI Audit Data archive
+        run: |
+          mkdir -p "$RUNNER_TEMP/fintrust-audit-uci"
+          curl --fail --location --retry 4 --max-time 150 \
+            'https://archive.ics.uci.edu/static/public/475/audit%2Bdata.zip' \
+            --output "$RUNNER_TEMP/fintrust-audit-uci/original_uci_archive.zip"
+          unzip -l "$RUNNER_TEMP/fintrust-audit-uci/original_uci_archive.zip"
+          python - <<'PY'
+          import os, zipfile, pathlib
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'fintrust-audit-uci'
+          with zipfile.ZipFile(root/'original_uci_archive.zip') as z:
+              names=[x for x in z.namelist() if x.endswith('audit_risk.csv')]
+              if len(names)!=1:raise ValueError('Expected exactly one official audit_risk.csv inside '+str(z.namelist()))
+              dest=root/'audit_risk.csv'
+              dest.write_bytes(z.read(names[0]))
+              print('Verified official csv bytes',dest.stat().st_size)
+          PY
+      - name: Train true audit RISK 0 and 1 with duplicate-controlled untouched test
+        working-directory: fintrust_backend
+        env:
+          OPENBLAS_NUM_THREADS: '2'
+          OMP_NUM_THREADS: '2'
+        run: |
+          python -m research.financial_ml.external_benchmark.uci_india_audit_risk_ablation \
+            --source-csv "$RUNNER_TEMP/fintrust-audit-uci/audit_risk.csv" \
+            --out "$RUNNER_TEMP/fintrust-audit-uci/results"
+      - name: Archive model, individual test predictions and target-construction report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fintrust-uci-audit-riskscore-0-1-honest-comparison
+          path: ${{ runner.temp }}/fintrust-audit-uci/results/
+          if-no-files-found: warn
+          retention-days: 30
