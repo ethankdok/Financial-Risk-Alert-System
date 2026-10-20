@@ -1,0 +1,48 @@
+name: FinTrust Real AAER RUSBoost Class Imbalance Experiments
+on:
+  push:
+    branches:
+      - feature/financial-ml-aaer-enhanced-20261020
+    paths:
+      - fintrust_backend/research/financial_ml/external_benchmark/aaer_rusboost_cost_sensitive.py
+      - .github/workflows/financial-ml-aaer-rusboost.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual_aaer_cost_sensitive_supervised:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install published-benchmark imbalance models
+        run: python -m pip install 'numpy>=1.26,<3' 'pandas>=2.1,<3' 'scikit-learn>=1.5,<2' 'imbalanced-learn>=0.14,<1' 'joblib>=1.4,<2' 'lightgbm>=4.1,<5'
+      - name: Download unchanged real AAER researcher-curated labels
+        run: |
+          mkdir -p "$RUNNER_TEMP/fintrust-rus"
+          curl -L --fail --retry 4 --max-time 180 \
+            https://raw.githubusercontent.com/JarFraud/FraudDetection/master/data_FraudDetection_JAR2020.csv \
+            -o "$RUNNER_TEMP/fintrust-rus/source.csv"
+          sha256sum "$RUNNER_TEMP/fintrust-rus/source.csv"
+      - name: Run true 0/1 cost-weighted RUSBoost fit, validation, and untouched test
+        working-directory: fintrust_backend
+        env:
+          OPENBLAS_NUM_THREADS: '2'
+          OMP_NUM_THREADS: '2'
+          MKL_NUM_THREADS: '2'
+        run: |
+          python -m research.financial_ml.external_benchmark.aaer_rusboost_cost_sensitive \
+            --source-csv "$RUNNER_TEMP/fintrust-rus/source.csv" \
+            --output-dir "$RUNNER_TEMP/fintrust-rus/results"
+      - name: Deliver fitted models, labels, independent test and all candidate comparisons
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fintrust-real-aaer-rusboost-ensemble-research
+          path: ${{ runner.temp }}/fintrust-rus/results/
+          if-no-files-found: warn
+          retention-days: 30
