@@ -1,0 +1,27 @@
+name: Financial ML Round9 Every Company Evidence Review
+on:
+  push:
+    branches:
+      - feature/financial-ml-round9-company-evidence-audit-20261020
+    paths:
+      - fintrust_backend/research/financial_ml/round9_every_company_official_review.py
+      - fintrust_backend/research/financial_ml/round9_official_case_source_leads.json
+      - fintrust_backend/tests/test_financial_ml_round9_every_company_audit.py
+      - .github/workflows/financial-ml-round9-company-audit.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  every_company:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install existing model import dependencies
+        run: python -m pip install --disable-pip-version-check numpy scikit-learn joblib
+      - name: Every issuer annual label stays unknown before evidence review
+        working-directory: fintrust_backend
+        run: python -m unittest discover -s tests -p test_financial_ml_round9_every_company_audit.py -v
