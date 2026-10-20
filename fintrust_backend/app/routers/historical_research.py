@@ -96,6 +96,28 @@ def case_timeline(ticker: str = TICKER, analysis_mode: str = MODE_QUERY, cutoff_
     return _call(service.timeline, ticker, context, evidence_tier=evidence_tier, limit=limit, offset=offset)
 
 
+@router.get("/cases/{ticker}/original-ai1-reviewed")
+def original_ai1_reviewed(
+    ticker: str = TICKER,
+    analysis_mode: Literal["RETROSPECTIVE_FORENSIC"] = Query(...),
+) -> dict[str, Any]:
+    """Explicit opt-in local research only; not a fabricated historical alert.
+
+    No change to production snapshot/score pipeline or existing frontend.
+    The isolated SQLite path is configured by deployment admin.
+    """
+    if ticker!="1785" or os.getenv("FINTRUST_1785_ORIGINAL_REVIEW_API_ENABLED")!="1":
+        raise HTTPException(status_code=404,detail="research_original_review_not_enabled")
+    path=os.getenv("FINTRUST_1785_ORIGINAL_REVIEW_DB","").strip()
+    if not path:
+        raise HTTPException(status_code=503,detail="research_original_review_db_not_configured")
+    from app.services.financial_research.original_ai1_research_reader import get_1785_original_ai1
+    try:
+        return get_1785_original_ai1(path)
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=503,detail=str(exc)) from exc
+
+
 @router.get("/cases/{ticker}/restatement-bridge")
 def restatement_bridge(ticker: str = TICKER, analysis_mode: str = MODE_QUERY, cutoff_at: str | None = CUTOFF_QUERY,
                        scope: Literal["all", "consolidated", "individual"] = Query("all"),
