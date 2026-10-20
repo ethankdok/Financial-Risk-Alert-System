@@ -17,6 +17,7 @@ from .annual_panel_readiness import METRICS
 from .fy2013_2015_stage1_freeze import YEARS
 from .fy2013_2015_stage2_labels import ACCEPTED_FIELDS,TARGET
 from .round8_human_supervised_classifier import feature_matrix,score
+from .round10_disclosure_event_label_gate import cohort
 
 MIN_TOTAL={0:24,1:12}
 
@@ -27,9 +28,11 @@ def load_approved(path):
             raise ValueError("fy1315_supervised_requires_stage2_audited_csv")
         rows=list(rd)
     seen=set();records=[]
+    approved_issuer_universe=set(cohort())
     for r in rows:
         k=(r["ticker"],int(r["fiscal_year"]))
         if (k in seen or k[1] not in YEARS or k[0]=="1785"
+            or k[0] not in approved_issuer_universe
             or r["label_target"]!=TARGET
             or r["label"] not in ("0","1")
             or not r["original_sha256"]):
