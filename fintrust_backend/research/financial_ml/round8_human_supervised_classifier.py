@@ -395,6 +395,83 @@ def run(panel,evidence_dir,out):
     return report
 
 
+def score_reserved_1785(original_review_db,approved_model_dir,output):
+    """Only after human-reviewed supervised fit exists: score the BLIND 1785
+    ORIGINAL PDF cells without any fit/tuning or post-restatement features.
+    Historical first-publication remains unverified, so this is research
+    retrospective scoring, not an observed May-2016 alert or fraud proof.
+    """
+    import joblib
+    from app.services.financial_research.original_ai1_research_reader import get_1785_original_ai1
+    root=Path(approved_model_dir)
+    out=Path(output)
+    if out.exists() and any(out.iterdir()):
+        raise FileExistsError("round8_case_inference_result_immutable")
+    m=json.loads((root/"round8_supervised_classification_report.json").read_text(encoding="utf-8"))
+    if (m.get("status")!="ROUND8_SUPERVISED_APPROVED_ORIGINAL_LABELLED_EXPERIMENT"
+        or m.get("final_holdout_1785_excluded") is not True
+        or m.get("selected_model") not in ("logistic_regression","random_forest")):
+        raise ValueError("round8_1785_case_requires_approved_frozen_classifier")
+    entry=next(x for x in m["comparisons"] if x["model"]==m["selected_model"])
+    threshold=float(entry["decision_threshold_validation_selected"])
+    # joblib artifacts must have been created by OUR local trusted workflow.
+    classifier=joblib.load(root/(m["selected_model"]+"_officially_reviewed_experiment.joblib"))
+    source=get_1785_original_ai1(original_review_db)
+    by=defaultdict(dict)
+    for r in source["records"]:
+        year=int(r["fiscal_year"])
+        if r["metric"] in by[year]:
+            raise ValueError("round8_1785_duplicate_original_source_metric")
+        by[year][r["metric"]]=r
+    records=[]
+    for year in (2013,2014,2015):
+        found=by[year]
+        if set(found)!=set(METRICS):
+            records.append({
+                "ticker":"1785","fiscal_year":year,
+                "status":"ORIGINAL_DOUBLE_REVIEWED_VECTOR_INCOMPLETE",
+                "present_fields":len(found),
+                "missing_fields":sorted(set(METRICS)-set(found)),
+                "supervised_misstatement_score":None,
+                "flagged_at_validation_threshold":None,
+            })
+            continue
+        values=[float(found[k]["value_twd"]) for k in METRICS]
+        if not all(math.isfinite(x) for x in values):
+            raise ValueError("round8_1785_original_nonfinite_reviewed_amount")
+        example={"features":values}
+        x=feature_matrix([example])
+        score_value=float(classifier.predict_proba(x)[0,1])
+        if not (0<=score_value<=1):
+            raise ValueError("round8_1785_probability_outside_unit_interval")
+        records.append({
+            "ticker":"1785","fiscal_year":year,
+            "status":"RETROSPECTIVE_BLIND_ORIGINAL_PDF_MODEL_SCORE",
+            "present_fields":12,"missing_fields":[],
+            "supervised_misstatement_score":score_value,
+            "flagged_at_validation_threshold":bool(score_value>=threshold),
+            "financial_document_hash":found[METRICS[0]]["source_pdf_sha256"],
+        })
+    report={
+        "status":"ROUND8_1785_RETROSPECTIVE_INDEPENDENT_CASE_INFERENCE",
+        "model":m["selected_model"],
+        "supervised_training_included_1785":False,
+        "model_selected_without_1785":True,
+        "decision_threshold_from_validation_only":threshold,
+        "classification_score_not_calibrated_historical_fraud_probability":True,
+        "pre_restated_original_pdf_values_only":True,
+        "original_document_first_publication_time_unverified":True,
+        "historical_asof_alert_claim_allowed":False,
+        "source_total_original_double_reviewed_cells":
+            source["observed_original_pdf_amount_cells"],
+        "periods":records,
+    }
+    out.mkdir(parents=True,exist_ok=True)
+    (out/"round8_1785_original_blind_case_scores.json").write_text(
+        json.dumps(report,ensure_ascii=False,indent=2,allow_nan=False)+"\\n",
+        encoding="utf-8")
+    return report
+
 def main(argv=None):
     p=argparse.ArgumentParser()
     sub=p.add_subparsers(dest="mode",required=True)
@@ -405,9 +482,15 @@ def main(argv=None):
     b.add_argument("--approved-panel",required=True)
     b.add_argument("--evidence-root",required=True)
     b.add_argument("--out",required=True)
+    c=sub.add_parser("score-case")
+    c.add_argument("--original-review-db",required=True)
+    c.add_argument("--approved-model-dir",required=True)
+    c.add_argument("--out",required=True)
     args=p.parse_args(argv)
     result=(prepare_labels(args.annual_index,args.out) if args.mode=="prepare"
-            else run(args.approved_panel,args.evidence_root,args.out))
+            else run(args.approved_panel,args.evidence_root,args.out)
+            if args.mode=="train" else
+            score_reserved_1785(args.original_review_db,args.approved_model_dir,args.out))
     print(json.dumps(result,indent=2,ensure_ascii=False))
 if __name__=="__main__":
     main()
