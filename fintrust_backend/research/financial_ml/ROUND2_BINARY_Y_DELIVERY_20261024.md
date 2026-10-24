@@ -77,3 +77,82 @@ Round3 只進行真實年度原始財務 X 欄位取得、數值覆蓋率、
 最後才進行真正的獨立預測與泛化評估。
 如未升級官方 as-filed 及 24 個月觀察期證據，模型只能稱
 retrospective silver-label experiment，不可以稱 24-month early warning。
+
+
+## 2026-10-24 Round 2 擴充：全市場資料與實際資料量稽核
+
+使用者指出原有 **26 筆**遠不足以評估機器學習，因此直接在本 Round 2 分支擴充，不另開 Round。
+
+### 已成功執行的官方公司主檔蒐集
+
+新檔案：
+- `round2_marketwide_universe.py`：抓取、保存 TWSE/TPEX 官方公司主檔原始回應、SHA，統一兩市場不同欄名，結合原 120 家名單及原本已知標籤。
+- `test_financial_ml_round2_marketwide_universe.py`：測試不同市場 schema、重複鍵、CSV 退路、無標籤不能冒充 0、不可宣稱過去上市資格。
+- `.github/workflows/financial-ml-round2-marketwide.yml`：對實際官方來源執行並上傳可下載 CSV/JSON/官方原始回應。
+
+實際 CI：https://github.com/ethankdok/Financial-Risk-Alert-System/actions/runs/40101670495
+
+**實際官方連線成功：**
+- TWSE `https://openapi.twse.com.tw/v1/opendata/t187ap03_L`：**1,091 家**。
+- TPEx `https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O`：**894 家**。
+- 官方目前公司合計 **1,985 家**；保留不在目前名單的既有研究公司，總數 **1,997 家**。
+- FY2013–2023 共 **21,967 個候選公司年度**。
+- 現有 26 筆來源標籤只有 **25 筆落在 FY2013–2023：Y=1 七筆、Y=0 十八筆**；有一筆 6485 FY2024 的 Y=1 位於本次時間範圍之外。
+- 未配對標籤 **21,942 筆**；可證實已取得合格 X+Y 的資料 **0 筆**。
+
+**嚴重品質限制：** 21,967 只是現在公司名單與年度的笛卡兒積，再加歷史案例。它們未必當年已上市，可能包含尚未掛牌的年度；不含所有過去已下市公司。沒有官方完整事件檢索就不能轉成大量 Y=0。這個結果不能報告成幾萬筆機器學習訓練集。
+
+### MOPS 歷史事件批次查詢實測
+
+新增 `round2_mops_keyword_discovery.py` 及單元測試，使用舊式公開歷史主旨查詢 `ajax_t51sb10`，**限定 113/114 年兩個年度、兩個關鍵字，四次請求**，保存回應 SHA 與狀態，不繞過驗證碼、不不斷重試。GitHub Actions：https://github.com/ethankdok/Financial-Risk-Alert-System/actions/runs/40101817264
+
+結果：**4/4 回應都不是可解析的公告表格（每份約 800 bytes）**，
+結果為 `NO_DOCUMENT_TABLE_NOT_COVERED`，**新增可核准 0/1 = 0**。
+這代表此環境下這條舊版查詢路線不可用，不能以空結果宣稱「未發現重編」。
+不要反覆執行同一舊式 endpoint。
+
+### 可擴大的歷史事件來源與匯入工具
+
+為了避免只靠逐家新聞查詢，新增 `round2_bulk_outcome_adapter.py` 和測試：
+- 接受獨立取得的歷史公司年度事件 CSV；
+- 嚴格要求合併年度報表、first_filed_at、事件日期、24 月完整追蹤截止、來源雜湊、正負明確標示；
+- 事件在首次申報後 24 月內才可列 Y=1；沒有事件但完整 24 月來源涵蓋才可列 Y=0；
+- 同公司年度重複、早於首次申報／晚於窗口事件、不完整負例、保留 1785 或無來源者拒絕；
+- 匯入結果標為 `SOURCE_REPORTED_NEEDS_INDEPENDENT_AUDIT`，**不會憑 CSV 內容自稱已做過獨立官方驗證**。
+- 此 adapter 的單元測試為合成資料，**目前沒有額外的真實大規模匯入檔，也沒有新增真的 Y**。
+
+有研究價值但**須另行取得權限或匯出來源檔**的兩條路：
+1. **TEJ TT2 上市櫃公司重編財報資料（1990 年起）**；若學校訂閱，可取得系統化的重編事件名單與年度，適合補足不同年代及下市公司，仍須核對標註定義、首次申報與事件時間。
+2. **FinLab 重大訊息資料庫（2006 年起，>百萬筆公告）**；免費歷史資料範圍以服務條款及實際帳號權限為準，全文篩選後仍需確認受影響財報年度與更正性質。
+資料庫網頁資訊不是資料本體，**不能宣稱我們已經下載或完成標記**。
+
+### 擴充版目前驗收結論
+
+官方現行公司名錄資料管線與來源驗證 **PASS**；
+既有 silver numeric Y **26 筆**仍然有效地獨立保存。
+**大型正式標註資料集尚未完成**，阻礙是真正的全市場歷史更補正事件資料，
+不是再換一種分類器就能解決的問題。
+
+下一步若要達成使用者要求的數千公司年度、上百正例，必須
+**先取得可用的完整歷史事件原始批次資料**（TEJ TT2、合法匯出的公告歷史或可用的新版 MOPS 官方批次功能），
+再以 bulk adapter＋原始申報歷史建立同定義標籤。
+絕不能將 21,942 個未知年度直接轉成 Y=0。
+
+### 擴充版執行
+
+在 `fintrust_backend`：
+
+```powershell
+python -m unittest discover -s tests -p "test_financial_ml_round2_marketwide_universe.py" -v
+python -m unittest discover -s tests -p "test_financial_ml_round2_mops_keyword_discovery.py" -v
+python -m unittest discover -s tests -p "test_financial_ml_round2_bulk_outcome_adapter.py" -v
+python -m research.financial_ml.round2_marketwide_universe --out data/financial_ml/round2_marketwide
+```
+
+批次歷史事件 CSV 若由可信來源實際取得後：
+
+```powershell
+python -m research.financial_ml.round2_bulk_outcome_adapter --input-csv <PATH_TO_REAL_HISTORICAL_CSV> --out data/financial_ml/round2_bulk
+```
+
+不得把 synthetic test fixture 送進正式訓練。
