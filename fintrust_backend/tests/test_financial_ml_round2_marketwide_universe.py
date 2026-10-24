@@ -80,7 +80,7 @@ class MarketwideTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not_an_array"):
             parse_official(b'{"status":"blocked"}', "TWSE")
         with self.assertRaisesRegex(ValueError, "too_small"):
-            parse_official(b'[{"公司代號":"2330","公司簡稱":"TSMC"}]', "TWSE")
+            parse_official('[{"公司代號":"2330","公司簡稱":"TSMC"}]'.encode("utf-8"), "TWSE")
         with self.assertRaisesRegex(ValueError, "duplicate"):
             parse_official(json.dumps([listed("1101")] * 12).encode(), "TWSE")
         with self.assertRaisesRegex(ValueError, "unapproved"):
