@@ -130,7 +130,7 @@ def make_labels(evidence, events, periods):
                         or case["negative_window_complete"] is not False
                         or case["review_asof"] != "2026-10-24"):
                     raise ValueError("round2_negative_snapshot_is_not_eligible")
-                if not url.endswith(f"/stock/{ticker}/filings"):
+                if url != f"https://toalpha.tw/stock/{ticker}/filings":
                     raise ValueError("round2_negative_source_identity_mismatch")
                 if any(p["ticker"] == ticker and int(p["fiscal_year"]) == year
                        and p["annual_target_candidate"] == "true"
