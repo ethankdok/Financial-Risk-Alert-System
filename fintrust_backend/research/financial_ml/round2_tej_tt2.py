@@ -185,7 +185,11 @@ def plus24(d):
 
 def scope_ok(x):
     s = x.strip().upper()
-    return s in ("3", "合併", "合併財報", "合併報表", "CONSOLIDATED")
+    if s in ("3", "合併", "合併財報", "合併報表", "CONSOLIDATED"):
+        return True
+    if s in ("1", "2", "個別", "個體", "非合併", "STANDALONE", "INDIVIDUAL"):
+        return False
+    raise ValueError("tej_unknown_report_scope")
 
 
 def nonzero_adjustment(row, cols):
@@ -201,9 +205,11 @@ def nonzero_adjustment(row, cols):
             amounts.append(Decimal(s))
         except InvalidOperation as exc:
             raise ValueError("tej_invalid_adjustment_number:" + name) from exc
-    if not amounts:
-        return ""  # no defensible core-amount label
-    return "1" if any(x != 0 for x in amounts) else "0"
+    if any(x != 0 for x in amounts):
+        return "1"
+    # All five financial deltas must be present before declaring "no
+    # core amount changed"; one available zero does not prove the rest.
+    return "0" if len(amounts) == 5 else ""
 
 
 def coverage_manifest(blob, tt2_sha, universe_sha):
@@ -240,7 +246,7 @@ def materialize(tt2_csv, universe_csv, coverage_json, out, *, mapping_json=None)
     coverage_raw = Path(coverage_json).read_bytes()
     coverage_through, covered_fy, coverage_meta = coverage_manifest(
         coverage_raw, tt2_sha, universe_sha)
-    excludes, events, annual = [], [], {}
+    excludes, events, annual, unresolved_keys = [], [], {}, set()
     for i, r in enumerate(tt2_rows, 2):
         if not any((v or "").strip() for v in r.values()):
             continue
@@ -256,6 +262,8 @@ def materialize(tt2_csv, universe_csv, coverage_json, out, *, mapping_json=None)
             event_date = parse_date(get(r, tmap, "event_date"))
             if event_date > AS_OF:
                 raise ValueError("tej_future_event_date")
+            if event_date > coverage_through:
+                raise ValueError("tej_event_after_declared_coverage_end")
             core = nonzero_adjustment(r, tmap)
             events.append({
                 "ticker": ticker, "fiscal_year": str(fy),
@@ -267,6 +275,19 @@ def materialize(tt2_csv, universe_csv, coverage_json, out, *, mapping_json=None)
                 "scope": "consolidated", "source_sha256": tt2_sha,
             })
         except (ValueError, TypeError) as exc:
+            # Malformed annual TT2 events can never become false "clean"
+            # company-years merely because this import could not parse them.
+            # Known non-consolidated events and out-of-scope dates are exempt.
+            reason = str(exc)
+            if reason not in ("tej_not_consolidated", "tej_outside_annual_scope",
+                              "tej_reserved_final_holdout"):
+                try:
+                    maybe_ticker = company_id(get(r, tmap, "company"))
+                    maybe_fy, _ = period_year_month(get(r, tmap, "period"))
+                    if maybe_fy in covered_fy:
+                        unresolved_keys.add((maybe_ticker, maybe_fy))
+                except ValueError:
+                    pass
             excludes.append({"dataset": "tt2", "source_row": str(i),
                              "ticker": str(r.get(tmap.get("company", ""), "")),
                              "fiscal_year": str(r.get(tmap.get("period", ""), "")),
@@ -318,6 +339,7 @@ def materialize(tt2_csv, universe_csv, coverage_json, out, *, mapping_json=None)
         end = plus24(first)
         eligible = end <= coverage_through
         candidates = keyed_events.get((ticker, fy), [])
+        unresolved = (ticker, fy) in unresolved_keys
         within = [e for e in candidates if first < parse_date(e["event_date"]) <= end]
         if any(parse_date(e["event_date"]) <= first for e in candidates):
             excludes.append({"dataset": "label", "source_row": "",
@@ -325,8 +347,9 @@ def materialize(tt2_csv, universe_csv, coverage_json, out, *, mapping_json=None)
                              "reason": "tej_event_precedes_first_publication"})
             continue
         # Missing complete follow-up means neither class can be assigned.
-        y = "1" if within else "0" if eligible else ""
-        core = ("1" if any(e["core_change"] == "1" for e in within) else
+        y = "" if unresolved else "1" if within else "0" if eligible else ""
+        core = ("" if unresolved else
+                "1" if any(e["core_change"] == "1" for e in within) else
                 "0" if eligible and all(e["core_change"] == "0" for e in within) else
                 "0" if eligible and not within else "")
         # A TT2 broad event without financial-delta coverage is NOT a core=0.
@@ -338,7 +361,9 @@ def materialize(tt2_csv, universe_csv, coverage_json, out, *, mapping_json=None)
             "y_core_adjustment_24m": core,
             "last_tt2_event_date": max((e["event_date"] for e in within), default=""),
             "matching_tt2_event_count": str(len(within)),
-            "label_grade": "SOURCE_CONDITIONAL_WITH_MANIFEST" if eligible else "CENSORED",
+            "label_grade": ("BLOCKED_UNPARSEABLE_TT2_EVENT" if unresolved else
+                            "SOURCE_CONDITIONAL_WITH_MANIFEST" if eligible else
+                            "OBSERVED_POSITIVE_IN_OPEN_WINDOW" if within else "CENSORED"),
             "target": TT2_EVENT_TARGET,
             "source_tt2_sha256": tt2_sha, "source_universe_sha256": universe_sha,
             "source_coverage_sha256": h(coverage_raw),
@@ -366,6 +391,9 @@ def materialize(tt2_csv, universe_csv, coverage_json, out, *, mapping_json=None)
         "core_amount_y_0": core_counts["0"],
         "core_amount_unlabeled": core_counts[""],
         "excluded_rows": len(excludes),
+        "blocked_issuer_years_due_to_unparseable_events": len(unresolved_keys & set(annual)),
+        "orphan_tt2_event_issuer_years_not_in_universe": len(
+            set(keyed_events) - set(annual)),
         "excluded_reasons": dict(Counter(e["reason"] for e in excludes)),
         "source_sha256": {"tt2": tt2_sha, "annual_universe": universe_sha,
                           "coverage_manifest": h(coverage_raw)},
