@@ -223,6 +223,10 @@ def run(out, *, offline_paths=None):
     immutable_write(out / "round2_market_company_roster.csv", company_blob)
     immutable_write(out / "round2_market_issuer_year_candidates.csv", panel_blob)
     counts = Counter(x["y"] for x in panel)
+    covered = {(x["ticker"], int(x["fiscal_year"])) for x in panel}
+    outside = [r for r in labels if (r["ticker"], int(r["fiscal_year"])) not in covered]
+    if len(outside) != 1 or (outside[0]["ticker"], outside[0]["fiscal_year"], outside[0]["y"]) != ("6485", "2024", "1"):
+        raise ValueError("unexpected_label_missing_from_period_grid")
     report = {
         "schema": "fintrust_round2_marketwide_v1",
         "as_of": "2026-10-24",
@@ -232,6 +236,12 @@ def run(out, *, offline_paths=None):
         "issuer_rows_total_including_historical_seeds": len(companies),
         "candidate_issuer_year_positions": len(panel),
         "actual_binary_y_1": counts["1"],
+        "source_silver_labels_total": len(labels),
+        "source_y_1_including_out_of_scope": sum(r["y"] == "1" for r in labels),
+        "out_of_scope_existing_silver_labels": [
+            {"ticker": r["ticker"], "fiscal_year": r["fiscal_year"], "y": r["y"]}
+            for r in outside
+        ],
         "actual_binary_y_0": counts["0"],
         "not_yet_labeled": counts[""],
         "model_eligible_x_y_pairs": 0,
