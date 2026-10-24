@@ -35,8 +35,8 @@ class Round2BinaryTests(unittest.TestCase):
     def test_real_numeric_classes_and_no_duplicate_pairs(self):
         report, rows, followups = self._case()
         self.assertEqual((report["rows_numeric_y"], report["y_1"], report["y_0"]),
-                         (16, 8, 8))
-        self.assertEqual(len({(r["ticker"], r["fiscal_year"]) for r in rows}), 16)
+                         (26, 8, 18))
+        self.assertEqual(len({(r["ticker"], r["fiscal_year"]) for r in rows}), 26)
         self.assertEqual(set(r["y"] for r in rows), {"0", "1"})
         self.assertTrue(all(r["strict_24m_y"] == "" for r in rows))
         self.assertTrue(all(r["original_xbrl_first_filing_verified"] == "false"
@@ -62,7 +62,7 @@ class Round2BinaryTests(unittest.TestCase):
         report, rows, _ = self._case()
         neg = [r for r in rows if r["y"] == "0"]
         self.assertEqual({r["ticker"] for r in neg},
-                         {"2330", "2454", "2317", "6488"})
+                         {"2330", "2454", "2317", "6488", "2303", "3034", "3711", "3008", "2603"})
         self.assertEqual({r["fiscal_year"] for r in neg}, {"2022", "2023"})
         self.assertTrue(all(r["evidence_grade"].startswith("SILVER_THIRD_PARTY")
                             and r["negative_window_complete"] == "false"
