@@ -164,16 +164,16 @@ def period_year_month(x):
 
 
 def parse_date(x):
-    s = x.strip().replace("/", "-")
+    s = x.strip().replace("/", "-").replace(".", "-")
     if not s:
         raise ValueError("tej_required_date_missing")
     if re.fullmatch(r"\d{8}", s):
         return date.fromisoformat(s[:4] + "-" + s[4:6] + "-" + s[6:])
     if re.fullmatch(r"\d{7}", s):  # ROC yyyMMdd
         return date(int(s[:3]) + 1911, int(s[3:5]), int(s[5:]))
-    if re.fullmatch(r"\d{3}-\d{1,2}-\d{1,2}", s):
+    if re.fullmatch(r"\d{3,4}-\d{1,2}-\d{1,2}", s):
         y, m, d = map(int, s.split("-"))
-        return date(y + 1911, m, d)
+        return date(y + 1911 if y < 1911 else y, m, d)
     return date.fromisoformat(s)
 
 
@@ -392,6 +392,30 @@ def materialize(tt2_csv, universe_csv, coverage_json, out, *, mapping_json=None)
     return report
 
 
+def prepare_coverage_template(tt2_csv, universe_csv, out):
+    """Create an unapproved local coverage manifest with actual file hashes."""
+    tt2_raw, tt2_names, _ = load_csv(tt2_csv)
+    univ_raw, univ_names, _ = load_csv(universe_csv)
+    record = {
+        "schema_version": "fintrust_tej_tt2_coverage_v1",
+        "tt2_export_sha256": h(tt2_raw),
+        "universe_export_sha256": h(univ_raw),
+        "closed_event_census_for_exported_universe": False,
+        "includes_historical_delisted_firms": False,
+        "issuer_and_year_filters_match": False,
+        "tt2_event_coverage_through": "",
+        "covered_fiscal_years": [],
+        "review_required": "Verify licensed coverage, historic/delisted firms, fiscal filters, event dates and observation window before setting these fields.",
+        "tt2_input_headers": tt2_names,
+        "universe_input_headers": univ_names,
+    }
+    immutable(Path(out) / "round2_tej_coverage_REVIEW_REQUIRED.json", json_blob(record))
+    return {"status": "UNAPPROVED_COVERAGE_TEMPLATE",
+            "file": "round2_tej_coverage_REVIEW_REQUIRED.json",
+            "tt2_export_sha256": h(tt2_raw), "universe_export_sha256": h(univ_raw),
+            "not_training_ready": True}
+
+
 def preflight(out):
     report = {
         "schema": "fintrust_round2_tej_tt2_v1",
@@ -418,10 +442,13 @@ def main(argv=None):
     p.add_argument("--coverage-json")
     p.add_argument("--column-map")
     p.add_argument("--preflight", action="store_true")
+    p.add_argument("--prepare-coverage", action="store_true")
     p.add_argument("--out", required=True)
     args = p.parse_args(argv)
     if args.preflight:
         result = preflight(args.out)
+    elif args.prepare_coverage and args.tt2_csv and args.universe_csv:
+        result = prepare_coverage_template(args.tt2_csv, args.universe_csv, args.out)
     elif args.tt2_csv and args.universe_csv and args.coverage_json:
         result = materialize(args.tt2_csv, args.universe_csv,
                              args.coverage_json, args.out,
