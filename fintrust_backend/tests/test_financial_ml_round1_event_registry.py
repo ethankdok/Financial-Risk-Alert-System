@@ -31,9 +31,9 @@ class Round1EventRegistryTests(unittest.TestCase):
 
     def test_real_source_counts_and_unique_event_keys(self):
         report, rows, links = self._load()
-        self.assertEqual(report["input_record_count"], 22)
-        self.assertEqual(report["unique_notices"], 20)
-        self.assertEqual(report["unique_issuers"], 19)
+        self.assertEqual(report["input_record_count"], 26)
+        self.assertEqual(report["unique_notices"], 24)
+        self.assertEqual(report["unique_issuers"], 23)
         self.assertEqual(len({r["event_id"] for r in rows}), len(rows))
         self.assertEqual(len(links), report["event_year_or_quarter_links"])
         self.assertEqual(report["positive_training_labels_issued"], 0)
@@ -74,6 +74,11 @@ class Round1EventRegistryTests(unittest.TestCase):
                              if r["ticker"] in ("5210", "8487")))
         self.assertIn("2022Q3", {r["period"] for r in links
                                 if r["ticker"] == "8487"})
+        self.assertEqual(next(r for r in rows if r["ticker"] == "6918")["annual_years"], "2023")
+        self.assertEqual(next(r for r in rows if r["ticker"] == "3432")["annual_years"], "2022;2023")
+        self.assertEqual(next(r for r in rows if r["ticker"] == "7547")["annual_years"], "2021;2022;2023")
+        self.assertEqual(next(r for r in rows if r["ticker"] == "1806")["event_family"],
+                         "RESTATEMENT_ORDER_OR_EXTENSION")
 
     def test_no_mutations_and_idempotent_run(self):
         report, _, _ = self._load()
