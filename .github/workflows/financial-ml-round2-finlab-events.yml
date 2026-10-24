@@ -18,6 +18,8 @@ on:
       - 'fintrust_backend/tests/test_financial_ml_round2_label_cohorts.py'
       - 'fintrust_backend/research/financial_ml/round2_official_review_sprint.py'
       - 'fintrust_backend/tests/test_financial_ml_round2_official_review_sprint.py'
+      - 'fintrust_backend/research/financial_ml/round2_phase1_official_source_audit.py'
+      - 'fintrust_backend/tests/test_financial_ml_round2_phase1_source_audit.py'
   workflow_dispatch:
 
 permissions:
@@ -46,8 +48,10 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_financial_ml_round2_label_cohorts.py' -v
       - name: Verify official Y1 review sprint never assigns missing negatives
         run: python -m unittest discover -s tests -p 'test_financial_ml_round2_official_review_sprint.py' -v
-      - name: Compile six source-safe offline pipelines
-        run: python -m py_compile research/financial_ml/round2_finlab_events.py research/financial_ml/round2_finlab_evidence.py research/financial_ml/round2_finlab_review_gate.py research/financial_ml/round2_tej_transparency.py research/financial_ml/round2_label_cohorts.py research/financial_ml/round2_official_review_sprint.py
+      - name: Verify Phase1 exact notice matching and no premature official labels
+        run: python -m unittest discover -s tests -p 'test_financial_ml_round2_phase1_source_audit.py' -v
+      - name: Compile seven source-safe offline pipelines
+        run: python -m py_compile research/financial_ml/round2_finlab_events.py research/financial_ml/round2_finlab_evidence.py research/financial_ml/round2_finlab_review_gate.py research/financial_ml/round2_tej_transparency.py research/financial_ml/round2_label_cohorts.py research/financial_ml/round2_official_review_sprint.py research/financial_ml/round2_phase1_official_source_audit.py
       - name: Confirm no FinLab licensed announcement export in public repository
         run: |
           python -c "from pathlib import Path; assert not list(Path('data/financial_ml').glob('finlab_restatement_candidates.csv')) if Path('data/financial_ml').exists() else True; print('Only code and synthetic tests included; no licensed announcement payload')"
