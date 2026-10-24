@@ -8,6 +8,8 @@ on:
       - '.github/workflows/financial-ml-round2-finlab-events.yml'
       - 'fintrust_backend/research/financial_ml/round2_finlab_events.py'
       - 'fintrust_backend/tests/test_financial_ml_round2_finlab_events.py'
+      - 'fintrust_backend/research/financial_ml/round2_finlab_evidence.py'
+      - 'fintrust_backend/tests/test_financial_ml_round2_finlab_evidence.py'
   workflow_dispatch:
 
 permissions:
@@ -26,8 +28,10 @@ jobs:
           python-version: '3.11'
       - name: Validate fiscal-year extraction, classification, no false Y, hash and idempotence
         run: python -m unittest discover -s tests -p 'test_financial_ml_round2_finlab_events.py' -v
-      - name: Compile offline importer
-        run: python -m py_compile research/financial_ml/round2_finlab_events.py
+      - name: Validate FinLab evidence and issuer-year case ledger on synthetic fixtures
+        run: python -m unittest discover -s tests -p 'test_financial_ml_round2_finlab_evidence.py' -v
+      - name: Compile both offline pipelines
+        run: python -m py_compile research/financial_ml/round2_finlab_events.py research/financial_ml/round2_finlab_evidence.py
       - name: Confirm no FinLab licensed announcement export in public repository
         run: |
           python -c "from pathlib import Path; assert not list(Path('data/financial_ml').glob('finlab_restatement_candidates.csv')) if Path('data/financial_ml').exists() else True; print('Only code and synthetic tests included; no licensed announcement payload')"
