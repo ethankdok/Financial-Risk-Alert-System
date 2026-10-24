@@ -156,3 +156,27 @@ python -m research.financial_ml.round2_bulk_outcome_adapter --input-csv <PATH_TO
 ```
 
 不得把 synthetic test fixture 送進正式訓練。
+
+
+## 使用者指定 TEJ TT2 後的最終 Round 2 開發（同一 Round，2026-10-24）
+
+選定 TEJ TT2 為正式歷史重編來源。已新增
+`round2_tej_tt2.py`、
+`test_financial_ml_round2_tej_tt2.py`、
+`.github/workflows/financial-ml-round2-tej-tt2.yml`。
+提供 TT2 實際 CSV 匯入、完整年度母體配對、24 個月事件標籤、核心金額調整子目標、
+重複事件消除、錯誤事件不得誤推成負標籤、來源 SHA、不覆蓋輸出、保留光洋科、
+來源授權與完整涵蓋範圍驗證。已有全套 CI 測試。
+
+**完整 TEJ Pro 匯出、欄位、授權限制與執行方式：**
+`ROUND2_TEJ_TT2_HANDOFF_20261024.md`。
+
+真實數據狀態需分開看：
+- **0 筆**：目前真正從受授權 TEJ TT2 匯入的事件與 0／1。
+- **26 筆**：原本其他來源建立的 silver 研究 0／1，非 TEJ TT2。
+- **21,967 格**：上市／上櫃名錄的 2013–2023 候選位置，非 X+Y。
+
+TT2 讀取權與年度公司母體授權原始 CSV 未在當前 GitHub／會話提供，
+因此 **TEJ 正式大規模資料驗收尚未完成**。程式及測試驗收成功，不代表
+使用者要求的 TEJ TT2 實際資料量目標完成。不得自行填造授權資料、
+使用後見財報數字當成早期 X，或將 TT2 重編等同司法確認舞弊。
