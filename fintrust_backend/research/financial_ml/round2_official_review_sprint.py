@@ -104,6 +104,8 @@ def build(finlab_tej_cases,tej_year_csv,out,controls_per_fy=20):
         finlab_pairs.add(pair)
         if c["training_y"].strip():
             raise ValueError("refuse_mixed_training_y")
+        if ticker=="1785" or c.get("holdout","").lower()=="true":
+            continue  # Reserved independent historical case, not review sampling pool.
         if c["rank"] not in ("P0","P1"):
             continue
         tej=int(float(c.get("tej_notice_year_max_count") or 0))>0
