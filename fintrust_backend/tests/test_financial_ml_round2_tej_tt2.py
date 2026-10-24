@@ -128,6 +128,44 @@ class TT2AdapterTests(unittest.TestCase):
         self.assertEqual(r["core_amount_y_1"],0)
         self.assertEqual(r["core_amount_unlabeled"],2) # sparse positive + censored
 
+    def test_invalid_tt2_date_blocks_zero_even_when_other_event_row_valid(self):
+        # One bad event date must never be misread as "no restatement".
+        self.events[0]["重編事件日"] = "INVALID"
+        save_csv(self.tt2, ["公司","年/月","重編事件日","財報類別","重編原因",
+                            "營業收入_調整金額","稅後淨利_調整金額"], self.events)
+        self.coverage_data["tt2_export_sha256"] = hashlib.sha256(self.tt2.read_bytes()).hexdigest()
+        self.write_coverage()
+        r = materialize(self.tt2, self.universe, self.coverage, self.base / "blocked")
+        self.assertEqual(r["blocked_issuer_years_due_to_unparseable_events"], 1)
+        with (self.base / "blocked" / "round2_tej_issuer_year_labels.csv").open(encoding="utf-8") as f:
+            rows = {(x["ticker"], x["fiscal_year"]): x for x in csv.DictReader(f)}
+        self.assertEqual(rows["2330", "2020"]["y_tej_restatement_24m"], "")
+        self.assertEqual(rows["2330", "2020"]["label_grade"], "BLOCKED_UNPARSEABLE_TT2_EVENT")
+
+    def test_partial_core_zero_not_all_five_zero(self):
+        for row in self.events:
+            row["營業收入_調整金額"] = "0"
+            row["稅後淨利_調整金額"] = ""
+        save_csv(self.tt2, ["公司","年/月","重編事件日","財報類別","重編原因",
+                            "營業收入_調整金額","稅後淨利_調整金額"], self.events)
+        self.coverage_data["tt2_export_sha256"] = hashlib.sha256(self.tt2.read_bytes()).hexdigest()
+        self.write_coverage()
+        r = materialize(self.tt2, self.universe, self.coverage, self.base / "partial")
+        self.assertEqual(r["tej_restatement_y_1"], 1)
+        self.assertEqual(r["core_amount_y_1"], 0)
+        self.assertEqual(r["core_amount_unlabeled"], 2)
+
+    def test_coverage_template_is_unapproved_by_default(self):
+        from research.financial_ml.round2_tej_tt2 import prepare_coverage_template
+        r = prepare_coverage_template(self.tt2, self.universe, self.base / "template")
+        self.assertTrue(r["not_training_ready"])
+        d = json.loads((self.base / "template" /
+                        "round2_tej_coverage_REVIEW_REQUIRED.json").read_text(encoding="utf-8"))
+        self.assertFalse(d["closed_event_census_for_exported_universe"])
+        self.assertFalse(d["includes_historical_delisted_firms"])
+        self.assertEqual(d["covered_fiscal_years"], [])
+        self.assertEqual(d["tt2_export_sha256"], hashlib.sha256(self.tt2.read_bytes()).hexdigest())
+
     def test_invalid_company_scope_period_roc_and_date(self):
         self.assertEqual(company_id("1101 台泥"),"1101")
         self.assertEqual(period_year_month("11212"),(2023,12))
