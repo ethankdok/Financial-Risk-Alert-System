@@ -99,6 +99,7 @@ class Round2BinaryTests(unittest.TestCase):
             make_labels(altered, events, periods)
         altered = deepcopy(evidence)
         altered["negatives"][0]["ticker"] = "6485"
+        altered["negatives"][0]["fiscal_year"] = 2023
         with self.assertRaisesRegex(ValueError, "duplicate_or_conflicting_y"):
             make_labels(altered, events, periods)
         altered = deepcopy(evidence)
