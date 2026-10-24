@@ -1,0 +1,19 @@
+{
+  "schema_version": "fintrust_round1_supplement_v1",
+  "as_of": "2026-10-24",
+  "description": "Small supplementary source leads not found in frozen Round9/10 case files; not a source of approved fiscal-year labels.",
+  "events": [
+    {
+      "id": "M01",
+      "ticker": "5210",
+      "company": "寶碩財務科技",
+      "notice_date": "2026-10-21",
+      "candidate_fiscal_years": [
+        2021
+      ],
+      "source_url": "https://udn.com/news/story/7321/9827567",
+      "issuer_statement_url": "https://www.apex.com.tw/",
+      "description": "2026-10-21 media reports prosecutors investigating alleged false transactions concerning a 2021-era solar business; the company released a statement about the former management case. No verified financial-statement restatement or corresponding affected FY annual figures are established. Investigation allegation only; do not assign financial-restatement Y=1."
+    }
+  ]
+}
