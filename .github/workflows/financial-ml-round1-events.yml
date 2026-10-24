@@ -1,0 +1,42 @@
+name: FinTrust ML Round1 Event Registry
+
+on:
+  push:
+    branches:
+      - feature/financial-ml-round1-event-registry-20261024
+    paths:
+      - '.github/workflows/financial-ml-round1-events.yml'
+      - 'fintrust_backend/research/financial_ml/round1_event_registry.py'
+      - 'fintrust_backend/research/financial_ml/round1_current_event_supplement_20261024.json'
+      - 'fintrust_backend/research/financial_ml/round9_official_case_source_leads.json'
+      - 'fintrust_backend/research/financial_ml/round10_user_cohort_20261020_disclosure_leads.json'
+      - 'fintrust_backend/research/financial_ml/FY1315_EXTERNAL_OFFICIAL_RESTATEMENT_LEADS_NOT_IN_COHORT.json'
+      - 'fintrust_backend/tests/test_financial_ml_round1_event_registry.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  round1-offline-real-event-registry:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fintrust_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate real event sources, links, dedup, holdout, immutability
+        run: python -m unittest discover -s tests -p 'test_financial_ml_round1_event_registry.py' -v
+      - name: Build immutable Round1 registry from repository-backed event leads
+        run: python -m research.financial_ml.round1_event_registry --out data/financial_ml/round1_events
+      - name: Confirm manifest and source provenance
+        run: |
+          python -c "import json,pathlib; p=pathlib.Path('data/financial_ml/round1_events/round1_event_registry_report.json'); r=json.loads(p.read_text()); assert (r['input_record_count'],r['unique_notices'],r['unique_issuers'])==(22,20,19); assert r['official_full_market_census_completed'] is False and r['positive_training_labels_issued']==0; print('Round1 real-source registry validated')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fintrust-round1-event-registry
+          path: fintrust_backend/data/financial_ml/round1_events/
+          if-no-files-found: error
