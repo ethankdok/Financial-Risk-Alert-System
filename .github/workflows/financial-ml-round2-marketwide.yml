@@ -31,7 +31,7 @@ jobs:
         run: python -m research.financial_ml.round2_marketwide_universe --out data/financial_ml/round2_marketwide
       - name: Verify provenance and genuine Y counts
         run: |
-          python -c "import json,pathlib; p=pathlib.Path('data/financial_ml/round2_marketwide/round2_marketwide_report.json'); r=json.loads(p.read_text()); assert r['actual_binary_y_1']==8 and r['actual_binary_y_0']==18; assert r['model_eligible_x_y_pairs']==0; assert r['candidate_issuer_year_positions']==r['issuer_rows_total_including_historical_seeds']*11; print('Verified actual Y 8/18 distinct from candidate grid', r['sources'])"
+          python -c "import json,pathlib; p=pathlib.Path('data/financial_ml/round2_marketwide/round2_marketwide_report.json'); r=json.loads(p.read_text()); assert r['actual_binary_y_1']==7 and r['actual_binary_y_0']==18 and r['source_y_1_including_out_of_scope']==8 and r['source_silver_labels_total']==26; assert r['model_eligible_x_y_pairs']==0; assert r['candidate_issuer_year_positions']==r['issuer_rows_total_including_historical_seeds']*11; print('Verified in-range Y 7/18 and FY2024 Y=1 excluded from 2013-23 candidate grid', r['sources'])"
       - uses: actions/upload-artifact@v4
         with:
           name: fintrust-round2-marketwide-universe
