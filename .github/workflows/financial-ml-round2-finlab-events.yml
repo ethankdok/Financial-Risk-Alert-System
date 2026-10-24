@@ -14,6 +14,8 @@ on:
       - 'fintrust_backend/tests/test_financial_ml_round2_finlab_review_gate.py'
       - 'fintrust_backend/research/financial_ml/round2_tej_transparency.py'
       - 'fintrust_backend/tests/test_financial_ml_round2_tej_transparency.py'
+      - 'fintrust_backend/research/financial_ml/round2_label_cohorts.py'
+      - 'fintrust_backend/tests/test_financial_ml_round2_label_cohorts.py'
   workflow_dispatch:
 
 permissions:
@@ -38,8 +40,10 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_financial_ml_round2_finlab_review_gate.py' -v
       - name: Validate TEJ calendar-year transparency and FinLab integration on fabricated XLSX
         run: python -m unittest discover -s tests -p 'test_financial_ml_round2_tej_transparency.py' -v
-      - name: Compile four source-safe offline pipelines
-        run: python -m py_compile research/financial_ml/round2_finlab_events.py research/financial_ml/round2_finlab_evidence.py research/financial_ml/round2_finlab_review_gate.py research/financial_ml/round2_tej_transparency.py
+      - name: Validate TEJ proxy cohorts independently from official Y
+        run: python -m unittest discover -s tests -p 'test_financial_ml_round2_label_cohorts.py' -v
+      - name: Compile five source-safe offline pipelines
+        run: python -m py_compile research/financial_ml/round2_finlab_events.py research/financial_ml/round2_finlab_evidence.py research/financial_ml/round2_finlab_review_gate.py research/financial_ml/round2_tej_transparency.py research/financial_ml/round2_label_cohorts.py
       - name: Confirm no FinLab licensed announcement export in public repository
         run: |
           python -c "from pathlib import Path; assert not list(Path('data/financial_ml').glob('finlab_restatement_candidates.csv')) if Path('data/financial_ml').exists() else True; print('Only code and synthetic tests included; no licensed announcement payload')"
