@@ -225,8 +225,8 @@ def run(out, *, offline_paths=None):
     counts = Counter(x["y"] for x in panel)
     covered = {(x["ticker"], int(x["fiscal_year"])) for x in panel}
     outside = [r for r in labels if (r["ticker"], int(r["fiscal_year"])) not in covered]
-    if len(outside) != 1 or (outside[0]["ticker"], outside[0]["fiscal_year"], outside[0]["y"]) != ("6485", "2024", "1"):
-        raise ValueError("unexpected_label_missing_from_period_grid")
+    if any(int(r["fiscal_year"]) in YEARS for r in outside):
+        raise ValueError("in_scope_label_missing_from_period_grid")
     report = {
         "schema": "fintrust_round2_marketwide_v1",
         "as_of": "2026-10-24",
