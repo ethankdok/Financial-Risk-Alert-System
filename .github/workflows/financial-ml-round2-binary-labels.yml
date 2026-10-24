@@ -1,0 +1,48 @@
+name: FinTrust ML Round2 Binary Research Labels
+
+on:
+  push:
+    branches:
+      - feature/financial-ml-round2-binary-labels-20261024
+    paths:
+      - '.github/workflows/financial-ml-round2-binary-labels.yml'
+      - 'fintrust_backend/research/financial_ml/round1_event_registry.py'
+      - 'fintrust_backend/research/financial_ml/round1_current_event_supplement_20261024.json'
+      - 'fintrust_backend/research/financial_ml/round2_binary_labels.py'
+      - 'fintrust_backend/research/financial_ml/round2_reviewed_binary_evidence_20261024.json'
+      - 'fintrust_backend/research/financial_ml/round9_official_case_source_leads.json'
+      - 'fintrust_backend/research/financial_ml/round10_user_cohort_20261020_disclosure_leads.json'
+      - 'fintrust_backend/research/financial_ml/FY1315_EXTERNAL_OFFICIAL_RESTATEMENT_LEADS_NOT_IN_COHORT.json'
+      - 'fintrust_backend/tests/test_financial_ml_round2_binary_labels.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  round2:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fintrust_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test issuer-year factual labels and defense against leakage
+        run: python -m unittest discover -s tests -p 'test_financial_ml_round2_binary_labels.py' -v
+      - name: Rebuild real-source Round2 label CSV and report
+        run: python -m research.financial_ml.round2_binary_labels --out data/financial_ml/round2_labels
+      - name: Verify two numeric classes and explicit silver evidence grades
+        run: |
+          python -c "import json,pathlib; r=json.loads(pathlib.Path('data/financial_ml/round2_labels/round2_binary_label_report.json').read_text()); assert (r['rows_numeric_y'],r['y_1'],r['y_0'])==(16,8,8); assert r['only_silver_labels'] and r['strict_24m_evaluable_rows']==0 and not r['has_numeric_financial_x']; print('Round2 real 0/1 Y generated, not mislabeled as fraud or 24m gold')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fintrust-round2-binary-evidence-labels
+          path: |
+            fintrust_backend/data/financial_ml/round2_labels/round2_binary_research_labels.csv
+            fintrust_backend/data/financial_ml/round2_labels/round2_targeted_followup_queue.csv
+            fintrust_backend/data/financial_ml/round2_labels/round2_binary_label_report.json
+            fintrust_backend/data/financial_ml/round2_labels/input_round1/round1_event_registry_report.json
+          if-no-files-found: error
