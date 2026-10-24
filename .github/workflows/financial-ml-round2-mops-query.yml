@@ -1,0 +1,39 @@
+name: FinTrust Round2 MOPS Historical Keyword Probe
+
+on:
+  push:
+    branches:
+      - feature/financial-ml-round2-binary-labels-20261024
+    paths:
+      - '.github/workflows/financial-ml-round2-mops-query.yml'
+      - 'fintrust_backend/research/financial_ml/round2_mops_keyword_discovery.py'
+      - 'fintrust_backend/tests/test_financial_ml_round2_mops_keyword_discovery.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  historical-source-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: fintrust_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify HTML parsing does not manufacture 0 or 1
+        run: python -m unittest discover -s tests -p 'test_financial_ml_round2_mops_keyword_discovery.py' -v
+      - name: Probe bounded MOPS official historical source
+        run: python -m research.financial_ml.round2_mops_keyword_discovery --out data/financial_ml/round2_mops_probe
+      - name: Report source coverage limitations
+        run: |
+          python -c "import json,pathlib; r=json.loads(pathlib.Path('data/financial_ml/round2_mops_probe/round2_mops_keyword_report.json').read_text()); assert r['query_count']==4 and r['new_approved_binary_y']==0 and r['negative_annual_windows_covered']==0; print('MOPS source outcomes:',[(x['year_roc'],x['keyword'],x['status'],x['unverified_issuer_rows']) for x in r['requests']])"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fintrust-round2-mops-source-probe
+          path: fintrust_backend/data/financial_ml/round2_mops_probe/
+          if-no-files-found: error
