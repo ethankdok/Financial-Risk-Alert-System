@@ -259,6 +259,20 @@ def materialize(tt2_csv, universe_csv, coverage_json, out, *, mapping_json=None)
                 raise ValueError("tej_outside_annual_scope")
             if not scope_ok(get(r, tmap, "scope")):
                 raise ValueError("tej_not_consolidated")
+            # Some TEJ summary variants include zero-count company-year
+            # rows. Such rows MUST NOT become positive restatement events.
+            count_str = get(r, tmap, "event_count")
+            if count_str:
+                try:
+                    num = Decimal(count_str.replace(",", ""))
+                except InvalidOperation as exc:
+                    raise ValueError("tej_invalid_restatement_count") from exc
+                if num < 0 or num != num.to_integral_value():
+                    raise ValueError("tej_invalid_restatement_count")
+                if num == 0 and not get(r, tmap, "event_date"):
+                    continue  # explicit zero-event source row; no positive
+                if num == 0:
+                    raise ValueError("tej_zero_count_with_event_date")
             event_date = parse_date(get(r, tmap, "event_date"))
             if event_date > AS_OF:
                 raise ValueError("tej_future_event_date")
