@@ -32,6 +32,10 @@ class FinLabTriageTests(unittest.TestCase):
                          "D_QUARTER_OR_YEAR_UNCLEAR")
         self.assertEqual(classify("更正本公司財務主管變動公告")[0],
                          "E_ADMIN_OR_NONFINANCIAL_REVIEW")
+        self.assertEqual(classify("更正本公司103年度重編後合併財報第83頁")[0],
+                         "B_RESTATEMENT_CONTEXT_REVIEW")
+        self.assertEqual(classify("公告重編108Q4~111Q4合併財報")[3],
+                         "YEAR_RANGE_REVIEW")
 
     def test_real_column_contract_hash_idempotence_and_holdout(self):
         with tempfile.TemporaryDirectory() as temp:
