@@ -112,7 +112,7 @@ def classify(title):
         priority = "HIGH" if consolidated and not standalone else "MEDIUM"
     elif is_restate and is_fin:
         group, priority = "B_RESTATEMENT_CONTEXT_REVIEW", "MEDIUM"
-    elif is_correction and years:
+    elif is_correction and years and not procedural and not subsidiary:
         group, priority = "C_ANNUAL_CORRECTION_REVIEW", "MEDIUM"
     elif is_correction or (is_restate and is_fin):
         group, priority = "D_QUARTER_OR_YEAR_UNCLEAR", "LOW"
