@@ -12,9 +12,9 @@ Round 1 只負責具來源追蹤能力的財報更正／重編／涉嫌事件索
 既有 Round10：12 筆公司公告線索、11 家公司。
 既有 Round9：1785 光洋科（櫃買公告）、3027 盛達、8299 群聯（司法文書）、6452 康友-KY（投保中心資料），共四件案例。
 既有原名單外研究：2305 全友 FY2015、3662 樂陞 FY2014/2015、2384 勝華 FY2014/2015，共五筆年度線索、三則事件。
-補充：5210 寶碩 2026/10/21 偵辦新聞＋公司官網聲明，僅屬涉嫌事件，不是已確認財報重編。
+補充：5210 寶碩 2026/10/21 偵辦新聞＋公司官網聲明，僅屬涉嫌事件；另新增 3432 台端 FY2022–2023、6918 愛派司 FY2023、7547 碩網 FY2021–2023、1806 冠軍 FY2023 的公告年季來源。注意 7547 不同年度的「重編」與「更正」須分辨，1806 是主管機關要求重行公告的紀錄。
 
-共 **22 條原始來源紀錄**，預期去重 **20 個事件、19 家公司**。3662 與 2384 不同年度的同一公告合併成一事件，仍保留逐年度連結。
+共 **26 條原始來源紀錄**，預期去重 **24 個事件、23 家公司**。3662 與 2384 不同年度的同一公告合併成一事件，仍保留逐年度連結。
 光洋科永遠是獨立保留案例，不進訓練或調參。
 
 公開來源參考：
@@ -43,7 +43,7 @@ training_label 目前全部空白；training_admitted 全 false。
     python -m unittest discover -s tests -p "test_financial_ml_round1_event_registry.py" -v
     python -m research.financial_ml.round1_event_registry --out data/financial_ml/round1_events
 
-GitHub Actions financial-ml-round1-events.yml 會執行以上測試與實際來源導入，驗證 22→20／19 的數量、年度來源及 Holdout，並輸出 fintrust-round1-event-registry artifact。CI PASS 僅代表本輪導入與測試通過，不代表新聞與司法內容已全部取得原始位元組。
+GitHub Actions financial-ml-round1-events.yml 會執行以上測試與實際來源導入，驗證 26→24／23 的數量、年度來源及 Holdout，並輸出 fintrust-round1-event-registry artifact。CI PASS 僅代表本輪導入與測試通過，不代表新聞與司法內容已全部取得原始位元組。
 
 ## 下一輪交接
 
