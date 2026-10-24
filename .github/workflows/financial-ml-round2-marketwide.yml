@@ -8,6 +8,8 @@ on:
       - '.github/workflows/financial-ml-round2-marketwide.yml'
       - 'fintrust_backend/research/financial_ml/round2_marketwide_universe.py'
       - 'fintrust_backend/tests/test_financial_ml_round2_marketwide_universe.py'
+      - 'fintrust_backend/research/financial_ml/round2_bulk_outcome_adapter.py'
+      - 'fintrust_backend/tests/test_financial_ml_round2_bulk_outcome_adapter.py'
   workflow_dispatch:
 
 permissions:
@@ -27,6 +29,8 @@ jobs:
           python-version: '3.11'
       - name: Run Round2 bulk schema and no-fake-Y tests
         run: python -m unittest discover -s tests -p 'test_financial_ml_round2_marketwide_universe.py' -v
+      - name: Validate historical bulk-outcome adapter gates
+        run: python -m unittest discover -s tests -p 'test_financial_ml_round2_bulk_outcome_adapter.py' -v
       - name: Acquire official CURRENT-ONLY TWSE/TPEx profiles and produce 2013-2023 candidate grid
         run: python -m research.financial_ml.round2_marketwide_universe --out data/financial_ml/round2_marketwide
       - name: Verify provenance and genuine Y counts
