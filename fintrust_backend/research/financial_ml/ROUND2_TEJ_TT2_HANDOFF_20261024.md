@@ -94,3 +94,25 @@ Once actual licensed exports become available, Round2 data acceptance requires:
 - source-date limitations clearly reported.
 
 **Next after DATA acceptance:** Round3 X financial features; Round4/5 features/quality/training split; Round6 traditional classifiers; Round7 heldout prediction. No neural networks before that.
+
+
+## 校內 TEJ Pro 存取核實（2026）
+
+國立中正大學圖書館「常用電子資源」確實列有「臺灣經濟新報資料庫 (TEJ)」：
+https://lib.ccu.edu.tw/p/426-1011-154.php?Lang=zh-tw
+這**不等於**已核實中正大學帳號包含 TEJ TT2 的授權；需由登入後實際模組或館員確認。
+
+**請使用 2026 年的 TEJ Pro 介面。** TEJ+ 舊系統已公告於 2026/3/20 停用，
+過去 PDF 中的 TEJ+ 路徑只供瞭解重編欄位概念，不能當成 2026 畫面逐步操作依據。
+參考：https://lib.npust.edu.tw/news/9586/
+
+TT2 匯出格式若是 .xlsx：請先在 Excel 另存一份 CSV UTF-8，保留原始 xlsx 不覆寫。
+「報表簽證日／原編表日」與「對外首次公告日」不是相同概念，
+後者必須另行取得且不能臆測為 3/31。
+
+## 這次 CI 的真正意義
+- TEJ 統合程式 9 個 hermetic 測試 **PASS**（如未來 CI 更動，以最新 workflow 為準）。
+- 測試資料為人工製造的研究小樣例，不屬於學校 TT2 授權資料；
+  不應加總到原 26 筆 silver 標籤、不能加總到 21,967 年度候選格數。
+- 真實 TEJ TT2 事件與數值標籤直到實際匯出前維持 0。
+- 任一無法解讀的 TT2 年度事件會阻止該年度落為 Y=0；只有五項核心財務調整欄位全部明確為 0，才容許把「已有 TT2 重編事件」的核心金額標籤定為 0。
