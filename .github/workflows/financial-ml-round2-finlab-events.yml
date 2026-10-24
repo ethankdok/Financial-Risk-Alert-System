@@ -1,0 +1,33 @@
+name: FinTrust Round2 FinLab Research Event Triage
+
+on:
+  push:
+    branches:
+      - feature/financial-ml-round2-binary-labels-20261024
+    paths:
+      - '.github/workflows/financial-ml-round2-finlab-events.yml'
+      - 'fintrust_backend/research/financial_ml/round2_finlab_events.py'
+      - 'fintrust_backend/tests/test_financial_ml_round2_finlab_events.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-safe-triage-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fintrust_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate fiscal-year extraction, classification, no false Y, hash and idempotence
+        run: python -m unittest discover -s tests -p 'test_financial_ml_round2_finlab_events.py' -v
+      - name: Compile offline importer
+        run: python -m py_compile research/financial_ml/round2_finlab_events.py
+      - name: Confirm no FinLab licensed announcement export in public repository
+        run: |
+          python -c "from pathlib import Path; assert not list(Path('data/financial_ml').glob('finlab_restatement_candidates.csv')) if Path('data/financial_ml').exists() else True; print('Only code and synthetic tests included; no licensed announcement payload')"
