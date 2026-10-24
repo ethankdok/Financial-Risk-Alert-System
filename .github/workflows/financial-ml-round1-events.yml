@@ -34,7 +34,7 @@ jobs:
         run: python -m research.financial_ml.round1_event_registry --out data/financial_ml/round1_events
       - name: Confirm manifest and source provenance
         run: |
-          python -c "import json,pathlib; p=pathlib.Path('data/financial_ml/round1_events/round1_event_registry_report.json'); r=json.loads(p.read_text()); assert (r['input_record_count'],r['unique_notices'],r['unique_issuers'])==(22,20,19); assert r['official_full_market_census_completed'] is False and r['positive_training_labels_issued']==0; print('Round1 real-source registry validated')"
+          python -c "import json,pathlib; p=pathlib.Path('data/financial_ml/round1_events/round1_event_registry_report.json'); r=json.loads(p.read_text()); assert (r['input_record_count'],r['unique_notices'],r['unique_issuers'])==(26,24,23); assert r['official_full_market_census_completed'] is False and r['positive_training_labels_issued']==0; print('Round1 real-source registry validated')"
       - uses: actions/upload-artifact@v4
         with:
           name: fintrust-round1-event-registry
