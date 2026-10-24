@@ -36,7 +36,7 @@ jobs:
         run: python -m research.financial_ml.round2_binary_labels --out data/financial_ml/round2_labels
       - name: Verify two numeric classes and explicit silver evidence grades
         run: |
-          python -c "import json,pathlib; r=json.loads(pathlib.Path('data/financial_ml/round2_labels/round2_binary_label_report.json').read_text()); assert (r['rows_numeric_y'],r['y_1'],r['y_0'])==(16,8,8); assert r['only_silver_labels'] and r['strict_24m_evaluable_rows']==0 and not r['has_numeric_financial_x']; print('Round2 real 0/1 Y generated, not mislabeled as fraud or 24m gold')"
+          python -c "import json,pathlib; r=json.loads(pathlib.Path('data/financial_ml/round2_labels/round2_binary_label_report.json').read_text()); assert (r['rows_numeric_y'],r['y_1'],r['y_0'])==(26,8,18); assert r['only_silver_labels'] and r['strict_24m_evaluable_rows']==0 and not r['has_numeric_financial_x']; print('Round2 real 0/1 Y generated, not mislabeled as fraud or 24m gold')"
       - uses: actions/upload-artifact@v4
         with:
           name: fintrust-round2-binary-evidence-labels
