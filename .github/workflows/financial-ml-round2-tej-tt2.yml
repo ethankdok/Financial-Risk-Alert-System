@@ -1,0 +1,38 @@
+name: FinTrust Round2 TEJ TT2 Integration
+
+on:
+  push:
+    branches:
+      - feature/financial-ml-round2-binary-labels-20261024
+    paths:
+      - '.github/workflows/financial-ml-round2-tej-tt2.yml'
+      - 'fintrust_backend/research/financial_ml/round2_tej_tt2.py'
+      - 'fintrust_backend/tests/test_financial_ml_round2_tej_tt2.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tej-tt2-parser-and-preflight:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fintrust_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test synthetic schema and temporal-label gates
+        run: python -m unittest discover -s tests -p 'test_financial_ml_round2_tej_tt2.py' -v
+      - name: Produce transparent missing-license-data preflight report
+        run: python -m research.financial_ml.round2_tej_tt2 --preflight --out data/financial_ml/round2_tej
+      - name: Verify no TEJ data or fake approved labels in CI
+        run: |
+          python -c "import json,pathlib; x=json.loads(pathlib.Path('data/financial_ml/round2_tej/round2_tej_preflight.json').read_text()); assert x['real_tej_tt2_rows_ingested']==0 and x['real_tej_binary_labels_generated']==0; assert x['synthetic_ci_samples_are_not_real_tej_data']; print('TEJ importer tested; real licensed export remains a separate acceptance condition')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fintrust-round2-tej-tt2-integration-preflight
+          path: fintrust_backend/data/financial_ml/round2_tej/round2_tej_preflight.json
+          if-no-files-found: error
