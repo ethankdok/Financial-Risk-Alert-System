@@ -45,6 +45,8 @@ ANNUAL_YEAR = re.compile(
     r"年\s*(?:第\s*[4四]\s*季|12\s*月|十二月)|Q4)"
 )
 YEAR_SPAN = re.compile(r"\d{2,3}\s*(?:年)?\s*(?:至|到|~|～|-)\s*\d{2,3}\s*年")
+Q4_RANGE = re.compile(r"\d{2,3}\s*Q4\s*(?:至|到|~|～|-)\s*\d{2,3}\s*Q4", re.I)
+CONTEXT_ONLY = re.compile("更正.{0,30}重編後|重編後.{0,35}(?:附註|附表|iXBRL|更正)", re.I)
 FY_TOKEN = re.compile(r"(?<![A-Za-z0-9])FY\s*(20\d{2})\b", re.I)
 DIGIT_MAP = str.maketrans("〇○零一二三四五六七八九","000123456789")
 CHINESE = {"十":10, "百":100}
@@ -107,7 +109,7 @@ def classify(title):
     years = annual_years(title)
     consolidated = bool(CONSOLIDATED.search(title))
     standalone = bool(STANDALONE_ONLY.search(title)) and not consolidated
-    if is_restate and is_fin and years and not procedural and not subsidiary:
+    if is_restate and is_fin and years and not procedural and not subsidiary and not CONTEXT_ONLY.search(title):
         group = "A_RESTATEMENT_ANNUAL_REVIEW"
         priority = "HIGH" if consolidated and not standalone else "MEDIUM"
     elif is_restate and is_fin:
@@ -118,7 +120,7 @@ def classify(title):
         group, priority = "D_QUARTER_OR_YEAR_UNCLEAR", "LOW"
     else:
         group, priority = "E_ADMIN_OR_NONFINANCIAL_REVIEW", "LOW"
-    status = ("YEAR_RANGE_REVIEW" if YEAR_SPAN.search(title) else
+    status = ("YEAR_RANGE_REVIEW" if (YEAR_SPAN.search(title) or Q4_RANGE.search(title)) else
               "CANDIDATE_YEAR_ONLY" if years else "NO_EXPLICIT_ANNUAL_YEAR")
     return group, priority, years, status, procedural, subsidiary, consolidated, standalone
 
