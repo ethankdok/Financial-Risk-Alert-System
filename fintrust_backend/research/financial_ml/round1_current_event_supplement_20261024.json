@@ -1,7 +1,7 @@
 {
   "schema_version": "fintrust_round1_supplement_v1",
   "as_of": "2026-10-24",
-  "description": "Small supplementary source leads not found in frozen Round9/10 case files; not a source of approved fiscal-year labels.",
+  "description": "Targeted 2026-10-24 searches of public issuer disclosure republications and one issuer response. Not a comprehensive MOPS census or certified first-original-filing archive.",
   "events": [
     {
       "id": "M01",
@@ -14,6 +14,79 @@
       "source_url": "https://udn.com/news/story/7321/9827567",
       "issuer_statement_url": "https://www.apex.com.tw/",
       "description": "2026-10-21 media reports prosecutors investigating alleged false transactions concerning a 2021-era solar business; the company released a statement about the former management case. No verified financial-statement restatement or corresponding affected FY annual figures are established. Investigation allegation only; do not assign financial-restatement Y=1."
+    },
+    {
+      "id": "S21",
+      "ticker": "3432",
+      "company": "台端",
+      "notice_date": "2024-04-23",
+      "candidate_fiscal_years": [
+        2022,
+        2023
+      ],
+      "candidate_quarters": [
+        "2023Q1",
+        "2023Q2",
+        "2023Q3"
+      ],
+      "event_family": "ANNUAL_RESTATEMENT_LEAD",
+      "evidence_tier": "COMPANY_NOTICE_REPRINT",
+      "source_url": "https://www.moneydj.com/kmdj/news/newsviewer.aspx?a=7cffa3ea-9b03-4248-a893-f0a1966defd8",
+      "description": "Company announcement says board approved restated 2022 annual and periods through 2023 annual reports; fair value and deferred tax asset accounting. Financial values and filing vintages must still be sourced."
+    },
+    {
+      "id": "S22",
+      "ticker": "6918",
+      "company": "愛派司",
+      "notice_date": "2025-02-13",
+      "candidate_fiscal_years": [
+        2023
+      ],
+      "candidate_quarters": [
+        "2024Q2",
+        "2024Q3"
+      ],
+      "event_family": "ANNUAL_RESTATEMENT_LEAD",
+      "evidence_tier": "COMPANY_NOTICE_REPRINT",
+      "source_url": "https://news.cnyes.com/news/id/5861634",
+      "issuer_statement_url": "https://www.aplusbio.com/tw/investor/financial/finance",
+      "description": "Company announcement says 2023 consolidated and individual annual statements were restated, plus 2024 Q2/Q3. Goodwill impairment increase TWD 42,464 thousand; company hosts restated PDFs."
+    },
+    {
+      "id": "S23",
+      "ticker": "7547",
+      "company": "碩網",
+      "notice_date": "2024-12-10",
+      "candidate_fiscal_years": [
+        2021,
+        2022,
+        2023
+      ],
+      "candidate_quarters": [
+        "2021Q2",
+        "2022Q2",
+        "2023Q2",
+        "2024Q2",
+        "2024Q3"
+      ],
+      "event_family": "ANNUAL_FINANCIAL_CORRECTION_LEAD",
+      "evidence_tier": "COMPANY_NOTICE_REPRINT",
+      "source_url": "https://news.cnyes.com/news/id/5805614",
+      "description": "Company notice distinguishes original 2021 CONSOLIDATED annual restatement from 2022/2023 consolidated annual CORRECTIONS and 2021-23 individual annual restatements; no automatic same-category label for each year."
+    },
+    {
+      "id": "S24",
+      "ticker": "1806",
+      "company": "冠軍",
+      "notice_date": "2024-04-09",
+      "candidate_fiscal_years": [
+        2023
+      ],
+      "candidate_quarters": [],
+      "event_family": "RESTATEMENT_ORDER_OR_EXTENSION",
+      "evidence_tier": "COMPANY_NOTICE_REPRINT",
+      "source_url": "https://news.cnyes.com/news/id/5517679",
+      "description": "Regulator required FY2023 statement re-audit/re-publication following limited audit evidence about equity-method investment; evidence shows order, not independent proof of completed restatement."
     }
   ]
 }
