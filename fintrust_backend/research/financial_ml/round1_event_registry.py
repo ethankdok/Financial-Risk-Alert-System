@@ -214,10 +214,12 @@ def prepare_events(raw):
     for e in raw["supplement"]["events"]:
         candidates.append(record(
             e["ticker"], e["company"], e["notice_date"],
-            "INVESTIGATION_ALLEGATION", "MEDIA_REPORT_WITH_ISSUER_RESPONSE",
-            e["candidate_fiscal_years"], [], e["source_url"],
-            source_id="supplement:" + e["id"], note=e["description"],
-            supplementary=e["issuer_statement_url"],
+            e.get("event_family", "INVESTIGATION_ALLEGATION"),
+            e.get("evidence_tier", "MEDIA_REPORT_WITH_ISSUER_RESPONSE"),
+            e["candidate_fiscal_years"], e.get("candidate_quarters", []),
+            e["source_url"], source_id="supplement:" + e["id"],
+            note=e["description"],
+            supplementary=e.get("issuer_statement_url", ""),
         ))
     # One notice can mention multiple years. Merge same issuer, notice,
     # source URL and category WITHOUT discarding the referenced fiscal years.
