@@ -7,7 +7,7 @@ from pathlib import Path
 
 from research.financial_ml.annual_panel_readiness import FIELDNAMES, METRICS
 from research.financial_ml.finlab_finmind_binary import (
-    build, labels, finmind_panel, make_review_template, x_metrics
+    build, labels, finmind_panel, finmind_union, mops_panel, make_review_template, x_metrics
 )
 
 SHAS = "a" * 64
@@ -155,6 +155,72 @@ class FinlabFinmindBinaryTest(unittest.TestCase):
         contents=(self.dest/"finlab_human_review_private.csv").read_text(encoding="utf-8-sig")
         self.assertIn("UNKNOWN,pending",contents)
         self.assertNotIn("1785",contents)
+
+
+    def test_multiple_finmind_csvs_are_reconciled_not_appended(self):
+        copy=self.root/"second.csv"
+        save(copy,FIELDNAMES,self.frows)
+        table,src,conflicts=finmind_union([self.annual,copy])
+        self.assertEqual(len(src),2)
+        self.assertEqual(len(table),88)
+        self.assertEqual(conflicts,{})
+        report=build([self.annual,copy],self.proxy,"tej_proxy",self.dest,train=False)
+        self.assertEqual(report["matched_feature_rows"],64)
+
+    def test_archive_backed_mops_extends_join_without_fake_inventory(self):
+        path=self.root/"mops.csv"
+        cols=("ticker","financial_fy","period_end","sector_schema",
+              "source_income_sha256","source_balance_sha256","source_cashflow_sha256",
+              "revenue","cogs","operating_income","net_income","assets",
+              "current_assets","current_liabilities","liabilities","cfo")
+        mopsrows=[]
+        for fy in range(2013,2022):
+            for ticker in ("1211","1212"):
+                mopsrows.append(dict(zip(cols,(ticker,str(fy),f"{fy}-12-31",
+                   "general_summary",SHAS,SHAS,SHAS,"200","120","25","12",
+                   "500","200","100","250","10"))))
+        save(path,cols,mopsrows)
+        facts,src,skips=mops_panel(path)
+        self.assertEqual(len(facts),18)
+        self.assertEqual(skips,{})
+        for fy in range(2016,2024):
+            for ticker in ("1211","1212"):
+                self.prows.append({
+                    "ticker":ticker,"calendar_year":fy,
+                    "y_tej_calendar_proxy":str(int(ticker=="1212")),
+                    "split":"train" if fy<=2020 else "validation" if fy<=2022 else "test",
+                    "label_provenance":"TEJ_INFORMATION_TRANSPARENCY_PROXY_NOT_TT2",
+                    "feature_asof_date":f"{fy-1}-12-31",
+                    "max_safe_annual_financial_fy":str(fy-2),
+                    "y_official_annual_24m":""})
+        save(self.proxy,("ticker","calendar_year","y_tej_calendar_proxy","split",
+                         "label_provenance","feature_asof_date",
+                         "max_safe_annual_financial_fy","y_official_annual_24m"),self.prows)
+        r=build([self.annual],self.proxy,"tej_proxy",self.dest,
+                train=False,mops_annual=path)
+        self.assertEqual(r["matched_feature_rows"],80)
+        self.assertEqual(r["matched_source_counts"]["public_mops_retrospective"],16)
+        rows=list(csv.DictReader((self.dest/"finlab_finmind_xy_private.csv")
+                                   .open(encoding="utf-8-sig")))
+        x=next(x for x in rows if x["ticker"]=="1211" and x["target_year"]=="2016")
+        self.assertEqual(x["x_fiscal_year"],"2014")
+        self.assertEqual(x["source_x"],"public_mops_retrospective")
+        self.assertEqual(x["roa"],"0.024")
+        self.assertEqual(x["inventory_growth"],"")
+
+    def test_mops_invalid_source_sha_not_accepted(self):
+        path=self.root/"bad_mops.csv"
+        cols=("ticker","financial_fy","period_end","sector_schema",
+              "source_income_sha256","source_balance_sha256","source_cashflow_sha256",
+              "revenue","cogs","operating_income","net_income","assets",
+              "current_assets","current_liabilities","liabilities","cfo")
+        row={x:"" for x in cols}
+        row.update(ticker="2001",financial_fy="2020",
+                   period_end="2020-12-31",sector_schema="general_summary",
+                   revenue="3")
+        save(path,cols,[row])
+        with self.assertRaisesRegex(ValueError,"MOPS_FINANCIAL_FACT_WITHOUT_ARCHIVE_SHA"):
+            mops_panel(path)
 
 if __name__=="__main__":
     unittest.main()
