@@ -7,6 +7,7 @@ from pathlib import Path
 
 from research.financial_ml.annual_panel_readiness import FIELDNAMES, METRICS
 from research.financial_ml.run_existing_binary import run as run_existing_binary, MissingInput
+from test_financial_ml_round2_tej_transparency import synthetic_tej, data as synthetic_tej_month
 from research.financial_ml.finlab_finmind_binary import (
     build, labels, finmind_panel, finmind_union, mops_panel, make_review_template, x_metrics
 )
@@ -242,6 +243,27 @@ class FinlabFinmindBinaryTest(unittest.TestCase):
         self.assertEqual(report["y2_recovery"],"reused_y2")
         self.assertEqual(report["finmind_files"],1)
         self.assertEqual(report["status"],"FITTED_RETROSPECTIVE_RESEARCH_ONLY")
+
+    def test_one_command_restores_missing_y2_from_original_tej_xlsx(self):
+        data=self.root/"financial_ml"
+        data.mkdir()
+        save(data/"finmind_annual_candidate_lines.csv",FIELDNAMES,self.frows)
+        original=self.root/"20261025034613DataExport.xlsx"
+        months=[]
+        for ticker in range(1201,1209):
+            for m in range(1,13):
+                months.append(synthetic_tej_month(str(ticker),f"2016/{m:02d}",
+                                                 1 if ticker%2==0 else 0))
+        synthetic_tej(original,months)
+        result=run_existing_binary(data,tej_xlsx=original)
+        self.assertEqual(result["y2_recovery"],"recovered_from_original_xlsx")
+        self.assertEqual(result["eligible_y2"],8)
+        self.assertEqual(result["matched_company_years"],8)
+        self.assertTrue((data/"binary_existing_real_run_20261026"/
+                         "tej_yearly_from_existing_xlsx"/
+                         "tej_calendar_year_evidence_private.csv").is_file())
+        self.assertEqual(result["matched_class_counts"],{"positive":4,"negative":4})
+        self.assertEqual(result["status"],"BLOCKED_NO_VALIDATION_ROWS")
 
     def test_one_command_fails_before_trying_model_when_y_missing(self):
         data=self.root/"financial_ml"
