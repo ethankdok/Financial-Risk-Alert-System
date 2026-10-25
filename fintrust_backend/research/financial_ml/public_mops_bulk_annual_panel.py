@@ -35,8 +35,8 @@ ALIASES={
   "net_income":("本期淨利(淨損)","本期淨利(淨損)","本期稅後淨利(淨損)"),
  },
  "balance":{
-  "assets":("資產總計",),"current_assets":("流動資產",),
-  "current_liabilities":("流動負債",),"liabilities":("負債總計",),
+  "assets":("資產總計","資產總額"),"current_assets":("流動資產",),
+  "current_liabilities":("流動負債",),"liabilities":("負債總計","負債總額"),
   "noncurrent_assets":("非流動資產",),
   "noncurrent_liabilities":("非流動負債",)
  },
@@ -85,7 +85,7 @@ def company_table(df,kind):
         return None
     if kind=="income" and not {"營業收入","營業成本"}.issubset(names):
         return None
-    if kind=="balance" and not {"資產總計","流動資產"}.issubset(names):
+    if kind=="balance" and ("流動資產" not in names or not ({"資產總計","資產總額"} & set(names))):
         return None
     if kind=="cashflow" and not any("營業活動之淨現金" in k for k in names):
         return None
