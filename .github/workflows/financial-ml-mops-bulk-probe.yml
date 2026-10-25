@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install HTTP dependency
-        run: python -m pip install --disable-pip-version-check requests
+        run: python -m pip install --disable-pip-version-check requests pandas lxml
       - name: Test historic public MOPS market-wide statements (no TEJ inputs)
         shell: bash
         run: |
@@ -38,7 +38,17 @@ jobs:
                       result={'type':typ,'route':prefix or 'standard','status':r.status_code,'url':r.url,'bytes':len(r.content),'tables':txt.count('<table'),'has_company_header':('公司代號' in txt),'sha256':hashlib.sha256(r.content).hexdigest(),'sample':txt[:130].replace('\n',' ')}
                       results.append(result)
                       print('PROBE',json.dumps(result,ensure_ascii=False),flush=True)
-                      if r.ok and result['has_company_header'] and len(r.content)>20000:
+                      if r.ok and len(r.content)>20000:
+                          import pandas as pd,io,re
+                          for token in ('2330','公司','代號','營業收入','台積電','臺積電'):
+                              print('TOKEN',typ,token,txt.count(token),flush=True)
+                          try:
+                              frames=pd.read_html(io.StringIO(txt))
+                              for idx,frame in enumerate(frames[:9]):
+                                  print('FRAME',typ,idx,'shape',frame.shape,'cols',[str(x) for x in frame.columns[:7]],'sample',str(frame.head(2).iloc[:,:5].to_dict(orient='records'))[:450],flush=True)
+                          except Exception as exc:print('PARSE_FAIL',str(exc)[:250],flush=True)
+                          with open('sample_'+typ+'.html','wb') as save:save.write(r.content)
+
                           break
                   except Exception as exc:
                       result={'type':typ,'route':prefix or 'standard','error':str(exc)[:160]}
@@ -52,4 +62,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: public-mops-bulk-probe
-          path: fintrust_bulk_probe_report.json
+          path: |
+            fintrust_bulk_probe_report.json
+            sample_*.html
