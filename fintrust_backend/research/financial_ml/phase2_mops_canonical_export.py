@@ -23,9 +23,6 @@ import io
 import json
 from collections import Counter
 from pathlib import Path
-from app.services.financial_research.literature_extraction import extract_xbrl
-from app.services.financial_research.literature_inputs import FilingLines
-from research.financial_ml.literature_dataset import checked_manifest,archive_bytes
 from research.financial_ml.phase2_pit_x_y_bridge import immutable,csv_bytes
 
 # Annual consolidated canonical candidates from specific TIFRS XBRL concepts.
@@ -79,6 +76,11 @@ def metric_observation(lines,fy,name):
     return "OBSERVED_OFFICIAL_XBRL_LINE",text,obs
 
 def build(acquisition_manifest,out):
+    # Heavy XBRL/app dependencies are needed only for the real offline archive run.
+    # Synthetic semantic tests must remain hermetic and credential-free.
+    from app.services.financial_research.literature_extraction import extract_xbrl
+    from app.services.financial_research.literature_inputs import FilingLines
+    from research.financial_ml.literature_dataset import checked_manifest,archive_bytes
     records,excluded=checked_manifest(acquisition_manifest)
     folder=Path(acquisition_manifest).parent
     if not records:raise ValueError("no_validated_official_acquisition_records")
