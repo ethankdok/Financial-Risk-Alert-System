@@ -376,9 +376,9 @@ MOPS_SOURCES = {
 
 def finmind_union(paths):
     """Reconcile existing provider exports; contradictory duplicates become missing."""
-    path_list=[paths] if isinstance(paths,(str,Path)) else list(paths)
+    path_list=[] if paths is None else ([paths] if isinstance(paths,(str,Path)) else list(paths))
     if not path_list:
-        raise ValueError("NO_FINMIND_INPUT")
+        return defaultdict(dict),[],{}
     merged=defaultdict(dict)
     source_info=[]
     collisions=Counter()
@@ -615,11 +615,11 @@ def main(argv=None):
     args=p.parse_args(argv)
     if args.finlab_cases and not args.annual_lines and not args.labels:
         result=make_review_template(args.finlab_cases,args.out)
-    elif args.annual_lines and args.labels:
+    elif (args.annual_lines or args.mops_annual) and args.labels:
         result=build(args.annual_lines,args.labels,args.label_kind,args.out,
                      train=not args.no_train,mops_annual=args.mops_annual)
     else:
-        p.error("Provide --annual-lines and --labels, OR only --finlab-cases")
+        p.error("Provide --labels and at least one X source (--annual-lines/--mops-annual), OR only --finlab-cases")
     print(json.dumps(result,ensure_ascii=False,indent=2))
 
 if __name__=="__main__":
