@@ -20,6 +20,10 @@ on:
       - 'fintrust_backend/tests/test_financial_ml_round2_official_review_sprint.py'
       - 'fintrust_backend/research/financial_ml/round2_phase1_official_source_audit.py'
       - 'fintrust_backend/tests/test_financial_ml_round2_phase1_source_audit.py'
+      - 'fintrust_backend/research/financial_ml/phase2_pit_x_y_bridge.py'
+      - 'fintrust_backend/tests/test_financial_ml_phase2_pit_x_y_bridge.py'
+      - 'fintrust_backend/research/financial_ml/phase2_official_bulk_y_gate.py'
+      - 'fintrust_backend/tests/test_financial_ml_phase2_official_bulk_y_gate.py'
   workflow_dispatch:
 
 permissions:
@@ -52,6 +56,12 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_financial_ml_round2_phase1_source_audit.py' -v
       - name: Compile seven source-safe offline pipelines
         run: python -m py_compile research/financial_ml/round2_finlab_events.py research/financial_ml/round2_finlab_evidence.py research/financial_ml/round2_finlab_review_gate.py research/financial_ml/round2_tej_transparency.py research/financial_ml/round2_label_cohorts.py research/financial_ml/round2_official_review_sprint.py research/financial_ml/round2_phase1_official_source_audit.py
+      - name: Strict MOPS point-in-time 15X to Y2 validation
+        run: python -m unittest discover -s tests -p 'test_financial_ml_phase2_pit_x_y_bridge.py' -v
+      - name: Official bulk Y1 window-coverage labeling and UNKNOWN preservation
+        run: python -m unittest discover -s tests -p 'test_financial_ml_phase2_official_bulk_y_gate.py' -v
+      - name: Compile Phase2 pipelines
+        run: python -m py_compile research/financial_ml/phase2_pit_x_y_bridge.py research/financial_ml/phase2_official_bulk_y_gate.py
       - name: Confirm no FinLab licensed announcement export in public repository
         run: |
           python -c "from pathlib import Path; assert not list(Path('data/financial_ml').glob('finlab_restatement_candidates.csv')) if Path('data/financial_ml').exists() else True; print('Only code and synthetic tests included; no licensed announcement payload')"
