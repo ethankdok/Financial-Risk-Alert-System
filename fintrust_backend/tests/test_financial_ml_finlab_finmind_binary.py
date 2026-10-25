@@ -207,6 +207,10 @@ class FinlabFinmindBinaryTest(unittest.TestCase):
         self.assertEqual(x["source_x"],"public_mops_retrospective")
         self.assertEqual(x["roa"],"0.024")
         self.assertEqual(x["inventory_growth"],"")
+        only=build(None,self.proxy,"tej_proxy",self.root/"mops_only",
+                   train=False,mops_annual=path)
+        self.assertEqual(only["matched_feature_rows"],16)
+        self.assertEqual(only["matched_source_counts"]["public_mops_retrospective"],16)
 
     def test_mops_invalid_source_sha_not_accepted(self):
         path=self.root/"bad_mops.csv"
