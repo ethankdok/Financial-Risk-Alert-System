@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   test-binary-join:
@@ -29,3 +30,44 @@ jobs:
         run: python -m py_compile research/financial_ml/finlab_finmind_binary.py
       - name: Check FinMind source, label identities, periods, and actual sklearn fitting on SYNTHETIC only
         run: python -m unittest discover -s tests -p "test_financial_ml_finlab_finmind_binary.py" -v
+
+      - name: Reuse existing real public MOPS FY2013-2021 all-market artifact
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 40185732973
+          name: fintrust-public-mops-fy2013-2021-unlicensed
+          github-token: ${{ github.token }}
+          path: fintrust_backend/data/archived_marketwide_public_mops
+      - name: Run REAL archived MOPS X times preexisting Silver Y (not fraud/PIT)
+        working-directory: fintrust_backend
+        run: |
+          python -m research.financial_ml.round2_binary_labels --out data/binary_real_silver_ci
+          python -m research.financial_ml.finlab_finmind_binary \
+            --mops-annual data/archived_marketwide_public_mops/all_market_public_annual_financial_features_2013_2021.csv \
+            --labels data/binary_real_silver_ci/round2_binary_research_labels.csv \
+            --label-kind silver --out data/binary_real_public_mops_ci
+          python - <<'PY'
+          import json
+          p="data/binary_real_public_mops_ci/finlab_finmind_binary_report.json"
+          d=json.load(open(p,encoding="utf-8"))
+          summary={k:d[k] for k in ("matched_feature_rows","matched_class_counts",
+                                   "by_split","unmatched_reasons","training",
+                                   "matched_source_counts")}
+          summary["training"]={k:d["training"].get(k) for k in ("status","reason",
+                                                                "validation_selected_model")}
+          print("REAL_SOURCE_XY_AGGREGATE",json.dumps(summary,ensure_ascii=False))
+          with open("GITHUB_REAL_BINARY_SUMMARY.md","w",encoding="utf-8") as f:
+              f.write("# Real public MOPS FY2013-2021 × SILVER binary label coverage\\n\\n")
+              f.write("This is retrospective and neither original-as-filed PIT nor fraud.\\n\\n")
+              f.write("```json\\n"+json.dumps(summary,ensure_ascii=False,indent=2)+"\\n```\\n")
+          PY
+      - name: Archive only aggregate real-data report and source manifest
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fintrust-real-mops-silver-binary-aggregate
+          path: |
+            fintrust_backend/data/binary_real_public_mops_ci/finlab_finmind_binary_report.json
+            fintrust_backend/GITHUB_REAL_BINARY_SUMMARY.md
+          if-no-files-found: warn
+          retention-days: 14
