@@ -24,13 +24,13 @@ jobs:
         run: |
           python - <<'PY'
           import requests,time,json,hashlib
-          base='https://mops.twse.com.tw/mops/web/'
+          base='https://mopsov.twse.com.tw/mops/web/'
           s=requests.Session()
           s.headers.update({'User-Agent':'Mozilla/5.0 (compatible; FinTrust university research; public quarterly financial summary)','Referer':'https://mops.twse.com.tw/mops/web/index','Accept-Language':'zh-TW,zh;q=0.9'})
           results=[]
           for typ in ('t163sb04','t163sb05','t163sb20'):
-              data={'encodeURIComponent':'1','step':'1','firstin':'1','off':'1','TYPEK':'sii','year':'108','season':'4'}
-              for prefix in ('ajax_',''):
+              data={'encodeURIComponent':'1','step':'1','firstin':'1','off':'1','TYPEK':'sii','year':'108','season':'04','isQuery':'Y'}
+              for prefix in ('ajax_',):
                   url=base+prefix+typ
                   try:
                       r=s.post(url,data=data,timeout=32)
