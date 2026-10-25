@@ -17,6 +17,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install HTTP dependency
+        run: python -m pip install --disable-pip-version-check requests
       - name: Test historic public MOPS market-wide statements (no TEJ inputs)
         shell: bash
         run: |
