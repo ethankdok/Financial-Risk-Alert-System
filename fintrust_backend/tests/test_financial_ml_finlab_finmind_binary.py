@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from research.financial_ml.annual_panel_readiness import FIELDNAMES, METRICS
+from research.financial_ml.run_existing_binary import run as run_existing_binary, MissingInput
 from research.financial_ml.finlab_finmind_binary import (
     build, labels, finmind_panel, finmind_union, mops_panel, make_review_template, x_metrics
 )
@@ -225,6 +226,31 @@ class FinlabFinmindBinaryTest(unittest.TestCase):
         save(path,cols,[row])
         with self.assertRaisesRegex(ValueError,"MOPS_FINANCIAL_FACT_WITHOUT_ARCHIVE_SHA"):
             mops_panel(path)
+
+
+    def test_one_command_reuses_existing_y2_and_all_x_without_new_tej(self):
+        data=self.root/"financial_ml"
+        data.mkdir()
+        save(data/"finmind_annual_candidate_lines.csv",FIELDNAMES,self.frows)
+        proxy_cols=("ticker","calendar_year","y_tej_calendar_proxy","split",
+                    "label_provenance","feature_asof_date",
+                    "max_safe_annual_financial_fy","y_official_annual_24m")
+        save(data/"tej_calendar_proxy_cohort_private.csv",proxy_cols,self.prows)
+        report=run_existing_binary(data)
+        self.assertEqual(report["eligible_y2"],64)
+        self.assertEqual(report["matched_company_years"],64)
+        self.assertEqual(report["y2_recovery"],"reused_y2")
+        self.assertEqual(report["finmind_files"],1)
+        self.assertEqual(report["status"],"FITTED_RETROSPECTIVE_RESEARCH_ONLY")
+
+    def test_one_command_fails_before_trying_model_when_y_missing(self):
+        data=self.root/"financial_ml"
+        data.mkdir()
+        save(data/"finmind_annual_candidate_lines.csv",FIELDNAMES,self.frows)
+        with self.assertRaisesRegex(MissingInput,"TEJ_Y2_SOURCE_NOT_ON_THIS_COMPUTER_PATH"):
+            run_existing_binary(data)
+        self.assertFalse((data/"binary_existing_real_run_20261026"/"classification"/
+                          "finlab_finmind_binary_report.json").exists())
 
 if __name__=="__main__":
     unittest.main()
