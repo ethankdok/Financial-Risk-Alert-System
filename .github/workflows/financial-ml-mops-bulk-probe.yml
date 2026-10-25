@@ -1,0 +1,53 @@
+name: FinTrust Public MOPS Financial Bulk Probe
+on:
+  push:
+    branches:
+      - feature/financial-ml-round2-binary-labels-20261024
+    paths:
+      - '.github/workflows/financial-ml-mops-bulk-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public_financial_probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test historic public MOPS market-wide statements (no TEJ inputs)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import requests,time,json,hashlib
+          base='https://mops.twse.com.tw/mops/web/'
+          s=requests.Session()
+          s.headers.update({'User-Agent':'Mozilla/5.0 (compatible; FinTrust university research; public quarterly financial summary)','Referer':'https://mops.twse.com.tw/mops/web/index','Accept-Language':'zh-TW,zh;q=0.9'})
+          results=[]
+          for typ in ('t163sb04','t163sb05','t163sb20'):
+              data={'encodeURIComponent':'1','step':'1','firstin':'1','off':'1','TYPEK':'sii','year':'108','season':'4'}
+              for prefix in ('ajax_',''):
+                  url=base+prefix+typ
+                  try:
+                      r=s.post(url,data=data,timeout=32)
+                      txt=r.content.decode('utf-8','replace')
+                      result={'type':typ,'route':prefix or 'standard','status':r.status_code,'url':r.url,'bytes':len(r.content),'tables':txt.count('<table'),'has_company_header':('公司代號' in txt),'sha256':hashlib.sha256(r.content).hexdigest(),'sample':txt[:130].replace('\n',' ')}
+                      results.append(result)
+                      print('PROBE',json.dumps(result,ensure_ascii=False),flush=True)
+                      if r.ok and result['has_company_header'] and len(r.content)>20000:
+                          break
+                  except Exception as exc:
+                      result={'type':typ,'route':prefix or 'standard','error':str(exc)[:160]}
+                      results.append(result)
+                      print('PROBE',json.dumps(result,ensure_ascii=False),flush=True)
+                  time.sleep(2)
+              time.sleep(3)
+          with open('fintrust_bulk_probe_report.json','w',encoding='utf8') as f:
+              json.dump(results,f,ensure_ascii=False,indent=2)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-mops-bulk-probe
+          path: fintrust_bulk_probe_report.json
