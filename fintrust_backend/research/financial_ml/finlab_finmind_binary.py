@@ -44,7 +44,7 @@ MODEL_COLS = (
     "ticker", "target_year", "x_fiscal_year", "prior_x_fiscal_year",
     "label_kind", "label_grade", "label", "split", "source_x_present_count",
     "source_x_prior_present_count", "available_feature_count",
-    "x_retrospective_only", *FEATURES
+    "x_retrospective_only", "source_x", *FEATURES
 )
 ALLOWED_SILVER = "DOCUMENTED_ANNUAL_CONSOLIDATED_CORE_FINANCIAL_CORRECTION_OR_RESTATEMENT_OBSERVED_BY_ASOF"
 ALLOWED_PROXY = "TEJ_INFORMATION_TRANSPARENCY_PROXY_NOT_TT2"
@@ -358,10 +358,137 @@ def fit_models(data, label_kind):
     return result
 
 
-def build(annual_lines, labels_csv, label_kind, out, *, train=True):
+
+# Public MOPS all-market CSV comes from the EXISTING public_mops_bulk_annual_panel.py.
+# Financial institutions with other statement schemas are not substituted with
+# the generic annual features. All provenance remains retrospective.
+MOPS_REQUIRED = {
+    "ticker","financial_fy","period_end","sector_schema",
+    "source_income_sha256","source_balance_sha256","source_cashflow_sha256",
+    "revenue","cogs","operating_income","net_income","assets",
+    "current_assets","current_liabilities","liabilities","cfo"
+}
+MOPS_SOURCES = {
+    "income":("revenue","cogs","operating_income","net_income"),
+    "balance":("assets","current_assets","current_liabilities","liabilities"),
+    "cashflow":("cfo",)
+}
+
+def finmind_union(paths):
+    """Reconcile existing provider exports; contradictory duplicates become missing."""
+    path_list=[paths] if isinstance(paths,(str,Path)) else list(paths)
+    if not path_list:
+        raise ValueError("NO_FINMIND_INPUT")
+    merged=defaultdict(dict)
+    source_info=[]
+    collisions=Counter()
+    quarantined=set()
+    for path in path_list:
+        part,digest,failures,cells=finmind_panel(path)
+        source_info.append({"filename":Path(path).name, "sha256":digest,
+                            "candidate_cells":cells,"missing_status_counts":failures})
+        for key,items in part.items():
+            for metric,value in items.items():
+                marker=(*key,metric)
+                if marker in quarantined:
+                    continue
+                prior=merged[key].get(metric)
+                if prior is not None and not math.isclose(prior,value,rel_tol=1e-10,abs_tol=1e-8):
+                    quarantined.add(marker)
+                    del merged[key][metric]
+                    collisions["CONFLICTING_PROVIDER_DUPLICATE_METRIC"]+=1
+                else:
+                    merged[key][metric]=value
+    return merged,source_info,dict(collisions)
+
+
+def mops_panel(path):
+    """Read existing public, all-market nonfinancial statement SUMMARY CSV."""
+    if not path:
+        return {},None,{}
+    rows,digest=read_csv(path,MOPS_REQUIRED)
+    output={}
+    rejected=Counter()
+    for row in rows:
+        ticker=row["ticker"].strip()
+        fy=int(row["financial_fy"])
+        if ticker=="1785":
+            rejected["RESERVED_HOLDOUT"]+=1
+            continue
+        if not re.fullmatch(r"[0-9]{4}",ticker) or not 2013<=fy<=2025:
+            rejected["INVALID_TICKER_OR_FY"]+=1
+            continue
+        if row["sector_schema"]!="general_summary":
+            rejected["NON_GENERAL_FINANCIAL_STATEMENT_SCHEMA"]+=1
+            continue
+        if row["period_end"]!=f"{fy}-12-31":
+            rejected["INVALID_FINANCIAL_PERIOD"]+=1
+            continue
+        key=(ticker,fy)
+        if key in output:
+            # Reject conflicting cross-market duplicate issuers instead of selecting one.
+            output[key]=None
+            rejected["DUPLICATE_COMPANY_FY"]+=1
+            continue
+        facts={}
+        mapping={
+            "revenue":"revenue",
+            "cost_of_goods_sold":"cogs",
+            "operating_income":"operating_income",
+            "net_income":"net_income",
+            "total_assets":"assets",
+            "current_assets":"current_assets",
+            "current_liabilities":"current_liabilities",
+            "total_liabilities":"liabilities",
+            "operating_cash_flow":"cfo"
+        }
+        for family,cols in MOPS_SOURCES.items():
+            sha=row[f"source_{family}_sha256"].strip()
+            if any(str(row[v]).strip() for v in cols):
+                if not re.fullmatch(r"[A-Fa-f0-9]{64}",sha):
+                    raise ValueError("MOPS_FINANCIAL_FACT_WITHOUT_ARCHIVE_SHA")
+        for dest,src in mapping.items():
+            val=as_num(row[src])
+            if val is not None:
+                facts[dest]=val
+        if "revenue" in facts and "cost_of_goods_sold" in facts:
+            facts["gross_profit"]=facts["revenue"]-facts["cost_of_goods_sold"]
+        output[key]=facts
+    return {k:v for k,v in output.items() if v is not None}, {
+        "filename":Path(path).name,"sha256":digest,
+        "rows":len(rows),"usable_company_fy":sum(v is not None and bool(v) for v in output.values())
+    },dict(rejected)
+
+
+def choose_financial_pair(ticker,current_fy,finmind,mops):
+    """Use one consistent provider for BOTH current and previous annual FY.
+    Never form a growth ratio from two different providers' amount series.
+    Prefer the pair with most usable features. Ties prefer official public summary.
+    """
+    options=[]
+    for source,archive in (("public_mops_retrospective",mops),
+                           ("finmind_provisional",finmind)):
+        cur=archive.get((ticker,current_fy),{})
+        prev=archive.get((ticker,current_fy-1),{})
+        if not cur:
+            continue
+        xs=x_metrics(cur,prev)
+        available=sum(bool(v) for v in xs.values())
+        score=(available, 1 if source=="public_mops_retrospective" else 0)
+        options.append((score,source,cur,prev,xs))
+    if not options:
+        return None
+    _,source,cur,prev,xs=max(options,key=lambda x:x[0])
+    return source,cur,prev,xs
+
+def build(annual_lines, labels_csv, label_kind, out, *, train=True, mops_annual=None):
     if label_kind not in ("silver","tej_proxy","human"):
         raise ValueError("UNSUPPORTED_LABEL_KIND")
-    financial, fhash, status_counts, source_cells = finmind_panel(annual_lines)
+    financial, finmind_inputs, provider_conflicts = finmind_union(annual_lines)
+    public_mops, mops_input, mops_rejected = mops_panel(mops_annual)
+    fhash=finmind_inputs[0]["sha256"] if len(finmind_inputs)==1 else None
+    status_counts=dict(sum((Counter(x["missing_status_counts"]) for x in finmind_inputs),Counter()))
+    source_cells=sum(x["candidate_cells"] for x in finmind_inputs)
     outcomes, yhash, skipped_labels, raw_labels = labels(labels_csv,label_kind)
     rows = []
     omissions = Counter()
@@ -369,13 +496,12 @@ def build(annual_lines, labels_csv, label_kind, out, *, train=True):
     splits=defaultdict(Counter)
     for (ticker,year),y in sorted(outcomes.items(),key=lambda k:(k[0][1],k[0][0])):
         fy=y["x_fiscal_year"]
-        current=financial.get((ticker,fy))
-        previous=financial.get((ticker,fy-1),{})
-        if not current:
+        selected=choose_financial_pair(ticker,fy,financial,public_mops)
+        if selected is None:
             omissions["X_FY_MISSING_OR_ALL_EMPTY"] += 1
             annual[year]["x_not_found"] += 1
             continue
-        xs=x_metrics(current,previous)
+        source_x,current,previous,xs=selected
         n=sum(bool(v) for v in xs.values())
         if n<4:
             omissions["FEWER_THAN_4_FEATURES"] += 1
@@ -387,7 +513,8 @@ def build(annual_lines, labels_csv, label_kind, out, *, train=True):
             "label_grade":y["label_grade"],"label":str(y["label"]),
             "split":y["split"],"source_x_present_count":str(len(current)),
             "source_x_prior_present_count":str(len(previous)),
-            "available_feature_count":str(n),"x_retrospective_only":"true",**xs}
+            "available_feature_count":str(n),"x_retrospective_only":"true",
+            "source_x":source_x,**xs}
         rows.append(row)
         annual[year]["joined"]+=1
         annual[year]["positive"]+=y["label"]
@@ -401,7 +528,14 @@ def build(annual_lines, labels_csv, label_kind, out, *, train=True):
         "target_definition":(ALLOWED_PROXY if label_kind=="tej_proxy" else
                              ALLOWED_SILVER if label_kind=="silver" else
                              "HUMAN_REVIEWED_SOURCE_ATTESTED_NOT_GOLD"),
-        "source_sha256":{"finmind_annual_lines":fhash,"labels":yhash},
+        "source_sha256":{"finmind_annual_lines":fhash,"labels":yhash,
+                         "mops_annual":mops_input["sha256"] if mops_input else None},
+        "finmind_inputs":finmind_inputs,
+        "finmind_reconciled_company_fy":len(financial),
+        "finmind_conflicting_repeated_values":provider_conflicts,
+        "public_mops_input":mops_input,
+        "public_mops_rejected":mops_rejected,
+        "matched_source_counts":dict(Counter(r["source_x"] for r in rows)),
         "finmind_source_candidate_cells":source_cells,
         "finmind_source_status_counts":status_counts,
         "label_input_rows":raw_labels,
@@ -471,7 +605,8 @@ def make_review_template(finlab_cases, out):
 
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--annual-lines",help="Existing FinMind provisional annual line CSV")
+    p.add_argument("--annual-lines",action="append",help="Existing FinMind provisional annual line CSV; repeat for all existing exports")
+    p.add_argument("--mops-annual",help="Previously archived all-market public MOPS annual financial features CSV")
     p.add_argument("--labels",help="Existing research labels CSV")
     p.add_argument("--label-kind",choices=("silver","tej_proxy","human"),default="silver")
     p.add_argument("--finlab-cases",help="Optional existing FinLab case CSV to create human review template")
@@ -482,7 +617,7 @@ def main(argv=None):
         result=make_review_template(args.finlab_cases,args.out)
     elif args.annual_lines and args.labels:
         result=build(args.annual_lines,args.labels,args.label_kind,args.out,
-                     train=not args.no_train)
+                     train=not args.no_train,mops_annual=args.mops_annual)
     else:
         p.error("Provide --annual-lines and --labels, OR only --finlab-cases")
     print(json.dumps(result,ensure_ascii=False,indent=2))
