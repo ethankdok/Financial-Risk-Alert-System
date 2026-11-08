@@ -1,0 +1,4 @@
+ticker,fiscal_year,company,Y1,Y2,Y3_official,Y4_court_found,Y2_scope,event_date,source_document_url,evidence_detail,evidence_grade,label_status,TEJ_FSC_industry_code,formal_X_status
+8299,2015,群聯,1,1,,,FY_CONSOLIDATED,2016-09-21,https://news.cnyes.com/news/id/3548499,主管機關函示重編民國102年至105年第二季各期合併財務報告；2015年度合併財報在範圍內,MOPS_ANNOUNCEMENT_REPRINT,ANNUAL_RESTATEMENT_CONFIRMED_FROM_NOTICE;PIT_X_PENDING,,NO_TEJ_SQLITE_AVAILABLE_HERE
+5706,2017,鳳凰,1,1,,,FY_CONSOLIDATED,2018-12-07,https://www.moneydj.com/kmdj/news/newsviewer.aspx?a=%7B7cdb91c2-3068-4772-b348-c4eda80fea79%7D,依金管會函示重編106年度合併財務報告；更補正102至105年度需另判斷核心金額,MOPS_ANNOUNCEMENT_REPRINT,ANNUAL_RESTATEMENT_CONFIRMED_FROM_NOTICE;PIT_X_PENDING,,NO_TEJ_SQLITE_AVAILABLE_HERE
+4960,2018,誠美材,1,1,,,FY_CONSOLIDATED,2019-04-29,https://news.cnyes.com/news/print/4310982,重編107年度合併及個體財報；合併存貨及綜合損益各減少新臺幣76750千元,MOPS_ANNOUNCEMENT_REPRINT,ANNUAL_RESTATEMENT_CONFIRMED_FROM_NOTICE;PIT_X_PENDING,,NO_TEJ_SQLITE_AVAILABLE_HERE
