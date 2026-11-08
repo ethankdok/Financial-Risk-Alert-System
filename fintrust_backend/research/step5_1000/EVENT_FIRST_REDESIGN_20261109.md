@@ -1,0 +1,11 @@
+# FinTrust Event-First Sampling Redesign — 2026-11-09
+
+The old 1,003 issuer-year staging source is immutable. Its 448 randomly selected, Y1–Y4-unreviewed observations are excluded from the active cohort. The 555 preexisting evidence-bearing/research rows remain preserved. A curated issuer notice ledger adds 47 affected issuer-year links, with 37 unique new issuer-years, yielding a 592-row audit master: Y1 positives 105; Y2 positives 65. Two legacy blank Y2 values are versioned as confirmed 1 following sourced annual consolidated main-statement corrections. Y3/Y4 are **not** inferred from Y1/Y2.
+
+**These counts are not claims of 592 clean model samples.** FY2013 341 older rows are audit/IFRS-lag baseline and cannot dominate FY2014–2025 training. Only 25 of 65 Y2-positive issuer-years have >=18 TEJ20 features and a nonblank TEJ FSC code in the currently accessible uploaded snapshot; source first-filed PIT proof is still missing.
+
+For FY2014–2025 the intended final dataset is 1,000 verified issuer-years distributed approximately 83–84/year. Y2 positive:control 1:4 is a design target, never a license to invent negatives. Candidates must first match an independently reviewed Y2 event by the exact FY and literal TEJ FSC code (including leading zero), then have MOPS/official-case searches recorded before Y2=0 can be admitted. No custom industry classes; no duplicate issuer between training and reserved test companies. Original fixed 117-company test remains locked, 1785 excluded from all training/tuning. A standalone FY×FSC candidate must retain UNKNOWN labels before verification.
+
+The user-only local-data workflow is intentionally outside GitHub because the licensed TEJ SQLite / original private ratios are not committed. The runtime sampler uses SQLite read-only and strict consolidated annual NTD listings, requiring >=18 of 20 TEJ features. Canonical Beneish/Dechow must use original statement components and PIT time checks; TEJ candidate/proxy fields must never be silently substituted.
+
+Current evidence sources are reproduced MOPS issuer notices rather than MOPS-first-filed archived originals. The target 1,000 **verified** records are not achieved; any further result must report fully verified positive/negative counts separately from candidate counts.
