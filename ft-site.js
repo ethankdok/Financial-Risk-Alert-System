@@ -218,7 +218,7 @@
       if(!ticker){status("整合查核需要有效公司代號（4–6 碼）。",true);button.disabled=false;return;}
       add("assessment",api("/api/integrity/assessments/preview",{method:"POST",body:JSON.stringify({ticker:ticker,review_mode:"CURRENT_REVIEW",sections:["financial_checks","literature","jsd","claims"]})}));
       add("events",api("/api/financial/companies/"+encodeURIComponent(ticker)+"/material-events"));
-      if(claim)add("claim",api("/api/financial/claims/verify",{method:"POST",body:JSON.stringify({company_code:ticker,claim:claim})}));
+      if(isVerifiableClaim(claim))add("claim",api("/api/financial/claims/verify",{method:"POST",body:JSON.stringify({company_code:ticker,claim:claim})}));
     }else if(mode==="claim"){
       if(!ticker||claim.length<2){status("主張查核需要公司代號及至少兩個字的新聞／言論內容。",true);button.disabled=false;return;}
       add("claim",api("/api/financial/claims/verify",{method:"POST",body:JSON.stringify({company_code:ticker,claim:claim})}));
@@ -241,11 +241,57 @@
     button.disabled=false;
     if(success)target.scrollIntoView({behavior:"smooth",block:"start"});
   }
+
+  function isVerifiableClaim(text){
+    var q=String(text||"").trim();
+    if(!q)return false;
+    if(/^(幫我|請|查詢|查查|查看|分析|找出|比較|研究|想知道)/.test(q)&&!/新聞(?:說|指出)|報導(?:說|指出)|宣稱|聲稱|「|\d+%/.test(q))return false;
+    return q.length>=8;
+  }
+  async function resolveCompanyFromQuestion(text){
+    var q=String(text||"");if(!q)return "";
+    var candidates=[];
+    for(var i=0;i<2;i++){
+      try{
+        var data=await api(i===0?"/api/financial/companies":"/api/integrity/companies");
+        candidates=asArray(data.companies||data.items);
+        var found=candidates.filter(function(c){
+          var name=String(c.name||c.company_name||"").trim();
+          return name.length>=2&&q.includes(name)&&/^\d{4,6}$/.test(String(c.ticker||c.code||""));
+        });
+        if(found.length===1)return String(found[0].ticker||found[0].code);
+      }catch(e){}
+    }
+    return "";
+  }
+  function renderLayoutPreview(target,financial){
+    clear(target);target.hidden=false;
+    var title=section("結果頁配置預覽");
+    title.appendChild(badge("介面示意｜沒有執行分析"));
+    title.appendChild(para("以下只展示實際資料回來後會出現的資訊區塊，不含虛構模型分數、公司資料或新聞。"));
+    var grid=node("div",null,"ft-result-cards");
+    append(grid,[
+      summaryItem("查核結論","等待執行","對應官方證據與時間"),
+      summaryItem("財務篩檢","等待執行","異常指標與原因"),
+      summaryItem("模型可計算性","等待執行","Beneish／Dechow"),
+      summaryItem("來源狀態","等待執行","申報版本與原始連結")
+    ]);title.appendChild(grid);target.appendChild(title);
+    var detail=section(financial?"財務異常與模型明細":"新聞主張與財務交叉核對");
+    var d=node("details");d.appendChild(node("summary","展開資訊欄位示意"));
+    d.appendChild(para(financial?"指標名稱、期間、公式、輸入科目、可計算性、官方資料來源。":"新聞原文、公司與事件日期、官方數據、查核狀態、財務異常與引用證據。"));
+    detail.appendChild(d);target.appendChild(detail);
+  }
+
   function startIntegrated(){
     var p=fromUrl(),ticker=$("#ft-ticker"),query=$("#ft-query"),mode=$("#ft-mode"),button=$("#ft-run"),result=$("#ft-result");
     if(!ticker||!query||!mode||!button)return;
     ticker.value=p.ticker||"";query.value=p.query||"";
     if(p.query&&/新聞|貼文|說法|claim|真假/i.test(p.query))mode.value="integrated";
+
+    if(!p.ticker&&p.query){resolveCompanyFromQuestion(p.query).then(function(code){if(code&&!ticker.value.trim())ticker.value=code;});}
+    var preview=node("button","預覽結果頁版型","ft-btn");preview.type="button";
+    button.parentNode.insertBefore(preview,button);
+    preview.addEventListener("click",function(){renderLayoutPreview(result,false);status("僅顯示版型預覽，未執行任何分析。");});
     attachFile($("#ft-attach"),query,$("#ft-file-note"));
     $("#ft-form").addEventListener("submit",function(e){e.preventDefault();runWorkflow(mode.value,ticker.value.trim(),query.value.trim(),result,button);});
     document.querySelectorAll("[data-ft-mode]").forEach(function(b){b.addEventListener("click",function(){mode.value=b.getAttribute("data-ft-mode");query.focus();});});
@@ -254,6 +300,11 @@
     var p=fromUrl(),ticker=$("#ft-audit-ticker"),button=$("#ft-audit-run"),result=$("#ft-result");
     if(!ticker||!button)return;
     ticker.value=p.ticker||"";
+
+    if(!p.ticker&&p.query){resolveCompanyFromQuestion(p.query).then(function(code){if(code&&!ticker.value.trim())ticker.value=code;});}
+    var preview=node("button","預覽結果頁版型","ft-btn");preview.type="button";
+    button.parentNode.insertBefore(preview,button);
+    preview.addEventListener("click",function(){renderLayoutPreview(result,true);status("僅顯示版型預覽，未執行任何分析。");});
     async function run(){
       var code=ticker.value.trim();if(!/^\d{4,6}$/.test(code)){status("請輸入 4–6 碼公司代號。",true);return;}
       clear(result);result.hidden=false;button.disabled=true;status("正在讀取財務查核與模型可計算性…");
