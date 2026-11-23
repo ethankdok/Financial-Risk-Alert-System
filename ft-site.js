@@ -298,22 +298,34 @@
     var p=fromUrl(),ticker=$("#ft-ticker"),query=$("#ft-query"),mode=$("#ft-mode"),button=$("#ft-run"),result=$("#ft-result");
     if(!ticker||!query||!mode||!button)return;
     ticker.value=p.ticker||"";query.value=p.query||"";
-    if(p.query&&/新聞|貼文|說法|claim|真假/i.test(p.query))mode.value="integrated";
-
-    if(!p.ticker&&p.query){resolveCompanyFromQuestion(p.query).then(function(code){if(code&&!ticker.value.trim())ticker.value=code;});}
+    if(p.query&&/保證獲利|穩賺|詐騙|內線消息|投資話術/.test(p.query)&&!/財報|新聞主張|官方財務/.test(p.query))mode.value="text";
+    var launched=false;
+    function launchFromHome(){
+      if(launched||!p.query)return;
+      if(mode.value!=="text"&&!ticker.value.trim()){status("請先填入公司代號，再執行查核。");return;}
+      launched=true;
+      runWorkflow(mode.value,ticker.value.trim(),query.value.trim(),result,button);
+    }
+    if(!p.ticker&&p.query){
+      resolveCompanyFromQuestion(p.query).then(function(code){
+        if(code&&!ticker.value.trim())ticker.value=code;
+        launchFromHome();
+      });
+    }
     var preview=node("button","預覽結果頁版型","ft-btn");preview.type="button";
     button.parentNode.insertBefore(preview,button);
     preview.addEventListener("click",function(){renderLayoutPreview(result,false);status("僅顯示版型預覽，未執行任何分析。");});
     attachFile($("#ft-attach"),query,$("#ft-file-note"));
     $("#ft-form").addEventListener("submit",function(e){e.preventDefault();runWorkflow(mode.value,ticker.value.trim(),query.value.trim(),result,button);});
     document.querySelectorAll("[data-ft-mode]").forEach(function(b){b.addEventListener("click",function(){mode.value=b.getAttribute("data-ft-mode");query.focus();});});
+    if(p.query&&(p.ticker||mode.value==="text"))launchFromHome();
   }
   function startAudit(){
     var p=fromUrl(),ticker=$("#ft-audit-ticker"),button=$("#ft-audit-run"),result=$("#ft-result");
     if(!ticker||!button)return;
     ticker.value=p.ticker||"";
 
-    if(!p.ticker&&p.query){resolveCompanyFromQuestion(p.query).then(function(code){if(code&&!ticker.value.trim())ticker.value=code;});}
+    if(!p.ticker&&p.query){resolveCompanyFromQuestion(p.query).then(function(code){if(code&&!ticker.value.trim()){ticker.value=code;run();}else if(!code)status("請先填入公司代號，再執行稽核。");});}
     var preview=node("button","預覽結果頁版型","ft-btn");preview.type="button";
     button.parentNode.insertBefore(preview,button);
     preview.addEventListener("click",function(){renderLayoutPreview(result,true);status("僅顯示版型預覽，未執行任何分析。");});
