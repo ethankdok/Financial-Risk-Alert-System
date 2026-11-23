@@ -8,14 +8,11 @@
   <link rel="stylesheet" href="ui-humanize.css">
   <script src="member-auth.js"></script>
   <script>MemberAuth.requireMember();</script>
+  <link rel="stylesheet" href="ft-site.css">
+  <script defer src="ft-site.js"></script>
 </head>
-<body>
-  <header class="site-header">
-    <div class="nav-wrap">
-      <a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Member Center</span></div></a>
-      <nav class="nav-links"><a href="index.html">首頁</a><a href="analysis.html">資訊分析</a><a href="official.html">公告比對</a><a class="active" href="member.html">會員中心</a><button class="nav-button" data-member-logout type="button">登出</button></nav>
-    </div>
-  </header>
+<body class="ft-app ft-member-page" data-ft-page="member">
+  <header id="ft-header"></header>
   <section class="page-hero"><div class="container"><div class="breadcrumb">首頁 / 會員中心</div><h1>會員中心</h1><p><span data-member-name>會員</span>，管理個人資料、追蹤公司與通知設定。</p></div></section>
   <div class="container layout">
     <aside class="sidebar"><a href="analysis.html">金融資訊分析</a><a href="official.html">官方公告比對</a><a class="active" href="member.html">會員中心</a></aside>
@@ -58,6 +55,12 @@
       <section class="content-card">
         <h3>最近通知紀錄</h3>
         <div class="table-wrap"><table class="data-table"><thead><tr><th>時間</th><th>公司</th><th>類型</th><th>狀態</th><th>主旨</th></tr></thead><tbody id="notificationRows"><tr><td colspan="5">讀取中</td></tr></tbody></table></div>
+      </section>
+      <section class="content-card">
+        <h3>我的分析紀錄</h3>
+        <p class="muted-text">目前會員追蹤與通知已連動後端；個人查核報告尚未永久保存，這裡不顯示示意紀錄。</p>
+        <div id="memberAnalysisHistory" class="muted-text" aria-live="polite">讀取分析歷史狀態中…</div>
+        <a class="ft-inline-link" href="analysis.html">建立新的整合查核</a>
       </section>
     </main>
   </div>
@@ -106,7 +109,15 @@
   document.getElementById('profileForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const data=await MemberAuth.api('/api/member/profile',{method:'PUT',body:JSON.stringify({display_name:form.display_name.value,email:form.email.value})});document.getElementById('profileStatus').textContent='已儲存';MemberAuth.mountNav(data.member);});
   document.getElementById('watchlistForm').addEventListener('submit',async event=>{event.preventDefault();const ticker=event.currentTarget.ticker.value;if(!ticker)return;await MemberAuth.api('/api/member/watchlist',{method:'POST',body:JSON.stringify({ticker,company_name:companyNames[ticker],alert_enabled:true})});loadWatchlist();});
   document.getElementById('preferenceForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;await MemberAuth.api('/api/member/notification-preferences',{method:'PUT',body:JSON.stringify({email_enabled:form.email_enabled.checked,digest_frequency:form.digest_frequency.value,important_alerts:form.important_alerts.checked,material_event_alerts:form.material_event_alerts.checked,conference_alerts:form.conference_alerts.checked,narrative_shift_alerts:form.narrative_shift_alerts.checked})});document.getElementById('preferenceStatus').textContent='提醒偏好已儲存';});
+  async function loadAnalysisHistory(){
+    const target=document.getElementById('memberAnalysisHistory');
+    try{const data=await MemberAuth.api('/api/member/analysis-history');
+      const records=data.items||[];
+      target.textContent=records.length?('目前有 '+records.length+' 筆分析紀錄。'):(data.message||'目前尚無個人分析紀錄。');
+    }catch(e){target.textContent='分析歷史狀態暫時無法讀取。';}
+  }
   loadMemberPage();
+  loadAnalysisHistory();
   </script>
 </body>
 </html>
