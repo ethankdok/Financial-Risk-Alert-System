@@ -106,7 +106,7 @@
     var b=node("section",null,"ft-mini-card");append(b,[node("h3",title),node("strong",value),para(description||"")]);return b;
   }
   function section(title){var el=node("section",null,"ft-panel");el.appendChild(node("h2",title));return el;}
-  function renderFinding(f){
+  function renderFinding(f,evidenceRecords){
     var box=node("div",null,"ft-finding");
     var head=node("div",null,"ft-finding-head");append(head,[node("strong",f.title||f.name||f.finding_id||"財務篩檢項目"),badge(statusNames[f.status]||f.status||"狀態未明",f.status==="descriptive_divergence"?"warn":"")]);
     box.appendChild(head);
@@ -121,7 +121,16 @@
       if(v.length)inner.appendChild(para(v.join("　")));
     }
     if(asArray(f.limitations).length)inner.appendChild(para("限制："+asArray(f.limitations).join("；")));
-    if(asArray(f.evidence_ids).length)inner.appendChild(para("證據編號："+asArray(f.evidence_ids).join("、"),"ft-code"));
+    if(asArray(f.evidence_ids).length){
+      var evidenceIndex={};
+      asArray(evidenceRecords).forEach(function(record){if(record&&record.evidence_id)evidenceIndex[record.evidence_id]=record;});
+      asArray(f.evidence_ids).forEach(function(id){
+        var rec=evidenceIndex[id];
+        var line=para((rec?(rec.fiscal_period||"")+" "+(rec.concept||"")+"；版本 "+(rec.filing_version||"未記錄"):"證據編號")+"　"+id,"ft-code");
+        if(rec&&rec.source_url)line.appendChild(safeOfficialLink(rec.source_url,"　官方來源"));
+        inner.appendChild(line);
+      });
+    }
     d.appendChild(inner);box.appendChild(d);return box;
   }
   function renderModel(m){
@@ -148,7 +157,7 @@
     if(focus!=="only-news"){
       var fin=section("財務篩檢與文獻模型");
       if(!findings.length&&!models.length)fin.appendChild(para("目前沒有可顯示的財務篩檢項目。"));
-      findings.forEach(function(f){fin.appendChild(renderFinding(f));});
+      findings.forEach(function(f){fin.appendChild(renderFinding(f,r.evidence_records));});
       models.forEach(function(m){fin.appendChild(renderModel(m));});
       container.appendChild(fin);
     }
@@ -161,7 +170,7 @@
       asArray(c.evidence).slice(0,3).forEach(function(v){var line=para((v.source_title||v.source_type||"官方證據")+"　"+(v.period||""));line.appendChild(safeOfficialLink(v.source_reference,"　查看來源"));b.appendChild(line);});
       cross.appendChild(b);
     });
-    narratives.forEach(function(n){cross.appendChild(renderFinding(n));});
+    narratives.forEach(function(n){cross.appendChild(renderFinding(n,r.evidence_records));});
     if(r.data_shift){
       var d=r.data_shift;var summary=node("div",null,"ft-finding");summary.appendChild(node("strong","法說會／財報敘述差異"));
       summary.appendChild(para("比較期間："+(d.period_1||"—")+" → "+(d.period_2||"—")+"；狀態："+(d.status||"未知")));
