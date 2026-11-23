@@ -48,9 +48,10 @@
     var q=String(raw||"").trim();if(!q)return false;
     var intent=detectIntent(q);
     var target=intent==="audit"?"financial-audit.html":"analysis.html";
-    var params=new URLSearchParams({q:q});
+    try{sessionStorage.setItem("ft:pending-query",q);}catch(e){return false;}
+    var params=new URLSearchParams();
     var ticker=extractTicker(q);if(ticker)params.set("ticker",ticker);
-    location.href=target+"?"+params.toString();
+    location.href=target+(params.toString()?"?"+params.toString():"");
     return true;
   }
   function attachFile(input,area,display){
@@ -77,8 +78,10 @@
   }
   function errorMsg(e){var map={400:"查詢參數不正確",401:"需要登入",403:"目前沒有權限",404:"公司未收錄或資料不存在",409:"此分析模式尚不支援",422:"查詢內容不符合格式",502:"後端 API 無法連線",503:"資料來源目前不可用"};return (map[e.status]||"分析暫時無法完成")+"："+(e.message||"請稍後重試");}
   function fromUrl(){
-    var p=parseQuery();
-    return {query:p.get("q")||"",ticker:p.get("ticker")||extractTicker(p.get("q")||"")};
+    var p=parseQuery(),pending="";
+    try{pending=sessionStorage.getItem("ft:pending-query")||"";sessionStorage.removeItem("ft:pending-query");}catch(e){}
+    var q=p.get("q")||pending;
+    return {query:q,ticker:p.get("ticker")||extractTicker(q)};
   }
   function startHome(){
     var input=$("#ft-home-query"),button=$("#ft-home-submit");
