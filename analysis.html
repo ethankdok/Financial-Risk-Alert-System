@@ -1,18 +1,47 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>金融資訊分析</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ui-humanize.css"></head><body>
-<header class="site-header"><div class="nav-wrap"><a class="brand" href="index.html"><div class="brand-mark">FI</div><div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Financial Information Credibility & Risk Alert System</span></div></a><nav class="nav-links"><a href="index.html">首頁</a><a class="active" href="analysis.html">資訊分析</a><a href="official.html">公告比對</a><a href="records.html">分析紀錄</a><a href="member.html">會員中心</a><a class="login-link" href="login.html">登入</a></nav></div></header>
-<section class="page-hero"><div class="container"><div class="breadcrumb">首頁 / 金融資訊分析</div><h1>金融資訊分析</h1><p>依照手邊資料選擇查詢方式，系統會整理來源並進行可信度與風險分析。</p></div></section>
-<div class="container layout"><aside class="sidebar"><a class="active" href="analysis.html">金融資訊分析</a><a href="official.html">官方公告比對</a><a href="records.html">分析紀錄</a><a href="member.html">會員中心</a></aside><main>
-<div class="content-card"><div class="search-intro"><div><h2>選擇搜尋方式</h2><p class="notice">五種方式會共用日期、資料來源與分析條件，使用者可依手邊資訊選擇最適合的方法。</p></div></div>
-<div class="search-tabs" role="tablist">
-<button class="search-tab active" data-tab="ai">AI 搜尋</button><button class="search-tab" data-tab="text">文字搜尋</button><button class="search-tab" data-tab="field">欄位搜尋</button><button class="search-tab" data-tab="voice">語音搜尋</button><button class="search-tab" data-tab="image">圖片搜尋</button>
+<!doctype html>
+<html lang="zh-Hant"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>整合查核｜FinTrust</title><link rel="stylesheet" href="ft-site.css">
+<script defer src="member-auth.js"></script><script defer src="ft-site.js"></script>
+</head>
+<body class="ft-app" data-ft-page="integrated"><header id="ft-header"></header>
+<main class="ft-wrap">
+<section class="ft-page-hero"><div class="ft-eyebrow">Investigation workspace</div>
+<h1>整合查核</h1><p>在同一條查核流程中選擇分析方式，整合官方財報、金融資訊及研究模型。</p></section>
+<div class="ft-layout"><div>
+<section class="ft-panel">
+<div class="ft-panel-heading"><h2>建立查核</h2><span class="ft-badge">既有後端 API</span></div>
+<form id="ft-form">
+<div class="ft-two-fields">
+<div class="ft-field"><label for="ft-ticker">公司代號</label><input id="ft-ticker" class="ft-input" inputmode="numeric" pattern="[0-9]{4,6}" placeholder="例如 2330"></div>
+<div class="ft-field"><label for="ft-mode">分析方式</label><select class="ft-select" id="ft-mode">
+<option value="integrated">整合查核（財務＋官方證據）</option>
+<option value="claim">新聞／言論主張查核</option>
+<option value="text">投資言論規則篩檢</option>
+</select></div></div>
+<div class="ft-field"><label for="ft-query">新聞內容、財務主張或查核問題</label>
+<textarea class="ft-textarea" id="ft-query" placeholder="例如：這篇新聞說 2330 的營收成長 30%，和官方財報一致嗎？可以貼上新聞正文、主張或投資言論。"></textarea>
 </div>
-<form id="analysisForm">
-<section class="search-panel active" id="tab-ai"><div class="mode-head"><div class="mode-icon">AI</div><div><h3>AI 搜尋</h3><p>直接用自然語言描述想查的內容，系統自動理解公司、事件與風險重點。</p></div></div><label>請描述你的查詢需求</label><textarea class="form-control large-input" placeholder="例如：幫我查最近台積電是否有重大公告，並判斷 X 上『下週保證漲停』的貼文可信度。"></textarea><div class="helper-chips"><span class="chip ai-example">台積電最近有沒有重大訊息？</span><span class="chip ai-example">這篇飆股貼文可信嗎？</span><span class="chip ai-example">整理近期 AI 概念股的高風險訊息</span></div></section>
-<section class="search-panel" id="tab-text"><div class="mode-head"><div class="mode-icon">文</div><div><h3>文字搜尋</h3><p>輸入單一或多個關鍵字，搜尋相關新聞、貼文與官方公告。</p></div></div><label for="keyword">搜尋關鍵字</label><input class="form-control" id="keyword" placeholder="例如：台積電、AI 概念股、保證獲利、重大訊息"><div class="helper-chips"><span class="chip" data-chip="台積電" data-target="#keyword">台積電</span><span class="chip" data-chip="AI 概念股" data-target="#keyword">AI 概念股</span><span class="chip" data-chip="保證獲利" data-target="#keyword">保證獲利</span><span class="chip" data-chip="重大訊息" data-target="#keyword">重大訊息</span></div></section>
-<section class="search-panel" id="tab-field"><div class="mode-head"><div class="mode-icon">欄</div><div><h3>欄位搜尋</h3><p>用明確欄位縮小搜尋範圍，適合已知公司、股票代號或網址的使用者。</p></div></div><div class="form-grid"><div class="form-group"><label>公司名稱</label><input class="form-control" placeholder="例如：台灣積體電路製造"></div><div class="form-group"><label>股票代號</label><input class="form-control" placeholder="例如：2330"></div><div class="form-group full"><label>Yahoo 財經新聞網址</label><input class="form-control" placeholder="貼上 Yahoo 財經新聞網址"></div><div class="form-group full"><label>X 貼文網址</label><input class="form-control" placeholder="貼上 X 貼文網址"></div></div></section>
-<section class="search-panel" id="tab-voice"><div class="mode-head"><div class="mode-icon">🎙</div><div><h3>語音搜尋</h3><p>透過語音輸入查詢內容，適合行動裝置或不方便打字的情境。</p></div></div><div class="voice-box"><button type="button" class="voice-button" id="voiceButton">開始語音輸入</button><p id="voiceStatus">點擊按鈕後說出查詢內容，例如：「查詢台積電最近的重大訊息」。</p><textarea class="form-control" placeholder="語音辨識結果將顯示在這裡"></textarea></div></section>
-<section class="search-panel" id="tab-image"><div class="mode-head"><div class="mode-icon">圖</div><div><h3>圖片搜尋</h3><p>上傳新聞截圖、社群貼文截圖或投資訊息圖片，系統辨識文字後進行搜尋與分析。</p></div></div><label class="upload-box"><input type="file" accept="image/*" id="imageInput"><span class="upload-icon">＋</span><strong>點擊上傳圖片</strong><small>支援 JPG、PNG 圖片格式</small></label><div id="fileName" class="file-name">尚未選擇圖片</div></section>
-<div class="shared-filters"><h3>共用篩選條件</h3><div class="form-grid"><div class="form-group"><label>開始日期</label><input class="form-control" type="date"></div><div class="form-group"><label>結束日期</label><input class="form-control" type="date"></div><div class="form-group full"><label>資料來源</label><div class="check-row"><label class="check-pill"><input type="checkbox" checked> X</label><label class="check-pill"><input type="checkbox" checked> Yahoo 財經</label><label class="check-pill"><input type="checkbox" checked> 公開資訊觀測站</label></div></div><div class="form-group full"><label>分析重點</label><select class="form-control"><option>完整可信度與風險分析</option><option>真假資訊判斷</option><option>行銷內容辨識</option><option>欺騙風險辨識</option></select></div></div></div>
-<div class="analysis-actions"><button class="btn btn-primary" type="submit">開始分析</button><button class="btn btn-secondary" type="reset">清除條件</button></div></form></div>
-<div class="content-card"><h3>五種搜尋方式的使用情境</h3><div class="reason-list"><div class="reason"><div>AI</div><div><b>AI 搜尋</b><span>用完整句子提問，例如「幫我判斷這則台積電保證漲停的貼文是否可信」。</span></div></div><div class="reason"><div>文</div><div><b>文字搜尋</b><span>輸入台積電、ETF、保證獲利、重大訊息等關鍵字。</span></div></div><div class="reason"><div>欄</div><div><b>欄位搜尋</b><span>輸入公司名稱、股票代號、Yahoo 新聞網址或 X 貼文網址。</span></div></div><div class="reason"><div>🎙</div><div><b>語音搜尋</b><span>直接說出查詢需求，降低手機使用者的輸入負擔。</span></div></div><div class="reason"><div>圖</div><div><b>圖片搜尋</b><span>上傳新聞或社群貼文截圖，辨識其中的文字與金融主題。</span></div></div></div></div>
-</main></div><script src="script.js"></script></body></html>
+<div class="ft-chat-actions">
+<div><label class="ft-upload-label" for="ft-attach">＋ 附加檔案<input id="ft-attach" type="file" accept=".txt,.pdf,.png,.jpg,.jpeg,.csv,.xlsx"></label>
+<div id="ft-file-note" class="ft-file-note">文字檔可直接讀入；PDF／圖片解析尚未串接</div></div>
+<button type="submit" class="ft-btn ft-btn-primary" id="ft-run">執行查核</button>
+</div></form><div id="ft-status" class="ft-status" aria-live="polite" role="status" hidden></div>
+</section>
+<div id="ft-result" class="ft-result" aria-live="polite" hidden></div>
+</div>
+<aside class="ft-aside">
+<section class="ft-panel"><h2>查核流程</h2>
+<ol class="ft-steps"><li><strong>01　確認公司與查核主張</strong>使用公司代號定位財務資料，辨識你提供的訊息。</li>
+<li><strong>02　取得官方證據</strong>查詢已歸檔財報、財務指標及重大事件。</li>
+<li><strong>03　呈現查核結果</strong>分別顯示財務篩檢、新聞核驗與可追溯來源。</li></ol></section>
+<section class="ft-panel"><h3>切換分析方式</h3><p class="ft-hint">三種方式共用這一條工作流程，不會再切換成不同的搜尋網站。</p>
+<div style="display:grid;gap:8px"><button type="button" class="ft-btn" data-ft-mode="integrated">綜合公司查核</button>
+<button type="button" class="ft-btn" data-ft-mode="claim">核對新聞主張</button>
+<button type="button" class="ft-btn" data-ft-mode="text">檢查投資話術</button></div></section>
+<section class="ft-panel"><h3>目前資料範圍</h3>
+<p class="ft-hint">已完成的 API 優先使用已歸檔官方資料；可貼上近期新聞主張，但自動持續抓取每日新聞及跨時間分析仍需新增服務。無法取得資料時不使用示範結果替代。</p>
+<a class="ft-inline-link" href="financial-audit.html">需要查看詳細財務模型？</a></section>
+</aside></div>
+</main><footer class="ft-footer"><div class="ft-wrap"><span>FinTrust · 整合查核</span><span>新聞核驗、財務異常與投資風險話術採獨立解釋。</span></div></footer>
+</body></html>
