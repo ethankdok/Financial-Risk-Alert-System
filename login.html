@@ -7,17 +7,11 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="ui-humanize.css">
   <script src="member-auth.js"></script>
+  <link rel="stylesheet" href="ft-site.css">
+  <script defer src="ft-site.js"></script>
 </head>
-<body>
-  <header class="site-header">
-    <div class="nav-wrap">
-      <a class="brand" href="index.html">
-        <div class="brand-mark">FI</div>
-        <div class="brand-text"><strong>金融資訊真偽判斷與可信度風險提醒系統</strong><span>Member Sign In</span></div>
-      </a>
-      <nav class="nav-links"><a href="index.html">返回首頁</a><a href="register.html">建立會員帳號</a></nav>
-    </div>
-  </header>
+<body class="ft-app" data-ft-page="auth">
+  <header id="ft-header"></header>
   <main class="login-shell">
     <form class="auth-card" id="memberLoginForm">
       <span class="eyebrow">會員登入</span>
