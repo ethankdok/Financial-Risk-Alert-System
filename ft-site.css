@@ -192,3 +192,33 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
 .ft-app .ft-google-btn:hover{background:#f5f9fb}
 .ft-app .ft-google-mark{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;border:1px solid #d4dee6;color:#4285f4;font-weight:800;font-size:17px}
 .ft-app .ft-auth-divider{font-size:12px;color:#788999;text-align:center;margin:8px 0 18px}
+
+
+/* Company search suggestions and compact home recents. */
+.ft-app .ft-home-extras{max-width:740px;margin:55px auto 0;text-align:left}
+.ft-app .ft-subheading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 14px}
+.ft-app .ft-subheading h2{font-size:16px;font-weight:750;letter-spacing:-.25px;margin:0}
+.ft-app .ft-subheading-later{margin-top:27px}
+.ft-app .ft-text-button{border:0;background:transparent;color:var(--ft-soft);font-size:12px;font-weight:600;padding:6px 8px;border-radius:6px;cursor:pointer}
+.ft-app .ft-text-button:hover{background:#eef3f7;color:var(--ft-blue2)}
+.ft-app .ft-recent-list,.ft-app .ft-example-list{display:flex;align-items:center;flex-wrap:wrap;gap:10px;min-height:42px}
+.ft-app .ft-home-muted{font-size:13px;color:var(--ft-soft)}
+.ft-app .ft-recent-chip,.ft-app .ft-example-list button{border:1px solid #dde6ec;background:#fff;border-radius:10px;padding:9px 14px;cursor:pointer;color:var(--ft-ink);font-size:13px;font-weight:600}
+.ft-app .ft-recent-chip:hover,.ft-app .ft-example-list button:hover{border-color:#92bed2;background:#f7fbfd}
+.ft-app .ft-chat{position:relative}
+.ft-app .ft-company-field{min-width:0}
+.ft-app .ft-company-input-wrap{position:relative}
+.ft-app .ft-company-input-wrap .ft-input{width:100%;box-sizing:border-box}
+.ft-app .ft-search-list{position:absolute;z-index:35;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #cddce5;border-radius:12px;box-shadow:0 15px 34px rgba(23,45,62,.13);max-height:330px;overflow:auto;padding:6px}
+.ft-app .ft-search-list[hidden]{display:none!important}
+.ft-app .ft-home-suggestions{top:calc(100% - 65px);left:22px;right:22px}
+.ft-app .ft-search-option{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:transparent;border:0;padding:10px 13px;border-radius:7px;text-align:left;cursor:pointer;font-size:13px;color:var(--ft-ink)}
+.ft-app .ft-search-option:hover,.ft-app .ft-search-option.active{background:#eaf3f8}
+.ft-app .ft-search-option .ft-search-name{font-weight:650}
+.ft-app .ft-search-option small{color:var(--ft-soft);font-size:11px;white-space:nowrap}
+.ft-app .ft-search-empty{padding:13px;color:var(--ft-soft);font-size:13px}
+.ft-app .ft-company-data-status{font-size:12px;color:var(--ft-soft);margin-bottom:10px}
+.ft-app .ft-snapshot-message{line-height:1.75;padding:30px 10px;font-size:15px;color:var(--ft-soft)}
+.ft-app .ft-snapshot-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ft-app .ft-report-toolbar{grid-template-columns:minmax(240px,1.6fr) minmax(130px,1fr) minmax(110px,.65fr)}
+@media(max-width:730px){.ft-app .ft-home-extras{margin-top:38px}.ft-app .ft-home-suggestions{top:calc(100% - 55px);left:12px;right:12px}.ft-app .ft-report-toolbar{grid-template-columns:1fr}.ft-app .ft-search-option{flex-wrap:wrap}.ft-app .ft-search-option small{white-space:normal}}
