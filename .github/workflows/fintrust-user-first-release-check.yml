@@ -1,0 +1,30 @@
+name: FinTrust user-first release validation
+on:
+  push:
+    branches: [feature/fintrust-user-first-ui-20261124]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-release-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Validate shell and frontend syntax
+        run: |
+          bash -n deploy/user_first_cloud_run_release.sh
+          for file in ft-*.js; do node --check "$file"; done
+          node tests/ft_frontend_route_smoke.cjs
+      - name: Install dependencies
+        run: python3 -m pip install -r requirements.txt -r fintrust_backend/requirements.txt
+      - name: Offline regression
+        run: |
+          python3 -m py_compile app.py scripts/fintrust_user_first_ui_smoke.py company_directory.py
+          python3 -m unittest discover -s tests -p 'test_claim_verification_proxy.py'
+          python3 -m unittest discover -s tests -p 'test_public_company_directory.py'
+          (cd fintrust_backend && python3 -m unittest discover -s tests -p 'test_claim_verification.py')
+      - name: Build frontend container and check packaged app
+        run: |
+          docker build -f Dockerfile.flask -t fintrust-ui-test .
+          docker run --rm --network none -e APP_ENV=development -e FLASK_DATASTORE_BACKEND=sqlite -e ALLOW_DEMO_SEED_DATA=false fintrust-ui-test python -c 'from app import app; c=app.test_client(); assert c.get("/health").status_code == 200; assert c.get("/ft-mops-data.json").status_code == 200; assert c.get("/financial-audit.html").status_code == 200; assert c.get("/api/member/me").status_code == 401; rules=[r.rule for r in app.url_map.iter_rules()]; assert rules.count("/data/companies/<market>")==1; assert "/api/financial/claims/verify" in rules'
