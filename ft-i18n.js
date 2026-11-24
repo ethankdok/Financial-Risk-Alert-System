@@ -144,7 +144,20 @@ const translations=Object.freeze({
   "result.version":["版本","Version"],
   "result.unknownState":["狀態未明","Status unknown"],
   "result.hasBackend":["後端已回應","Backend responded"],
-  "result.noRuleHit":["未命中已設定的文字規則，不代表內容可靠。","No matching text-risk rule; this does not imply the content is trustworthy."]
+  "result.noRuleHit":["未命中已設定的文字規則，不代表內容可靠。","No matching text-risk rule; this does not imply the content is trustworthy."],
+  "demo.open":["介面示範","UI demo"],
+  "demo.memberBadge":["訪客示範｜僅儲存在本機","Visitor demo · Local only"],
+  "demo.memberLink":["體驗會員中心介面","Try member center demo"],
+  "demo.realLogin":["前往正式會員登入","Go to real account sign-in"],
+  "demo.liveButton":["實際查核","Live verification"],
+  "demo.notReal":["介面示範｜非實際查核結果","UI demo · Not a real verification result"],
+  "demo.finance":["財務報表","Financial statements"],
+  "demo.metrics":["異常指標","Risk metrics"],
+  "demo.evidence":["證據查核","Evidence verification"],
+  "demo.text":["文字分析","Text analysis"],
+  "demo.healthConnecting":["檢查後端連線…","Checking backend connection…"],
+  "demo.healthOnline":["已連線：既有後端","Connected: existing backend"],
+  "demo.healthOffline":["後端未確認連線，可使用介面示範","Backend unavailable; UI demo available"]
 });
 const phraseMap=Object.freeze(Object.fromEntries(Object.values(translations).map(([zh,en])=>[zh,en])));
 const lang=()=>{try{return localStorage.getItem("ft-language")==="en"?"en":"zh";}catch{return"zh";}};
