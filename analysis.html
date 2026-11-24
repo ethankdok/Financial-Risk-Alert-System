@@ -1,47 +1,21 @@
-<!doctype html>
-<html lang="zh-Hant"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>整合查核｜FinTrust</title><link rel="stylesheet" href="ft-site.css">
-<script defer src="member-auth.js"></script><script defer src="ft-site.js"></script>
-</head>
-<body class="ft-app" data-ft-page="integrated"><header id="ft-header"></header>
-<main class="ft-wrap">
-<section class="ft-page-hero"><div class="ft-eyebrow">Investigation workspace</div>
-<h1>整合查核</h1><p>在同一條查核流程中選擇分析方式，整合官方財報、金融資訊及研究模型。</p></section>
-<div class="ft-layout"><div>
-<section class="ft-panel">
-<div class="ft-panel-heading"><h2>建立查核</h2><span class="ft-badge">既有後端 API</span></div>
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>整合查核｜FinTrust</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-site.js"></script>
+</head><body class="ft-app" data-ft-page="integrated"><header id="ft-header"></header>
+<main class="ft-wrap ft-report-page">
+<div class="ft-page-title"><h1 data-ft-en="Integrated Verification">整合查核</h1></div>
+<section class="ft-panel ft-integrated-form">
 <form id="ft-form">
 <div class="ft-two-fields">
-<div class="ft-field"><label for="ft-ticker">公司代號</label><input id="ft-ticker" class="ft-input" inputmode="numeric" pattern="[0-9]{4,6}" placeholder="例如 2330"></div>
-<div class="ft-field"><label for="ft-mode">分析方式</label><select class="ft-select" id="ft-mode">
-<option value="integrated">整合查核（財務＋官方證據）</option>
-<option value="claim">新聞／言論主張查核</option>
-<option value="text">投資言論規則篩檢</option>
+<div class="ft-field"><label for="ft-ticker" data-ft-en="Company ticker">公司代號</label><input id="ft-ticker" class="ft-input" inputmode="numeric" pattern="[0-9]{4,6}" placeholder="2330"></div>
+<div class="ft-field"><label for="ft-mode" data-ft-en="Analysis method">分析方式</label>
+<select id="ft-mode" class="ft-select">
+<option value="integrated" data-ft-en="Integrated verification">整合查核</option>
+<option value="claim" data-ft-en="News claim verification">新聞主張查核</option>
+<option value="text" data-ft-en="Investment text screening">投資言論篩檢</option>
 </select></div></div>
-<div class="ft-field"><label for="ft-query">新聞內容、財務主張或查核問題</label>
-<textarea class="ft-textarea" id="ft-query" placeholder="例如：這篇新聞說 2330 的營收成長 30%，和官方財報一致嗎？可以貼上新聞正文、主張或投資言論。"></textarea>
-</div>
-<div class="ft-chat-actions">
-<div><label class="ft-upload-label" for="ft-attach">＋ 附加檔案<input id="ft-attach" type="file" accept=".txt,.pdf,.png,.jpg,.jpeg,.csv,.xlsx"></label>
-<div id="ft-file-note" class="ft-file-note">文字檔可直接讀入；PDF／圖片解析尚未串接</div></div>
-<button type="submit" class="ft-btn ft-btn-primary" id="ft-run">執行查核</button>
-</div></form><div id="ft-status" class="ft-status" aria-live="polite" role="status" hidden></div>
-</section>
-<div id="ft-result" class="ft-result" aria-live="polite" hidden></div>
-</div>
-<aside class="ft-aside">
-<section class="ft-panel"><h2>查核流程</h2>
-<ol class="ft-steps"><li><strong>01　確認公司與查核主張</strong>使用公司代號定位財務資料，辨識你提供的訊息。</li>
-<li><strong>02　取得官方證據</strong>查詢已歸檔財報、財務指標及重大事件。</li>
-<li><strong>03　呈現查核結果</strong>分別顯示財務篩檢、新聞核驗與可追溯來源。</li></ol></section>
-<section class="ft-panel"><h3>切換分析方式</h3><p class="ft-hint">三種方式共用這一條工作流程，不會再切換成不同的搜尋網站。</p>
-<div style="display:grid;gap:8px"><button type="button" class="ft-btn" data-ft-mode="integrated">綜合公司查核</button>
-<button type="button" class="ft-btn" data-ft-mode="claim">核對新聞主張</button>
-<button type="button" class="ft-btn" data-ft-mode="text">檢查投資話術</button></div></section>
-<section class="ft-panel"><h3>目前資料範圍</h3>
-<p class="ft-hint">已完成的 API 優先使用已歸檔官方資料；可貼上近期新聞主張，但自動持續抓取每日新聞及跨時間分析仍需新增服務。無法取得資料時不使用示範結果替代。</p>
-<a class="ft-inline-link" href="financial-audit.html">需要查看詳細財務模型？</a></section>
-</aside></div>
-</main><footer class="ft-footer"><div class="ft-wrap"><span>FinTrust · 整合查核</span><span>新聞核驗、財務異常與投資風險話術採獨立解釋。</span></div></footer>
+<div class="ft-field"><label for="ft-query" data-ft-en="Content to verify">查核內容</label><textarea id="ft-query" class="ft-textarea" data-ft-en-placeholder="Paste news or financial claims…" placeholder="貼上新聞或財務說法…"></textarea></div>
+<div class="ft-chat-actions"><div class="ft-attach-group"><label class="ft-upload-label" for="ft-attach">＋ <span data-ft-en="Attach file">上傳檔案</span><input type="file" id="ft-attach" accept=".txt,.csv,.json,.pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx"></label><span id="ft-file-note" class="ft-file-note"></span></div><button type="submit" id="ft-run" class="ft-btn ft-btn-primary" data-ft-en="Start verification">開始查核</button></div>
+</form><div id="ft-status" class="ft-status" role="status" aria-live="polite" hidden></div>
+</section><div id="ft-result" class="ft-result" hidden aria-live="polite"></div>
+</main><footer class="ft-footer ft-minimal-footer"><div class="ft-wrap"><span>© FinTrust</span></div></footer>
 </body></html>
