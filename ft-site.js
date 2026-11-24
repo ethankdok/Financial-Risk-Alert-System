@@ -18,20 +18,21 @@
     var insideAnalysis=page==="integrated";
     host.className="ft-header";
     host.innerHTML='<div class="ft-head-inner">'+
-      '<a class="ft-brand" href="index.html" aria-label="FinTrust 首頁"><span class="ft-brand-symbol">F</span><span>FinTrust<small>FINANCIAL EVIDENCE</small></span></a>'+
+      '<a class="ft-brand" href="index.html" aria-label="FinTrust 首頁"><span class="ft-brand-symbol">F</span><span>FinTrust</span></a>'+
       '<nav class="ft-top-nav" id="ft-top-nav" aria-label="主要導覽">'+
-      '<a class="ft-nav-link" href="index.html"'+(page==="home"?' aria-current="page"':'')+'>首頁</a>'+
-      '<div class="ft-nav-group" id="ft-analysis-nav"><button class="ft-nav-trigger" type="button" aria-expanded="false" aria-controls="ft-nav-pop"'+(insideAudit||insideAnalysis?' aria-current="page"':'')+'>查核分析 <span class="ft-chevron" aria-hidden="true"></span></button>'+
-      '<div class="ft-nav-pop" id="ft-nav-pop"><a href="analysis.html"'+(insideAnalysis?' aria-current="page"':'')+'>整合查核</a><a href="financial-audit.html"'+(insideAudit?' aria-current="page"':'')+'>財務異常稽核</a></div></div>'+
-      '<a class="ft-nav-link" href="member.html"'+(page==="member"?' aria-current="page"':'')+'>會員中心</a>'+
-      '</nav><div class="ft-head-right"><a href="login.html" class="ft-pill-link" id="ft-login-link">登入</a><button class="ft-menu-toggle" id="ft-menu-toggle" type="button" aria-label="展開導覽選單" aria-controls="ft-top-nav" aria-expanded="false">☰</button></div></div>';
+      '<a class="ft-nav-link" href="index.html"'+(page==="home"?' aria-current="page"':'')+' data-ft-en="Home">首頁</a>'+
+      '<div class="ft-nav-group" id="ft-analysis-nav"><button class="ft-nav-trigger" type="button" aria-expanded="false" aria-controls="ft-nav-pop"'+(insideAudit||insideAnalysis?' aria-current="page"':'')+' data-ft-en="Verification">查核分析 <span class="ft-chevron" aria-hidden="true"></span></button>'+
+      '<div class="ft-nav-pop" id="ft-nav-pop"><a href="analysis.html"'+(insideAnalysis?' aria-current="page"':'')+' data-ft-en="Integrated verification">整合查核</a><a href="financial-audit.html"'+(insideAudit?' aria-current="page"':'')+' data-ft-en="Financial audit">財務異常稽核</a></div></div>'+
+      '<a class="ft-nav-link" href="member.html"'+(page==="member"?' aria-current="page"':'')+' data-ft-en="Account">會員中心</a>'+
+      '</nav><div class="ft-head-right"><a href="login.html" class="ft-pill-link" id="ft-login-link" data-ft-en="Log in">登入</a><button class="ft-language-switch" id="ft-language-toggle" type="button" aria-label="Switch language">中文 / EN</button><button class="ft-menu-toggle" id="ft-menu-toggle" type="button" aria-label="展開導覽選單" aria-controls="ft-top-nav" aria-expanded="false">☰</button></div></div>';
+    if(window.FTLocale){window.FTLocale.apply();$("#ft-language-toggle").addEventListener("click",window.FTLocale.toggle);}
     var trigger=$("#ft-analysis-nav .ft-nav-trigger"),group=$("#ft-analysis-nav"),menu=$("#ft-menu-toggle"),nav=$("#ft-top-nav");
     trigger.addEventListener("click",function(){var isOpen=group.classList.toggle("ft-open");trigger.setAttribute("aria-expanded",String(isOpen));});
     menu.addEventListener("click",function(){var visible=nav.classList.toggle("ft-nav-visible");menu.setAttribute("aria-expanded",String(visible));});
     document.addEventListener("keydown",function(e){if(e.key==="Escape"){group.classList.remove("ft-open");trigger.setAttribute("aria-expanded","false");nav.classList.remove("ft-nav-visible");menu.setAttribute("aria-expanded","false");}});
     document.addEventListener("click",function(e){if(!group.contains(e.target)){group.classList.remove("ft-open");trigger.setAttribute("aria-expanded","false");}});
     if(window.MemberAuth&&typeof window.MemberAuth.getMember==="function"){
-      window.MemberAuth.getMember().then(function(m){if(m){var link=$("#ft-login-link");if(link){link.href="member.html";link.textContent="我的帳戶";}}}).catch(function(){});
+      window.MemberAuth.getMember().then(function(m){if(m){var link=$("#ft-login-link");if(link){link.href="member.html";link.textContent=window.FTLocale&&window.FTLocale.language()==="en"?"My account":"我的帳戶";}}}).catch(function(){});
     }
   }
   function status(text,isError){var e=$("#ft-status");if(!e)return;e.textContent=text;e.className="ft-status"+(isError?" ft-error":"");e.hidden=!text;}
@@ -55,14 +56,8 @@
     return true;
   }
   function attachFile(input,area,display){
-    if(!input)return;
-    input.addEventListener("change",function(){
-      var file=input.files&&input.files[0];if(!file)return;
-      if(display)display.textContent="已選擇："+file.name;
-      if(/\.txt$/i.test(file.name)&&file.size<120000){
-        file.text().then(function(s){if(area){area.value=(area.value.trim()?area.value.trim()+"\n\n":"")+s;}if(display)display.textContent="已讀入文字："+file.name;}).catch(function(){if(display)display.textContent="無法讀取檔案，請直接貼上文字。";});
-      }else if(display){display.textContent=file.name+"（本版尚未串接此格式解析，請先貼上文字；檔案不會上傳）";}
-    });
+    if(window.FTFileReader&&input){window.FTFileReader.attach(input,area,display);return;}
+    if(display)display.textContent="檔案解析器未載入";
   }
   async function api(url,options){
     var opts=Object.assign({headers:{Accept:"application/json"},credentials:"same-origin"},options||{});
@@ -312,9 +307,7 @@
         launchFromHome();
       });
     }
-    var preview=node("button","預覽結果頁版型","ft-btn");preview.type="button";
-    button.parentNode.insertBefore(preview,button);
-    preview.addEventListener("click",function(){renderLayoutPreview(result,false);status("僅顯示版型預覽，未執行任何分析。");});
+
     attachFile($("#ft-attach"),query,$("#ft-file-note"));
     $("#ft-form").addEventListener("submit",function(e){e.preventDefault();runWorkflow(mode.value,ticker.value.trim(),query.value.trim(),result,button);});
     document.querySelectorAll("[data-ft-mode]").forEach(function(b){b.addEventListener("click",function(){mode.value=b.getAttribute("data-ft-mode");query.focus();});});
@@ -326,9 +319,7 @@
     ticker.value=p.ticker||"";
 
     if(!p.ticker&&p.query){resolveCompanyFromQuestion(p.query).then(function(code){if(code&&!ticker.value.trim()){ticker.value=code;run();}else if(!code)status("請先填入公司代號，再執行稽核。");});}
-    var preview=node("button","預覽結果頁版型","ft-btn");preview.type="button";
-    button.parentNode.insertBefore(preview,button);
-    preview.addEventListener("click",function(){renderLayoutPreview(result,true);status("僅顯示版型預覽，未執行任何分析。");});
+
     async function run(){
       var code=ticker.value.trim();if(!/^\d{4,6}$/.test(code)){status("請輸入 4–6 碼公司代號。",true);return;}
       clear(result);result.hidden=false;button.disabled=true;status("正在讀取財務查核與模型可計算性…");
