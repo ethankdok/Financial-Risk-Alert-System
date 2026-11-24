@@ -342,6 +342,12 @@
     }
 
     attachFile($("#ft-attach"),query,$("#ft-file-note"));
+    $("#ft-demo-run")?.addEventListener("click",async function(){
+      if(!window.FTDemo)return;
+      await window.FTDemo.render(result,{mode:mode.value,ticker:ticker.value.trim()||p.ticker||"6505",claim:query.value.trim()});
+      status(L("目前顯示的是前端介面示範，非後端查核結果。","Showing a front-end demonstration, not backend verification."));
+      result.scrollIntoView({behavior:"smooth",block:"start"});
+    });
     $("#ft-form").addEventListener("submit",function(e){e.preventDefault();runWorkflow(mode.value,ticker.value.trim(),query.value.trim(),result,button);});
     document.querySelectorAll("[data-ft-mode]").forEach(function(b){b.addEventListener("click",function(){mode.value=b.getAttribute("data-ft-mode");query.focus();});});
     if(p.query&&(p.ticker||mode.value==="text"))launchFromHome();
@@ -365,6 +371,12 @@
       }catch(e){status(errorMsg(e),true);result.appendChild(para("本頁不會以示意分數代替真實模型結果。請確認 Flask、FastAPI 與資料來源是否正常。"));}
       button.disabled=false;
     }
+    $("#ft-audit-demo-run")?.addEventListener("click",async function(){
+      if(!window.FTDemo)return;
+      await window.FTDemo.render(result,{mode:"integrated",ticker:ticker.value.trim()||p.ticker||"6505"});
+      status(L("目前顯示的是前端介面示範，非後端查核結果。","Showing a front-end demonstration, not backend verification."));
+      result.scrollIntoView({behavior:"smooth",block:"start"});
+    });
     $("#ft-audit-form").addEventListener("submit",function(e){e.preventDefault();run();});
     if(p.ticker && !location.hostname.endsWith(".vercel.app"))run();
   }
