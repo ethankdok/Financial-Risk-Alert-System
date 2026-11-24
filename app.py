@@ -423,6 +423,21 @@ def member_login():
     return jsonify({"member": _public_member(member)})
 
 
+@app.get("/api/member/auth/web-config")
+def member_firebase_web_config():
+    """Only Firebase web SDK public identifiers; no service-account keys or private credentials."""
+    project_id = os.getenv("FIREBASE_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
+    api_key = os.getenv("FIREBASE_WEB_API_KEY", "").strip()
+    auth_domain = os.getenv("FIREBASE_AUTH_DOMAIN", "").strip()
+    app_id = os.getenv("FIREBASE_WEB_APP_ID", "").strip()
+    if not (project_id and api_key and auth_domain and app_id):
+        return jsonify({"configured": False, "firebase": None})
+    return jsonify({"configured": True, "firebase": {
+        "apiKey": api_key, "authDomain": auth_domain,
+        "projectId": project_id, "appId": app_id,
+    }})
+
+
 @app.post("/api/member/auth/firebase-login")
 def member_firebase_login():
     data = request.get_json(silent=True) or {}
