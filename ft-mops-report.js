@@ -163,6 +163,15 @@ function render(){
    const link=el("a",t("使用原有系統查核公司","Check company in the original workbench"),"ft-btn ft-btn-primary");
    link.href="financial-integrity.html?ticker="+encodeURIComponent(company);
    actions.appendChild(link);
+   const demo=el("button",t("查看功能示範","View UI demo"),"ft-btn");
+   demo.type="button";
+   demo.addEventListener("click",async()=>{
+     const result=$("#ft-result");
+     if(!result||!window.FTDemo)return;
+     await window.FTDemo.render(result,{ticker:company,mode:"integrated"});
+     result.scrollIntoView({behavior:"smooth",block:"start"});
+   });
+   actions.appendChild(demo);
    const official=el("a",t("前往公開資訊觀測站","Open MOPS"),"ft-btn");
    official.href="https://mops.twse.com.tw/";official.target="_blank";official.rel="noopener noreferrer";
    actions.appendChild(official);root.appendChild(actions);
