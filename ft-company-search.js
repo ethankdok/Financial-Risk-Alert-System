@@ -20,8 +20,8 @@ const lang=()=>window.FTLocale?.language?.()||"zh";
 const t=(key)=>window.FTLocale?.t?.(key)||key;
 function normalize(value){return String(value||"").normalize("NFKC").toLowerCase().replace(/[\s　\-]/g,"");}
 function safeCompany(raw){
- const ticker=String(raw.ticker??raw.code??raw.company_code??raw["公司代號"]??raw["股票代號"]??"").trim();
- const name=String(raw.short??raw.name??raw.company_name??raw["公司簡稱"]??raw["公司名稱"]??"").trim();
+ const ticker=String(raw.ticker??raw.code??raw.company_code??raw["公司代號"]??raw["股票代號"]??raw.SecuritiesCompanyCode??"").trim();
+ const name=String(raw.short??raw.name??raw.company_name??raw["公司簡稱"]??raw["公司名稱"]??raw.CompanyAbbreviation??raw.CompanyName??"").trim();
  if(!/^\d{4,6}$/.test(ticker)||!name||name.length>120)return null;
  return {
   ticker,name,
