@@ -277,34 +277,68 @@
     });container.appendChild(p);
   }
   async function runWorkflow(mode,ticker,claim,target,button){
-    clear(target);target.hidden=false;button.disabled=true;status("正在讀取官方資料並執行已串接的查核…");var jobs=[];
+    clear(target);target.hidden=false;button.disabled=true;
+    status(L("正在讀取已串接的官方資料…","Retrieving connected official data…"));
+    var jobs=[];
     function add(name,promise){jobs.push({name:name,promise:promise});}
-    if(mode==="integrated"){
-      if(!ticker){status("整合查核需要有效公司代號（4–6 碼）。",true);button.disabled=false;return;}
-      add("assessment",api("/api/integrity/assessments/preview",{method:"POST",body:JSON.stringify({ticker:ticker,review_mode:"CURRENT_REVIEW",sections:["financial_checks","literature","jsd","claims"]})}));
-      add("events",api("/api/financial/companies/"+encodeURIComponent(ticker)+"/material-events"));
-      if(isVerifiableClaim(claim))add("claim",api("/api/financial/claims/verify",{method:"POST",body:JSON.stringify({company_code:ticker,claim:claim})}));
-    }else if(mode==="claim"){
-      if(!ticker||claim.length<2){status("主張查核需要公司代號及至少兩個字的新聞／言論內容。",true);button.disabled=false;return;}
-      add("claim",api("/api/financial/claims/verify",{method:"POST",body:JSON.stringify({company_code:ticker,claim:claim})}));
+    var validTicker=/^\d{4,6}$/.test(String(ticker||""));
+    if(mode==="integrated"||mode==="claim"){
+      if(!validTicker){
+        status(L("請先輸入有效的公司代號。","Enter a valid company ticker."),true);
+        button.disabled=false;return;
+      }
+      if(mode==="claim"&&String(claim||"").trim().length<2){
+        status(L("請輸入至少兩個字的新聞或財務主張。","Enter a news or financial claim (at least 2 characters)."),true);
+        button.disabled=false;return;
+      }
+      if(window.FTLiveFinancial)add("financial",window.FTLiveFinancial.load(ticker));
+      // Legacy integrations remain optional until the Cloud Run service exposes them.
+      if(mode==="integrated"){
+        add("assessment",api("/api/integrity/assessments/preview",{method:"POST",body:JSON.stringify({
+          ticker:ticker,review_mode:"CURRENT_REVIEW",sections:["financial_checks","literature","jsd","claims"]
+        })}));
+      }
+      if(mode==="claim"||isVerifiableClaim(claim)){
+        add("claim",api("/api/financial/claims/verify",{method:"POST",body:JSON.stringify({
+          company_code:ticker,claim:claim
+        })}));
+      }
     }else{
-      if(!claim){status("請輸入要篩檢的文字內容。",true);button.disabled=false;return;}
+      if(!String(claim||"").trim()){
+        status(L("請輸入要篩檢的文字內容。","Enter text to screen."),true);
+        button.disabled=false;return;
+      }
       add("text",api("/api/analyze",{method:"POST",body:JSON.stringify({text:claim})}));
     }
-    var results=await Promise.allSettled(jobs.map(function(j){return j.promise;}));
-    var success=0,errors=[];
-    results.forEach(function(out,i){var job=jobs[i];
-      if(out.status==="fulfilled"){success++;
-        if(job.name==="assessment")renderAssessment(out.value,target);
-        if(job.name==="claim")renderClaim(out.value,target);
-        if(job.name==="events")renderEvents(out.value,target);
-        if(job.name==="text")renderTextRisk(out.value,target);
-      }else errors.push(job.name+"："+errorMsg(out.reason));
-    });
-    status(success?("已完成 "+success+" 項查核"+(errors.length?"；部分模組未能取得資料。":"。")):("本次沒有取得可用的分析結果。"),!success);
-    errors.forEach(function(x){target.appendChild(node("div",x,"ft-status ft-error"));});
-    button.disabled=false;
-    if(success)target.scrollIntoView({behavior:"smooth",block:"start"});
+    if(!jobs.length){status(L("此查核模式尚未接上資料來源。","No live data source is connected for this mode."),true);button.disabled=false;return;}
+    try{
+      var results=await Promise.allSettled(jobs.map(function(j){return j.promise;}));
+      var success=0,errors=[],missing=[];
+      results.forEach(function(out,i){
+        var job=jobs[i];
+        if(out.status==="fulfilled"){
+          success++;
+          if(job.name==="financial")window.FTLiveFinancial.render(target,out.value,{claim:claim});
+          if(job.name==="assessment")renderAssessment(out.value,target);
+          if(job.name==="claim")renderClaim(out.value,target);
+          if(job.name==="text")renderTextRisk(out.value,target);
+        }else if(out.reason&&out.reason.status===404){
+          missing.push(job.name);
+        }else errors.push(job.name+"："+errorMsg(out.reason||new Error("Unknown error")));
+      });
+      if(success){
+        var msg=L("已取得 "+success+" 個後端資料來源","Received "+success+" connected backend result(s)");
+        if(missing.length)msg+=" · "+L("部分進階功能尚未部署","Some advanced endpoints are not deployed");
+        if(errors.length)msg+=" · "+L("部分資料讀取失敗","Some requests failed");
+        status(msg);
+        if(missing.length)target.appendChild(para(L("新聞主張查證／整合稽核尚未部署的功能，可以點「介面示範」查看操作流程。","Claim verification or integrity features not yet deployed can be previewed using UI demo.")));
+        errors.forEach(function(e){target.appendChild(node("div",e,"ft-status ft-error"));});
+        target.scrollIntoView({behavior:"smooth",block:"start"});
+      }else{
+        status(L("正式後端尚未提供此模式，請使用「介面示範」查看操作流程。","This mode is not yet available in the connected backend. Use UI demo to explore the interface."),true);
+        errors.forEach(function(e){target.appendChild(node("div",e,"ft-status ft-error"));});
+      }
+    }finally{button.disabled=false;}
   }
 
   function isVerifiableClaim(text){
@@ -385,16 +419,36 @@
     if(!p.ticker&&p.query){resolveCompanyFromQuestion(p.query).then(function(code){if(code&&!ticker.value.trim()){ticker.value=code;run();}else if(!code)status(L("請先填入公司代號，再執行稽核。","Please enter the company ticker before running the audit."));});}
 
     async function run(){
-      var code=ticker.value.trim();if(!/^\d{4,6}$/.test(code)){status(L("請輸入 4–6 碼公司代號。","Enter a 4–6 digit ticker."),true);return;}
-      clear(result);result.hidden=false;button.disabled=true;status(L("正在讀取財務查核與模型可計算性…","Retrieving financial checks and model availability…"));
+      var code=ticker.value.trim();
+      if(!/^\d{4,6}$/.test(code)){status(L("請輸入 4–6 碼公司代號。","Enter a 4–6 digit ticker."),true);return;}
+      clear(result);result.hidden=false;button.disabled=true;
+      status(L("正在取得正式後端的財務資料…","Retrieving financial data from the existing backend…"));
       try{
-        var r=await api("/api/integrity/assessments/preview",{method:"POST",body:JSON.stringify({ticker:code,review_mode:"CURRENT_REVIEW",sections:["financial_checks","literature","jsd","claims"]})});
-        renderAssessment(r,result);
-        status(L("已取得後端財務查核結果。","Retrieved backend financial audit results."));
-        var link=$("#ft-advanced-link");if(link)link.href="financial-integrity.html?ticker="+encodeURIComponent(code)+"&expand=1";
-        result.scrollIntoView({behavior:"smooth",block:"start"});
-      }catch(e){status(errorMsg(e),true);result.appendChild(para("本頁不會以示意分數代替真實模型結果。請確認 Flask、FastAPI 與資料來源是否正常。"));}
-      button.disabled=false;
+        var real=null,old=null;
+        var tasks=[
+          window.FTLiveFinancial?window.FTLiveFinancial.load(code):Promise.reject(new Error("No financial adapter")),
+          api("/api/integrity/assessments/preview",{method:"POST",body:JSON.stringify({
+            ticker:code,review_mode:"CURRENT_REVIEW",sections:["financial_checks","literature","jsd","claims"]
+          })})
+        ];
+        var done=await Promise.allSettled(tasks);
+        if(done[0].status==="fulfilled"){
+          real=done[0].value;
+          window.FTLiveFinancial.render(result,real);
+        }
+        if(done[1].status==="fulfilled"){
+          old=done[1].value;renderAssessment(old,result);
+        }
+        if(real||old){
+          status(real?L("已取得 Cloud Run 財務後端的真實指標、規則及公告資料。","Loaded real Cloud Run financial metrics, rules and announcements."):L("已取得整合稽核後端的資料。","Loaded integrity assessment from the connected backend."));
+          var link=$("#ft-advanced-link");if(link)link.href="financial-integrity.html?ticker="+encodeURIComponent(code)+"&expand=1";
+          result.scrollIntoView({behavior:"smooth",block:"start"});
+        }else{
+          var cause=done[0].reason||done[1].reason||new Error("Not available");
+          status(errorMsg(cause),true);
+          result.appendChild(para(L("尚無可取得的實際財務結果，請使用「介面示範」。","No real financial results are currently available. Use UI demo.")));
+        }
+      }finally{button.disabled=false;}
     }
     $("#ft-audit-demo-run")?.addEventListener("click",async function(){
       if(!window.FTDemo)return;
