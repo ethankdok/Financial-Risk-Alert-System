@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="ui-humanize.css">
   <script src="member-auth.js"></script>
   <link rel="stylesheet" href="ft-site.css">
-  <script defer src="ft-site.js"></script>
+  <script defer src="ft-i18n.js"></script><script defer src="ft-site.js"></script><script defer src="ft-google-signin.js"></script>
 </head>
 <body class="ft-app" data-ft-page="auth">
   <header id="ft-header"></header>
@@ -16,13 +16,13 @@
     <form class="auth-card" id="memberLoginForm">
       <span class="eyebrow">會員登入</span>
       <h1>歡迎回來</h1>
-      <p>登入後可追蹤公司、保存提醒偏好，並查看通知紀錄。</p>
-      <div class="form-group"><label>Email</label><input class="form-control" name="email" autocomplete="email" required></div>
+      
+      <button type="button" id="ft-google-signin" class="ft-google-btn"><span aria-hidden="true" class="ft-google-mark">G</span><span data-ft-en="Continue with Google">使用 Google 帳號登入</span></button><div class="ft-auth-divider" data-ft-en="or sign in with email">或使用 Email 登入</div><div class="form-group"><label>Email</label><input class="form-control" name="email" autocomplete="email" required></div>
       <div class="form-group"><label>密碼</label><input class="form-control" name="password" type="password" autocomplete="current-password" required></div>
       <div class="auth-error" id="memberLoginError" hidden></div>
       <button class="btn btn-primary" style="width:100%" type="submit">登入</button>
       <p class="auth-switch">尚未註冊？ <a href="register.html">建立會員帳號</a></p>
-      <p class="auth-mode-note">正式環境建議改接 Firebase / Google Cloud Identity Platform；本地開發使用安全雜湊密碼測試 adapter。</p>
+      
     </form>
   </main>
   <script>
@@ -34,7 +34,7 @@
     try{
       await MemberAuth.api('/api/member/auth/login',{method:'POST',body:JSON.stringify({email:form.email.value,password:form.password.value})});
       const next=new URLSearchParams(location.search).get('next')||'member.html';
-      location.href=next;
+      location.href=/^[a-z0-9_-]+\.html(?:\?[^#]*)?$/i.test(next)?next:'member.html';
     }catch(exc){
       error.textContent=exc.message;
       error.hidden=false;
