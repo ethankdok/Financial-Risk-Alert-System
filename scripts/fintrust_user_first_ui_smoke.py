@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Non-mutating UI/API smoke for the isolated FinTrust user-first branch.
-Usage: python scripts/fintrust_user_first_ui_smoke.py --base http://127.0.0.1:5000 --ticker 1785
+Usage: python scripts/fintrust_user_first_ui_smoke.py --base https://fintrust-ui-preview-20261124.vercel.app --ticker 1785
 Requires Flask and FastAPI started with working FINTRUST_API_BASE_URL. Only assessment preview posts;
 the preview endpoint explicitly rejects persistence and does not scrape live content.
 """
@@ -37,6 +37,12 @@ def main() -> int:
         ("/analysis.html", 200, "ft-form"),
         ("/financial-audit.html", 200, "ft-audit-form"),
         ("/member.html", 200, "watchlistForm"),
+        ("/member-demo.html", 200, "ft-member-panel"),
+        ("/ft-demo.js", 200, "window.FTDemo"),
+        ("/ft-company-search.js", 200, "window.FTCompanies"),
+        ("/ft-member-demo.js", 200, "ft-member-demo-v1"),
+        ("/ft-i18n.js", 200, "window.FTLocale"),
+        ("/ft-mops-data.json", 200, '"industries"'),
         ("/ft-site.css", 200, "ft-header"),
         ("/ft-site.js", 200, "renderAssessment"),
     ]
@@ -52,10 +58,22 @@ def main() -> int:
             failures.append(path)
 
     try:
+        status, body = fetch(args.base, "/api/financial/health")
+        data = json.loads(body) if body else {}
+        ok = status == 200 and data.get("success") is True
+        print(f"{'PASS' if ok else 'FAIL'} Flask-to-FastAPI health: {status}")
+        if not ok:
+            failures.append("financial API health")
+    except (URLError, ValueError) as exc:
+        print(f"FAIL financial API health: {exc}")
+        failures.append("financial API health")
+
+    try:
         status, body = fetch(args.base, "/api/integrity/companies")
         data = json.loads(body) if body else {}
+        items = data.get("data") or {}
         ok = status == 200 and data.get("success") is True and isinstance(
-            (data.get("data") or {}).get("companies"), list
+            items.get("companies") if isinstance(items, dict) else None, list
         )
         print(f"{'PASS' if ok else 'FAIL'} companies API: {status}")
         if not ok:
@@ -92,7 +110,7 @@ def main() -> int:
     if failures:
         print("NOT READY: " + ", ".join(failures))
         return 1
-    print("READY: UI assets, live read-only assessment, and member authorization checked.")
+    print("READY: UI/demo assets, proxied financial API, live read-only assessment, and member authorization checked.")
     return 0
 
 
