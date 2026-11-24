@@ -1,20 +1,30 @@
 <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FinTrust｜金融資訊查核</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-file-reader.js"></script><script defer src="ft-site.js"></script>
+<title>FinTrust｜金融資訊查核</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-file-reader.js"></script><script defer src="ft-company-search.js"></script><script defer src="ft-site.js"></script>
 </head><body class="ft-app" data-ft-page="home"><header id="ft-header"></header>
 <main class="ft-wrap">
 <section class="ft-home-hero ft-clean-hero">
-<h1 class="ft-title" data-ft-en="What would you like to verify?">你想查核什麼？</h1>
+<h1 class="ft-title" data-i18n="home.title">你想查核什麼？</h1>
 <div class="ft-chat">
-<textarea id="ft-home-query" data-ft-en-placeholder="Enter a company, financial claim or news article…" placeholder="輸入公司名稱、財務資訊或新聞內容…" aria-label="查核問題"></textarea>
-<div class="ft-chat-actions"><div class="ft-attach-group">
-<label class="ft-upload-label" for="ft-home-file">＋ <span data-ft-en="Attach file">上傳檔案</span><input id="ft-home-file" type="file" accept=".txt,.csv,.json,.pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx"></label><span id="ft-home-file-status" class="ft-file-note"></span>
-</div><button type="button" id="ft-home-submit" class="ft-btn ft-btn-primary" data-ft-en="Start verification">開始查核 ↗</button></div>
+<textarea id="ft-home-query" data-i18n-placeholder="home.placeholder" placeholder="輸入公司代碼、名稱或需要查核的內容…" autocomplete="off" aria-label="查核問題"></textarea>
+<div id="ft-home-suggestions" class="ft-search-list ft-home-suggestions" role="listbox" hidden></div><div class="ft-chat-actions"><div class="ft-attach-group">
+<label class="ft-upload-label" for="ft-home-file">＋ <span data-i18n="home.attach">上傳檔案</span><input id="ft-home-file" type="file" accept=".txt,.csv,.json,.pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx"></label><span id="ft-home-file-status" class="ft-file-note"></span>
+</div><button type="button" id="ft-home-submit" class="ft-btn ft-btn-primary" data-i18n="home.run">開始查核</button></div>
 </div>
 <div class="ft-circle-grid" aria-label="專業功能">
-<a href="analysis.html" class="ft-circle-link"><span class="ft-circle-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14v14H5z"/><path d="M8 15l3-4 3 2 3-5"/><circle cx="17" cy="8" r="1"/></svg></span><strong data-ft-en="Integrated verification">整合查核</strong></a>
-<a href="financial-audit.html" class="ft-circle-link"><span class="ft-circle-icon teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v18H4zM8 7h8M8 11h8M8 15h3M13 15h3M8 19h3"/></svg></span><strong data-ft-en="Financial audit">財務異常稽核</strong></a>
-<a href="member.html" class="ft-circle-link"><span class="ft-circle-icon sand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-2c0-3 3-5 8-5s8 2 8 5v2"/><circle cx="12" cy="7" r="4"/><path d="M2 20h20"/></svg></span><strong data-ft-en="My account">會員中心</strong></a>
+<a href="analysis.html" class="ft-circle-link"><span class="ft-circle-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14v14H5z"/><path d="M8 15l3-4 3 2 3-5"/><circle cx="17" cy="8" r="1"/></svg></span><strong data-i18n="home.integrated">整合查核</strong></a>
+<a href="financial-audit.html" class="ft-circle-link"><span class="ft-circle-icon teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v18H4zM8 7h8M8 11h8M8 15h3M13 15h3M8 19h3"/></svg></span><strong data-i18n="home.audit">財務異常稽核</strong></a>
+<a href="member.html" class="ft-circle-link"><span class="ft-circle-icon sand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-2c0-3 3-5 8-5s8 2 8 5v2"/><circle cx="12" cy="7" r="4"/><path d="M2 20h20"/></svg></span><strong data-i18n="home.account">會員中心</strong></a>
 </div>
+<section class="ft-home-extras">
+<div class="ft-subheading"><h2 data-i18n="home.recent">近期查詢</h2><button id="ft-clear-recent" type="button" class="ft-text-button" data-i18n="home.clear" hidden>清除紀錄</button></div>
+<div id="ft-recent-list" class="ft-recent-list"><span class="ft-home-muted" data-i18n="home.none">尚無近期查詢</span></div>
+<div class="ft-subheading ft-subheading-later"><h2 data-i18n="home.quick">快速查核</h2></div>
+<div class="ft-example-list">
+<button type="button" data-ft-suggestion="2330 台積電 財務分析" data-i18n="home.example1">查詢台積電財務資料</button>
+<button type="button" data-ft-suggestion="6505 台塑化 財務異常稽核" data-i18n="home.example2">查看台塑化財務異常指標</button>
+<button type="button" data-ft-suggestion="核對新聞中的財務數字" data-i18n="home.example3">核對新聞中的財務數字</button>
+</div>
+</section>
 </section></main>
 <footer class="ft-footer ft-minimal-footer"><div class="ft-wrap"><span>© FinTrust</span></div></footer>
 </body></html>
