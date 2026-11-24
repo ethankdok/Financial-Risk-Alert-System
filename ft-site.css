@@ -290,3 +290,21 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
 .ft-app .ft-live-rule p{margin:6px 0}
 .ft-app .ft-live-source-links{display:flex;flex-wrap:wrap;gap:9px 16px;margin-top:14px}
 @media(max-width:680px){.ft-app .ft-live-report{padding:13px}}
+
+
+/* One enterprise health destination with direct access to financial, narrative and screening evidence. */
+.ft-app .ft-health-jumplinks{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 17px}
+.ft-app .ft-health-jumplinks a{display:inline-flex;align-items:center;background:#f5f9fb;border:1px solid #dde8ee;padding:9px 13px;border-radius:999px;color:#39596c;font-size:12px;font-weight:650}
+.ft-app .ft-health-jumplinks a:hover{color:var(--ft-blue2);background:#e8f2f7;border-color:#a9c9d7}
+.ft-app .ft-narrative-panel{margin:20px 0 24px;scroll-margin-top:95px}
+.ft-app .ft-sheet-report{scroll-margin-top:95px}
+.ft-app #ft-health-live{scroll-margin-top:95px}
+.ft-app .ft-narrative-meta{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:4px 0 14px}
+.ft-app .ft-narrative-meta strong{font-size:15px}
+.ft-app .ft-narrative-warning{padding:9px 13px;border:1px solid #eadab9;background:#fffbf2;color:#8a6b34;border-radius:8px;font-size:12px}
+.ft-app .ft-narrative-details{border-top:1px solid #e4edf2;padding-top:15px;margin-top:18px}
+.ft-app .ft-narrative-details>summary{font-size:13px;font-weight:700;cursor:pointer}
+.ft-app .ft-narrative-details h3{font-size:13px;margin:18px 0 10px}
+.ft-app .ft-narrative-evidence{border:1px solid #e3ecf1;border-radius:10px;padding:13px;margin:10px 0}
+.ft-app .ft-narrative-evidence p{font-size:12px;line-height:1.7;max-width:880px;overflow-wrap:anywhere}
+@media(max-width:700px){.ft-app .ft-health-jumplinks a{font-size:11px;padding:8px 10px}}
