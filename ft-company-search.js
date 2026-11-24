@@ -40,7 +40,7 @@ function upsert(raw){
   entry.hasSnapshot=old.hasSnapshot||entry.hasSnapshot;
   if(old.hasSnapshot&&!entry.hasSnapshot){entry.name=old.name;entry.fullName=old.fullName;}
   entry.english=entry.english||old.english;
-  entry.industry=entry.industry||old.industry;
+  entry.industry=(old.industry&&/^\d+$/.test(entry.industry))?old.industry:(entry.industry||old.industry);
   entry.market=entry.market||old.market;
   entry.origin=entry.hasSnapshot?"snapshot":entry.origin;
  }
