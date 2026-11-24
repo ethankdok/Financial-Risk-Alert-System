@@ -13,54 +13,54 @@
 </head>
 <body class="ft-app ft-member-page" data-ft-page="member">
   <header id="ft-header"></header>
-  <section class="page-hero"><div class="container"><div class="breadcrumb">首頁 / 會員中心</div><h1>會員中心</h1><p><span data-member-name>會員</span>，管理個人資料、追蹤公司與通知設定。</p></div></section>
+  <section class="page-hero"><div class="container"><h1 data-i18n="member.title">會員中心</h1></div></section>
   <div class="container layout">
-    <aside class="sidebar"><a href="analysis.html">金融資訊分析</a><a href="official.html">官方公告比對</a><a class="active" href="member.html">會員中心</a></aside>
+    
     <main class="member-grid">
       <section class="content-card">
-        <h2>個人資料</h2>
+        <h2 data-i18n="member.profile">個人資料</h2>
         <form class="form-grid" id="profileForm">
-          <div class="form-group"><label>會員名稱</label><input class="form-control" name="display_name"></div>
-          <div class="form-group"><label>Email</label><input class="form-control" name="email" type="email"></div>
+          <div class="form-group"><label data-i18n="member.name">會員名稱</label><input class="form-control" name="display_name"></div>
+          <div class="form-group"><label data-i18n="login.email">電子郵件</label><input class="form-control" name="email" type="email"></div>
           <div class="full form-status" id="profileStatus"></div>
-          <div class="full"><button class="btn btn-secondary" type="submit">儲存修改</button></div>
+          <div class="full"><button class="btn btn-secondary" type="submit" data-i18n="member.save">儲存修改</button></div>
         </form>
       </section>
 
       <section class="content-card">
-        <div class="section-row"><div><h3>追蹤公司</h3><p class="muted-text">追蹤後可接收重大官方證據、財務高風險與敘事變化提醒。</p></div></div>
+        <div class="section-row"><div><h3 data-i18n="member.watchlist">追蹤公司</h3></div></div>
         <form class="watchlist-form" id="watchlistForm">
           <select class="form-control" name="ticker" id="watchlistTicker">
             <option value="">載入公司清單中…</option>
           </select>
-          <button class="btn btn-primary" type="submit">追蹤</button>
+          <button class="btn btn-primary" type="submit" data-i18n="member.follow">追蹤</button>
         </form>
         <div class="watchlist-grid" id="watchlistItems"></div>
       </section>
 
       <section class="content-card">
-        <h3>提醒偏好</h3>
+        <h3 data-i18n="member.notifications">提醒偏好</h3>
         <form class="preference-grid" id="preferenceForm">
-          <label><input type="checkbox" name="email_enabled"> Email 通知</label>
-          <label><input type="checkbox" name="important_alerts"> 重要/高風險提醒</label>
-          <label><input type="checkbox" name="material_event_alerts"> 新重大訊息</label>
-          <label><input type="checkbox" name="conference_alerts"> 新法說會/官方證據</label>
-          <label><input type="checkbox" name="narrative_shift_alerts"> 敘事變化提醒</label>
-          <label>摘要頻率<select class="form-control" name="digest_frequency"><option value="daily">每日</option><option value="weekly">每週</option><option value="off">關閉摘要</option></select></label>
+          <label><input type="checkbox" name="email_enabled"> <span data-i18n="member.email">電子郵件通知</span></label>
+          <label><input type="checkbox" name="important_alerts"> <span data-i18n="member.important">重要／高風險提醒</span></label>
+          <label><input type="checkbox" name="material_event_alerts"> <span data-i18n="member.events">新重大訊息</span></label>
+          <label><input type="checkbox" name="conference_alerts"> <span data-i18n="member.conference">新法說會／官方證據</span></label>
+          <label><input type="checkbox" name="narrative_shift_alerts"> <span data-i18n="member.narrative">敘事變化提醒</span></label>
+          <label><span data-i18n="member.digest">摘要頻率</span><select class="form-control" name="digest_frequency"><option value="daily" data-i18n="member.daily">每日</option><option value="weekly" data-i18n="member.weekly">每週</option><option value="off" data-i18n="member.off">關閉摘要</option></select></label>
           <div class="full form-status" id="preferenceStatus"></div>
-          <button class="btn btn-secondary" type="submit">儲存偏好</button>
+          <button class="btn btn-secondary" type="submit" data-i18n="member.savePrefs">儲存偏好</button>
         </form>
       </section>
 
       <section class="content-card">
-        <h3>最近通知紀錄</h3>
-        <div class="table-wrap"><table class="data-table"><thead><tr><th>時間</th><th>公司</th><th>類型</th><th>狀態</th><th>主旨</th></tr></thead><tbody id="notificationRows"><tr><td colspan="5">讀取中</td></tr></tbody></table></div>
+        <h3 data-i18n="member.noticeHistory">最近通知紀錄</h3>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th data-i18n="member.time">時間</th><th data-i18n="member.company">公司</th><th data-i18n="member.type">類型</th><th data-i18n="member.state">狀態</th><th data-i18n="member.subject">主旨</th></tr></thead><tbody id="notificationRows"><tr><td colspan="5">讀取中</td></tr></tbody></table></div>
       </section>
       <section class="content-card">
-        <h3>我的分析紀錄</h3>
-        <p class="muted-text">目前會員追蹤與通知已連動後端；個人查核報告尚未永久保存，這裡不顯示示意紀錄。</p>
+        <h3 data-i18n="member.analysisHistory">我的分析紀錄</h3>
+        <p class="muted-text" data-i18n="member.noSavedHistory">查核報告尚未啟用跨裝置保存。</p>
         <div id="memberAnalysisHistory" class="muted-text" aria-live="polite">讀取分析歷史狀態中…</div>
-        <a class="ft-inline-link" href="analysis.html">建立新的整合查核</a>
+        <a class="ft-inline-link" href="analysis.html" data-i18n="member.newAnalysis">建立新的整合查核</a>
       </section>
     </main>
   </div>
