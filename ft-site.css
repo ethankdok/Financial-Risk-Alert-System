@@ -333,3 +333,11 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
 .ft-app .ft-health-advanced>summary{font-size:12px;font-weight:700;color:var(--ft-blue2);cursor:pointer}
 .ft-app .ft-health-advanced>summary:hover{color:var(--ft-ink)}
 @media(max-width:680px){.ft-app .ft-news-coverage{grid-template-columns:repeat(2,minmax(0,1fr))}.ft-app .ft-news-event{grid-template-columns:1fr;gap:3px}.ft-app .ft-news-evidence-section{padding:14px}}
+
+
+/* Numeric, source-backed enterprise health summaries */
+.ft-app .ft-live-at-a-glance{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:18px 0 20px}
+.ft-app .ft-live-glance-card{background:#f7fafb;border:1px solid #e0e9ed;border-radius:10px;padding:15px;display:flex;flex-direction:column;gap:6px}
+.ft-app .ft-live-glance-card strong{font-size:25px;line-height:1.1;font-variant-numeric:tabular-nums;font-weight:750}
+.ft-app .ft-live-glance-card span{font-size:12px;color:var(--ft-soft);font-weight:600}
+@media(max-width:520px){.ft-app .ft-live-at-a-glance{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.ft-app .ft-live-glance-card{padding:10px 7px}.ft-app .ft-live-glance-card strong{font-size:20px}.ft-app .ft-live-glance-card span{font-size:10px}}
