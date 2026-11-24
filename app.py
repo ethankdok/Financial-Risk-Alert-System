@@ -3,12 +3,15 @@ from __future__ import annotations
 import os
 import secrets
 import json
+import time
+from urllib.request import Request as URLRequest, urlopen as open_http_url
+from urllib.error import URLError
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, jsonify, request, session, send_from_directory
+from flask import Flask, Response, jsonify, request, session, send_from_directory
 from financial_routes import create_financial_blueprint
 from research_routes import create_research_blueprint
 from integrity_routes import create_integrity_blueprint
@@ -339,6 +342,50 @@ def _servable(filename: str) -> bool:
         return False
     suffix = Path(filename).suffix.lower()
     return suffix in _STATIC_SUFFIXES or (suffix == "" and (BASE_DIR / f"{filename}.html").is_file())
+
+
+_ROSTER_SOURCES = {
+    "listed": ("https://openapi.twse.com.tw/v1/opendata/t187ap03_L", "application/json; charset=utf-8"),
+    "otc": ("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O", "application/json; charset=utf-8"),
+    "otc-csv": ("https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv", "text/csv; charset=utf-8"),
+}
+_ROSTER_TTL_SECONDS = 6 * 60 * 60
+_roster_cache: dict[str, tuple[float, bytes]] = {}
+
+
+@app.get("/data/companies/<market>")
+def public_company_directory(market: str):
+    """Public read-only TWSE/TPEx company master, cached to protect upstream services.
+
+    Fixed allowlist only; no user-controlled URL or arbitrary proxy. This route
+    will be used when this branch is later deployed back to the original Cloud Run.
+    """
+    source = _ROSTER_SOURCES.get(market)
+    if source is None:
+        return jsonify({"error": "not found"}), 404
+    now = time.monotonic()
+    cached = _roster_cache.get(market)
+    if cached and now - cached[0] < _ROSTER_TTL_SECONDS:
+        data = cached[1]
+    else:
+        try:
+            req = URLRequest(
+                source[0],
+                headers={"User-Agent": "FinTrust-CompanyDirectory/1.0", "Accept": "application/json,text/csv"},
+            )
+            with open_http_url(req, timeout=12) as response:
+                data = response.read(3 * 1024 * 1024 + 1)
+            if len(data) > 3 * 1024 * 1024:
+                return jsonify({"error": "official company directory exceeds size limit"}), 502
+            _roster_cache[market] = (now, data)
+        except (URLError, TimeoutError, OSError):
+            if cached:
+                data = cached[1]
+            else:
+                return jsonify({"error": "official company directory is temporarily unavailable"}), 503
+    response = Response(data, mimetype=source[1].split(";")[0])
+    response.headers["Cache-Control"] = "public, max-age=900"
+    return response
 
 
 @app.route("/<path:filename>")
