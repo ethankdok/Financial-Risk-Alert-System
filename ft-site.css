@@ -308,3 +308,28 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
 .ft-app .ft-narrative-evidence{border:1px solid #e3ecf1;border-radius:10px;padding:13px;margin:10px 0}
 .ft-app .ft-narrative-evidence p{font-size:12px;line-height:1.7;max-width:880px;overflow-wrap:anywhere}
 @media(max-width:700px){.ft-app .ft-health-jumplinks a{font-size:11px;padding:8px 10px}}
+
+
+/* News verification: claim and archived evidence remain visually distinct. */
+.ft-app .ft-news-evidence{display:grid;gap:15px;margin:0 0 22px}
+.ft-app .ft-news-evidence-section{background:#fff;border:1px solid #e0eaf0;border-radius:13px;padding:20px}
+.ft-app .ft-news-evidence-section h3{margin:0 0 14px;font-size:15px}
+.ft-app .ft-news-claim-text{font-size:14px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere}
+.ft-app .ft-news-coverage{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0 20px}
+.ft-app .ft-news-stat{display:flex;flex-direction:column;gap:6px;border:1px solid #e5edf2;background:#f8fbfd;border-radius:10px;padding:12px 13px}
+.ft-app .ft-news-stat strong{font-size:20px;line-height:1.4}
+.ft-app .ft-news-stat span{font-size:11px;color:var(--ft-soft)}
+.ft-app .ft-news-evidence-section h4{margin:14px 0 9px;font-size:13px}
+.ft-app .ft-news-event{display:grid;grid-template-columns:100px minmax(0,1fr);gap:10px;align-items:start;padding:10px 0;border-bottom:1px solid #eff3f6}
+.ft-app .ft-news-event strong{font-weight:650;font-size:12px;line-height:1.5;display:block;margin-bottom:5px}
+.ft-app .ft-news-event .ft-inline-link{font-size:11px}
+.ft-app .ft-news-claim-details{margin:14px 0;border-top:1px solid #edf2f6;padding:12px 0 0}
+.ft-app .ft-news-claim-details>summary{cursor:pointer;font-size:12px;font-weight:700}
+.ft-app .ft-news-claim-row{padding:11px 3px;border-bottom:1px solid #eff2f5}
+.ft-app .ft-news-claim-row strong,.ft-app .ft-news-claim-row small{display:block;font-size:12px;line-height:1.7}
+.ft-app .ft-news-claim-row small{font-size:11px;color:var(--ft-soft)}
+.ft-app .ft-news-narrative{background:#fff;border:1px solid #e0eaf0;border-radius:13px;padding:20px}
+.ft-app .ft-health-advanced{border-top:1px solid #e2e9ee;margin-top:18px;padding-top:12px}
+.ft-app .ft-health-advanced>summary{font-size:12px;font-weight:700;color:var(--ft-blue2);cursor:pointer}
+.ft-app .ft-health-advanced>summary:hover{color:var(--ft-ink)}
+@media(max-width:680px){.ft-app .ft-news-coverage{grid-template-columns:repeat(2,minmax(0,1fr))}.ft-app .ft-news-event{grid-template-columns:1fr;gap:3px}.ft-app .ft-news-evidence-section{padding:14px}}
