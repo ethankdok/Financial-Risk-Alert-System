@@ -1,39 +1,20 @@
-<!doctype html>
-<html lang="zh-Hant"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="以官方財報為基礎，整合新聞主張、異常模型與可追溯證據。">
-<title>FinTrust｜金融資訊查核與風險研究</title>
-<link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-site.js"></script>
-</head><body class="ft-app" data-ft-page="home">
-<header id="ft-header"></header>
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FinTrust｜金融資訊查核</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-site.js"></script>
+</head><body class="ft-app" data-ft-page="home"><header id="ft-header"></header>
 <main class="ft-wrap">
-<section class="ft-home-hero">
-<div class="ft-eyebrow">Financial evidence intelligence</div>
-<h1 class="ft-title">從一個問題，開始查核金融資訊。</h1>
-<p class="ft-lead">以官方財報為依據，連結財務異常、新聞主張與歷史證據。</p>
+<section class="ft-home-hero ft-clean-hero">
+<h1 class="ft-title" data-ft-en="What would you like to verify?">你想查核什麼？</h1>
 <div class="ft-chat">
-<label for="ft-home-query" class="ft-eyebrow" style="display:block;margin-bottom:10px">輸入你的查核需求</label>
-<textarea id="ft-home-query" placeholder="例如：幫我分析 2330 最新財報有沒有異常，並查核營收成長的新聞……"></textarea>
-<div class="ft-chat-actions">
-<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-<label class="ft-upload-label" for="ft-home-file">＋ 附加檔案<input id="ft-home-file" type="file" accept=".txt,.pdf,.png,.jpg,.jpeg,.csv,.xlsx"></label>
-<span id="ft-home-file-status" class="ft-file-note">目前可讀取 .txt；其他格式尚未接入</span>
+<textarea id="ft-home-query" data-ft-en-placeholder="Enter a company, financial claim or news article…" placeholder="輸入公司名稱、財務資訊或新聞內容…" aria-label="查核問題"></textarea>
+<div class="ft-chat-actions"><div class="ft-attach-group">
+<label class="ft-upload-label" for="ft-home-file">＋ <span data-ft-en="Attach file">上傳檔案</span><input id="ft-home-file" type="file" accept=".txt,.csv,.json,.pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx"></label><span id="ft-home-file-status" class="ft-file-note"></span>
+</div><button type="button" id="ft-home-submit" class="ft-btn ft-btn-primary" data-ft-en="Start verification">開始查核 ↗</button></div>
 </div>
-<button type="button" id="ft-home-submit" class="ft-btn ft-btn-primary">開始查核 ↗</button>
-</div></div>
-<div class="ft-suggestions">
-<button type="button" class="ft-chip" data-ft-suggestion="分析 2330 財報異常與主要財務指標">財務異常稽核</button>
-<button type="button" class="ft-chip" data-ft-suggestion="查核 2330 最近的新聞與官方財務資料">新聞與財報整合查核</button>
-<button type="button" class="ft-chip" data-ft-suggestion="比較 1785 的財報與官方證據">官方證據比對</button>
-</div><p class="ft-file-note" style="margin-top:14px">首頁以明確的關鍵字規則分派現有工具；通用對話式 LLM 路由仍待串接。</p>
-</section>
-<section class="ft-section">
-<h2 class="ft-section-title">直接使用專業分析工具</h2>
-<p class="ft-section-note">知道要做哪種查核？可以直接進入工具，不必先使用對話框。</p>
-<div class="ft-quick-grid">
-<a class="ft-action-tile" href="analysis.html"><div class="ft-tile-icon">↗</div><strong>整合查核</strong><span>在同一個流程中選擇財報、新聞主張或文字風險分析。</span></a>
-<a class="ft-action-tile" href="financial-audit.html"><div class="ft-tile-icon">▤</div><strong>財務異常稽核</strong><span>深入檢查財務指標、Beneish／Dechow 與官方證據。</span></a>
-<a class="ft-action-tile" href="member.html"><div class="ft-tile-icon">◎</div><strong>我的研究與追蹤</strong><span>會員收藏、通知設定、分析紀錄與個人資料。</span></a>
-</div></section>
-</main><footer class="ft-footer"><div class="ft-wrap"><span>FinTrust · Financial Evidence Intelligence</span><span>查核結果僅供研究及資訊參考，不是舞弊認定或投資建議。</span></div></footer>
+<div class="ft-circle-grid" aria-label="專業功能">
+<a href="analysis.html" class="ft-circle-link"><span class="ft-circle-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14v14H5z"/><path d="M8 15l3-4 3 2 3-5"/><circle cx="17" cy="8" r="1"/></svg></span><strong data-ft-en="Integrated verification">整合查核</strong></a>
+<a href="financial-audit.html" class="ft-circle-link"><span class="ft-circle-icon teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v18H4zM8 7h8M8 11h8M8 15h3M13 15h3M8 19h3"/></svg></span><strong data-ft-en="Financial audit">財務異常稽核</strong></a>
+<a href="member.html" class="ft-circle-link"><span class="ft-circle-icon sand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-2c0-3 3-5 8-5s8 2 8 5v2"/><circle cx="12" cy="7" r="4"/><path d="M2 20h20"/></svg></span><strong data-ft-en="My account">會員中心</strong></a>
+</div>
+</section></main>
+<footer class="ft-footer ft-minimal-footer"><div class="ft-wrap"><span>© FinTrust</span></div></footer>
 </body></html>
