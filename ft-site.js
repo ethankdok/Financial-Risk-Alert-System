@@ -55,7 +55,7 @@
   function detectIntent(raw){
     var q=raw.toLowerCase();
     var news=/新聞|消息|報導|貼文|言論|報告說|內容|真假|查證|查核|公告|近期|最近|news|claim|fact.check/.test(q);
-    var fin=/財報|財務|異常|稽核|beneish|dechow|m.score|f.score|比率|現金流|應收|重編|xbrl|財報不實/.test(q);
+    var fin=/財報|財務|異常|稽核|beneish|dechow|m.score|f.score|比率|現金流|應收|重編|xbrl|財報不實|營收|營業|獲利|淨利|毛利|負債|資產|eps|roe|roa|營運|償債|存貨/.test(q);
     if(fin&&!news)return "audit";
     return "integrated";
   }
