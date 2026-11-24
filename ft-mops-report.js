@@ -223,7 +223,14 @@ document.addEventListener("DOMContentLoaded",async()=>{
   if(!res.ok)throw Error("HTTP "+res.status);
   database=await res.json();
   const wanted=new URLSearchParams(location.search).get("ticker");
-  if(wanted&&/^\d{4,6}$/.test(wanted))company=wanted;
+  if(wanted&&/^\d{4,6}$/.test(wanted)){
+   company=wanted;
+   const record=Object.values(database.industries).find(ind=>ind[wanted])?.[wanted];
+   const existing=window.FTCompanies?.get(wanted);
+   if(record||existing){
+     window.FTCompanies?.addRecent({ticker:wanted,name:record?.short||existing?.name||wanted});
+   }
+  }
   window.FTCompanies?.load();
   fillCompanies();fillYears();
   $("#ft-year").addEventListener("change",e=>{year=e.target.value;render();});
