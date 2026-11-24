@@ -7,11 +7,10 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="ui-humanize.css">
   <script src="member-auth.js"></script>
-  <script>MemberAuth.requireMember();</script>
   <link rel="stylesheet" href="ft-site.css">
   <script defer src="ft-i18n.js"></script><script defer src="ft-site.js"></script>
 </head>
-<body class="ft-app ft-member-page" data-ft-page="member">
+<body class="ft-app ft-member-page ft-auth-checking" data-ft-page="member">
   <header id="ft-header"></header>
   <section class="page-hero"><div class="container"><h1 data-i18n="member.title">會員中心</h1></div></section>
   <div class="container layout">
@@ -82,11 +81,12 @@
   }
   async function loadMemberPage(){
     const member=await MemberAuth.requireMember(); if(!member)return;
+    document.body.classList.remove('ft-auth-checking');
     MemberAuth.mountNav(member);
     const profile=document.getElementById('profileForm');
     profile.display_name.value=member.display_name||'';
     profile.email.value=member.email||'';
-    await Promise.all([loadCompanyOptions(),loadWatchlist(),loadPreferences(),loadNotifications()]);
+    await Promise.all([loadCompanyOptions(),loadWatchlist(),loadPreferences(),loadNotifications(),loadAnalysisHistory()]);
   }
   async function loadWatchlist(){
     const data=await MemberAuth.api('/api/member/watchlist');
@@ -117,7 +117,6 @@
     }catch(e){target.textContent='分析歷史狀態暫時無法讀取。';}
   }
   loadMemberPage();
-  loadAnalysisHistory();
   </script>
 </body>
 </html>
