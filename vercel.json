@@ -3,6 +3,18 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/data/companies/listed",
+      "destination": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+    },
+    {
+      "source": "/data/companies/otc",
+      "destination": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+    },
+    {
+      "source": "/data/companies/otc-csv",
+      "destination": "https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://financial-risk-web-v53gsmuxdq-de.a.run.app/api/:path*"
     },
@@ -18,6 +30,15 @@
         {
           "key": "Cache-Control",
           "value": "private, no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/data/companies/:market",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, s-maxage=21600, stale-while-revalidate=86400"
         }
       ]
     }
