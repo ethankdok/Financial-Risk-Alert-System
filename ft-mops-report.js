@@ -189,7 +189,7 @@ function selectedCompany(record){
  }catch(_){}
  if($("#ft-audit-ticker"))$("#ft-audit-ticker").value=company;
  window.FTCompanies?.addRecent(record);
- fillYears();render();
+ fillYears();render();window.FTNarrative?.show(company);
 }
 function fillCompanies(){
  const industry=$("#ft-industry"),input=$("#ft-company-search"),list=$("#ft-company-suggestions");
@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded",async()=>{
   window.FTCompanies?.load();
   fillCompanies();fillYears();
   $("#ft-year").addEventListener("change",e=>{year=e.target.value;render();});
-  render();
+  render();window.FTNarrative?.show(company);
  }catch(e){$("#ft-sheet-report").textContent=t("財報快照載入失敗，請重新整理頁面。","Unable to load financial snapshot.");}
 });
 })();
