@@ -343,6 +343,14 @@ def _servable(filename: str) -> bool:
 
 @app.route("/<path:filename>")
 def static_files(filename):
+    # Public, audited MOPS indicator snapshot only; do not enable arbitrary .json downloads.
+    if filename == "ft-mops-data.json":
+        source = BASE_DIR / filename
+        if source.is_file():
+            response = send_from_directory(BASE_DIR, filename)
+            response.headers["Cache-Control"] = "public, max-age=3600"
+            return response
+        return jsonify({"error": "not found"}), 404
     if not _servable(filename):
         return jsonify({"error": "not found"}), 404
     requested = BASE_DIR / filename
