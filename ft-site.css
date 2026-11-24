@@ -272,3 +272,21 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
  .ft-app .ft-top-nav.ft-nav-visible{display:flex}
  .ft-app .ft-nav-link{width:100%;justify-content:space-between}
 }
+
+
+/* Hide protected member data while authentication is being checked. */
+.ft-app.ft-member-page.ft-auth-checking .page-hero,
+.ft-app.ft-member-page.ft-auth-checking .container.layout{visibility:hidden}
+.ft-app .ft-live-report{border:1px solid #dbe4ea;border-radius:15px;background:#fff;margin:20px 0 28px;padding:23px}
+.ft-app .ft-live-heading{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.ft-app .ft-live-heading h2{font-size:21px;font-weight:720;margin:0 0 4px}
+.ft-app .ft-live-section{margin-top:28px}
+.ft-app .ft-live-section h3{font-size:15px;font-weight:750;margin:0 0 13px}
+.ft-app .ft-live-section .ft-btn{margin-top:12px}
+.ft-app .ft-live-report details{padding:12px 0;border-top:1px solid #e2e9ed;font-size:13px}
+.ft-app .ft-live-report summary{cursor:pointer;font-weight:700;color:var(--ft-ink)}
+.ft-app .ft-live-rule{padding:12px;border-bottom:1px solid #edf1f4;line-height:1.65}
+.ft-app .ft-live-rule strong{font-weight:750}
+.ft-app .ft-live-rule p{margin:6px 0}
+.ft-app .ft-live-source-links{display:flex;flex-wrap:wrap;gap:9px 16px;margin-top:14px}
+@media(max-width:680px){.ft-app .ft-live-report{padding:13px}}
