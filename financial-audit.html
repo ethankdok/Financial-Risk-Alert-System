@@ -24,9 +24,12 @@
 <div class="ft-panel-heading"><h2 data-i18n="health.jsdTitle">文字漂移與敘事差異</h2></div>
 </section>
 <section id="ft-health-live" class="ft-panel ft-secondary-audit">
+<div id="ft-live-dashboard" aria-live="polite"></div>
+<details class="ft-health-advanced"><summary data-i18n="health.advanced">進階查核操作</summary>
 <div class="ft-panel-heading"><h2 data-i18n="audit.otherCompany">查核其他公司</h2><a href="financial-integrity.html" class="ft-inline-link" data-i18n="audit.advanced">完整分析工作台</a></div>
 <form id="ft-audit-form" class="ft-audit-inline"><label for="ft-audit-ticker" data-i18n="audit.ticker">公司代號</label><input id="ft-audit-ticker" class="ft-input" inputmode="numeric" pattern="[0-9]{4,6}" placeholder="例：1785" required><button type="button" id="ft-audit-demo-run" class="ft-btn ft-btn-muted" data-i18n="demo.open">介面示範</button><button type="submit" class="ft-btn ft-btn-primary" id="ft-audit-run" data-i18n="audit.backendRun">執行查核</button></form>
 <div id="ft-status" class="ft-status" role="status" aria-live="polite" hidden></div><a id="ft-advanced-link" class="ft-inline-link" href="financial-integrity.html"></a>
+</details>
 </section>
 <div id="ft-result" class="ft-result" hidden aria-live="polite"></div>
 </main><footer class="ft-footer ft-minimal-footer"><div class="ft-wrap"><span>© FinTrust</span></div></footer></body></html>
