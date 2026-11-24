@@ -3,7 +3,7 @@
 "use strict";
 const translations=Object.freeze({
   "nav.home":["首頁","Home"],
-  "nav.integratedAnalysis":["整合分析","Integrated analysis"],"nav.financialStatementAudit":["財報異常稽核","Financial statement audit"],"nav.verification":["查核分析","Verification"],"nav.integrated":["整合查核","Integrated verification"],
+  "nav.integratedAnalysis":["整合分析","Integrated analysis"],"nav.financialStatementAudit":["財報異常稽核","Financial statement audit"],"nav.companyHealth":["企業健檢","Company health"],"health.reports":["財務報表與異常分數","Statements & anomaly scores"],"health.jsd":["文字漂移（JSD）","Text drift (JSD)"],"health.live":["營運指標與規則","Financial indicators & rules"],"health.jsdTitle":["文字漂移與敘事差異","Text drift & narrative changes"],"health.liveTitle":["營運指標與財務規則","Financial indicators & screening rules"],"nav.verification":["查核分析","Verification"],"nav.integrated":["整合查核","Integrated verification"],
   "nav.audit":["財務異常稽核","Financial audit"],"nav.member":["會員中心","My account"],"nav.signin":["登入","Sign in"],
   "nav.myaccount":["我的帳戶","My account"],"nav.language":["中文 / EN","EN / 中文"],
   "home.title":["你想查核什麼？","What would you like to verify?"],
