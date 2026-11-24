@@ -1,5 +1,5 @@
 /* Company directory/autocomplete across all industries, no industry selection required.
-   Sources: uploaded MOPS snapshot, canonical FinTrust APIs, a small verified UI fallback. */
+   Sources: official TWSE+TPEx master, uploaded MOPS snapshot and connected FinTrust API. */
 (function(){
 "use strict";
 const RECENT_KEY="ft-recent-companies-v2";
@@ -14,14 +14,14 @@ const fallback=[
  ["2603","長榮","Evergreen Marine","航運業"],
  ["2881","富邦金","Fubon Financial","金融保險業"]
 ];
-const records=new Map(),sourceReady={snapshot:false,backend:false};
+const records=new Map(),sourceReady={snapshot:false,backend:false,listed:false,otc:false,listedCount:0,otcCount:0};
 let loadPromise=null;
 const lang=()=>window.FTLocale?.language?.()||"zh";
 const t=(key)=>window.FTLocale?.t?.(key)||key;
 function normalize(value){return String(value||"").normalize("NFKC").toLowerCase().replace(/[\s　\-]/g,"");}
 function safeCompany(raw){
- const ticker=String(raw.ticker??raw.code??raw.company_code??"").trim();
- const name=String(raw.short??raw.name??raw.company_name??"").trim();
+ const ticker=String(raw.ticker??raw.code??raw.company_code??raw["公司代號"]??raw["股票代號"]??"").trim();
+ const name=String(raw.short??raw.name??raw.company_name??raw["公司簡稱"]??raw["公司名稱"]??"").trim();
  if(!/^\d{4,6}$/.test(ticker)||!name||name.length>120)return null;
  return {
   ticker,name,
@@ -49,44 +49,95 @@ function upsert(raw){
 fallback.forEach(([ticker,name,english,industry])=>upsert({ticker,name,english,industry,origin:"fallback"}));
 async function fetchJson(url){
  const abort=new AbortController();
- const timeout=setTimeout(()=>abort.abort(),4200);
+ const timeout=setTimeout(()=>abort.abort(),10000);
  try{
   const response=await fetch(url,{credentials:"same-origin",headers:{Accept:"application/json"},signal:abort.signal});
   if(!response.ok||!(response.headers.get("content-type")||"").includes("json"))return null;
   return await response.json();
  }catch{return null;}finally{clearTimeout(timeout);}
 }
+
+/* Parse official OTC CSV; quoted commas and newlines are supported. No third-party roster. */
+function csvRows(text){
+ const rows=[];let row=[],cell="",quote=false;
+ for(let i=0;i<text.length;i++){
+  const c=text[i];
+  if(quote){if(c==='"'&&text[i+1]==='"'){cell+='"';i++;}else if(c==='"')quote=false;else cell+=c;}
+  else if(c==='"')quote=true;
+  else if(c===','){row.push(cell);cell="";}
+  else if(c==='\n'){row.push(cell.replace(/\r$/,""));if(row.some(x=>x.trim()))rows.push(row);row=[];cell="";}
+  else cell+=c;
+ }
+ if(cell||row.length){row.push(cell);rows.push(row);}
+ return rows;
+}
+async function fetchOfficialCsv(){
+ const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),12000);
+ try{
+  const response=await fetch("/data/companies/otc-csv",{signal:abort.signal,cache:"force-cache"});
+  if(!response.ok)return[];
+  const raw=await response.arrayBuffer();
+  const decode=new TextDecoder("utf-8",{fatal:false}).decode(raw);
+  const decoded=decode.includes("公司代號")?decode:new TextDecoder("big5",{fatal:false}).decode(raw);
+  const allRows=csvRows(decoded);
+  const headers=allRows.shift()?.map(x=>x.replace(/^\uFEFF/,"").trim())||[];
+  if(!headers.some(x=>x==="公司代號"||x==="股票代號"))return[];
+  return allRows.map(row=>Object.fromEntries(headers.map((head,i)=>[head,row[i]||""])));
+ }catch{return[];}finally{clearTimeout(timer);}
+}
 async function load(){
  if(loadPromise)return loadPromise;
  loadPromise=(async()=>{
-  const snapshot=await fetchJson("ft-mops-data.json");
+  // Promise.all allows the roster to be downloaded without blocking the MOPS snapshot.
+  const endpoints=[
+   "ft-mops-data.json",
+   "/api/financial/companies",
+   "/api/integrity/companies",
+   "/data/companies/listed",
+   "/data/companies/otc"
+  ];
+  const payloads=await Promise.all(endpoints.map(fetchJson));
+  const snapshot=payloads[0];
   if(snapshot?.industries){
    for(const [industry,companies] of Object.entries(snapshot.industries)){
-    for(const [ticker,entry] of Object.entries(companies))upsert({ticker,name:entry.short,fullName:entry.name,market:entry.market,industry,hasSnapshot:true,origin:"snapshot"});
+    for(const [ticker,entry] of Object.entries(companies)){
+     upsert({ticker,name:entry.short,fullName:entry.name,market:entry.market,industry,hasSnapshot:true,origin:"snapshot"});
+    }
    }
    sourceReady.snapshot=true;
   }
-  const endpoints=["/api/financial/companies","/api/integrity/companies"];
-  const results=await Promise.all(endpoints.map(fetchJson));
-  results.forEach((payload)=>{
+  for(const payload of payloads.slice(1,3)){
    const response=payload?.data??payload??{};
-   const arr=Array.isArray(response)?response:response.companies||response.items||[];
-   if(!Array.isArray(arr))return;
-   for(const entry of arr)upsert({...entry,origin:"backend"});
-   if(arr.length)sourceReady.backend=true;
-  });
+   const companies=Array.isArray(response)?response:(response.companies||response.items||[]);
+   if(!Array.isArray(companies))continue;
+   for(const company of companies)upsert({...company,origin:"backend"});
+   if(companies.length)sourceReady.backend=true;
+  }
+  const officialListed=Array.isArray(payloads[3])?payloads[3]:(payloads[3]?.data||[]);
+  if(Array.isArray(officialListed)&&officialListed.length){
+   let n=0;
+   for(const record of officialListed){
+    const entry=safeCompany({...record,market:"上市",origin:"twse"});
+    if(entry){upsert(entry);n++;}
+   }
+   sourceReady.listed=n>0;sourceReady.listedCount=n;
+  }
+  let officialOtc=Array.isArray(payloads[4])?payloads[4]:(payloads[4]?.data||[]);
+  if(!Array.isArray(officialOtc)||!officialOtc.length)officialOtc=await fetchOfficialCsv();
+  if(officialOtc.length){
+   let n=0;
+   for(const record of officialOtc){
+    const entry=safeCompany({...record,market:"上櫃",origin:"tpex"});
+    if(entry){upsert(entry);n++;}
+   }
+   sourceReady.otc=n>0;sourceReady.otcCount=n;
+  }
+  window.dispatchEvent(new CustomEvent("ft:companies-ready",{detail:{...sourceReady,total:records.size}}));
   return all();
  })();
  return loadPromise;
 }
 function all(){return Array.from(records.values()).sort((a,b)=>a.ticker.localeCompare(b.ticker));}
-function matches(q,filter){
- const parts=normalize(q).split(/[,，]/).filter(Boolean);if(!parts.length)return false;
- if(filter&&filter!=="all"&&!parts.some(p=>p.includes(filter))&&!filter.includes(q)){
-  // filtered by industry, but never require industry to be set
- }
- return true;
-}
 function search(query,industry="all",limit=9){
  const raw=String(query||"").trim();
  if(raw.length<1)return[];
@@ -176,6 +227,7 @@ function attachAutocomplete({input,list,industry,choose,limit=9}){
  document.addEventListener("click",e=>{if(e.target!==input&&!root.contains(e.target))close();});
  industry?.addEventListener("change",()=>{if(!root.hidden)show();});
  load().then(()=>{if(document.activeElement===input&&input.value.trim())show();});
+ window.addEventListener("ft:companies-ready",()=>{if(document.activeElement===input&&input.value.trim())show();});
  return close;
 }
 window.FTCompanies={all,load,get,search,findInText,addRecent,readRecent,clearRecent,attachAutocomplete,sources:sourceReady};
