@@ -39,6 +39,23 @@ const dechow=[
  ["actual_issuance","新增籌資","New issuance","(IssShare > 0 OR IssBond > 0 OR IssLTD > 0) ? 1 : 0",["IssShare","IssBond","IssLTD"]]
 ];
 let database=null,company="6505",year="2025",tab="financial";
+
+let healthRequest=0;
+async function renderLiveHealth(ticker){
+ const container=$("#ft-live-dashboard");if(!container)return;
+ const seq=++healthRequest;
+ container.replaceChildren(el("p",t("正在讀取企業營運指標…","Retrieving company financial indicators…"),"ft-sheet-meta"));
+ if(!window.FTLiveFinancial){container.textContent=t("營運指標介面尚未載入","Financial API module unavailable");return;}
+ try{
+  const result=await window.FTLiveFinancial.load(ticker);
+  if(seq!==healthRequest)return;
+  window.FTLiveFinancial.render(container,result);
+ }catch(e){
+  if(seq!==healthRequest)return;
+  container.replaceChildren(el("p",t("目前沒有這家公司的既有後端財務分析結果；可使用上方已收錄的財報指標，或進入介面示範。","No connected financial analysis was found for this company. Use the uploaded financial snapshot or UI demo."),"ft-home-muted"));
+ }
+}
+
 function el(tag,text,cls){const x=document.createElement(tag);if(text!=null)x.textContent=String(text);if(cls)x.className=cls;return x;}
 function tr(cells){const r=el("tr");cells.forEach((v,i)=>{const c=el(i===0?"th":"td",v);if(i===0)c.scope="row";r.appendChild(c);});return r;}
 function table(head,rows){const sc=el("div",null,"ft-sheet-scroll");const tb=el("table",null,"ft-sheet-table");const thead=el("thead"),headrow=el("tr");head.forEach(x=>headrow.appendChild(el("th",x)));thead.appendChild(headrow);tb.appendChild(thead);const bd=el("tbody");rows.forEach(row=>bd.appendChild(row));tb.appendChild(bd);sc.appendChild(tb);return sc;}
@@ -141,7 +158,7 @@ function render(){
    const heading=el("div",null,"ft-sheet-heading");
    heading.appendChild(el("h2",(entry?entry.name:company)+"（"+company+"）"));
    root.appendChild(heading);
-   root.appendChild(el("p",t("此公司尚未收錄於本次 2021–2025 年財務指標快照。","This company is not part of the 2021–2025 financial metrics snapshot."),"ft-snapshot-message"));
+   root.appendChild(el("p",t("此公司尚無本次 2021–2025 年 Beneish／Dechow 指標快照；下方可查看已串接的營運健檢資料。","No Beneish/Dechow snapshot for this company in 2021–2025. Connected operational health evidence may be available below."),"ft-snapshot-message"));
    const actions=el("div",null,"ft-snapshot-actions");
    const link=el("a",t("使用原有系統查核公司","Check company in the original workbench"),"ft-btn ft-btn-primary");
    link.href="financial-integrity.html?ticker="+encodeURIComponent(company);
@@ -149,7 +166,7 @@ function render(){
    const official=el("a",t("前往公開資訊觀測站","Open MOPS"),"ft-btn");
    official.href="https://mops.twse.com.tw/";official.target="_blank";official.rel="noopener noreferrer";
    actions.appendChild(official);root.appendChild(actions);
-   if(status)status.textContent=t("公司名錄可搜尋；此公司沒有本次的財務計算快照。","Company found in the directory; this snapshot has no computed metrics for it.");
+   if(status)status.textContent=t("已找到公司；本次 Beneish／Dechow 未收錄，下方載入既有營運指標。","Company found. This snapshot has no Beneish/Dechow metrics; see live financial indicators below.");
    const ticker=$("#ft-audit-ticker");if(ticker)ticker.value=company;
    return;
  }
@@ -189,7 +206,7 @@ function selectedCompany(record){
  }catch(_){}
  if($("#ft-audit-ticker"))$("#ft-audit-ticker").value=company;
  window.FTCompanies?.addRecent(record);
- fillYears();render();window.FTNarrative?.show(company);
+ fillYears();render();window.FTNarrative?.show(company);renderLiveHealth(company);
 }
 function fillCompanies(){
  const industry=$("#ft-industry"),input=$("#ft-company-search"),list=$("#ft-company-suggestions");
@@ -234,7 +251,7 @@ document.addEventListener("DOMContentLoaded",async()=>{
   window.FTCompanies?.load();
   fillCompanies();fillYears();
   $("#ft-year").addEventListener("change",e=>{year=e.target.value;render();});
-  render();window.FTNarrative?.show(company);
+  render();window.FTNarrative?.show(company);renderLiveHealth(company);
  }catch(e){$("#ft-sheet-report").textContent=t("財報快照載入失敗，請重新整理頁面。","Unable to load financial snapshot.");}
 });
 })();
