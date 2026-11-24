@@ -63,9 +63,9 @@
     var q=String(raw||"").trim();if(!q)return false;
     var matched=window.FTCompanies?.findInText?.(q);
     var ticker=extractTicker(q)||(matched?.ticker||"");
-    var alone=/^\\d{4,6}(?:\\s+[^\\d]{1,30})?$/.test(q)||!!(matched&&[
+    var alone=/^\d{4,6}(?:\s+[^\d]{1,30})?$/.test(q)||!!(matched&&[
       matched.name,matched.fullName,matched.ticker,matched.ticker+" "+matched.name
-    ].some(function(v){return String(v||"").trim().normalize("NFKC").replace(/\\s+/g,"")===q.normalize("NFKC").replace(/\\s+/g,"");}));
+    ].some(function(v){return String(v||"").trim().normalize("NFKC").replace(/\s+/g,"")===q.normalize("NFKC").replace(/\s+/g,"");}));
     var intent=alone?"audit":detectIntent(q);
     var target=intent==="audit"?"financial-audit.html":"analysis.html";
     try{if(!alone)sessionStorage.setItem("ft:pending-query",q);else sessionStorage.removeItem("ft:pending-query");}catch(e){}
