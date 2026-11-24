@@ -61,12 +61,15 @@
   }
   function routeQuery(raw){
     var q=String(raw||"").trim();if(!q)return false;
-    var intent=detectIntent(q);
-    var target=intent==="audit"?"financial-audit.html":"analysis.html";
-    try{sessionStorage.setItem("ft:pending-query",q);}catch(e){return false;}
-    var params=new URLSearchParams();
     var matched=window.FTCompanies?.findInText?.(q);
     var ticker=extractTicker(q)||(matched?.ticker||"");
+    var alone=/^\\d{4,6}(?:\\s+[^\\d]{1,30})?$/.test(q)||!!(matched&&[
+      matched.name,matched.fullName,matched.ticker,matched.ticker+" "+matched.name
+    ].some(function(v){return String(v||"").trim().normalize("NFKC").replace(/\\s+/g,"")===q.normalize("NFKC").replace(/\\s+/g,"");}));
+    var intent=alone?"audit":detectIntent(q);
+    var target=intent==="audit"?"financial-audit.html":"analysis.html";
+    try{if(!alone)sessionStorage.setItem("ft:pending-query",q);else sessionStorage.removeItem("ft:pending-query");}catch(e){}
+    var params=new URLSearchParams();
     if(ticker)params.set("ticker",ticker);
     if(matched)window.FTCompanies.addRecent(matched);
     location.href=target+(params.toString()?"?"+params.toString():"");
@@ -400,11 +403,18 @@
     attachFile($("#ft-attach"),query,$("#ft-file-note"));
     $("#ft-demo-run")?.addEventListener("click",async function(){
       if(!window.FTDemo)return;
-      await window.FTDemo.render(result,{mode:mode.value,ticker:ticker.value.trim()||p.ticker||"6505",claim:query.value.trim()});
+      var code=extractTicker(ticker.value)||window.FTCompanies?.findInText?.(ticker.value)?.ticker||p.ticker||"6505";
+      await window.FTDemo.render(result,{mode:mode.value,ticker:code,claim:query.value.trim()});
       status(L("目前顯示的是前端介面示範，非後端查核結果。","Showing a front-end demonstration, not backend verification."));
       result.scrollIntoView({behavior:"smooth",block:"start"});
     });
-    $("#ft-form").addEventListener("submit",function(e){e.preventDefault();runWorkflow(mode.value,ticker.value.trim(),query.value.trim(),result,button);});
+    $("#ft-form").addEventListener("submit",function(e){
+      e.preventDefault();
+      var cleaned=extractTicker(ticker.value)||window.FTCompanies?.findInText?.(ticker.value)?.ticker||ticker.value.trim();
+      if(cleaned!==ticker.value.trim())ticker.value=cleaned;
+      if(window.FTCompanies?.get?.(cleaned))window.FTCompanies.addRecent(window.FTCompanies.get(cleaned));
+      runWorkflow(mode.value,cleaned,query.value.trim(),result,button);
+    });
     document.querySelectorAll("[data-ft-mode]").forEach(function(b){b.addEventListener("click",function(){mode.value=b.getAttribute("data-ft-mode");query.focus();});});
     if(p.query&&(p.ticker||mode.value==="text"))launchFromHome();
   }
