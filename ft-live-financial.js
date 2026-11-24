@@ -155,7 +155,7 @@ function render(container,result,opts={}){
  if(typeof opts.claim==="string"&&opts.claim.trim()){
   const inquiry=section(t("輸入內容","Submitted claim"));
   inquiry.appendChild(el("p",opts.claim.slice(0,1700)));
-  inquiry.appendChild(el("p",t("目前的 Cloud Run 未提供主張查證 API；以上為已取得的公司財務和官方公告資料，不能當作此主張的真偽判定。","The current Cloud Run does not expose claim verification. The financial and disclosure evidence above is not a verdict on this claim."),"ft-sheet-meta"));
+  inquiry.appendChild(el("p",t("此區僅提供公司財務與官方公告證據；主張核驗結論以獨立查證結果為準。","This section presents company financial and disclosure evidence only; see the separate claim verification result for the verdict."),"ft-sheet-meta"));
   root.appendChild(inquiry);
  }
  if(typeof analysis.summary==="string"&&analysis.summary.trim()){

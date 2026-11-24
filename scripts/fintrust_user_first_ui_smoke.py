@@ -62,6 +62,9 @@ def main() -> int:
         ("/ft-mops-data.json", '"industries"'),
         ("/ft-i18n.js", "FTLocale"),
         ("/ft-demo.js", "FTDemo"),
+        ("/ft-file-reader.js", "FTFileReader"),
+        ("/login.html", "member-auth.js"),
+        ("/register.html", "member-auth.js"),
     ]
     for path, marker in static:
         try:
@@ -138,6 +141,40 @@ def main() -> int:
         except URLError as exc:
             pending.append(path)
             print(f"PENDING optional {path}: {exc}")
+
+    # Use a real archived-company claim, not a synthetic success response.
+    # A healthy endpoint must provide the canonical verdict and evidence contract.
+    claim_path = "/api/financial/claims/verify"
+    try:
+        code, reply = fetch(args.base, claim_path, body={
+            "company_code": "2330", "claim": "台積電 2025 年第三季毛利率為 59.5%"})
+        payload = parse_json(reply)
+        data = payload.get("data", {}) if isinstance(payload, dict) else {}
+        data = data if isinstance(data, dict) else {}
+        evidence = data.get("evidence")
+        verdict = data.get("verdict")
+        valid = (code == 200 and payload.get("success") is True
+                 and verdict in {"supported", "conflicting", "insufficient_evidence"}
+                 and isinstance(evidence, list)
+                 and all(isinstance(item, dict) and item.get("evidence_id") for item in evidence)
+                 and isinstance(data.get("structured_claim"), dict)
+                 and isinstance(data.get("summary"), str))
+        if code == 404:
+            pending.append(claim_path)
+            print(f"PENDING claim {claim_path}: not deployed")
+        elif not valid:
+            failures.append(claim_path)
+            print(f"FAIL claim {claim_path}: HTTP {code}, invalid contract")
+        else:
+            print(f"PASS claim contract: HTTP {code}, verdict={verdict}, evidence={len(evidence)}")
+            if args.strict_full_stack and (verdict != "supported" or not evidence or not any(
+                    item.get("relation") == "supports" and item.get("decisive") is True
+                    and not (item.get("provenance") or {}).get("is_demo", False) for item in evidence)):
+                failures.append(claim_path + " known positive evidence")
+                print("FAIL known positive claim: no decisive real supporting evidence; do not cut over")
+    except URLError as exc:
+        pending.append(claim_path)
+        print(f"PENDING claim {claim_path}: {exc}")
 
     if args.strict_full_stack:
         failures.extend(pending)

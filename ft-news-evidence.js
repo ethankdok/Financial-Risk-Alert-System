@@ -14,7 +14,7 @@ function source(url,label){
  const a=el("a",label,"ft-inline-link");a.href=safe;a.target="_blank";a.rel="noopener noreferrer";return a;
 }
 function section(title){const div=el("section",null,"ft-news-evidence-section");div.appendChild(el("h3",title));return div;}
-function render(container,payload,claim){
+function render(container,payload,claim,claimResult){
  if(!container)return;
  const card=payload.card||{};
  const existing=container.querySelector(".ft-live-report")||container;
@@ -23,7 +23,10 @@ function render(container,payload,claim){
  const original=section(t("待查核的外部資訊","External claim to verify"));
  const content=String(claim||"").trim();
  original.appendChild(el("p",content||t("尚未輸入新聞或財務主張","No external claim was entered"),"ft-news-claim-text"));
- original.appendChild(el("span",t("核驗狀態：尚未取得逐項查證結論","Verification status: no claim-level verdict available"),"ft-demo-pill"));
+ const verdictLabels={supported:t("官方證據支持","Supported by official evidence"),conflicting:t("與官方證據不一致","Conflicts with official evidence"),insufficient_evidence:t("證據不足","Insufficient evidence")};
+ const verdict=claimResult?.verdict;
+ const verdictLabel=Object.prototype.hasOwnProperty.call(verdictLabels,verdict)?verdictLabels[verdict]:t("尚未取得逐項查證結論","No claim-level verdict available");
+ original.appendChild(el("span",t("核驗狀態：","Verification status: ")+verdictLabel,"ft-demo-pill"));
  shell.appendChild(original);
  const status=card.source_status||{},inventory=section(t("官方證據索引","Official evidence index"));
  const totals=el("div",null,"ft-news-coverage");

@@ -248,11 +248,11 @@
   function renderClaim(r,container){
     var p=section("新聞／言論主張查核");
     var label=r.verdict||r.status||r.conclusion||(r.result&&r.result.status)||"後端已回應";
-    p.appendChild(badge(typeof label==="string"?label:"已取得查核回應"));
+    p.appendChild(badge(statusNames[label]||(typeof label==="string"?label:"已取得查核回應")));
     var s=r.summary||r.explanation||r.message||r.reason||(r.result&&r.result.summary);
     if(typeof s==="string")p.appendChild(para(s));
     var support=asArray(r.evidence||r.sources||r.references);
-    support.slice(0,8).forEach(function(it){if(typeof it==="string")p.appendChild(para(it));else if(it&&typeof it==="object"){var line=para(it.title||it.source_title||it.summary||"查核來源");if(it.source_url||it.url)line.appendChild(safeOfficialLink(it.source_url||it.url,"　查看官方來源"));p.appendChild(line);}});
+    support.slice(0,8).forEach(function(it){if(typeof it==="string")p.appendChild(para(it));else if(it&&typeof it==="object"){var line=para([it.title||it.source_title||it.document||it.summary||"查核來源",it.period,it.source_date,it.page!=null?L("第 "+it.page+" 頁","Page "+it.page):null,it.relation,it.value!=null?String(it.value)+(it.unit?" "+it.unit:""):null].filter(Boolean).join(" · "));if(it.source_reference||it.source_url||it.url)line.appendChild(safeOfficialLink(it.source_reference||it.source_url||it.url,"　查看官方來源"));p.appendChild(line);}});
     var d=node("details");d.appendChild(node("summary","查看完整查核回應"));
     var pre=node("pre",JSON.stringify(r,null,2).slice(0,13000),"ft-code");pre.style.whiteSpace="pre-wrap";pre.style.overflowWrap="anywhere";d.appendChild(pre);p.appendChild(d);container.appendChild(p);
   }
@@ -305,11 +305,13 @@
     try{
       var results=await Promise.allSettled(jobs.map(function(j){return j.promise;}));
       var success=0,errors=[],missing=[];
+      var claimIndex=jobs.findIndex(function(j){return j.name==="claim";});
+      var claimResult=claimIndex>=0&&results[claimIndex].status==="fulfilled"?results[claimIndex].value:null;
       results.forEach(function(out,i){
         var job=jobs[i];
         if(out.status==="fulfilled"){
           success++;
-          if(job.name==="financial"){window.FTLiveFinancial.render(target,out.value,{claim:claim});window.FTNewsEvidence?.render(target,out.value,claim);}
+          if(job.name==="financial"){window.FTLiveFinancial.render(target,out.value,{claim:claim});window.FTNewsEvidence?.render(target,out.value,claim,claimResult);}
           if(job.name==="assessment")renderAssessment(out.value,target);
           if(job.name==="claim")renderClaim(out.value,target);
           if(job.name==="text")renderTextRisk(out.value,target);

@@ -355,12 +355,11 @@ _ROSTER_TTL_SECONDS = 6 * 60 * 60
 _roster_cache: dict[str, tuple[float, bytes]] = {}
 
 
-@app.get("/data/companies/<market>")
-def public_company_directory(market: str):
-    """Public read-only TWSE/TPEx company master, cached to protect upstream services.
+@app.get("/data/companies/otc-csv")
+def public_company_directory(market: str = "otc-csv"):
+    """Official OTC CSV fallback only; listed/OTC JSON uses the directory blueprint.
 
-    Fixed allowlist only; no user-controlled URL or arbitrary proxy. This route
-    will be used when this branch is later deployed back to the original Cloud Run.
+    Fixed allowlist only; no user-controlled URL or arbitrary proxy.
     """
     source = _ROSTER_SOURCES.get(market)
     if source is None:
