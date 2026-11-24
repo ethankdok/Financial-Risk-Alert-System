@@ -14,16 +14,16 @@
   <header id="ft-header"></header>
   <main class="login-shell">
     <form class="auth-card" id="memberRegisterForm">
-      <span class="eyebrow">註冊會員</span>
-      <h1>建立帳號</h1>
-      <p>建立測試會員後即可追蹤公司、設定個人提醒與查看通知歷史。</p>
-      <div class="form-group"><label>會員名稱</label><input class="form-control" name="display_name" autocomplete="name" required></div>
-      <div class="form-group"><label>Email</label><input class="form-control" name="email" type="email" autocomplete="email" required></div>
-      <div class="form-group"><label>密碼</label><input class="form-control" name="password" type="password" autocomplete="new-password" minlength="8" required></div>
+      <span class="eyebrow" data-i18n="register.title">註冊會員</span>
+      <h1 data-i18n="register.create">建立帳號</h1>
+      
+      <div class="form-group"><label data-i18n="register.name">會員名稱</label><input class="form-control" name="display_name" autocomplete="name" required></div>
+      <div class="form-group"><label data-i18n="login.email">電子郵件</label><input class="form-control" name="email" type="email" autocomplete="email" required></div>
+      <div class="form-group"><label data-i18n="login.password">密碼</label><input class="form-control" name="password" type="password" autocomplete="new-password" minlength="8" required></div>
       <div class="auth-error" id="memberRegisterError" hidden></div>
-      <button class="btn btn-primary" style="width:100%" type="submit">完成註冊</button>
-      <p class="auth-switch">已經有帳號？ <a href="login.html">返回登入</a></p>
-      <p class="auth-mode-note">正式部署時，會員身份應由 Firebase / Identity Platform 發行 UID；系統只保存 profile 與偏好設定。</p>
+      <button class="btn btn-primary" style="width:100%" type="submit" data-i18n="register.submit">完成註冊</button>
+      <p class="auth-switch"><span data-i18n="register.existing">已經有帳號？</span> <a href="login.html" data-i18n="register.back">返回登入</a></p>
+      
     </form>
   </main>
   <script>
