@@ -50,6 +50,8 @@ async function renderLiveHealth(ticker){
   const result=await window.FTLiveFinancial.load(ticker);
   if(seq!==healthRequest)return;
   window.FTLiveFinancial.render(container,result);
+  const narrative=$("#ft-narrative-health");
+  if(narrative&&window.FTNarrative?.renderFromCard)window.FTNarrative.renderFromCard(narrative,result.card,ticker);
  }catch(e){
   if(seq!==healthRequest)return;
   container.replaceChildren(el("p",t("目前沒有這家公司的既有後端財務分析結果；可使用上方已收錄的財報指標，或進入介面示範。","No connected financial analysis was found for this company. Use the uploaded financial snapshot or UI demo."),"ft-home-muted"));
@@ -215,7 +217,7 @@ function selectedCompany(record){
  }catch(_){}
  if($("#ft-audit-ticker"))$("#ft-audit-ticker").value=company;
  window.FTCompanies?.addRecent(record);
- fillYears();render();window.FTNarrative?.show(company);renderLiveHealth(company);
+ fillYears();render();renderLiveHealth(company);
 }
 function fillCompanies(){
  const industry=$("#ft-industry"),input=$("#ft-company-search"),list=$("#ft-company-suggestions");
@@ -260,7 +262,7 @@ document.addEventListener("DOMContentLoaded",async()=>{
   window.FTCompanies?.load();
   fillCompanies();fillYears();
   $("#ft-year").addEventListener("change",e=>{year=e.target.value;render();});
-  render();window.FTNarrative?.show(company);renderLiveHealth(company);
+  render();renderLiveHealth(company);
  }catch(e){$("#ft-sheet-report").textContent=t("財報快照載入失敗，請重新整理頁面。","Unable to load financial snapshot.");}
 });
 })();
