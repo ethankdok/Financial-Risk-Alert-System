@@ -1,8 +1,8 @@
 <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>整合查核｜FinTrust</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-file-reader.js"></script><script defer src="ft-demo.js"></script><script defer src="ft-live-financial.js"></script><script defer src="ft-site.js"></script>
+<title>新聞查證｜FinTrust</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-file-reader.js"></script><script defer src="ft-demo.js"></script><script defer src="ft-live-financial.js"></script><script defer src="ft-site.js"></script>
 </head><body class="ft-app" data-ft-page="integrated"><header id="ft-header"></header>
 <main class="ft-wrap ft-report-page">
-<div class="ft-page-title"><h1 data-i18n="nav.integratedAnalysis">整合分析</h1><span class="ft-api-status" data-ft-api-health></span></div>
+<div class="ft-page-title"><h1 data-i18n="nav.newsVerification">新聞查證</h1><span class="ft-api-status" data-ft-api-health></span></div>
 <section class="ft-panel ft-integrated-form">
 <form id="ft-form">
 <div class="ft-two-fields">
@@ -13,7 +13,7 @@
 <option value="claim" data-ft-en="News claim verification">新聞主張查核</option>
 <option value="text" data-ft-en="Investment text screening">投資言論篩檢</option>
 </select></div></div>
-<div class="ft-field"><label for="ft-query" data-ft-en="Content to verify">查核內容</label><textarea id="ft-query" class="ft-textarea" data-ft-en-placeholder="Paste news or financial claims…" placeholder="貼上新聞或財務說法…"></textarea></div>
+<div class="ft-field"><label for="ft-query" data-i18n="news.content">外部新聞／財務說法</label><textarea id="ft-query" class="ft-textarea" data-i18n-placeholder="news.placeholder" placeholder="貼上財經新聞、公告或待查證的說法…"></textarea></div>
 <div class="ft-chat-actions"><div class="ft-attach-group"><label class="ft-upload-label" for="ft-attach">＋ <span data-ft-en="Attach file">上傳檔案</span><input type="file" id="ft-attach" accept=".txt,.csv,.json,.pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx"></label><span id="ft-file-note" class="ft-file-note"></span></div><button type="button" id="ft-demo-run" class="ft-btn ft-btn-muted" data-i18n="demo.open">介面示範</button><button type="submit" id="ft-run" class="ft-btn ft-btn-primary" data-ft-en="Start verification">開始查核</button></div>
 </form><div id="ft-status" class="ft-status" role="status" aria-live="polite" hidden></div>
 </section><div id="ft-result" class="ft-result" hidden aria-live="polite"></div>
