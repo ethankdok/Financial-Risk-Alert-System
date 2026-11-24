@@ -39,9 +39,6 @@
     });
     main.appendChild(nav);
     var right=node("div",null,"ft-head-right");
-    var login=node("a",window.FTLocale?.t?.("nav.signin")||"登入","ft-pill-link");
-    login.href="login.html";login.id="ft-login-link";login.setAttribute("data-i18n","nav.signin");
-    right.appendChild(login);
     var lang=node("button","中文 / EN","ft-language-switch");
     lang.id="ft-language-toggle";lang.type="button";right.appendChild(lang);
     var menu=node("button","☰","ft-menu-toggle");menu.id="ft-menu-toggle";menu.type="button";
@@ -51,15 +48,6 @@
     if(window.FTLocale){window.FTLocale.apply();lang.addEventListener("click",window.FTLocale.toggle);}
     menu.addEventListener("click",function(){var visible=nav.classList.toggle("ft-nav-visible");menu.setAttribute("aria-expanded",String(visible));});
     document.addEventListener("keydown",function(e){if(e.key==="Escape"){nav.classList.remove("ft-nav-visible");menu.setAttribute("aria-expanded","false");}});
-    if(window.MemberAuth&&typeof window.MemberAuth.getMember==="function"){
-      window.MemberAuth.getMember().then(function(member){
-        if(member){
-          login.href="member.html";
-          login.textContent=window.FTLocale?.t?.("nav.myaccount")||L("我的帳戶","My account");
-          login.removeAttribute("data-i18n");
-        }
-      }).catch(function(){});
-    }
   }
   function status(text,isError){var e=$("#ft-status");if(!e)return;e.textContent=window.FTLocale?.phrase?.(String(text))||text;e.className="ft-status"+(isError?" ft-error":"");e.hidden=!text;}
   function parseQuery(){return new URLSearchParams(location.search);}
