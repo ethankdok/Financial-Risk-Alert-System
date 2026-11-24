@@ -1,8 +1,8 @@
 <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>財務異常稽核｜FinTrust</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-company-search.js"></script><script defer src="ft-site.js"></script><script defer src="ft-mops-report.js"></script>
+<title>財務異常稽核｜FinTrust</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-company-search.js"></script><script defer src="ft-demo.js"></script><script defer src="ft-site.js"></script><script defer src="ft-mops-report.js"></script>
 </head><body class="ft-app" data-ft-page="audit"><header id="ft-header"></header>
 <main class="ft-wrap ft-report-page">
-<div class="ft-page-title"><h1 data-i18n="audit.title">財務異常稽核</h1></div>
+<div class="ft-page-title"><h1 data-i18n="audit.title">財務異常稽核</h1><span class="ft-api-status" data-ft-api-health></span></div>
 <div class="ft-report-toolbar">
 <div class="ft-field ft-company-field">
 <label for="ft-company-search" data-i18n="audit.search">搜尋公司</label>
@@ -17,7 +17,7 @@
 <div id="ft-company-data-status" class="ft-company-data-status" aria-live="polite"></div><div id="ft-sheet-report" class="ft-sheet-report" aria-live="polite"><div class="ft-skeleton" data-i18n="audit.loading">載入財務資料…</div></div>
 <section class="ft-panel ft-secondary-audit">
 <div class="ft-panel-heading"><h2 data-i18n="audit.otherCompany">查核其他公司</h2><a href="financial-integrity.html" class="ft-inline-link" data-i18n="audit.advanced">完整分析工作台</a></div>
-<form id="ft-audit-form" class="ft-audit-inline"><label for="ft-audit-ticker" data-i18n="audit.ticker">公司代號</label><input id="ft-audit-ticker" class="ft-input" inputmode="numeric" pattern="[0-9]{4,6}" placeholder="例：1785" required><button type="submit" class="ft-btn ft-btn-primary" id="ft-audit-run" data-i18n="audit.backendRun">執行查核</button></form>
+<form id="ft-audit-form" class="ft-audit-inline"><label for="ft-audit-ticker" data-i18n="audit.ticker">公司代號</label><input id="ft-audit-ticker" class="ft-input" inputmode="numeric" pattern="[0-9]{4,6}" placeholder="例：1785" required><button type="button" id="ft-audit-demo-run" class="ft-btn ft-btn-muted" data-i18n="demo.open">介面示範</button><button type="submit" class="ft-btn ft-btn-primary" id="ft-audit-run" data-i18n="audit.backendRun">執行查核</button></form>
 <div id="ft-status" class="ft-status" role="status" aria-live="polite" hidden></div><a id="ft-advanced-link" class="ft-inline-link" href="financial-integrity.html"></a>
 </section>
 <div id="ft-result" class="ft-result" hidden aria-live="polite"></div>
