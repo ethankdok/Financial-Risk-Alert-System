@@ -153,7 +153,7 @@ def main() -> int:
         data = data if isinstance(data, dict) else {}
         evidence = data.get("evidence")
         verdict = data.get("verdict")
-        valid = (code == 200 and payload.get("success") is True
+        valid = (code == 200 and isinstance(payload, dict) and payload.get("success") is True
                  and verdict in {"supported", "conflicting", "insufficient_evidence"}
                  and isinstance(evidence, list)
                  and all(isinstance(item, dict) and item.get("evidence_id") for item in evidence)
@@ -175,6 +175,18 @@ def main() -> int:
     except URLError as exc:
         pending.append(claim_path)
         print(f"PENDING claim {claim_path}: {exc}")
+
+    # Verify the real member API is protected without creating an account or writing data.
+    member_path = "/api/member/me"
+    try:
+        code, reply = fetch(args.base, member_path)
+        valid = code == 401 and isinstance(parse_json(reply), dict)
+        print(f"{'PASS' if valid else 'FAIL'} anonymous member protection: HTTP {code}")
+        if not valid:
+            failures.append(member_path)
+    except URLError as exc:
+        failures.append(member_path)
+        print(f"FAIL anonymous member protection: {exc}")
 
     if args.strict_full_stack:
         failures.extend(pending)
