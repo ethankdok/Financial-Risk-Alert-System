@@ -133,7 +133,27 @@ function renderClaim(){
 }
 function render(){
  const root=$("#ft-sheet-report");if(!database||!root)return;
- const data=Object.entries(database.industries).find(([,v])=>v[company]);if(!data)return;
+ const data=Object.entries(database.industries).find(([,v])=>v[company]);
+ const status=$("#ft-company-data-status");
+ if(!data){
+   const entry=window.FTCompanies?.get(company);
+   root.replaceChildren();
+   const heading=el("div",null,"ft-sheet-heading");
+   heading.appendChild(el("h2",(entry?entry.name:company)+"（"+company+"）"));
+   root.appendChild(heading);
+   root.appendChild(el("p",t("此公司尚未收錄於本次 2021–2025 年財務指標快照。","This company is not part of the 2021–2025 financial metrics snapshot."),"ft-snapshot-message"));
+   const actions=el("div",null,"ft-snapshot-actions");
+   const link=el("a",t("使用原有系統查核公司","Check company in the original workbench"),"ft-btn ft-btn-primary");
+   link.href="financial-integrity.html?ticker="+encodeURIComponent(company);
+   actions.appendChild(link);
+   const official=el("a",t("前往公開資訊觀測站","Open MOPS"),"ft-btn");
+   official.href="https://mops.twse.com.tw/";official.target="_blank";official.rel="noopener noreferrer";
+   actions.appendChild(official);root.appendChild(actions);
+   if(status)status.textContent=t("公司名錄可搜尋；此公司沒有本次的財務計算快照。","Company found in the directory; this snapshot has no computed metrics for it.");
+   const ticker=$("#ft-audit-ticker");if(ticker)ticker.value=company;
+   return;
+ }
+ if(status)status.textContent=t("已載入 MOPS 財務指標資料","MOPS financial metrics loaded");
  const [industry,companies]=data,co=companies[company];let rec=co.years[year];if(!rec){year=Object.keys(co.years).sort().at(-1);rec=co.years[year];$("#ft-year").value=year;}
  const prev=co.years[String(Number(year)-1)];
  root.replaceChildren(header({group:industry}));
@@ -158,25 +178,56 @@ function downloadCSV(){
  const blob=new Blob(["\ufeff"+rows.join("\r\n")],{type:"text/csv;charset=utf-8"});
  const a=document.createElement("a");const url=URL.createObjectURL(blob);a.href=url;a.download=company+"_"+year+"_"+tab+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),300);
 }
-function fillCompanies(){
- const industry=$("#ft-industry"),select=$("#ft-company");
- const industries=Object.keys(database.industries);industry.replaceChildren();
- industries.forEach(i=>{const opt=el("option",i);opt.value=i;industry.appendChild(opt);});
- const found=industries.find(i=>database.industries[i][company])||industries[0];industry.value=found;
- function options(){const comp=database.industries[industry.value];select.replaceChildren();Object.entries(comp).forEach(([code,v])=>{const o=el("option",code+" "+v.short);o.value=code;select.appendChild(o);});if(comp[company])select.value=company;else{company=Object.keys(comp)[0];select.value=company;}}
- options();
- industry.addEventListener("change",()=>{options();fillYears();render();});
- select.addEventListener("change",()=>{company=select.value;fillYears();render();});
+function selectedCompany(record){
+ company=record.ticker;
+ const input=$("#ft-company-search");
+ if(input)input.value=record.ticker+" "+record.name;
+ try{
+   const url=new URL(location.href);
+   url.searchParams.set("ticker",company);
+   history.replaceState(null,"",url);
+ }catch(_){}
+ if($("#ft-audit-ticker"))$("#ft-audit-ticker").value=company;
+ window.FTCompanies?.addRecent(record);
+ fillYears();render();
 }
-function fillYears(){const sel=$("#ft-year");sel.replaceChildren();const c=Object.values(database.industries).find(x=>x[company])[company];Object.keys(c.years).sort().reverse().forEach(y=>{const opt=el("option",y);opt.value=y;sel.appendChild(opt);});if(c.years[year])sel.value=year;else{year=Object.keys(c.years).sort().at(-1);sel.value=year;}}
+function fillCompanies(){
+ const industry=$("#ft-industry"),input=$("#ft-company-search"),list=$("#ft-company-suggestions");
+ if(!industry||!input||!list)return;
+ industry.replaceChildren();
+ const all=el("option",t("全部產業","All industries"));all.value="all";industry.appendChild(all);
+ for(const category of Object.keys(database.industries)){
+  const option=el("option",category);option.value=category;industry.appendChild(option);
+ }
+ industry.value="all";
+ const local=Object.values(database.industries).find(x=>x[company])?.[company];
+ const match=window.FTCompanies?.get(company);
+ input.value=company+" "+(local?.short||match?.name||"");
+ window.FTCompanies?.attachAutocomplete({input,list,industry,choose:selectedCompany});
+ industry.addEventListener("change",()=>{input.focus();});
+}
+function fillYears(){
+ const sel=$("#ft-year");if(!sel)return;sel.replaceChildren();
+ const co=Object.values(database.industries).find(x=>x[company])?.[company];
+ if(!co){const opt=el("option","—");opt.value="";sel.appendChild(opt);sel.disabled=true;return;}
+ sel.disabled=false;
+ const years=Object.keys(co.years).sort().reverse();
+ for(const y of years){const opt=el("option",y);opt.value=y;sel.appendChild(opt);}
+ if(!co.years[year])year=years[0];
+ sel.value=year;
+}
 document.addEventListener("DOMContentLoaded",async()=>{
  if(!$("#ft-sheet-report"))return;
  try{
-  const res=await fetch("ft-mops-data.json",{cache:"force-cache"});if(!res.ok)throw Error("HTTP "+res.status);
+  const res=await fetch("ft-mops-data.json",{cache:"force-cache"});
+  if(!res.ok)throw Error("HTTP "+res.status);
   database=await res.json();
   const wanted=new URLSearchParams(location.search).get("ticker");
-  if(wanted&&Object.values(database.industries).some(ind=>ind[wanted]))company=wanted;
-  fillCompanies();fillYears();$("#ft-year").addEventListener("change",e=>{year=e.target.value;render();});render();
+  if(wanted&&/^\d{4,6}$/.test(wanted))company=wanted;
+  window.FTCompanies?.load();
+  fillCompanies();fillYears();
+  $("#ft-year").addEventListener("change",e=>{year=e.target.value;render();});
+  render();
  }catch(e){$("#ft-sheet-report").textContent=t("財報快照載入失敗，請重新整理頁面。","Unable to load financial snapshot.");}
 });
 })();
