@@ -96,5 +96,5 @@ async function show(ticker){
   target.appendChild(el("p",t("目前無法取得這家公司的文字比較結果。","Text comparison is currently unavailable for this company."),"ft-home-muted"));
  }finally{clearTimeout(timer);}
 }
-window.FTNarrative={show};
+window.FTNarrative={show,renderFromCard:display};
 })();
