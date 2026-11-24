@@ -67,6 +67,21 @@ function render(container,result,opts={}){
  top.appendChild(intro);
  const badge=el("span",t("已取得後端資料","Backend response received"),"ft-sheet-badge");
  top.appendChild(badge);root.appendChild(top);
+ const distinctMetricCount=new Set(arr(metrics.metrics).map(item=>String(item.metric_code||item.label||"")).filter(Boolean)).size;
+ const triggeredCount=arr(card.rule_cards||analysis.rule_cards).filter(item=>item.triggered===true).length;
+ const eventCount=events.length||arr(card.material_events).length;
+ const atAGlance=el("div",null,"ft-live-at-a-glance");
+ [
+  [t("歷史財務指標","Historical metrics"),distinctMetricCount||arr(card.key_metrics).length],
+  [t("觸發風險規則","Triggered screening rules"),triggeredCount],
+  [t("官方重大訊息","Official disclosures"),eventCount]
+ ].forEach(([label,count])=>{
+  const cardEl=el("div",null,"ft-live-glance-card");
+  cardEl.appendChild(el("strong",String(count)));
+  cardEl.appendChild(el("span",label));
+  atAGlance.appendChild(cardEl);
+ });
+ root.appendChild(atAGlance);
  const metricsList=arr(card.key_metrics||analysis.key_metrics);
  const metricRows=arr(metrics.metrics);
  const years=["2021FY","2022FY","2023FY","2024FY","2025FY"];
