@@ -408,10 +408,17 @@
       status(L("目前顯示的是前端介面示範，非後端查核結果。","Showing a front-end demonstration, not backend verification."));
       result.scrollIntoView({behavior:"smooth",block:"start"});
     });
-    $("#ft-form").addEventListener("submit",function(e){
+    $("#ft-form").addEventListener("submit",async function(e){
       e.preventDefault();
+      if(button.disabled)return;
       var cleaned=extractTicker(ticker.value)||window.FTCompanies?.findInText?.(ticker.value)?.ticker||ticker.value.trim();
-      if(cleaned!==ticker.value.trim())ticker.value=cleaned;
+      if(mode.value!=="text"&&!/^\d{4,6}$/.test(cleaned)&&query.value.trim()){
+        button.disabled=true;
+        status(L("正在辨識新聞中的公司…","Identifying company mentioned in the article…"));
+        try{cleaned=await resolveCompanyFromQuestion(query.value)||cleaned;}
+        finally{button.disabled=false;}
+      }
+      if(/^\d{4,6}$/.test(cleaned))ticker.value=cleaned;
       if(window.FTCompanies?.get?.(cleaned))window.FTCompanies.addRecent(window.FTCompanies.get(cleaned));
       runWorkflow(mode.value,cleaned,query.value.trim(),result,button);
     });
