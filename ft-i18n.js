@@ -24,8 +24,11 @@ function apply(){
  const english=localStorage.getItem("ft-language")==="en";
  document.documentElement.lang=english?"en":"zh-Hant";
  document.querySelectorAll("[data-ft-en]").forEach(node=>{
-   if(!node.dataset.ftZh)node.dataset.ftZh=node.textContent;
-   node.textContent=english?node.dataset.ftEn:node.dataset.ftZh;
+   if(node.dataset.ftZh==null)node.dataset.ftZh=Array.from(node.childNodes).filter(n=>n.nodeType===Node.TEXT_NODE).map(n=>n.nodeValue).join("");
+   const wanted=english?node.dataset.ftEn:node.dataset.ftZh;
+   const textNode=Array.from(node.childNodes).find(n=>n.nodeType===Node.TEXT_NODE);
+   if(textNode)textNode.nodeValue=wanted;
+   else if(!node.children.length)node.textContent=wanted;
  });
  document.querySelectorAll("[data-ft-en-placeholder]").forEach(node=>{
   if(node.dataset.ftZhPlaceholder==null)node.dataset.ftZhPlaceholder=node.getAttribute("placeholder")||"";
