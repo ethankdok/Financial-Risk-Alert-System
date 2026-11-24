@@ -69,3 +69,12 @@ Before merge: run this smoke, manual desktop/mobile keyboard navigation check, t
 - News verification shows the submitted external claim and archived official evidence from card.disclosure_claims, material_events and the financial metrics adapter; this is not automated claim adjudication. JSD from card.narrative_shift is shown with data_quality status, topic drift, dates and source link.
 - Company health merges the actual Cloud Run company metrics and screening rules, narrative JSD, and uploaded MOPS Beneish M-score/Dechow F-score spreadsheets. Companies without uploaded M/F snapshot use a clear missing-data state and can still show live financial metrics or the explicit demo.
 - JCAATs remains not connected. Schedule-capable standalone mops_pipeline_release.zip already supports python run.py run, --no-fetch and output/latest/mops_metrics.json. See docs/development/JCAATS_MOPS_HANDOFF_20261124.md for safe future integration.
+
+
+## Smoke verification and new UI evidence module, November 24
+- Vercel deployed UI revision READY (deployment dpl_4vnpYP31EePmP1XbSsmqzyjs7TtT); tested the stable /, /analysis.html, /financial-audit.html, /member-demo.html, /ft-news-evidence.js and /ft-narrative.js URLs: HTTP 200, expected content present.
+- Tested preview proxy GET /api/financial/health, /api/financial/companies/2330/card (narrative_shift metrics present), /api/financial/companies/2330/metrics (131 metrics): HTTP 200. Live business evidence is not a verification verdict.
+- Tested official company-list reverse proxies: TWSE 1,098 listed and TPEx 898 OTC records, HTTP 200. Executed JS company search against these real responses in isolation; 2330/台積 -> 台積電, 1240/茂生農經 -> 茂生農經; 1,996 normalized tickers returned.
+- Compared all 60 oil/gas company-year Beneish M-score and Dechow F-score outputs in the uploaded workbook against mops_metrics.json: zero mismatches, twelve unavailable F-scores preserved as null/N/A.
+- The new ft-news-evidence.js renders archived official events and disclosure topics with an explicit unverified-claim status, and reuses narrative_shift via ft-narrative.js. No automatic truth result is asserted when the claims API returns 404.
+- Cloud Run has NOT been redeployed to this branch. Company-directory blueprint, JCAATs handoff and new tests are GitHub changes until the future Cloud Run rollout.
