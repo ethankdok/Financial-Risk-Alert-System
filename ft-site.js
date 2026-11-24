@@ -19,7 +19,7 @@
     var current=(page==="member"||page==="member-demo")?"member":page;
     var links=[
       ["home","index.html","nav.home"],
-      ["integrated","analysis.html","nav.integratedAnalysis"],
+      ["integrated","analysis.html","nav.newsVerification"],
       ["audit","financial-audit.html","nav.companyHealth"],
       ["member","member.html","nav.member"]
     ];
