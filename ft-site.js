@@ -20,7 +20,7 @@
     var links=[
       ["home","index.html","nav.home"],
       ["integrated","analysis.html","nav.integratedAnalysis"],
-      ["audit","financial-audit.html","nav.financialStatementAudit"],
+      ["audit","financial-audit.html","nav.companyHealth"],
       ["member","member.html","nav.member"]
     ];
     var main=node("div",null,"ft-head-inner");
