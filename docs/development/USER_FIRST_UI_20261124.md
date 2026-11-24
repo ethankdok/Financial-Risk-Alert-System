@@ -42,3 +42,11 @@ Run after existing Flask + FastAPI services are started:
 The smoke checks pages and live Flask/FastAPI proxies with persist=false assessment. It fails rather than pretending a disconnected backend is healthy.
 
 Before merge: run this smoke, manual desktop/mobile keyboard navigation check, test account features, confirm which supported company is available; review in feature branch before deploying.
+
+## 2026-11-24 UI revision (user feedback)
+- Homepage: one short query, three circular entrypoints, on-device recent company queries, and quick actions.
+- The Chinese/English toggle uses explicitly authored string pairs in ft-i18n.js, not third-party machine translation. Financial statement and model labels are bilingual.
+- Financial audit allows cross-industry ticker/name typeahead, and the industry dropdown is optional. Uploaded MOPS snapshot values cover 50 companies for 2021-2025. Directory-only entries such as 2330 show a no-snapshot state instead of fabricated scores.
+- Recent searches save only ticker, short name and timestamp in device localStorage (last seven); not a full question or cross-device report.
+- JCAATs financial anomaly classifier is NOT connected. The current Beneish/Dechow uploaded snapshot and integrity preview must not be labeled JCAATs predictions. Future optional integration needs an API with ticker, fiscal period, model name/version, feature inputs, score, calculation time and evidence provenance. Hide the JCAATs section until it exists.
+- Preview is deployed separately to Vercel. Original Google Cloud Run URL is not overwritten; switching later requires deployment to the existing Cloud Run service plus Flask/FastAPI verification.
