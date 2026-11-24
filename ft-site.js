@@ -336,6 +336,11 @@
     return q.length>=8;
   }
   async function resolveCompanyFromQuestion(text){
+    if(window.FTCompanies){
+      await window.FTCompanies.load();
+      var directoryCompany=window.FTCompanies.findInText(text);
+      if(directoryCompany)return directoryCompany.ticker;
+    }
     var q=String(text||"");if(!q)return "";
     var candidates=[];
     for(var i=0;i<2;i++){
@@ -373,6 +378,10 @@
     var p=fromUrl(),ticker=$("#ft-ticker"),query=$("#ft-query"),mode=$("#ft-mode"),button=$("#ft-run"),result=$("#ft-result");
     if(!ticker||!query||!mode||!button)return;
     ticker.value=p.ticker||"";query.value=p.query||"";
+    window.FTCompanies?.attachAutocomplete({
+      input:ticker,list:$("#ft-news-suggestions"),
+      choose:function(item){ticker.value=item.ticker;window.FTCompanies.addRecent(item);}
+    });
     if(p.query&&/保證獲利|穩賺|詐騙|內線消息|投資話術/.test(p.query)&&!/財報|新聞主張|官方財務/.test(p.query))mode.value="text";
     var launched=false;
     function launchFromHome(){
