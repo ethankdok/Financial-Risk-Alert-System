@@ -6,8 +6,9 @@
   "use strict";
   var page=document.body.getAttribute("data-ft-page")||"";
   var $=function(s){return document.querySelector(s);};
+  var L=function(zh,en){return window.FTLocale?.language?.()==="en"?en:zh;};
   var asArray=function(x){return Array.isArray(x)?x:[];};
-  function node(tag,text,cls){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined&&text!==null)e.textContent=String(text);return e;}
+  function node(tag,text,cls){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined&&text!==null)e.textContent=window.FTLocale?.phrase?.(String(text))||String(text);return e;}
   function clear(e){if(e)e.replaceChildren();}
   function append(parent,children){children.forEach(function(x){if(x)parent.appendChild(x);});return parent;}
   function badge(t,type){return node("span",t,"ft-badge"+(type?" "+type:""));}
@@ -35,7 +36,7 @@
       window.MemberAuth.getMember().then(function(m){if(m){var link=$("#ft-login-link");if(link){link.href="member.html";link.textContent=window.FTLocale&&window.FTLocale.language()==="en"?"My account":"我的帳戶";}}}).catch(function(){});
     }
   }
-  function status(text,isError){var e=$("#ft-status");if(!e)return;e.textContent=text;e.className="ft-status"+(isError?" ft-error":"");e.hidden=!text;}
+  function status(text,isError){var e=$("#ft-status");if(!e)return;e.textContent=window.FTLocale?.phrase?.(String(text))||text;e.className="ft-status"+(isError?" ft-error":"");e.hidden=!text;}
   function parseQuery(){return new URLSearchParams(location.search);}
   function extractTicker(text){var match=String(text||"").match(/(?:^|[^\d])(\d{4,6})(?!\d)/);return match?match[1]:"";}
   function detectIntent(raw){
@@ -51,7 +52,10 @@
     var target=intent==="audit"?"financial-audit.html":"analysis.html";
     try{sessionStorage.setItem("ft:pending-query",q);}catch(e){return false;}
     var params=new URLSearchParams();
-    var ticker=extractTicker(q);if(ticker)params.set("ticker",ticker);
+    var matched=window.FTCompanies?.findInText?.(q);
+    var ticker=extractTicker(q)||(matched?.ticker||"");
+    if(ticker)params.set("ticker",ticker);
+    if(matched)window.FTCompanies.addRecent(matched);
     location.href=target+(params.toString()?"?"+params.toString():"");
     return true;
   }
@@ -71,7 +75,7 @@
     }
     return payload.data!==undefined?payload.data:payload;
   }
-  function errorMsg(e){var map={400:"查詢參數不正確",401:"需要登入",403:"目前沒有權限",404:"公司未收錄或資料不存在",409:"此分析模式尚不支援",422:"查詢內容不符合格式",502:"後端 API 無法連線",503:"資料來源目前不可用"};return (map[e.status]||"分析暫時無法完成")+"："+(e.message||"請稍後重試");}
+  function errorMsg(e){var map={400:"查詢參數不正確",401:"需要登入",403:"目前沒有權限",404:"公司未收錄或資料不存在",409:"此分析模式尚不支援",422:"查詢內容不符合格式",502:"後端 API 無法連線",503:"資料來源目前不可用"};return L((map[e.status]||"分析暫時無法完成"),"Verification unavailable")+"："+(e.message||L("請稍後重試","Please try again later"));}
   function fromUrl(){
     var p=parseQuery(),pending="";
     try{pending=sessionStorage.getItem("ft:pending-query")||"";sessionStorage.removeItem("ft:pending-query");}catch(e){}
@@ -79,11 +83,40 @@
     return {query:q,ticker:p.get("ticker")||extractTicker(q)};
   }
   function startHome(){
-    var input=$("#ft-home-query"),button=$("#ft-home-submit");
+    var input=$("#ft-home-query"),button=$("#ft-home-submit"),companies=window.FTCompanies;
     if(!input||!button)return;
-    button.addEventListener("click",function(){if(!routeQuery(input.value)){input.focus();$("#ft-home-file-status").textContent="請先輸入查核問題。";}});
+    function renderRecent(){
+      var host=$("#ft-recent-list"),clearBtn=$("#ft-clear-recent");if(!host||!companies)return;
+      host.replaceChildren();
+      var rows=companies.readRecent();
+      clearBtn.hidden=!rows.length;
+      if(!rows.length){host.appendChild(node("span",L("尚無近期查詢","No recent searches yet"),"ft-home-muted"));return;}
+      rows.forEach(function(entry){
+        var b=node("button",entry.ticker+"　"+entry.name,"ft-recent-chip");b.type="button";
+        b.addEventListener("click",function(){var v=companies.get(entry.ticker)||entry;companies.addRecent(v);location.href="financial-audit.html?ticker="+encodeURIComponent(entry.ticker);});
+        host.appendChild(b);
+      });
+    }
+    companies?.attachAutocomplete({
+      input:input,list:$("#ft-home-suggestions"),
+      choose:function(entry){
+        companies.addRecent(entry);
+        location.href="financial-audit.html?ticker="+encodeURIComponent(entry.ticker);
+      }
+    });
+    button.addEventListener("click",function(){
+      if(!routeQuery(input.value)){
+        input.focus();
+        var note=$("#ft-home-file-status");if(note)note.textContent=L("請先輸入查核問題。","Enter a question to verify.");
+      }
+    });
     input.addEventListener("keydown",function(e){if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();routeQuery(input.value);}});
-    document.querySelectorAll("[data-ft-suggestion]").forEach(function(b){b.addEventListener("click",function(){input.value=b.getAttribute("data-ft-suggestion");routeQuery(input.value);});});
+    document.querySelectorAll("[data-ft-suggestion]").forEach(function(b){
+      b.addEventListener("click",function(){input.value=b.getAttribute("data-ft-suggestion");routeQuery(input.value);});
+    });
+    $("#ft-clear-recent")?.addEventListener("click",function(){companies.clearRecent();});
+    window.addEventListener("ft:recent-changed",renderRecent);
+    renderRecent();
     attachFile($("#ft-home-file"),input,$("#ft-home-file-status"));
   }
   var queueNames={requires_verification:"需要人工核對",monitor:"持續觀察",insufficient_evidence:"證據不足",no_item_triggered:"未觸發篩檢項目"};
@@ -297,7 +330,7 @@
     var launched=false;
     function launchFromHome(){
       if(launched||!p.query)return;
-      if(mode.value!=="text"&&!ticker.value.trim()){status("請先填入公司代號，再執行查核。");return;}
+      if(mode.value!=="text"&&!ticker.value.trim()){status(L("請先填入公司代號，再執行查核。","Please enter the company ticker before running verification."));return;}
       launched=true;
       runWorkflow(mode.value,ticker.value.trim(),query.value.trim(),result,button);
     }
@@ -318,22 +351,22 @@
     if(!ticker||!button)return;
     ticker.value=p.ticker||"";
 
-    if(!p.ticker&&p.query){resolveCompanyFromQuestion(p.query).then(function(code){if(code&&!ticker.value.trim()){ticker.value=code;run();}else if(!code)status("請先填入公司代號，再執行稽核。");});}
+    if(!p.ticker&&p.query){resolveCompanyFromQuestion(p.query).then(function(code){if(code&&!ticker.value.trim()){ticker.value=code;run();}else if(!code)status(L("請先填入公司代號，再執行稽核。","Please enter the company ticker before running the audit."));});}
 
     async function run(){
-      var code=ticker.value.trim();if(!/^\d{4,6}$/.test(code)){status("請輸入 4–6 碼公司代號。",true);return;}
-      clear(result);result.hidden=false;button.disabled=true;status("正在讀取財務查核與模型可計算性…");
+      var code=ticker.value.trim();if(!/^\d{4,6}$/.test(code)){status(L("請輸入 4–6 碼公司代號。","Enter a 4–6 digit ticker."),true);return;}
+      clear(result);result.hidden=false;button.disabled=true;status(L("正在讀取財務查核與模型可計算性…","Retrieving financial checks and model availability…"));
       try{
         var r=await api("/api/integrity/assessments/preview",{method:"POST",body:JSON.stringify({ticker:code,review_mode:"CURRENT_REVIEW",sections:["financial_checks","literature","jsd","claims"]})});
         renderAssessment(r,result);
-        status("已取得後端財務查核結果。");
+        status(L("已取得後端財務查核結果。","Retrieved backend financial audit results."));
         var link=$("#ft-advanced-link");if(link)link.href="financial-integrity.html?ticker="+encodeURIComponent(code)+"&expand=1";
         result.scrollIntoView({behavior:"smooth",block:"start"});
       }catch(e){status(errorMsg(e),true);result.appendChild(para("本頁不會以示意分數代替真實模型結果。請確認 Flask、FastAPI 與資料來源是否正常。"));}
       button.disabled=false;
     }
     $("#ft-audit-form").addEventListener("submit",function(e){e.preventDefault();run();});
-    if(p.ticker)run();
+    if(p.ticker && !location.hostname.endsWith(".vercel.app"))run();
   }
   document.addEventListener("DOMContentLoaded",function(){topNavigation();if(page==="home")startHome();if(page==="integrated")startIntegrated();if(page==="audit")startAudit();});
 })();
