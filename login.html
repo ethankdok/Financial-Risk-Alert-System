@@ -14,14 +14,14 @@
   <header id="ft-header"></header>
   <main class="login-shell">
     <form class="auth-card" id="memberLoginForm">
-      <span class="eyebrow">會員登入</span>
-      <h1>歡迎回來</h1>
+      <span class="eyebrow" data-i18n="login.title">會員登入</span>
+      <h1 data-i18n="login.welcome">歡迎回來</h1>
       
-      <button type="button" id="ft-google-signin" class="ft-google-btn"><span aria-hidden="true" class="ft-google-mark">G</span><span data-ft-en="Continue with Google">使用 Google 帳號登入</span></button><div class="ft-auth-divider" data-ft-en="or sign in with email">或使用 Email 登入</div><div class="form-group"><label>Email</label><input class="form-control" name="email" autocomplete="email" required></div>
-      <div class="form-group"><label>密碼</label><input class="form-control" name="password" type="password" autocomplete="current-password" required></div>
+      <button type="button" id="ft-google-signin" class="ft-google-btn"><span aria-hidden="true" class="ft-google-mark">G</span><span data-i18n="login.google">使用 Google 帳號登入</span></button><div class="ft-auth-divider" data-i18n="login.emailOr">或使用 Email 登入</div><div class="form-group"><label data-i18n="login.email">電子郵件</label><input class="form-control" name="email" autocomplete="email" required></div>
+      <div class="form-group"><label data-i18n="login.password">密碼</label><input class="form-control" name="password" type="password" autocomplete="current-password" required></div>
       <div class="auth-error" id="memberLoginError" hidden></div>
-      <button class="btn btn-primary" style="width:100%" type="submit">登入</button>
-      <p class="auth-switch">尚未註冊？ <a href="register.html">建立會員帳號</a></p>
+      <button class="btn btn-primary" style="width:100%" type="submit" data-i18n="login.submit">登入</button>
+      <p class="auth-switch"><span data-i18n="login.noAccount">尚未註冊？</span> <a href="register.html" data-i18n="login.create">建立會員帳號</a></p>
       
     </form>
   </main>
