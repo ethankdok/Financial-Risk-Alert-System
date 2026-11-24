@@ -1,47 +1,18 @@
-<!doctype html>
-<html lang="zh-Hant">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>財務異常稽核｜FinTrust</title>
-<link rel="stylesheet" href="ft-site.css">
-<script defer src="member-auth.js"></script><script defer src="ft-site.js"></script>
-</head>
-<body class="ft-app" data-ft-page="audit">
-<header id="ft-header"></header>
-<main class="ft-wrap">
-  <section class="ft-page-hero"><div class="ft-eyebrow">Financial integrity</div>
-    <h1>財務異常稽核</h1>
-    <p>根據已歸檔的官方財報，檢查財務一致性、指標可計算性與可追溯來源。</p>
-  </section>
-  <div class="ft-layout">
-    <div>
-      <section class="ft-panel">
-        <div class="ft-panel-heading"><h2>選擇公司</h2><span class="ft-badge">目前查核資料</span></div>
-        <form id="ft-audit-form">
-          <div class="ft-field"><label for="ft-audit-ticker">上市櫃公司代號</label>
-            <input id="ft-audit-ticker" class="ft-input" type="text" inputmode="numeric" pattern="[0-9]{4,6}" placeholder="例如 1785" required>
-          </div>
-          <button type="submit" class="ft-btn ft-btn-primary" id="ft-audit-run">執行財務稽核</button>
-        </form>
-        <div id="ft-status" class="ft-status" role="status" aria-live="polite" hidden></div>
-      </section>
-      <div id="ft-result" class="ft-result" hidden aria-live="polite"></div>
-    </div>
-    <aside class="ft-aside">
-      <section class="ft-panel">
-        <h2>深入財務指標</h2>
-        <p class="ft-hint">結果可展開查核公式、輸入數字、Beneish／Dechow 模型就緒狀態，以及原始資料來源。</p>
-        <p class="ft-hint">未取得文獻要求的輸入值時，系統會顯示不可計算，不使用研究案例分數冒充其他公司結果。</p>
-        <a id="ft-advanced-link" class="ft-inline-link" href="financial-integrity.html">開啟完整技術稽核工作台</a>
-      </section>
-      <section class="ft-panel">
-        <h3>注意資料時點</h3>
-        <p class="ft-hint">預設使用 CURRENT_REVIEW 模式；若要驗證某個歷史事件當時的預警能力，必須另外採用該日期以前已公開的財報版本。</p>
-        <a class="ft-inline-link" href="analysis.html">需要同時查核新聞？</a>
-      </section>
-    </aside>
-  </div>
-</main>
-<footer class="ft-footer"><div class="ft-wrap"><span>FinTrust · 財務異常稽核</span><span>模型分數與篩檢訊號不等於舞弊判定。</span></div></footer>
-</body>
-</html>
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>財務異常稽核｜FinTrust</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-site.js"></script><script defer src="ft-mops-report.js"></script>
+</head><body class="ft-app" data-ft-page="audit"><header id="ft-header"></header>
+<main class="ft-wrap ft-report-page">
+<div class="ft-page-title"><h1 data-ft-en="Financial Audit">財務異常稽核</h1></div>
+<div class="ft-report-toolbar">
+<div class="ft-field"><label for="ft-industry" data-ft-en="Industry">產業</label><select class="ft-select" id="ft-industry"></select></div>
+<div class="ft-field"><label for="ft-company" data-ft-en="Company">公司</label><select class="ft-select" id="ft-company"></select></div>
+<div class="ft-field"><label for="ft-year" data-ft-en="Fiscal year">財報年度</label><select class="ft-select" id="ft-year"></select></div>
+</div>
+<div id="ft-sheet-report" class="ft-sheet-report" aria-live="polite"><div class="ft-skeleton">載入財務資料…</div></div>
+<section class="ft-panel ft-secondary-audit">
+<div class="ft-panel-heading"><h2 data-ft-en="Check another company against the backend">查核其他公司</h2><a href="financial-integrity.html" class="ft-inline-link" data-ft-en="Detailed workbench">完整分析工作台</a></div>
+<form id="ft-audit-form" class="ft-audit-inline"><label for="ft-audit-ticker" data-ft-en="Ticker">公司代號</label><input id="ft-audit-ticker" class="ft-input" inputmode="numeric" pattern="[0-9]{4,6}" placeholder="例：1785" required><button type="submit" class="ft-btn ft-btn-primary" id="ft-audit-run" data-ft-en="Run audit">執行查核</button></form>
+<div id="ft-status" class="ft-status" role="status" aria-live="polite" hidden></div><a id="ft-advanced-link" class="ft-inline-link" href="financial-integrity.html"></a>
+</section>
+<div id="ft-result" class="ft-result" hidden aria-live="polite"></div>
+</main><footer class="ft-footer ft-minimal-footer"><div class="ft-wrap"><span>© FinTrust</span></div></footer></body></html>
