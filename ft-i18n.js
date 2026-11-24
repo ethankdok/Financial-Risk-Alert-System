@@ -1,62 +1,117 @@
-/* UI language switch: Chinese by default, English on demand. No extra slogans. */
+/* FinTrust translations are explicitly written and maintained here. No automatic translation service. */
 (function(){
 "use strict";
-const d={
-"首頁":"Home","查核分析":"Verification","整合查核":"Integrated verification",
-"財務異常稽核":"Financial audit","會員中心":"Account",
-"你想查核什麼？":"What would you like to verify?",
-"開始查核":"Start verification","上傳檔案":"Upload file",
-"產業":"Industry","公司":"Company","財報年度":"Fiscal year",
-"查核其他公司":"Check another company","完整分析工作台":"Advanced workbench",
-"公司代號":"Ticker","執行查核":"Run audit","分析方式":"Analysis method","查核內容":"Content to verify",
-"新聞主張查核":"News verification","投資言論篩檢":"Investment text screening",
-"登入":"Log in","註冊":"Sign up","會員登入":"Account sign in","歡迎回來":"Welcome back",
-"建立會員帳號":"Create an account","密碼":"Password","電子郵件":"Email",
-"我的分析紀錄":"My analysis history","個人資料":"Profile","通知設定":"Notifications",
-"追蹤公司":"Watchlist","通知紀錄":"Notification history","儲存":"Save",
-"登出":"Log out","財務報表":"Financial statements","官方來源":"Official sources",
-"模型指標":"Model indicators","來源查證":"Source verification",
-"檢視計算":"Inspect calculation","無資料":"No data",
-"財報查核":"Financial verification","年增率":"Year-over-year","本期":"Current","前期":"Prior",
-"風險通知":"Risk alerts","查核結果":"Results","資料來源":"Sources","財務異常":"Financial anomaly"
+const translations=Object.freeze({
+  "nav.home":["首頁","Home"],"nav.verification":["查核分析","Verification"],"nav.integrated":["整合查核","Integrated verification"],
+  "nav.audit":["財務異常稽核","Financial audit"],"nav.member":["會員中心","My account"],"nav.signin":["登入","Sign in"],
+  "nav.myaccount":["我的帳戶","My account"],"nav.language":["中文 / EN","EN / 中文"],
+  "home.title":["你想查核什麼？","What would you like to verify?"],
+  "home.placeholder":["輸入公司代碼、名稱或需要查核的內容…","Enter a company ticker, name or information to verify…"],
+  "home.run":["開始查核","Verify now"],"home.attach":["上傳檔案","Attach file"],
+  "home.integrated":["整合查核","Integrated verification"],"home.audit":["財務異常稽核","Financial audit"],
+  "home.account":["會員中心","My account"],
+  "home.recent":["近期查詢","Recent searches"],"home.clear":["清除紀錄","Clear history"],
+  "home.none":["尚無近期查詢","No recent searches yet"],"home.quick":["快速查核","Quick searches"],
+  "home.example1":["查詢台積電財務資料","Review TSMC financial data"],
+  "home.example2":["查看台塑化財務異常指標","View Formosa Petrochemical risk metrics"],
+  "home.example3":["核對新聞中的財務數字","Check financial figures in the news"],
+  "home.recentLocal":["僅顯示這台裝置最近查詢的公司","Recent companies on this device"],
+  "audit.title":["財務異常稽核","Financial audit"],"audit.search":["搜尋公司","Find a company"],
+  "audit.companyPlaceholder":["輸入股票代碼或公司名稱，例如 2330 台積電","Search by ticker or company, e.g. 2330 TSMC"],
+  "audit.industry":["產業（選填）","Industry (optional)"],"audit.allIndustries":["全部產業","All industries"],
+  "audit.year":["財報年度","Fiscal year"],"audit.otherCompany":["更多公司查核","Check additional companies"],
+  "audit.advanced":["完整分析工作台","Advanced workbench"],"audit.ticker":["公司代號","Ticker"],
+  "audit.backendRun":["執行查核","Run verification"],"audit.loading":["載入財務資料…","Loading financial data…"],
+  "audit.available":["已有財務指標資料","Financial data available"],"audit.directoryOnly":["公司名錄","Company directory"],
+  "audit.noSnapshot":["此公司尚未收錄於本次 2021–2025 年財務指標快照。","This company is not included in the current 2021–2025 metrics snapshot."],
+  "audit.searchBackend":["使用原有系統查核公司","Check company in the original system"],
+  "audit.fetching":["正在搜尋公司名錄…","Searching the company directory…"],
+  "audit.noMatch":["找不到符合的公司","No matching company found"],
+  "audit.listRole":["公司搜尋候選清單","Company search suggestions"],
+  "integrated.title":["整合查核","Integrated verification"],"integrated.ticker":["公司代號","Company ticker"],
+  "integrated.mode":["分析方式","Verification mode"],"integrated.claim":["新聞主張查核","News claim verification"],
+  "integrated.screen":["投資言論篩檢","Investment statement screening"],"integrated.body":["查核內容","Content to verify"],
+  "integrated.placeholder":["貼上新聞或財務說法…","Paste news or financial claims…"],
+  "integrated.start":["開始查核","Start verification"],
+  "login.title":["會員登入","Sign in"],"login.welcome":["歡迎回來","Welcome back"],
+  "login.google":["使用 Google 帳號登入","Continue with Google"],"login.emailOr":["或使用 Email 登入","Or sign in with email"],
+  "login.email":["電子郵件","Email"],"login.password":["密碼","Password"],"login.submit":["登入","Sign in"],
+  "login.noAccount":["尚未註冊？","New to FinTrust?"],"login.create":["建立會員帳號","Create an account"],
+  "register.title":["註冊會員","Sign up"],"register.create":["建立帳號","Create an account"],
+  "register.name":["會員名稱","Display name"],"register.submit":["完成註冊","Create account"],
+  "register.existing":["已經有帳號？","Already have an account?"],"register.back":["返回登入","Back to sign in"],
+  "member.title":["會員中心","My account"],"member.profile":["個人資料","Profile"],
+  "member.name":["會員名稱","Display name"],"member.save":["儲存修改","Save changes"],
+  "member.watchlist":["追蹤公司","Followed companies"],"member.follow":["追蹤","Follow"],
+  "member.notifications":["提醒偏好","Notification preferences"],"member.email":["電子郵件通知","Email notifications"],
+  "member.important":["重要／高風險提醒","Important / high-risk alerts"],"member.events":["新重大訊息","New material disclosures"],
+  "member.conference":["新法說會／官方證據","New investor meetings / official evidence"],
+  "member.narrative":["敘事變化提醒","Narrative shift alerts"],"member.digest":["摘要頻率","Digest frequency"],
+  "member.daily":["每日","Daily"],"member.weekly":["每週","Weekly"],"member.off":["關閉摘要","Disabled"],
+  "member.savePrefs":["儲存偏好","Save preferences"],"member.noticeHistory":["最近通知紀錄","Recent notifications"],
+  "member.time":["時間","Time"],"member.company":["公司","Company"],"member.type":["類型","Type"],
+  "member.state":["狀態","Status"],"member.subject":["主旨","Subject"],
+  "member.analysisHistory":["我的分析紀錄","My analysis history"],
+  "member.newAnalysis":["建立新的整合查核","Start a new verification"],
+  "member.noSavedHistory":["查核報告尚未啟用跨裝置保存。","Cross-device saved reports are not enabled yet."],
+  "member.noWatchlist":["尚未追蹤公司。","No followed companies yet."],
+  "member.noNotices":["尚無通知紀錄","No notification history"],
+  "member.alertOn":["提醒開啟","Alerts on"],"member.alertOff":["提醒關閉","Alerts off"],
+  "member.enableAlert":["開啟提醒","Enable alerts"],"member.disableAlert":["關閉提醒","Disable alerts"],
+  "member.unfollow":["取消追蹤","Unfollow"],
+  "member.saved":["已儲存","Saved"],"member.preferencesSaved":["提醒偏好已儲存","Notification preferences saved"],
+  "member.empty":["目前尚無個人分析紀錄。","No saved analysis reports yet."],
+  "member.error":["分析歷史狀態暫時無法讀取。","Unable to load analysis history."],
+  "common.company":["公司","Company"],"common.ticker":["公司代號","Ticker"],
+  "common.loading":["讀取中","Loading…"],"common.new":["新增","Add"],"common.cancel":["取消","Cancel"],
+  "common.retry":["重試","Retry"],"common.close":["關閉","Close"],"common.back":["返回","Back"],
+  "common.error":["資料目前無法讀取","Unable to load data"],
+  "common.noFile":["檔案解析器未載入","File reader not available"],
+  "common.typeTicker":["請輸入公司代號再執行查核。","Enter a company ticker to run verification."],
+  "common.invalidTicker":["請輸入 4–6 碼公司代號。","Enter a 4–6 digit company ticker."],
+  "common.enterQuestion":["請先輸入查核問題。","Please enter a question to verify."],
+  "result.layoutTitle":["查核結果","Verification results"],"result.summary":["查核摘要","Verification summary"],
+  "result.sources":["官方證據","Official evidence"],"result.models":["財務指標","Financial metrics"],
+  "result.literature":["學術模型","Research models"],"result.text":["文字分析","Text analysis"],
+  "result.notAvailable":["資料不足","Insufficient data"],"result.needsReview":["需要核對","Needs review"],
+  "result.notComputable":["不可計算","Not computable"],"result.noClaim":["未發現可查核主張","No verifiable claim"],
+  "result.ready":["已取得後端查核結果。","Backend verification returned results."],
+  "result.running":["正在讀取財務查核結果…","Retrieving financial verification…"],
+  "result.failed":["查核暫時無法完成","Unable to complete verification"],
+  "result.version":["申報版本","Filing version"],"result.time":["發布時間","Published at"],
+  "result.download":["下載報表","Download report"]
+});
+const phraseMap=Object.freeze(Object.fromEntries(Object.values(translations).map(([zh,en])=>[zh,en])));
+const lang=()=>{try{return localStorage.getItem("ft-language")==="en"?"en":"zh";}catch{return"zh";}};
+const t=(key,params={})=>{
+  const pair=translations[key];
+  let result=pair?pair[lang()==="en"?1:0]:key;
+  for(const [k,v] of Object.entries(params))result=result.replaceAll("{"+k+"}",String(v));
+  return result;
 };
 function apply(){
- const english=localStorage.getItem("ft-language")==="en";
- document.documentElement.lang=english?"en":"zh-Hant";
- document.querySelectorAll("[data-ft-en]").forEach(node=>{
-   if(node.dataset.ftZh==null)node.dataset.ftZh=Array.from(node.childNodes).filter(n=>n.nodeType===Node.TEXT_NODE).map(n=>n.nodeValue).join("");
-   const wanted=english?node.dataset.ftEn:node.dataset.ftZh;
-   const textNode=Array.from(node.childNodes).find(n=>n.nodeType===Node.TEXT_NODE);
-   if(textNode)textNode.nodeValue=wanted;
-   else if(!node.children.length)node.textContent=wanted;
- });
- document.querySelectorAll("[data-ft-en-placeholder]").forEach(node=>{
-  if(node.dataset.ftZhPlaceholder==null)node.dataset.ftZhPlaceholder=node.getAttribute("placeholder")||"";
-  node.setAttribute("placeholder",english?node.dataset.ftEnPlaceholder:node.dataset.ftZhPlaceholder);
- });
- const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
- let n;while(n=walker.nextNode()){
-   if(n.parentElement?.closest("[data-ft-en],script,style"))continue;
-   if(!n.ftOriginal)n.ftOriginal=n.nodeValue;
-   const trimmed=n.ftOriginal.trim();
-   if(!trimmed||!d[trimmed])continue;
-   const wanted=english?d[trimmed]:trimmed;
-   const prefix=n.ftOriginal.match(/^\s*/)?.[0]||"";
-   const suffix=n.ftOriginal.match(/\s*$/)?.[0]||"";
-   if(n.nodeValue!==prefix+wanted+suffix)n.nodeValue=prefix+wanted+suffix;
- }
- const control=document.querySelector("#ft-language-toggle");
- if(control){
-    control.textContent=english?"EN / 中文":"中文 / EN";
-    control.setAttribute("aria-label",english?"Switch to Chinese":"Switch to English");
-    control.setAttribute("title",english?"Switch to Chinese":"Switch to English");
- }
+  const english=lang()==="en";
+  document.documentElement.lang=english?"en":"zh-Hant";
+  document.querySelectorAll("[data-i18n]").forEach(el=>{el.textContent=t(el.dataset.i18n);});
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{el.placeholder=t(el.dataset.i18nPlaceholder);});
+  document.querySelectorAll("[data-ft-en]").forEach(el=>{
+    if(el.dataset.i18n)return;
+    if(el.dataset.ftZh==null){
+      const n=Array.from(el.childNodes).find(child=>child.nodeType===3);
+      el.dataset.ftZh=n?.nodeValue||el.textContent||"";
+    }
+    const v=english?el.dataset.ftEn:el.dataset.ftZh;
+    const n=Array.from(el.childNodes).find(child=>child.nodeType===3);
+    if(n)n.nodeValue=v;else if(!el.children.length)el.textContent=v;
+  });
+  document.querySelectorAll("[data-ft-en-placeholder]").forEach(el=>{
+    if(el.dataset.ftZhPlaceholder==null)el.dataset.ftZhPlaceholder=el.placeholder||"";
+    el.placeholder=english?el.dataset.ftEnPlaceholder:el.dataset.ftZhPlaceholder;
+  });
+  const btn=document.getElementById("ft-language-toggle");
+  if(btn){btn.textContent=t("nav.language");btn.lang=english?"en":"zh-Hant";btn.setAttribute("aria-label",english?"Switch to Chinese":"切換至英文");}
 }
-function toggle(){
- const english=localStorage.getItem("ft-language")==="en";
- localStorage.setItem("ft-language",english?"zh":"en");
- location.reload();
-}
-window.FTLocale={apply,toggle,language:()=>localStorage.getItem("ft-language")==="en"?"en":"zh"};
+function toggle(){try{localStorage.setItem("ft-language",lang()==="en"?"zh":"en");}catch{}location.reload();}
+window.FTLocale={t,apply,toggle,language:lang,phrase:s=>lang()==="en"?(phraseMap[String(s)]||String(s)):String(s),keys:()=>Object.keys(translations)};
 document.addEventListener("DOMContentLoaded",apply);
 })();
