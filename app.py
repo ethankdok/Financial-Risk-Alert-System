@@ -13,6 +13,7 @@ from typing import Any
 
 from flask import Flask, Response, jsonify, request, session, send_from_directory
 from financial_routes import create_financial_blueprint
+from company_directory import create_company_directory_blueprint
 from research_routes import create_research_blueprint
 from integrity_routes import create_integrity_blueprint
 from b2b_routes import create_b2b_blueprint
@@ -49,6 +50,7 @@ def _financial_admin_required(fn):
 
 
 app.register_blueprint(create_financial_blueprint(admin_required=_financial_admin_required))
+app.register_blueprint(create_company_directory_blueprint())
 app.register_blueprint(data_shift_bp)
 app.register_blueprint(create_research_blueprint())
 app.register_blueprint(create_integrity_blueprint())
