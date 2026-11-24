@@ -1,12 +1,12 @@
 <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>新聞查證｜FinTrust</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-file-reader.js"></script><script defer src="ft-demo.js"></script><script defer src="ft-live-financial.js"></script><script defer src="ft-site.js"></script>
+<title>新聞查證｜FinTrust</title><link rel="stylesheet" href="ft-site.css"><script defer src="member-auth.js"></script><script defer src="ft-i18n.js"></script><script defer src="ft-company-search.js"></script><script defer src="ft-file-reader.js"></script><script defer src="ft-demo.js"></script><script defer src="ft-live-financial.js"></script><script defer src="ft-site.js"></script>
 </head><body class="ft-app" data-ft-page="integrated"><header id="ft-header"></header>
 <main class="ft-wrap ft-report-page">
 <div class="ft-page-title"><h1 data-i18n="nav.newsVerification">新聞查證</h1><span class="ft-api-status" data-ft-api-health></span></div>
 <section class="ft-panel ft-integrated-form">
 <form id="ft-form">
 <div class="ft-two-fields">
-<div class="ft-field"><label for="ft-ticker" data-ft-en="Company ticker">公司代號</label><input id="ft-ticker" class="ft-input" inputmode="numeric" pattern="[0-9]{4,6}" placeholder="2330"></div>
+<div class="ft-field"><label for="ft-ticker" data-ft-en="Company ticker">公司代號</label><div class="ft-company-input-wrap"><input id="ft-ticker" class="ft-input" autocomplete="off" placeholder="輸入公司代碼或名稱，例如 2330 台積電" data-i18n-placeholder="audit.companyPlaceholder"><div id="ft-news-suggestions" class="ft-search-list" role="listbox" hidden></div></div></div>
 <div class="ft-field"><label for="ft-mode" data-ft-en="Analysis method">分析方式</label>
 <select id="ft-mode" class="ft-select">
 <option value="integrated" data-ft-en="Integrated verification">整合查核</option>
