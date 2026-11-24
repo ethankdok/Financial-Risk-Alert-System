@@ -222,3 +222,41 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
 .ft-app .ft-snapshot-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .ft-app .ft-report-toolbar{grid-template-columns:minmax(240px,1.6fr) minmax(130px,1fr) minmax(110px,.65fr)}
 @media(max-width:730px){.ft-app .ft-home-extras{margin-top:38px}.ft-app .ft-home-suggestions{top:calc(100% - 55px);left:12px;right:12px}.ft-app .ft-report-toolbar{grid-template-columns:1fr}.ft-app .ft-search-option{flex-wrap:wrap}.ft-app .ft-search-option small{white-space:normal}}
+
+
+/* Honest UI demo / real API connectivity, minimally visible until requested. */
+.ft-app .ft-page-title{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.ft-app .ft-api-status,.ft-app .ft-api-health{font-size:11px;font-weight:650;color:var(--ft-soft)}
+.ft-app .ft-health-ok{color:#267c61}
+.ft-app .ft-health-offline{color:#927345}
+.ft-app .ft-btn-muted{background:#f0f5f7;border:1px solid #dbe4eb;color:#435d6e}
+.ft-app .ft-btn-muted:hover{background:#e7f0f6}
+.ft-app .ft-demo-shell{margin-top:18px;padding:24px;background:#fff;border:1px solid #d6e2e9;border-radius:15px}
+.ft-app .ft-demo-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.ft-app .ft-demo-pill{display:inline-flex;align-items:center;padding:5px 11px;border:1px solid #e4d0a8;background:#fff9ed;border-radius:100px;color:#986f2f;font-weight:750;font-size:11px}
+.ft-app .ft-demo-shell h2{font-size:21px;margin:0 0 6px}
+.ft-app .ft-demo-shell h3{font-size:15px;margin:20px 0 14px}
+.ft-app .ft-demo-shell details{padding:13px 5px;border-top:1px solid #e6edf1}
+.ft-app .ft-demo-shell details summary{font-weight:650;cursor:pointer;font-size:13px}
+.ft-app .ft-demo-shell .ft-sheet-scroll{max-height:410px}
+.ft-app .ft-demo-scores{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0 22px}
+.ft-app .ft-demo-score{display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:17px 19px;background:#f7fafb;border:1px solid #d9e5ec;border-radius:12px}
+.ft-app .ft-demo-score>span:first-child{font-size:12px;color:var(--ft-soft)}
+.ft-app .ft-demo-score strong{font-size:23px;font-variant-numeric:tabular-nums}
+.ft-app .ft-member-demo-page{max-width:930px}
+.ft-app .ft-member-demo-panel{min-height:280px}
+.ft-app .ft-member-demo-panel>h2{font-size:17px;margin:0 0 20px}
+.ft-app .ft-member-demo-tabs{margin-bottom:15px}
+.ft-app .ft-member-demo-field{display:flex;flex-direction:column;gap:8px;max-width:450px;margin:15px 0}
+.ft-app .ft-member-demo-field span{font-size:13px;font-weight:650}
+.ft-app .ft-member-demo-field .ft-input{width:100%}
+.ft-app .ft-member-demo-panel .ft-btn{margin-right:10px}
+.ft-app .ft-member-demo-check{display:flex;align-items:center;gap:12px;min-height:42px;font-size:13px;font-weight:650}
+.ft-app .ft-member-demo-search{max-width:500px;margin:8px 0 18px}
+.ft-app .ft-member-demo-search .ft-input{width:100%}
+.ft-app .ft-member-demo-item{display:flex;align-items:center;justify-content:space-between;padding:13px 2px;border-bottom:1px solid #e6edf1;gap:12px}
+.ft-app .ft-member-demo-item strong{font-size:13px}
+.ft-app .ft-member-demo-history{display:block;border-bottom:1px solid #e6edf1;padding:12px 4px;font-size:13px}
+.ft-app .ft-member-demo-actions{padding:15px 0}
+.ft-app .ft-member-demo-link{display:block;text-align:center;margin:14px 0 0;color:var(--ft-blue2);font-size:13px;font-weight:650}
+@media(max-width:650px){.ft-app .ft-demo-shell{padding:15px}.ft-app .ft-demo-scores{grid-template-columns:1fr}.ft-app .ft-member-demo-tabs{gap:0}}
