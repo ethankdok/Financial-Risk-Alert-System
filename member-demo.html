@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>會員中心介面示範｜FinTrust</title>
+  <link rel="stylesheet" href="ft-site.css">
+  <script defer src="ft-i18n.js"></script>
+  <script defer src="ft-company-search.js"></script>
+  <script defer src="ft-site.js"></script>
+  <script defer src="ft-member-demo.js"></script>
+</head>
+<body class="ft-app" data-ft-page="member-demo"><header id="ft-header"></header>
+<main class="ft-wrap ft-report-page ft-member-demo-page">
+  <div class="ft-page-title"><h1 data-i18n="member.title">會員中心</h1><span class="ft-demo-pill" data-i18n="demo.memberBadge">訪客示範｜僅儲存在本機</span></div>
+  <nav class="ft-sheet-tabs ft-member-demo-tabs" aria-label="會員功能">
+    <button type="button" data-member-tab="profile" class="active" data-i18n="member.profile">個人資料</button>
+    <button type="button" data-member-tab="watchlist" data-i18n="member.watchlist">追蹤公司</button>
+    <button type="button" data-member-tab="prefs" data-i18n="member.notifications">提醒偏好</button>
+    <button type="button" data-member-tab="history" data-i18n="member.analysisHistory">我的分析紀錄</button>
+  </nav>
+  <section class="ft-panel ft-member-demo-panel" id="ft-member-panel" aria-live="polite"></section>
+  <div class="ft-member-demo-actions"><a class="ft-inline-link" href="login.html" data-i18n="demo.realLogin">前往正式會員登入</a></div>
+</main><footer class="ft-footer ft-minimal-footer"><div class="ft-wrap">© FinTrust</div></footer>
+</body></html>
