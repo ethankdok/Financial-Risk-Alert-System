@@ -186,3 +186,9 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
 .ft-app .ft-integrated-form .ft-textarea{min-height:190px}
 .ft-app .ft-sheet-down td:nth-child(4){color:#b15344}
 @media(max-width:730px){.ft-app .ft-circle-grid{gap:12px;justify-content:space-between}.ft-app .ft-circle-link{min-width:0;width:33.33%;font-size:12px}.ft-app .ft-circle-icon{width:66px;height:66px}.ft-app .ft-circle-icon svg{width:27px;height:27px}.ft-app .ft-clean-hero{padding:64px 0 60px}.ft-app .ft-report-toolbar{grid-template-columns:1fr;gap:12px;padding:16px}.ft-app .ft-report-page{padding-top:25px}.ft-app .ft-sheet-report{padding:14px}.ft-app .ft-sheet-stat{padding:12px}.ft-app .ft-sheet-stat strong{font-size:20px}.ft-app .ft-circle-link strong{font-size:12px}.ft-app .ft-language-switch{padding:5px 8px;min-width:auto}}
+
+
+.ft-app .ft-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid #c8d6df;background:#fff;border-radius:10px;padding:11px 15px;width:100%;color:#213a4c;font-weight:700;margin:12px 0 18px;cursor:pointer}
+.ft-app .ft-google-btn:hover{background:#f5f9fb}
+.ft-app .ft-google-mark{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;border:1px solid #d4dee6;color:#4285f4;font-weight:800;font-size:17px}
+.ft-app .ft-auth-divider{font-size:12px;color:#788999;text-align:center;margin:8px 0 18px}
