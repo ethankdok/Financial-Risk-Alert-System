@@ -25,10 +25,10 @@ function safeCompany(raw){
  if(!/^\d{4,6}$/.test(ticker)||!name||name.length>120)return null;
  return {
   ticker,name,
-  fullName:String(raw.fullName||raw.company_name||raw.name||name).trim(),
-  english:String(raw.english||raw.english_name||raw.enName||"").trim(),
-  industry:String(raw.industry||raw.subindustry||"").trim(),
-  market:String(raw.market||"").trim(),
+  fullName:String(raw.fullName||raw.company_name||raw["公司名稱"]||raw.CompanyName||raw.name||name).trim(),
+  english:String(raw.english||raw.english_name||raw.enName||raw["英文簡稱"]||raw.Symbol||"").trim(),
+  industry:String(raw.industry||raw.subindustry||raw["產業別"]||raw.SecuritiesIndustryCode||"").trim(),
+  market:String(raw.market||raw["市場別"]||"").trim(),
   hasSnapshot:!!raw.hasSnapshot,
   origin:raw.origin||"directory"
  };
