@@ -306,7 +306,7 @@
         var job=jobs[i];
         if(out.status==="fulfilled"){
           success++;
-          if(job.name==="financial")window.FTLiveFinancial.render(target,out.value,{claim:claim});
+          if(job.name==="financial"){window.FTLiveFinancial.render(target,out.value,{claim:claim});window.FTNewsEvidence?.render(target,out.value,claim);}
           if(job.name==="assessment")renderAssessment(out.value,target);
           if(job.name==="claim")renderClaim(out.value,target);
           if(job.name==="text")renderTextRisk(out.value,target);
