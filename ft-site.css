@@ -260,3 +260,15 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
 .ft-app .ft-member-demo-actions{padding:15px 0}
 .ft-app .ft-member-demo-link{display:block;text-align:center;margin:14px 0 0;color:var(--ft-blue2);font-size:13px;font-weight:650}
 @media(max-width:650px){.ft-app .ft-demo-shell{padding:15px}.ft-app .ft-demo-scores{grid-template-columns:1fr}.ft-app .ft-member-demo-tabs{gap:0}}
+
+
+/* Four first-level tabs; no verification dropdown. */
+.ft-app .ft-top-nav{gap:5px}
+.ft-app .ft-nav-link{font-size:14px;padding:11px 12px}
+@media (min-width:681px) and (max-width:990px){
+ .ft-app .ft-menu-toggle{display:inline-grid;place-items:center}
+ .ft-app .ft-head-right .ft-pill-link{display:none}
+ .ft-app .ft-top-nav{display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:#fff;border-bottom:1px solid var(--ft-line);box-shadow:0 12px 20px rgba(0,0,0,.07);padding:12px 18px;flex-direction:column;align-items:stretch;gap:4px}
+ .ft-app .ft-top-nav.ft-nav-visible{display:flex}
+ .ft-app .ft-nav-link{width:100%;justify-content:space-between}
+}
