@@ -14,6 +14,7 @@ jobs:
       - name: Validate shell and frontend syntax
         run: |
           bash -n deploy/user_first_cloud_run_release.sh
+          bash -n deploy/firebase-hosting-release.sh
           for file in ft-*.js; do node --check "$file"; done
           node tests/ft_frontend_route_smoke.cjs
       - name: Install dependencies
@@ -29,7 +30,7 @@ jobs:
       - name: Build frontend container and check packaged app
         run: |
           docker build -f Dockerfile.flask -t fintrust-ui-test .
-          docker run --rm --network none -e APP_ENV=development -e FLASK_DATASTORE_BACKEND=sqlite -e ALLOW_DEMO_SEED_DATA=false fintrust-ui-test python -c 'from app import app; c=app.test_client(); assert c.get("/health").status_code == 200; assert c.get("/ft-mops-data.json").status_code == 200; assert c.get("/financial-audit.html").status_code == 200; assert c.get("/api/member/me").status_code == 401; rules=[r.rule for r in app.url_map.iter_rules()]; assert rules.count("/data/companies/<market>")==1; assert "/api/financial/claims/verify" in rules'
+          docker run --rm --network none -e APP_ENV=development -e FLASK_DATASTORE_BACKEND=sqlite -e ALLOW_DEMO_SEED_DATA=false fintrust-ui-test python -c 'from app import app; c=app.test_client(); assert c.get("/health").status_code == 200; assert c.get("/ft-mops-data.json").status_code == 200; assert c.get("/financial-audit.html").status_code == 200; assert c.get("/api/member/me").status_code == 401; assert "no-store" in c.get("/api/member/me").headers["Cache-Control"]; assert app.config["SESSION_COOKIE_NAME"]=="__session"; rules=[r.rule for r in app.url_map.iter_rules()]; assert rules.count("/data/companies/<market>")==1; assert "/api/financial/claims/verify" in rules'
 
       - name: Build FastAPI container and verify live two-service contract
         run: |

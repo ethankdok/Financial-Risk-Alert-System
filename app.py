@@ -34,10 +34,20 @@ if IS_PRODUCTION and not SECRET_KEY:
 app = Flask(__name__, static_folder=None)
 app.secret_key = SECRET_KEY or "dev-change-this-secret-key"
 app.config.update(
+    SESSION_COOKIE_NAME="__session",
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=IS_PRODUCTION,
 )
+
+
+@app.after_request
+def prevent_private_api_caching(response):
+    # Firebase Hosting/CDN must never cache member, administrator or analysis API responses.
+    if request.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "private, no-store, max-age=0"
+        response.vary.add("Cookie")
+    return response
 
 
 def _financial_admin_required(fn):

@@ -211,7 +211,7 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
 .ft-app .ft-company-input-wrap .ft-input{width:100%;box-sizing:border-box}
 .ft-app .ft-search-list{position:absolute;z-index:35;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #cddce5;border-radius:12px;box-shadow:0 15px 34px rgba(23,45,62,.13);max-height:330px;overflow:auto;padding:6px}
 .ft-app .ft-search-list[hidden]{display:none!important}
-.ft-app .ft-home-suggestions{top:calc(100% - 65px);left:22px;right:22px}
+.ft-app .ft-home-suggestions{position:relative;top:auto;left:auto;right:auto;margin:0 22px 8px;max-height:230px}
 .ft-app .ft-search-option{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:transparent;border:0;padding:10px 13px;border-radius:7px;text-align:left;cursor:pointer;font-size:13px;color:var(--ft-ink)}
 .ft-app .ft-search-option:hover,.ft-app .ft-search-option.active{background:#eaf3f8}
 .ft-app .ft-search-option .ft-search-name{font-weight:650}
@@ -221,7 +221,7 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
 .ft-app .ft-snapshot-message{line-height:1.75;padding:30px 10px;font-size:15px;color:var(--ft-soft)}
 .ft-app .ft-snapshot-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .ft-app .ft-report-toolbar{grid-template-columns:minmax(240px,1.6fr) minmax(130px,1fr) minmax(110px,.65fr)}
-@media(max-width:730px){.ft-app .ft-home-extras{margin-top:38px}.ft-app .ft-home-suggestions{top:calc(100% - 55px);left:12px;right:12px}.ft-app .ft-report-toolbar{grid-template-columns:1fr}.ft-app .ft-search-option{flex-wrap:wrap}.ft-app .ft-search-option small{white-space:normal}}
+@media(max-width:730px){.ft-app .ft-home-extras{margin-top:38px}.ft-app .ft-home-suggestions{top:auto;left:auto;right:auto;margin:0 12px 8px;max-height:180px}.ft-app .ft-report-toolbar{grid-template-columns:1fr}.ft-app .ft-search-option{flex-wrap:wrap}.ft-app .ft-search-option small{white-space:normal}}
 
 
 /* Honest UI demo / real API connectivity, minimally visible until requested. */
