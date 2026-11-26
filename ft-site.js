@@ -249,9 +249,26 @@
   function renderTextRisk(r,container){
     var p=section("文字風險規則篩檢");p.appendChild(para("此結果來自既有關鍵字／話術特徵規則，不是財報模型或新聞真偽機率。"));
     var g=node("div",null,"ft-result-cards");
-    append(g,[summaryItem("規則篩檢分數",r.risk_score==null?"—":String(r.risk_score)+"/100","規則權重指標，不是統計機率"),summaryItem("文字風險等級",r.risk_level||"未產生","僅限輸入文字的風險話術")]);p.appendChild(g);
+    var score=r.score??r.risk_score;
+    append(g,[summaryItem("規則篩檢分數",score==null?"—":String(score)+"/100","規則權重指標，不是統計機率"),summaryItem("文字風險等級",r.max_score===0?"尚無啟用規則":(r.risk_level||"未產生"),"僅限輸入文字的風險話術"),summaryItem("命中特徵權重",String(r.raw_score??"—")+" / "+String(r.max_score??"—"),"後端實際權重與分母")]);p.appendChild(g);
+    p.appendChild(para("輸入文字："+String(r.text||"")));
     var features=asArray(r.matched_features);if(!features.length)p.appendChild(para("未命中已設定的文字規則，不代表內容可靠。"));
-    features.forEach(function(f){p.appendChild(para((f.name||"特徵")+"："+asArray(f.matched_keywords).join("、")+"。"+(f.explain||"")));});container.appendChild(p);
+    features.forEach(function(f){var item=node("div",null,"ft-finding");item.appendChild(node("strong",(f.name||"特徵")+" · 權重 "+String(f.weight??"—")));item.appendChild(para(asArray(f.matched_keywords).join("、")+"。"+(f.explain||"")));p.appendChild(item);});
+    if(asArray(r.matched_keywords).length)p.appendChild(para("命中關鍵字："+r.matched_keywords.map(k=>k.phrase).filter(Boolean).join("、")));
+    p.appendChild(para("分數公式："+(r.normalization?.formula||"未提供")+"；門檻狀態："+(r.threshold?.status||"未提供")));
+    p.appendChild(modelOutput(r,"/api/analyze"));container.appendChild(p);
+  }
+  function modelOutput(payload,endpoint){
+    var details=node("details",null,"ft-model-output");
+    details.appendChild(node("summary","後端模型輸出與執行依據"));
+    details.appendChild(para("API："+endpoint));
+    var pre=node("pre",JSON.stringify(payload,null,2),"ft-code");
+    pre.style.whiteSpace="pre-wrap";pre.style.overflowWrap="anywhere";details.appendChild(pre);
+    var button=node("button","下載模型輸出 JSON","ft-btn");button.type="button";
+    button.addEventListener("click",function(){
+      var url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
+      var a=node("a");a.href=url;a.download="model-output.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),500);
+    });details.appendChild(button);return details;
   }
   function renderClaim(r,container){
     var p=section("新聞／言論主張查核");
@@ -259,10 +276,15 @@
     p.appendChild(badge(statusNames[label]||(typeof label==="string"?label:"已取得查核回應")));
     var s=r.summary||r.explanation||r.message||r.reason||(r.result&&r.result.summary);
     if(typeof s==="string")p.appendChild(para(s));
+    var structured=r.structured_claim||{}, detail=r.verification_detail||{};
+    var cards=node("div",null,"ft-result-cards");
+    append(cards,[summaryItem("解析公司與期間",String(structured.company_code||"—")+" · "+String(structured.period||"—"),structured.metric_or_topic||structured.claim_type||""),
+      summaryItem("主張數值",structured.value==null?"—":String(structured.value)+" "+(structured.unit||""),structured.extraction_method||""),
+      summaryItem("支持／矛盾證據",String(detail.decisive_supporting??"—")+" / "+String(detail.decisive_conflicting??"—"),"決定性證據筆數"),
+      summaryItem("比對差異",detail.difference==null?"—":String(detail.difference),"容許差異："+String(detail.tolerance??"—"))]);p.appendChild(cards);
     var support=asArray(r.evidence||r.sources||r.references);
     support.slice(0,8).forEach(function(it){if(typeof it==="string")p.appendChild(para(it));else if(it&&typeof it==="object"){var line=para([it.title||it.source_title||it.document||it.summary||"查核來源",it.period,it.source_date,it.page!=null?L("第 "+it.page+" 頁","Page "+it.page):null,it.relation,it.value!=null?String(it.value)+(it.unit?" "+it.unit:""):null].filter(Boolean).join(" · "));if(it.source_reference||it.source_url||it.url)line.appendChild(safeOfficialLink(it.source_reference||it.source_url||it.url,"　查看官方來源"));p.appendChild(line);}});
-    var d=node("details");d.appendChild(node("summary","查看完整查核回應"));
-    var pre=node("pre",JSON.stringify(r,null,2).slice(0,13000),"ft-code");pre.style.whiteSpace="pre-wrap";pre.style.overflowWrap="anywhere";d.appendChild(pre);p.appendChild(d);container.appendChild(p);
+    p.appendChild(modelOutput(r,"/api/financial/claims/verify"));container.appendChild(p);
   }
   function renderEvents(r,container){
     var p=section("近期官方重大訊息");
@@ -315,14 +337,24 @@
       var success=0,errors=[],missing=[];
       var claimIndex=jobs.findIndex(function(j){return j.name==="claim";});
       var claimResult=claimIndex>=0&&results[claimIndex].status==="fulfilled"?results[claimIndex].value:null;
-      results.forEach(function(out,i){
+      // A financial renderer clears its own container; isolate each model output.
+      // Show the primary claim/rule result before the supporting financial sections.
+      var order=jobs.map((j,i)=>i).sort((a,b)=>({claim:0,text:0,assessment:1,financial:2}[jobs[a].name]??3)-({claim:0,text:0,assessment:1,financial:2}[jobs[b].name]??3));
+      order.forEach(function(i){
+        var out=results[i];
         var job=jobs[i];
         if(out.status==="fulfilled"){
-          success++;
-          if(job.name==="financial"){window.FTLiveFinancial.render(target,out.value,{claim:claim});window.FTNewsEvidence?.render(target,out.value,claim,claimResult);}
-          if(job.name==="assessment")renderAssessment(out.value,target);
-          if(job.name==="claim")renderClaim(out.value,target);
-          if(job.name==="text")renderTextRisk(out.value,target);
+          var area=node("div",null,"ft-model-result");
+          try{
+            if(job.name==="financial"){window.FTLiveFinancial.render(area,out.value,{claim:claim});window.FTNewsEvidence?.render(area,out.value,claim,claimResult);}
+            if(job.name==="assessment")renderAssessment(out.value,area);
+            if(job.name==="claim")renderClaim(out.value,area);
+            if(job.name==="text")renderTextRisk(out.value,area);
+            target.appendChild(area);success++;
+          }catch(e){
+            errors.push(job.name+"：結果顯示失敗");
+            area.replaceChildren(modelOutput(out.value,job.name));target.appendChild(area);
+          }
         }else if(out.reason&&out.reason.status===404){
           missing.push(job.name);
         }else errors.push(job.name+"："+errorMsg(out.reason||new Error("Unknown error")));
@@ -411,6 +443,8 @@
     }
 
     attachFile($("#ft-attach"),query,$("#ft-file-note"));
+    $("#ft-case-claim")?.addEventListener("click",function(){ticker.value="2330";mode.value="claim";query.value="台積電 2025 年第三季毛利率為 59.5%";runWorkflow(mode.value,ticker.value,query.value,result,button);});
+    $("#ft-case-text")?.addEventListener("click",function(){mode.value="text";query.value="保證獲利，穩賺不賠，限時加入投資群組，立即匯款。";runWorkflow(mode.value,"",query.value,result,button);});
     $("#ft-demo-run")?.addEventListener("click",async function(){
       if(!window.FTDemo)return;
       var code=extractTicker(ticker.value)||window.FTCompanies?.findInText?.(ticker.value)?.ticker||p.ticker||"6505";

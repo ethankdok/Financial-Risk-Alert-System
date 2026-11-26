@@ -408,3 +408,5 @@ body.ft-app{
   .ft-app .auth-card{padding:24px 22px;border-radius:16px}
 }
 @media(prefers-reduced-motion:reduce){.ft-app .auth-card [aria-busy=true]::after{animation:none}}
+
+.ft-app .ft-case-examples{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-top:13px}.ft-app .ft-case-examples>span{font-size:12px;color:var(--ft-soft)}.ft-app .ft-model-output pre{max-height:520px;overflow:auto;background:#fff;padding:14px;border:1px solid var(--ft-line);border-radius:8px}.ft-app .ft-official-compare{margin:18px 0;padding:16px;border:1px solid var(--ft-line);border-radius:10px;background:#fff}.ft-app .ft-official-compare .ft-audit-inline{display:flex;gap:9px;flex-wrap:wrap}.ft-app .ft-official-compare input{width:120px}.ft-app .ft-model-result:empty{display:none}

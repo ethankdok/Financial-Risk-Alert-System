@@ -69,6 +69,10 @@ with sync_playwright() as pw:
     page.get_by_role("button", name="官方來源", exact=True).click()
     expect(page.locator("#ft-sheet-body")).to_contain_text("原始檔名")
     passed("five-year snapshot scores, 8+7 formulas, CSV download and source panel")
+    response=ctx.request.get(WEB+"/api/research/annual-model-results/6505/2025")
+    assert response.ok and response.json()["data"]["record"]["beneish"]["M_score"]==company["years"]["2025"]["beneish"]["M_score"]
+    assert ctx.request.get(WEB+"/api/research/annual-model-results/2330/2025").status==404
+    passed("archived annual financial model backend output matches source snapshot")
 
     # Renderer-only JSD fixture: does not assert live official archive completeness.
     page.evaluate("""() => FTNarrative.renderFromCard(document.querySelector('#ft-narrative-health'),
@@ -120,6 +124,14 @@ with sync_playwright() as pw:
     claim("台積電 2025 年第三季毛利率為 59.5%", "supported")
     claim("台積電 2025 年第三季毛利率為 10%", "conflicting")
     passed("actual browser-to-API claim insufficient/support/conflict with isolated synthetic fixture")
+    page.locator("#ft-mode").select_option("text")
+    page.locator("#ft-query").fill("CI test text")
+    with page.expect_response(lambda r:r.url.endswith("/api/analyze")) as risk:
+        page.locator("#ft-run").click()
+    expect(page.locator("#ft-result")).to_contain_text(str(risk.value.json()["score"])+"/100")
+    expect(page.locator("#ft-result")).to_contain_text("後端模型輸出與執行依據")
+    passed("actual news risk API score is visible in the result page")
+    page.locator("#ft-mode").select_option("claim")
 
     attach(page,"claim.txt","text/plain",FIXTURE.encode(),FIXTURE)
     attach(page,"claim.csv","text/csv",b"metric,value\nRevenue,12345","Revenue,12345")

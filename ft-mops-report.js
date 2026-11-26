@@ -56,7 +56,7 @@ async function renderLiveHealth(ticker){
  }catch(e){
   if(seq!==healthRequest)return;
   container.replaceChildren(el("p",t("目前沒有這家公司的既有後端財務分析結果；可使用上方已收錄的財報指標，或進入介面示範。","No connected financial analysis was found for this company. Use the uploaded financial snapshot or UI demo."),"ft-home-muted"));
-  if(narrative) narrative.replaceChildren(el("h2",t("文字漂移與敘事差異","Text drift & narrative changes")),el("p",t("目前無法取得這家公司的文字比較結果。","Text comparison is currently unavailable for this company."),"ft-home-muted"));
+  if(narrative){narrative.replaceChildren(el("h2",t("文字漂移與敘事差異","Text drift & narrative changes")),el("p",t("目前無法取得這家公司的文字比較結果。","Text comparison is currently unavailable for this company."),"ft-home-muted"));window.FTNarrative?.officialCompare?.(narrative,ticker);}
  }
 }
 
@@ -118,6 +118,8 @@ function renderModel(rec,prev,model){
  root.appendChild(el("p",formulas,"ft-sheet-formula"));
  if(!isM&&rec.dechow?.F_score!=null)root.appendChild(el("p",t("模型中間輸出","Model intermediate values")+": Pred "+fmt(rec.dechow.pred,6)+"　 P="+fmt(rec.dechow.prob,6),"ft-sheet-meta"));
  root.appendChild(el("p",t("此為財務異常篩檢指標，不是舞弊認定。","Screening indicator only; not proof of fraud."),"ft-sheet-meta"));
+ const endpoint="/api/research/annual-model-results/"+encodeURIComponent(company)+"/"+encodeURIComponent(year);
+ const a=el("a",t("查看後端已封存模型輸出（JSON）","View archived backend model output (JSON)"),"ft-inline-link");a.href=endpoint;a.target="_blank";a.rel="noopener";root.appendChild(a);
 }
 function renderSource(rec,p){
  const root=$("#ft-sheet-body");
@@ -252,7 +254,9 @@ document.addEventListener("DOMContentLoaded",async()=>{
   const res=await fetch("ft-mops-data.json",{cache:"force-cache"});
   if(!res.ok)throw Error("HTTP "+res.status);
   database=await res.json();
-  const wanted=new URLSearchParams(location.search).get("ticker");
+  const params=new URLSearchParams(location.search),wanted=params.get("ticker"),requestedYear=params.get("year"),requestedModel=params.get("model");
+  if(/^20[0-9]{2}$/.test(requestedYear||""))year=requestedYear;
+  if(["beneish","dechow","source","financial"].includes(requestedModel))tab=requestedModel;
   if(wanted&&/^\d{4,6}$/.test(wanted)){
    company=wanted;
    const record=Object.values(database.industries).find(ind=>ind[wanted])?.[wanted];

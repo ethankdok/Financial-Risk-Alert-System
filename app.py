@@ -331,6 +331,20 @@ def health():
     })
 
 
+@app.get("/api/research/annual-model-results/<ticker>/<int:year>")
+def annual_model_result(ticker: str, year: int):
+    """Read-only published MOPS calculation output; not live ML inference."""
+    if not ticker.isdigit() or len(ticker) not in (4, 5, 6) or not 2021 <= year <= 2025:
+        return jsonify({"error": "invalid company or year"}), 400
+    with (BASE_DIR / "ft-mops-data.json").open(encoding="utf-8") as source:
+        snapshot = json.load(source)
+    for industry, companies in snapshot["industries"].items():
+        company = companies.get(ticker)
+        if company and str(year) in company["years"]:
+            return jsonify({"success": True, "data": {"ticker": ticker, "company": company["name"], "industry": industry, "year": year, "result_kind": "archived_mops_financial_model_calculation", "record": company["years"][str(year)]}})
+    return jsonify({"error": "no published annual financial model result"}), 404
+
+
 @app.route("/")
 def home():
     return send_from_directory(BASE_DIR, "index.html")

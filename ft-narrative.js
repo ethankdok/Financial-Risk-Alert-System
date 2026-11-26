@@ -27,13 +27,40 @@ function sourceLink(obj){
  const a=el("a",t("查看官方來源","View official evidence"),"ft-inline-link");a.href=url.href;a.target="_blank";a.rel="noopener noreferrer";return a;
  }catch{return null;}
 }
+function officialCompare(target,ticker){
+ const wrapper=el("div",null,"ft-official-compare");
+ wrapper.appendChild(el("h3",t("官方法說會跨期分析","Official conference comparison")));
+ wrapper.appendChild(el("p",t("使用已歸檔的相鄰季度同類型文件執行 JSD 與 Cosine。期間留空則使用最新可比組合；此分析不同於年度財報文字研究。","Compare adjacent-quarter archived documents. Leave periods blank for the latest pair; distinct from annual-report research."),"ft-sheet-meta"));
+ const form=el("form",null,"ft-audit-inline"),first=el("input",null,"ft-input"),second=el("input",null,"ft-input");
+ first.placeholder="2025Q2";second.placeholder="2025Q3";first.setAttribute("aria-label","前期");second.setAttribute("aria-label","本期");first.pattern=second.pattern="20[0-9]{2}Q[1-4]";
+ const btn=el("button",t("執行官方文字比較","Compare official documents"),"ft-btn ft-btn-primary");btn.type="submit";form.append(first,second,btn);wrapper.appendChild(form);
+ const result=el("div",null,"ft-official-compare-result");result.setAttribute("aria-live","polite");wrapper.appendChild(result);target.appendChild(wrapper);
+ form.addEventListener("submit",async e=>{
+  e.preventDefault();if(Boolean(first.value)!==Boolean(second.value)){result.textContent="請同時填寫兩個期間，或皆留空。";return;}
+  btn.disabled=true;result.textContent="正在執行文字比較…";
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
+  try{
+   const res=await fetch("/api/financial/data-shift/analyze",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_code:ticker,period_1:first.value||null,period_2:second.value||null}),signal:controller.signal});
+   const payload=await res.json();if(!res.ok||payload.success===false)throw Error(payload.error||"HTTP "+res.status);
+   const d=payload.data||payload;result.replaceChildren();
+   result.appendChild(el("p",ticker+" · "+(d.period_1||"—")+" → "+(d.period_2||"—")+" · "+(d.document_type||"")+" · "+(d.language||"")));
+   if(d.metrics&&typeof d.metrics.jsd==="number"&&typeof d.metrics.cosine_similarity==="number"){
+    result.appendChild(sheet(["分析指標","後端實際輸出"],[["JSD",num(d.metrics.jsd)],["Cosine Similarity",num(d.metrics.cosine_similarity)]]));
+   }else result.appendChild(el("p","未取得可計算指標："+(d.reason_code||d.analysis_status||"資料不足"),"ft-narrative-warning"));
+   result.appendChild(el("p","資料品質："+(d.data_quality?.passed===true?"通過":d.data_quality?.passed===false?"未通過":"未評估")+"；校準："+(d.calibration?.status||"未評估")+"；方法："+(d.method?.method_version||"未提供"),"ft-sheet-meta"));
+   for(const item of d.source_documents||[]){const row=el("p",String(item.document_name||item.title||item.period||"官方文件")+" ");const link=sourceLink(item);if(link)row.appendChild(link);result.appendChild(row);}
+   for(const item of d.limitations||[])result.appendChild(el("p",String(item),"ft-sheet-meta"));
+   const details=el("details");details.appendChild(el("summary","後端 JSD 模型輸出與來源"));const pre=el("pre",JSON.stringify(d,null,2),"ft-code");pre.style.whiteSpace="pre-wrap";details.appendChild(pre);result.appendChild(details);
+  }catch(err){result.textContent="文字比較未完成："+err.message;}finally{clearTimeout(timer);btn.disabled=false;}
+ });
+}
 function display(target,card,ticker){
  target.replaceChildren();
  const n=card?.narrative_shift;
  const heading=el("div",null,"ft-panel-heading");heading.appendChild(el("h2",t("文字漂移與敘事差異","Text drift & narrative changes")));
  target.appendChild(heading);
  if(!n||!n.metrics||!Object.values(n.metrics).some(v=>typeof v==="number")){
-  target.appendChild(el("p",t("這家公司尚無可比較的官方文字資料。","No comparable official text evidence is available for this company."),"ft-home-muted"));return;
+  target.appendChild(el("p",t("這家公司尚無可比較的官方文字資料。","No comparable official text evidence is available for this company."),"ft-home-muted"));officialCompare(target,ticker);return;
  }
  const meta=el("div",null,"ft-narrative-meta");
  meta.appendChild(el("strong",(card.company_name||ticker)+"（"+ticker+"）"));
@@ -73,6 +100,7 @@ function display(target,card,ticker){
   });
  }
  target.appendChild(details);
+ officialCompare(target,ticker);
  target.appendChild(el("p",t("JSD 反映不同期間文字分布差異，Cosine 反映文字相似度；兩者均不是舞弊或財報不實機率。未通過品質門檻時不進行風險判定。","JSD measures distribution shifts and cosine measures text similarity. Neither is fraud probability. When quality requirements are not met, no risk judgement is made."),"ft-sheet-meta"));
 }
 async function show(ticker){
@@ -96,5 +124,5 @@ async function show(ticker){
   target.appendChild(el("p",t("目前無法取得這家公司的文字比較結果。","Text comparison is currently unavailable for this company."),"ft-home-muted"));
  }finally{clearTimeout(timer);}
 }
-window.FTNarrative={show,renderFromCard:display};
+window.FTNarrative={show,renderFromCard:display,officialCompare};
 })();
