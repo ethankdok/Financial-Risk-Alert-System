@@ -28,3 +28,62 @@ jobs:
         run: |
           docker build -f Dockerfile.flask -t fintrust-ui-test .
           docker run --rm --network none -e APP_ENV=development -e FLASK_DATASTORE_BACKEND=sqlite -e ALLOW_DEMO_SEED_DATA=false fintrust-ui-test python -c 'from app import app; c=app.test_client(); assert c.get("/health").status_code == 200; assert c.get("/ft-mops-data.json").status_code == 200; assert c.get("/financial-audit.html").status_code == 200; assert c.get("/api/member/me").status_code == 401; rules=[r.rule for r in app.url_map.iter_rules()]; assert rules.count("/data/companies/<market>")==1; assert "/api/financial/claims/verify" in rules'
+
+      - name: Build FastAPI container and verify live two-service contract
+        run: |
+          docker build -f Dockerfile.fastapi -t fintrust-api-test .
+          docker network create --internal fintrust-release-test
+          trap 'docker logs fintrust-api-ci 2>/dev/null || true; docker logs fintrust-web-ci 2>/dev/null || true; docker rm -f fintrust-api-ci fintrust-web-ci 2>/dev/null || true; docker network rm fintrust-release-test 2>/dev/null || true' EXIT
+          docker run -d --name fintrust-api-ci --network fintrust-release-test -e APP_ENV=development -e DATASTORE_BACKEND=sqlite -e FINANCIAL_DATABASE_PATH=/tmp/fintrust-ci.sqlite3 -e ALLOW_DEMO_SEED_DATA=false -e FINANCIAL_AI_AUTO_LLM_ENABLED=false fintrust-api-test
+          docker run -d --name fintrust-web-ci --network fintrust-release-test -e APP_ENV=development -e FLASK_DATASTORE_BACKEND=sqlite -e FLASK_DATABASE_PATH=/tmp/fintrust-web-ci.sqlite3 -e ALLOW_DEMO_SEED_DATA=false -e FINTRUST_API_BASE_URL=http://fintrust-api-ci:8080 fintrust-ui-test
+          docker exec -i fintrust-web-ci python - <<'PY'
+          import json, time
+          from urllib.request import Request, urlopen
+          from urllib.error import HTTPError, URLError
+          api = "http://fintrust-api-ci:8080"
+          web = "http://127.0.0.1:8080"
+          def get(base, path, body=None):
+              req = Request(base + path, data=None if body is None else json.dumps(body, ensure_ascii=False).encode("utf-8"), headers={"Content-Type":"application/json","Accept":"application/json"})
+              try:
+                  with urlopen(req, timeout=15) as r:
+                      return r.status, json.load(r)
+              except HTTPError as e:
+                  return e.code, json.load(e)
+          for base in (api, web):
+              for attempt in range(30):
+                  try:
+                      code, data = get(base, "/health")
+                      if code == 200 and data.get("status") == "ok":
+                          break
+                  except (OSError, URLError, ValueError):
+                      pass
+                  time.sleep(2)
+              else:
+                  raise AssertionError("Container failed health check: " + base)
+              print("PASS container HTTP health", base)
+          code, spec = get(api, "/openapi.json")
+          assert code == 200
+          for path in ("/api/v1/financial/claims/verify", "/api/v1/integrity/companies", "/api/v1/integrity/assessments/preview"):
+              assert path in spec["paths"], path
+          print("PASS FastAPI routes are published")
+          code, data = get(web, "/api/financial/health")
+          assert code == 200 and data["success"] is True and data["data"]["status"] == "ok", data
+          print("PASS Flask to FastAPI HTTP proxy")
+          body = {"company_code":"2330", "claim":"台積電 2025 年第三季毛利率為 59.5%"}
+          code, result = get(web, "/api/financial/claims/verify", body)
+          assert code == 200 and result["success"] is True, result
+          d = result["data"]
+          assert d["verdict"] == "insufficient_evidence", d
+          assert isinstance(d["structured_claim"], dict) and isinstance(d["evidence"], list), d
+          assert not any(item.get("decisive") for item in d["evidence"]), d
+          print("PASS claim API over both containers; empty database correctly returns insufficient evidence")
+          code, data = get(web, "/api/integrity/companies")
+          assert code == 200 and data["success"] is True, data
+          print("PASS integrity proxy over real HTTP")
+          code, data = get(web, "/api/integrity/assessments/preview", {"ticker":"2330","persist":True})
+          assert code == 400, data
+          print("PASS browser cannot persist assessments")
+          code, data = get(web, "/api/member/me")
+          assert code == 401, data
+          print("PASS protected member endpoint")
+          PY
