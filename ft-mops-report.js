@@ -44,17 +44,19 @@ let healthRequest=0;
 async function renderLiveHealth(ticker){
  const container=$("#ft-live-dashboard");if(!container)return;
  const seq=++healthRequest;
+ const narrative=$("#ft-narrative-health");
+ if(narrative) narrative.replaceChildren(el("h2",t("文字漂移與敘事差異","Text drift & narrative changes")),el("p",t("正在讀取此公司的文字資料…","Loading text evidence for this company…"),"ft-home-muted"));
  container.replaceChildren(el("p",t("正在讀取企業營運指標…","Retrieving company financial indicators…"),"ft-sheet-meta"));
  if(!window.FTLiveFinancial){container.textContent=t("營運指標介面尚未載入","Financial API module unavailable");return;}
  try{
   const result=await window.FTLiveFinancial.load(ticker);
   if(seq!==healthRequest)return;
   window.FTLiveFinancial.render(container,result);
-  const narrative=$("#ft-narrative-health");
   if(narrative&&window.FTNarrative?.renderFromCard)window.FTNarrative.renderFromCard(narrative,result.card,ticker);
  }catch(e){
   if(seq!==healthRequest)return;
   container.replaceChildren(el("p",t("目前沒有這家公司的既有後端財務分析結果；可使用上方已收錄的財報指標，或進入介面示範。","No connected financial analysis was found for this company. Use the uploaded financial snapshot or UI demo."),"ft-home-muted"));
+  if(narrative) narrative.replaceChildren(el("h2",t("文字漂移與敘事差異","Text drift & narrative changes")),el("p",t("目前無法取得這家公司的文字比較結果。","Text comparison is currently unavailable for this company."),"ft-home-muted"));
  }
 }
 

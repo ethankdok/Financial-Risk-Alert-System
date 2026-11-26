@@ -1,0 +1,43 @@
+name: FinTrust browser E2E
+on:
+  push:
+    branches: [feature/fintrust-user-first-ui-20261124]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install browser and document fixtures
+        run: |
+          python3 -m pip install playwright==1.51.0 pymupdf==1.25.5 openpyxl==3.1.5 python-docx==1.1.2 pillow==11.1.0
+          python3 -m playwright install --with-deps chromium
+      - name: Start isolated two-service test system
+        run: |
+          docker build -f Dockerfile.fastapi -t fintrust-browser-api .
+          docker build -f Dockerfile.flask -t fintrust-browser-web .
+          docker network create fintrust-browser
+          docker run -d --name fintrust-browser-api --network fintrust-browser -p 127.0.0.1:18081:8080 -e APP_ENV=development -e DATASTORE_BACKEND=sqlite -e FINANCIAL_DATABASE_PATH=/tmp/browser-ci.sqlite3 -e INGESTION_API_TOKEN=ci-test-only-token -e ALLOW_DEMO_SEED_DATA=false -e FINANCIAL_AI_AUTO_LLM_ENABLED=false fintrust-browser-api
+          docker run -d --name fintrust-browser-web --network fintrust-browser -p 127.0.0.1:18080:8080 -e APP_ENV=development -e FLASK_DATASTORE_BACKEND=sqlite -e FLASK_DATABASE_PATH=/tmp/browser-web.sqlite3 -e ALLOW_DEMO_SEED_DATA=false -e FINTRUST_API_BASE_URL=http://fintrust-browser-api:8080 fintrust-browser-web
+          for port in 18080 18081; do
+            ready=0
+            for attempt in $(seq 1 40); do
+              if curl -fsS "http://127.0.0.1:$port/health" >/dev/null; then ready=1; break; fi
+              sleep 2
+            done
+            test "$ready" = 1
+          done
+      - name: Browser E2E including actual local file parsers
+        env:
+          FINTRUST_TEST_CDN: "1"
+        run: python3 tests/ft_browser_e2e.py
+      - name: Container logs and cleanup
+        if: always()
+        run: |
+          docker logs fintrust-browser-api 2>/dev/null || true
+          docker logs fintrust-browser-web 2>/dev/null || true
+          docker rm -f fintrust-browser-api fintrust-browser-web 2>/dev/null || true
+          docker network rm fintrust-browser 2>/dev/null || true
