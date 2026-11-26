@@ -11,9 +11,12 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install browser and document fixtures
         run: |
-          python3 -m pip install playwright==1.51.0 pymupdf==1.25.5 openpyxl==3.1.5 python-docx==1.1.2 pillow==11.1.0
+          python3 -m pip install --only-binary=:all: playwright==1.51.0 pymupdf==1.25.5 openpyxl==3.1.5 python-docx==1.1.2 pillow==11.1.0
           python3 -m playwright install --with-deps chromium
       - name: Start isolated two-service test system
         run: |
