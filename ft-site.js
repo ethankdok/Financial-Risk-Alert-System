@@ -4,6 +4,14 @@
  */
 (function(){
   "use strict";
+  // Remove only the external ChatGPT source marker, without losing ticker/next/hash.
+  try {
+    var cleanUrl=new URL(location.href);
+    if(cleanUrl.searchParams.getAll("utm_source").includes("chatgpt.com")){
+      cleanUrl.searchParams.delete("utm_source","chatgpt.com");
+      history.replaceState(history.state,"",cleanUrl.pathname+cleanUrl.search+cleanUrl.hash);
+    }
+  } catch (_) { /* navigation must still work when history is unavailable */ }
   var page=document.body.getAttribute("data-ft-page")||"";
   var $=function(s){return document.querySelector(s);};
   var L=function(zh,en){return window.FTLocale?.language?.()==="en"?en:zh;};

@@ -8,7 +8,7 @@ const vm=require("node:vm");
 const path=require("node:path");
 const file=fs.readFileSync(path.join(__dirname,"..","ft-site.js"),"utf8");
 
-function simulateHome(text){
+function simulateHome(text,initialUrl="https://example.com/",expectedClean=null){
   const handlers={};
   const input={value:text,focus(){},addEventListener:(type,fn)=>handlers["input:"+type]=fn};
   const button={disabled:false,addEventListener:(type,fn)=>handlers["button:"+type]=fn};
@@ -31,14 +31,17 @@ function simulateHome(text){
     findInText:q=>(String(q).includes("台積電")||q==="2330")?company:null,
     addRecent(){},readRecent:()=>[],attachAutocomplete(){},clearRecent(){}
   };
-  const location={search:"",hostname:"example.com",href:""};
+  const location={search:new URL(initialUrl).search,hostname:"example.com",href:initialUrl};
+  let cleaned=null;
+  const history={state:null,replaceState:(_s,_t,url)=>{cleaned=url;}};
   const sessionStorage={setItem(){},removeItem(){},getItem:()=>null};
   const window={
     FTCompanies,FTLocale:{language:()=>"zh",phrase:s=>s,t:s=>s},
     addEventListener(){}
   };
-  vm.runInNewContext(file,{document,location,sessionStorage,window,URLSearchParams,fetch:async()=>({})},
+  vm.runInNewContext(file,{document,location,sessionStorage,window,URL,URLSearchParams,history,fetch:async()=>({})},
                      {filename:"ft-site.js"});
+  assert.equal(cleaned,expectedClean);
   assert.equal(typeof handlers.DOMContentLoaded,"function");
   handlers.DOMContentLoaded();
   handlers["button:click"]();
@@ -60,3 +63,7 @@ for(const [input,expected] of cases){
   process.stdout.write("PASS "+JSON.stringify(input)+" → "+actual+"\n");
 }
 process.stdout.write("\n8/8 home-route cases passed.\n");
+
+simulateHome("2330","https://example.com/?utm_source=chatgpt.com&next=member.html&ticker=2330#live","/?next=member.html&ticker=2330#live");
+simulateHome("2330","https://example.com/?utm_source=other&x=1",null);
+console.log("PASS tracking parameter cleanup preserves navigation parameters and fragment");
