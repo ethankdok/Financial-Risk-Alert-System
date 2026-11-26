@@ -341,3 +341,70 @@ body.ft-app{margin:0;background:var(--ft-bg);color:var(--ft-ink);font-family:"No
 .ft-app .ft-live-glance-card strong{font-size:25px;line-height:1.1;font-variant-numeric:tabular-nums;font-weight:750}
 .ft-app .ft-live-glance-card span{font-size:12px;color:var(--ft-soft);font-weight:600}
 @media(max-width:520px){.ft-app .ft-live-at-a-glance{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.ft-app .ft-live-glance-card{padding:10px 7px}.ft-app .ft-live-glance-card strong{font-size:20px}.ft-app .ft-live-glance-card span{font-size:10px}}
+
+/* Calm product-wide surface treatment. Alpha is on backgrounds, never text.
+   Keep data tables, charts, form controls and menus opaque for readability. */
+body.ft-app{
+  --ft-glass:rgba(255,255,255,.82);
+  --ft-glass-dense:rgba(255,255,255,.96);
+  --ft-glass-border:rgba(151,174,190,.34);
+  min-height:100vh;
+  background-color:#f4f6f5;
+  background-image:radial-gradient(ellipse at 5% 0%,#dbe9f6 0%,transparent 48%),radial-gradient(ellipse at 92% 18%,#e1eeea 0%,transparent 48%),linear-gradient(145deg,#edf2f5 0%,#f7f6f1 57%,#e7edf5 100%);
+  background-attachment:fixed;
+}
+.ft-app .ft-header{background:rgba(255,255,255,.91);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.ft-app .ft-chat,.ft-app .ft-panel,.ft-app .ft-action-tile,.ft-app .ft-report-toolbar,.ft-app .ft-demo-shell,.ft-app.ft-member-page .member-grid .content-card{
+  background:var(--ft-glass);
+  border-color:var(--ft-glass-border);
+  box-shadow:0 8px 26px rgba(34,59,78,.045);
+}
+.ft-app .ft-sheet-report,.ft-app .ft-news-evidence-section,.ft-app .ft-news-narrative{background:var(--ft-glass-dense)}
+.ft-app .ft-sheet-table,.ft-app .ft-table,.ft-app .data-table,.ft-app .ft-input,.ft-app .ft-select,.ft-app .ft-textarea,.ft-app .form-control{background:#fff}
+.ft-app .login-shell{
+  min-height:calc(100vh - 68px);
+  background:transparent;
+  padding:32px 20px 44px;
+}
+.ft-app .auth-card{
+  width:min(420px,100%);
+  background:var(--ft-glass);
+  border:1px solid var(--ft-glass-border);
+  border-radius:20px;
+  padding:30px 32px;
+  box-shadow:0 14px 42px rgba(32,52,71,.085);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.ft-app .auth-card .eyebrow{background:transparent;color:#53768a;padding:0;font-size:12px;font-weight:650;letter-spacing:.08em}
+.ft-app .auth-card h1{font-size:26px;line-height:1.35;letter-spacing:-.4px;margin:5px 0 23px}
+.ft-app .auth-card .form-group{margin-bottom:14px}
+.ft-app .auth-card .form-group label{font-size:13px;font-weight:650;margin-bottom:6px;color:var(--ft-ink)}
+.ft-app .auth-card .form-control{font-size:14px;min-height:42px;padding:9px 12px;border-radius:8px}
+.ft-app .auth-card .btn-primary{background:var(--ft-blue2);border-radius:8px;font-size:14px;min-height:44px;padding:9px 14px;font-weight:650}
+.ft-app .auth-card .btn-primary:hover:not(:disabled){background:#234c62}
+.ft-app .auth-card .ft-google-btn{
+  display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:40px;
+  position:relative;background:#fff;border:1px solid #747775;border-radius:4px;
+  color:#1f1f1f;font-family:Roboto,Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+  font-size:14px;font-weight:500;letter-spacing:.15px;padding:9px 36px;margin:0;
+}
+.ft-app .ft-google-logo{width:18px;height:18px;flex:0 0 18px;position:absolute;left:12px}
+.ft-app .auth-card .ft-google-btn:hover:not(:disabled){background:#f8faff;border-color:#5f6368}
+.ft-app .ft-auth-divider{display:flex;align-items:center;gap:10px;color:#647583;font-size:12px;margin:17px 0}
+.ft-app .ft-auth-divider::before,.ft-app .ft-auth-divider::after{content:"";height:1px;background:#d5dfe6;flex:1}
+.ft-app .auth-card .ft-auth-help{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin:-3px 0 15px}
+.ft-app .auth-card .ft-auth-text{padding:2px 0;border:0;background:transparent;color:var(--ft-blue2);font-size:12px;font-weight:600}
+.ft-app .auth-card .ft-auth-text:hover:not(:disabled){text-decoration:underline;text-underline-offset:3px}
+.ft-app .auth-card .auth-switch{font-size:13px;margin:16px 0 0}
+.ft-app .auth-card .ft-member-demo-link{font-size:12px;margin-top:9px}
+.ft-app #memberAuthStatus:not([hidden]){font-size:13px;line-height:1.6;color:#34596c;background:#eef5f8;border-radius:7px;padding:9px 12px;margin:10px 0}
+.ft-app .auth-card [aria-busy=true]{cursor:progress;opacity:.85}
+.ft-app .auth-card [aria-busy=true]::after{content:"";width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:ft-auth-spin .8s linear infinite;flex:none}
+@keyframes ft-auth-spin{to{transform:rotate(360deg)}}
+@media(max-width:680px){
+  body.ft-app{background-attachment:scroll}
+  .ft-app .login-shell{padding:24px 16px 32px;min-height:calc(100vh - 62px)}
+  .ft-app .auth-card{padding:24px 22px;border-radius:16px}
+}
+@media(prefers-reduced-motion:reduce){.ft-app .auth-card [aria-busy=true]::after{animation:none}}

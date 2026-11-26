@@ -39,6 +39,8 @@ with sync_playwright() as pw:
     page.goto(WEB + "/")
     expect(page.locator("#ft-home-query")).to_be_visible()
     expect(page.locator("#ft-top-nav a")).to_have_count(4)
+    assert "gradient" in page.locator("body").evaluate("(el)=>getComputedStyle(el).backgroundImage")
+    assert page.locator(".ft-chat").evaluate("(el)=>getComputedStyle(el).backgroundColor") == "rgba(255, 255, 255, 0.82)"
     page.locator("#ft-home-query").fill("2330")
     page.locator("#ft-home-submit").click()
     expect(page).to_have_url(re.compile(r"financial-audit\.html\?ticker=2330"))
@@ -140,6 +142,10 @@ with sync_playwright() as pw:
 
     page.goto(WEB+"/member.html")
     expect(page).to_have_url(re.compile("login.html"))
+    assert page.locator("#ft-google-signin svg path").count()==4
+    assert page.locator("#ft-auth-email").evaluate("(el)=>getComputedStyle(el).backgroundColor")=="rgb(255, 255, 255)"
+    assert page.locator(".auth-card").evaluate("(el)=>getComputedStyle(el).backgroundColor")=="rgba(255, 255, 255, 0.82)"
+    passed("shared gradient surfaces, opaque input fields and multicolor Google identity mark")
     page.goto(WEB+"/register.html")
     email="ci-"+uuid.uuid4().hex+"@example.invalid"
     password="ci-test-password-2026"

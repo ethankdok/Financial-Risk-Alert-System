@@ -46,13 +46,14 @@ function message(e){
   };
   return errors[e.code]|| (e.status?e.message:t("登入服務暫時無法完成操作，請重試。","Unable to complete authentication; try again."));
 }
-async function run(fn){
+async function run(fn,active=null){
   if(busy)return;
-  busy=true;notice("");
+  busy=true;notice(t("正在處理，請稍候…","Working on your request…"));
+  if(active)active.setAttribute("aria-busy","true");
   const buttons=Array.from(document.querySelectorAll("#memberLoginForm button,#memberRegisterForm button,#ft-account-link button"));
   const disabled=buttons.map(b=>b.disabled);buttons.forEach(b=>b.disabled=true);
   try{await fn();}catch(e){notice(message(e),true);}
-  finally{busy=false;buttons.forEach((b,i)=>b.disabled=disabled[i]);}
+  finally{busy=false;if(active)active.removeAttribute("aria-busy");buttons.forEach((b,i)=>b.disabled=disabled[i]);}
 }
 function next(){
   const n=new URLSearchParams(location.search).get("next")||"member.html";
@@ -71,6 +72,7 @@ async function establish(user){
 async function google(){
   const {auth,m}=await sdk();
   const provider=new m.GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});
+  notice(t("請在 Google 視窗選擇帳號並完成登入。","Choose your account in the Google sign-in window."));
   const result=await m.signInWithPopup(auth,provider);
   if(await establish(result.user))next();
 }
@@ -136,9 +138,9 @@ async function linkControls(){
 }
 window.FinTrustFirebase={logout};
 document.addEventListener("DOMContentLoaded",()=>{
-  $("#ft-google-signin")?.addEventListener("click",()=>run(google));
-  $("#memberLoginForm")?.addEventListener("submit",e=>{e.preventDefault();const form=e.currentTarget;run(()=>emailLogin(form));});
-  $("#memberRegisterForm")?.addEventListener("submit",e=>{e.preventDefault();const form=e.currentTarget;run(()=>register(form));});
+  $("#ft-google-signin")?.addEventListener("click",e=>run(google,e.currentTarget));
+  $("#memberLoginForm")?.addEventListener("submit",e=>{e.preventDefault();const form=e.currentTarget;run(()=>emailLogin(form),e.submitter);});
+  $("#memberRegisterForm")?.addEventListener("submit",e=>{e.preventDefault();const form=e.currentTarget;run(()=>register(form),e.submitter);});
   $("#ft-reset-password")?.addEventListener("click",()=>run(reset));
   $("#ft-resend-verification")?.addEventListener("click",()=>run(resend));
   if($("#memberLoginForm")||$("#memberRegisterForm"))config().then(c=>{if(c.configured)return sdk();if(c.local_password_enabled){if($("#ft-google-signin"))$("#ft-google-signin").hidden=true;if($("#ft-reset-password"))$("#ft-reset-password").hidden=true;}}).catch(()=>{});
