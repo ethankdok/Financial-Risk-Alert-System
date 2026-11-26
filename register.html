@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="ui-humanize.css">
   <script src="member-auth.js"></script>
   <link rel="stylesheet" href="ft-site.css">
-  <script defer src="ft-i18n.js"></script><script defer src="ft-site.js"></script>
+  <script defer src="ft-i18n.js"></script><script defer src="ft-site.js"></script><script defer src="ft-google-signin.js"></script>
 </head>
 <body class="ft-app" data-ft-page="auth">
   <header id="ft-header"></header>
@@ -20,26 +20,11 @@
       <div class="form-group"><label data-i18n="register.name">會員名稱</label><input class="form-control" name="display_name" autocomplete="name" required></div>
       <div class="form-group"><label data-i18n="login.email">電子郵件</label><input class="form-control" name="email" type="email" autocomplete="email" required></div>
       <div class="form-group"><label data-i18n="login.password">密碼</label><input class="form-control" name="password" type="password" autocomplete="new-password" minlength="8" required></div>
-      <div class="auth-error" id="memberRegisterError" hidden></div>
+      <div class="auth-error" id="memberRegisterError" role="alert" hidden></div><p id="memberAuthStatus" role="status" hidden></p>
       <button class="btn btn-primary" style="width:100%" type="submit" data-i18n="register.submit">完成註冊</button>
       <p class="auth-switch"><span data-i18n="register.existing">已經有帳號？</span> <a href="login.html" data-i18n="register.back">返回登入</a></p>
       
     </form>
   </main>
-  <script>
-  document.getElementById('memberRegisterForm').addEventListener('submit',async event=>{
-    event.preventDefault();
-    const form=event.currentTarget;
-    const error=document.getElementById('memberRegisterError');
-    error.hidden=true;
-    try{
-      await MemberAuth.api('/api/member/auth/register',{method:'POST',body:JSON.stringify({display_name:form.display_name.value,email:form.email.value,password:form.password.value})});
-      location.href='member.html';
-    }catch(exc){
-      error.textContent=exc.message;
-      error.hidden=false;
-    }
-  });
-  </script>
 </body>
 </html>

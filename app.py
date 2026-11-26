@@ -487,8 +487,8 @@ def member_firebase_web_config():
     auth_domain = os.getenv("FIREBASE_AUTH_DOMAIN", "").strip()
     app_id = os.getenv("FIREBASE_WEB_APP_ID", "").strip()
     if not (project_id and api_key and auth_domain and app_id):
-        return jsonify({"configured": False, "firebase": None})
-    return jsonify({"configured": True, "firebase": {
+        return jsonify({"configured": False, "firebase": None, "local_password_enabled": member_auth.local_password_enabled()})
+    return jsonify({"configured": True, "local_password_enabled": False, "firebase": {
         "apiKey": api_key, "authDomain": auth_domain,
         "projectId": project_id, "appId": app_id,
     }})
@@ -502,8 +502,14 @@ def member_firebase_login():
         return jsonify({"error": "missing id_token"}), 400
     try:
         member = member_auth.login_firebase_token(id_token)
-    except (RuntimeError, ValueError) as exc:
-        return jsonify({"error": str(exc)}), 400
+    except DuplicateRecordError:
+        return jsonify({"error": "此 Email 已屬於另一個會員帳號，請聯繫管理員；不會自動合併。"}), 409
+    except PermissionError:
+        return jsonify({"error": "請驗證 Email，並確認帳號可用。"}), 403
+    except ValueError:
+        return jsonify({"error": "登入憑證無效，請重新登入。"}), 401
+    except RuntimeError:
+        return jsonify({"error": "登入服務暫時無法使用。"}), 503
     session.clear()
     session["member_uid"] = member["uid"]
     return jsonify({"member": _public_member(member)})
@@ -530,6 +536,8 @@ def member_me():
 def member_profile_update():
     member = current_member()
     data = request.get_json(silent=True) or {}
+    if member.get("auth_provider") == "firebase" and str(data.get("email", member["email"])).strip().lower() != member["email"]:
+        return jsonify({"error": "Firebase 帳號電子郵件必須透過身分驗證服務變更。"}), 400
     fields = {
         "display_name": str(data.get("display_name", member["display_name"])).strip() or member["display_name"],
         "email": str(data.get("email", member["email"])).strip().lower() or member["email"],

@@ -49,6 +49,7 @@ offline(){
   command -v node >/dev/null || die "Node.js required for frontend regression"
   for f in ft-*.js; do node --check "$f"; done
   node tests/ft_frontend_route_smoke.cjs
+  "$venv/bin/python" -m unittest discover -s tests -p 'test_managed_member_auth.py'
   rm -rf "$venv"
 }
 build_context(){
@@ -117,6 +118,35 @@ repair_backend(){
   smoke "${wi[1]}"
   printf 'STAGED; production unchanged.\nCandidate website: %s\nVerify browser operations before promote --browser-verified.\n' "${wi[1]}"
 }
+stage_auth(){
+  [[ -f "$STATE" ]] || die "No staged release state"
+  mapfile -t s < "$STATE"; [[ "${#s[@]}" == 10 ]] || die "Invalid release state"
+  clean_checkout
+  git merge-base --is-ancestor "${s[0]}" "$SHA" || die "Staged commit not an ancestor"
+  [[ -z "$(git diff --name-only "${s[0]}" "$SHA" -- fintrust_backend Dockerfile.fastapi data_shift.py deploy/cloudbuild-fastapi.yaml)" ]] || die "FastAPI source changed; cannot reuse candidate"
+  [[ "$(service_url "$WEB")" == "$EXPECTED_WEB" && "$(service_url "$API")" == "${s[9]}" ]] || die "Service URLs changed"
+  [[ "$(serving "$WEB")" == "${s[1]}" && "$(serving "$API")" == "${s[2]}" ]] || die "Production traffic changed"
+  health "${s[4]}"
+  [[ -n "${FIREBASE_WEB_API_KEY:-}" && -n "${FIREBASE_WEB_APP_ID:-}" ]] || die "Set public Firebase web API key and app ID in Cloud Shell"
+  offline; build_context
+  local stamp web_image wi
+  stamp="$(date -u +%y%m%d%H%M%S)"
+  web_image="$(image_base "${s[1]}"):auth-$stamp"
+  gc builds submit "$CTX" --config="$CTX/deploy/cloudbuild-flask.yaml" --substitutions="_IMAGE=$web_image"
+  rm -rf "$CTX"
+  gc run deploy "$WEB" --region="$REGION" --image="$web_image" --revision-suffix="auth-$stamp" --no-traffic --tag=google-login --update-env-vars="FINTRUST_API_BASE_URL=${s[4]},FIREBASE_PROJECT_ID=$PROJECT,FIREBASE_AUTH_DOMAIN=$PROJECT.firebaseapp.com,FIREBASE_WEB_API_KEY=$FIREBASE_WEB_API_KEY,FIREBASE_WEB_APP_ID=$FIREBASE_WEB_APP_ID"
+  mapfile -t wi < <(tag_info "$WEB" google-login)
+  [[ "${#wi[@]}" == 2 ]] || die "Auth candidate missing"
+  [[ "$(serving "$WEB")" == "${s[1]}" && "$(serving "$API")" == "${s[2]}" ]] || die "Production traffic changed"
+  smoke "${wi[1]}"
+  auth_config "${wi[1]}"
+  (umask 077; printf '%s\n' "$SHA" "${s[1]}" "${s[2]}" "${s[3]}" "${s[4]}" "${wi[0]}" "${wi[1]}" "$web_image" "$stamp" "${s[9]}" > "$STATE.tmp")
+  mv "$STATE.tmp" "$STATE"
+  printf 'AUTH STAGED; production unchanged.\nCandidate: %s/login.html\nAuthorize its hostname in Firebase and manually verify both sign-in methods.\n' "${wi[1]}"
+}
+auth_config(){
+  curl -fsS --max-time 30 "$1/api/member/auth/web-config" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["configured"] and d["firebase"]["projectId"]==sys.argv[1] and not d["local_password_enabled"]; print("PASS managed Firebase configuration")' "$PROJECT"
+}
 promote(){
   [[ "${2:-}" == --browser-verified ]] || die "Manual browser verification is required before promotion"
   [[ -f "$STATE" ]] || die "No staged release state"
@@ -126,6 +156,7 @@ promote(){
   [[ "$(service_url "$WEB")" == "$EXPECTED_WEB" && "$(service_url "$API")" == "${s[9]}" ]] || die "Service URLs changed"
   [[ "$(serving "$WEB")" == "${s[1]}" && "$(serving "$API")" == "${s[2]}" ]] || die "Production traffic changed since staging"
   smoke "${s[6]}"
+  auth_config "${s[6]}"
   local final_tag="ui-final-${s[8]}"
   local promoted=0
   rollback_on_error(){
@@ -146,9 +177,11 @@ promote(){
   mapfile -t fin < <(tag_info "$WEB" "$final_tag")
   [[ "${#fin[@]}" == 2 ]] || die "Final web candidate missing"
   smoke "${fin[1]}"
+  auth_config "${fin[1]}"
   traffic "$WEB" "${fin[0]}"
   [[ "$(serving "$WEB")" == "${fin[0]}" && "$(serving "$API")" == "${s[3]}" ]] || die "Traffic verification failed"
   smoke "$EXPECTED_WEB"
+  auth_config "$EXPECTED_WEB"
   promoted=0; trap - EXIT
   printf 'PROMOTED: %s\nPrevious revisions retained: %s %s\n' "$EXPECTED_WEB" "${s[1]}" "${s[2]}"
   printf 'Rollback if needed: gcloud run services update-traffic %s --project=%s --region=%s --to-revisions=%s=100; repeat for %s revision %s\n' "$WEB" "$PROJECT" "$REGION" "${s[1]}" "$API" "${s[2]}"
@@ -157,6 +190,7 @@ case "$MODE" in
   preflight) preflight ;;
   stage) stage ;;
   repair-backend) repair_backend ;;
+  stage-auth) stage_auth ;;
   promote) promote "$@" ;;
-  *) die "Usage: bash deploy/user_first_cloud_run_release.sh {preflight|stage|repair-backend|promote --browser-verified}" ;;
+  *) die "Usage: bash deploy/user_first_cloud_run_release.sh {preflight|stage|repair-backend|stage-auth|promote --browser-verified}" ;;
 esac

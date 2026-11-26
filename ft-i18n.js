@@ -37,6 +37,7 @@ const translations=Object.freeze({
   "login.title":["會員登入","Sign in"],"login.welcome":["歡迎回來","Welcome back"],
   "login.google":["使用 Google 帳號登入","Continue with Google"],"login.emailOr":["或使用 Email 登入","Or sign in with email"],
   "login.email":["電子郵件","Email"],"login.password":["密碼","Password"],"login.submit":["登入","Sign in"],
+  "login.reset":["忘記密碼？","Forgot password?"],"login.resend":["重寄驗證信","Resend verification email"],
   "login.noAccount":["尚未註冊？","New to FinTrust?"],"login.create":["建立會員帳號","Create an account"],
   "register.title":["註冊會員","Sign up"],"register.create":["建立帳號","Create an account"],
   "register.name":["會員名稱","Display name"],"register.submit":["完成註冊","Create account"],

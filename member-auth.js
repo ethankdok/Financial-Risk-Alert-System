@@ -24,7 +24,11 @@
   }
 
   async function logout(){
-    try{await api('/api/member/auth/logout',{method:'POST',body:'{}'});}catch(e){}
+    try{
+      if(window.FinTrustFirebase)await window.FinTrustFirebase.logout();
+    }catch(e){console.warn("Firebase sign-out could not be confirmed");}
+    try{await api('/api/member/auth/logout',{method:'POST',body:'{}'});}
+    catch(e){if(e.status!==401){alert('登出失敗，請重試。');return;}}
     cachedMember=null;
     location.href='login.html';
   }
@@ -32,7 +36,7 @@
   function mountNav(member){
     document.querySelectorAll('[data-member-name]').forEach(el=>{el.textContent=member.display_name||member.email;});
     document.querySelectorAll('[data-member-email]').forEach(el=>{el.textContent=member.email;});
-    document.querySelectorAll('[data-member-logout]').forEach(btn=>btn.addEventListener('click',logout));
+    document.querySelectorAll('[data-member-logout]').forEach(btn=>{btn.onclick=logout;});
   }
 
   window.MemberAuth={api,getMember,requireMember,logout,mountNav,escapeHtml};

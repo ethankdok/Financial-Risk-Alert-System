@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="ui-humanize.css">
   <script src="member-auth.js"></script>
   <link rel="stylesheet" href="ft-site.css">
-  <script defer src="ft-i18n.js"></script><script defer src="ft-site.js"></script>
+  <script defer src="ft-i18n.js"></script><script defer src="ft-site.js"></script><script defer src="ft-google-signin.js"></script>
 </head>
 <body class="ft-app ft-member-page ft-auth-checking" data-ft-page="member">
   <header id="ft-header"></header>
@@ -24,6 +24,7 @@
           <div class="full form-status" id="profileStatus"></div>
           <div class="full"><button class="btn btn-secondary" type="submit" data-i18n="member.save">儲存修改</button></div>
         </form>
+        <div id="ft-account-link" hidden><h3 data-ft-en="Sign-in methods">登入方式</h3><button class="btn btn-secondary" type="button" id="ft-link-google" data-ft-en="Link Google account" hidden>綁定 Google 帳號</button><form id="ft-link-password" hidden><label data-ft-en="Set a password (at least 8 characters)">設定登入密碼（至少 8 碼）</label><input class="form-control" name="password" type="password" autocomplete="new-password" minlength="8" required><button class="btn btn-secondary" type="submit" data-ft-en="Add email/password login">新增 Email／密碼登入</button></form><p id="memberAuthStatus" role="status" hidden></p><div id="memberLoginError" class="auth-error" role="alert" hidden></div></div>
       </section>
 
       <section class="content-card">
@@ -86,6 +87,7 @@
     const profile=document.getElementById('profileForm');
     profile.display_name.value=member.display_name||'';
     profile.email.value=member.email||'';
+    profile.email.readOnly=member.auth_provider==='firebase';
     await Promise.all([loadCompanyOptions(),loadWatchlist(),loadPreferences(),loadNotifications(),loadAnalysisHistory()]);
   }
   async function loadWatchlist(){

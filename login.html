@@ -17,29 +17,13 @@
       <span class="eyebrow" data-i18n="login.title">會員登入</span>
       <h1 data-i18n="login.welcome">歡迎回來</h1>
       
-      <button type="button" id="ft-google-signin" class="ft-google-btn"><span aria-hidden="true" class="ft-google-mark">G</span><span data-i18n="login.google">使用 Google 帳號登入</span></button><div class="ft-auth-divider" data-i18n="login.emailOr">或使用 Email 登入</div><div class="form-group"><label data-i18n="login.email">電子郵件</label><input class="form-control" name="email" autocomplete="email" required></div>
+      <button type="button" id="ft-google-signin" class="ft-google-btn"><span aria-hidden="true" class="ft-google-mark">G</span><span data-i18n="login.google">使用 Google 帳號登入</span></button><div class="ft-auth-divider" data-i18n="login.emailOr">或使用 Email 登入</div><div class="form-group"><label data-i18n="login.email">電子郵件</label><input class="form-control" name="email" type="email" autocomplete="email" required></div>
       <div class="form-group"><label data-i18n="login.password">密碼</label><input class="form-control" name="password" type="password" autocomplete="current-password" required></div>
-      <div class="auth-error" id="memberLoginError" hidden></div>
+      <div class="auth-error" id="memberLoginError" role="alert" hidden></div><p id="memberAuthStatus" role="status" hidden></p><p><button class="mini-btn" type="button" id="ft-reset-password" data-i18n="login.reset">忘記密碼？</button> <button class="mini-btn" type="button" id="ft-resend-verification" data-i18n="login.resend" hidden>重寄驗證信</button></p>
       <button class="btn btn-primary" style="width:100%" type="submit" data-i18n="login.submit">登入</button>
       <p class="auth-switch"><span data-i18n="login.noAccount">尚未註冊？</span> <a href="register.html" data-i18n="login.create">建立會員帳號</a></p>
       
     <a class="ft-member-demo-link" href="member-demo.html" data-i18n="demo.memberLink">體驗會員中心介面</a></form>
   </main>
-  <script>
-  document.getElementById('memberLoginForm').addEventListener('submit',async event=>{
-    event.preventDefault();
-    const form=event.currentTarget;
-    const error=document.getElementById('memberLoginError');
-    error.hidden=true;
-    try{
-      await MemberAuth.api('/api/member/auth/login',{method:'POST',body:JSON.stringify({email:form.email.value,password:form.password.value})});
-      const next=new URLSearchParams(location.search).get('next')||'member.html';
-      location.href=/^[a-z0-9_-]+\.html(?:\?[^#]*)?$/i.test(next)?next:'member.html';
-    }catch(exc){
-      error.textContent=exc.message;
-      error.hidden=false;
-    }
-  });
-  </script>
 </body>
 </html>

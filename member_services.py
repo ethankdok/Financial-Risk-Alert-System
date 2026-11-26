@@ -96,8 +96,20 @@ class MemberAuthService:
             "schema_version": 1,
         }
         if existing:
-            return self.repository.update_member(uid, fields) or {**existing, **fields}
-        return self.repository.create_member({**fields, "created_at": now})
+            if existing.get("account_status") != "active" or existing.get("auth_provider") != provider:
+                raise PermissionError("member account unavailable")
+            # Keep the member's chosen display name, account status and existing UID.
+            return self.repository.update_member(uid, {"email": fields["email"], "updated_at": now}) or existing
+        # Do not merge historical/local identities just because an email matches.
+        if self.repository.get_member_by_email(fields["email"]):
+            raise DuplicateRecordError("email belongs to another member")
+        try:
+            return self.repository.create_member({**fields, "created_at": now})
+        except DuplicateRecordError:
+            existing = self.repository.get_member(uid)
+            if existing and existing.get("email") == fields["email"] and existing.get("account_status") == "active" and existing.get("auth_provider") == provider:
+                return existing
+            raise
 
     def login_firebase_token(self, id_token: str) -> dict[str, Any]:
         project_id = os.getenv("FIREBASE_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
@@ -108,11 +120,22 @@ class MemberAuthService:
             from google.oauth2 import id_token as google_id_token
         except ImportError as exc:  # pragma: no cover - dependency is transitive in deployed runtime
             raise RuntimeError("google-auth is required for Firebase member token verification.") from exc
-        claims = google_id_token.verify_firebase_token(id_token, google_requests.Request(), audience=project_id)
-        uid = str(claims.get("sub") or claims.get("user_id") or "")
+        from google.auth.exceptions import GoogleAuthError
+        try:
+            claims = google_id_token.verify_firebase_token(id_token, google_requests.Request(), audience=project_id)
+        except (GoogleAuthError, ValueError) as exc:
+            raise ValueError("invalid Firebase ID token") from exc
+        uid = str(claims.get("sub") or "")
         email = str(claims.get("email") or "")
-        if not uid or not email:
-            raise ValueError("Firebase token is missing uid or email.")
+        if claims.get("iss") != f"https://securetoken.google.com/{project_id}" or claims.get("aud") != project_id:
+            raise ValueError("invalid Firebase token issuer or audience")
+        if not uid or len(uid) > 128 or "/" in uid or uid.startswith("local_") or not email or "@" not in email:
+            raise ValueError("invalid Firebase identity")
+        if claims.get("email_verified") is not True:
+            raise PermissionError("email verification required")
+        provider = (claims.get("firebase") or {}).get("sign_in_provider")
+        if provider not in {"google.com", "password"}:
+            raise PermissionError("unsupported sign-in provider")
         return self.upsert_managed_identity(
             uid=uid,
             email=email,
