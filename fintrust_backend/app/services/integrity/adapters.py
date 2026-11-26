@@ -16,6 +16,7 @@ import hashlib
 import json
 import re
 import sqlite3
+from datetime import date, datetime
 from decimal import Decimal, localcontext
 from pathlib import Path
 from typing import Any
@@ -54,6 +55,13 @@ class IntegrityDataUnavailable(RuntimeError):
 
 def _sha(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+def _timestamp_text(value: Any) -> Any:
+    """Firestore returns native timestamps; SQLite returns text. Keep offsets and missing values."""
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    return value  # do not silently coerce malformed non-date values
 
 
 # --------------------------------------------------------------------------------------------- facts
@@ -127,8 +135,8 @@ class FactsAdapter:
             "source_url": al.official_url(source_url) if trusted else None,
             "locator": {"xbrl_concept": row.get("taxonomy_concept"), "pipeline_fact_id": row.get("fact_id"),
                         "source_field": row.get("source_field")},
-            "published_at": row.get("filed_at"), "effective_available_at": None,
-            "effective_available_at_precision": "unknown", "ingested_at": row.get("retrieved_at"),
+            "published_at": _timestamp_text(row.get("filed_at")), "effective_available_at": None,
+            "effective_available_at_precision": "unknown", "ingested_at": _timestamp_text(row.get("retrieved_at")),
             "provenance": "persisted_pipeline_fact:" + str(row.get("source_kind") or "unknown"),
             "evidence_family": family, "method_version": FACTS_ADAPTER_VERSION,
             "pit_eligible": False, "pit_reason": "effective_available_at_unknown",

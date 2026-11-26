@@ -45,6 +45,7 @@ offline(){
   "$venv/bin/python" -m unittest discover -s tests -p 'test_claim_verification_proxy.py'
   "$venv/bin/python" -m unittest discover -s tests -p 'test_public_company_directory.py'
   (cd fintrust_backend && "$venv/bin/python" -m unittest discover -s tests -p 'test_claim_verification.py')
+  (cd fintrust_backend && "$venv/bin/python" -m unittest discover -s tests -p 'test_integrity_firestore_timestamps.py')
   command -v node >/dev/null || die "Node.js required for frontend regression"
   for f in ft-*.js; do node --check "$f"; done
   node tests/ft_frontend_route_smoke.cjs
@@ -78,6 +79,43 @@ stage(){
   (umask 077; printf '%s\n' "$SHA" "$OLD_WEB" "$OLD_API" "${ai[0]}" "${ai[1]}" "${wi[0]}" "${wi[1]}" "$web_image" "$stamp" "$API_URL" > "$STATE")
   smoke "${wi[1]}"
   printf 'STAGED; production unchanged.\nCandidate website: %s\nVerify login, Google sign-in (if enabled), company search, file parsing, claim evidence and mobile UI manually. Then run promote --browser-verified.\n' "${wi[1]}"
+}
+repair_backend(){
+  [[ -f "$STATE" ]] || die "No staged release state"
+  mapfile -t s < "$STATE"; [[ "${#s[@]}" == 10 ]] || die "Invalid release state"
+  clean_checkout
+  [[ "$SHA" != "${s[0]}" ]] || die "Pull backend fix before repair"
+  git merge-base --is-ancestor "${s[0]}" "$SHA" || die "Staged commit not an ancestor"
+  # Reuse the previously built Flask image only when no Flask runtime source changed.
+  local p
+  while IFS= read -r p; do
+    case "$p" in
+      fintrust_backend/*|deploy/user_first_cloud_run_release.sh|.github/workflows/*|docs/*) ;;
+      *) die "Frontend/runtime change requires full rebuild: $p" ;;
+    esac
+  done < <(git diff --name-only "${s[0]}" "$SHA")
+  [[ "$(service_url "$WEB")" == "$EXPECTED_WEB" && "$(service_url "$API")" == "${s[9]}" ]] || die "Service URLs changed"
+  [[ "$(serving "$WEB")" == "${s[1]}" && "$(serving "$API")" == "${s[2]}" ]] || die "Production traffic changed since staging"
+  offline; build_context
+  local stamp api_image api_tag web_tag ai wi
+  stamp="$(date -u +%y%m%d%H%M%S)"
+  api_image="$(image_base "${s[2]}"):ui-$stamp"
+  api_tag="ui-api-$stamp"; web_tag="ui-web-$stamp"
+  gc builds submit "$CTX" --config="$CTX/deploy/cloudbuild-fastapi.yaml" --substitutions="_IMAGE=$api_image"
+  rm -rf "$CTX"
+  gc run deploy "$API" --region="$REGION" --image="$api_image" --revision-suffix="ui-$stamp" --no-traffic --tag="$api_tag"
+  mapfile -t ai < <(tag_info "$API" "$api_tag")
+  [[ "${#ai[@]}" == 2 ]] || die "API candidate not found"
+  health "${ai[1]}"
+  gc run deploy "$WEB" --region="$REGION" --image="${s[7]}" --revision-suffix="ui-$stamp" --no-traffic --tag="$web_tag" --update-env-vars="FINTRUST_API_BASE_URL=${ai[1]}"
+  mapfile -t wi < <(tag_info "$WEB" "$web_tag")
+  [[ "${#wi[@]}" == 2 ]] || die "Web candidate not found"
+  [[ "$(serving "$WEB")" == "${s[1]}" && "$(serving "$API")" == "${s[2]}" ]] || die "Serving revisions changed unexpectedly"
+  # Keep rollback revisions and replace candidate state atomically.
+  (umask 077; printf '%s\n' "$SHA" "${s[1]}" "${s[2]}" "${ai[0]}" "${ai[1]}" "${wi[0]}" "${wi[1]}" "${s[7]}" "$stamp" "${s[9]}" > "$STATE.tmp")
+  mv "$STATE.tmp" "$STATE"
+  smoke "${wi[1]}"
+  printf 'STAGED; production unchanged.\nCandidate website: %s\nVerify browser operations before promote --browser-verified.\n' "${wi[1]}"
 }
 promote(){
   [[ "${2:-}" == --browser-verified ]] || die "Manual browser verification is required before promotion"
@@ -118,6 +156,7 @@ promote(){
 case "$MODE" in
   preflight) preflight ;;
   stage) stage ;;
+  repair-backend) repair_backend ;;
   promote) promote "$@" ;;
-  *) die "Usage: bash deploy/user_first_cloud_run_release.sh {preflight|stage|promote --browser-verified}" ;;
+  *) die "Usage: bash deploy/user_first_cloud_run_release.sh {preflight|stage|repair-backend|promote --browser-verified}" ;;
 esac
