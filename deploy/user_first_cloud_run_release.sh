@@ -50,6 +50,7 @@ offline(){
   for f in ft-*.js; do node --check "$f"; done
   node tests/ft_frontend_route_smoke.cjs
   "$venv/bin/python" -m unittest discover -s tests -p 'test_managed_member_auth.py'
+  "$venv/bin/python" -m unittest discover -s tests -p 'test_model_workbench.py'
   rm -rf "$venv"
 }
 build_context(){
@@ -125,7 +126,14 @@ stage_auth(){
   git merge-base --is-ancestor "${s[0]}" "$SHA" || die "Staged commit not an ancestor"
   [[ -z "$(git diff --name-only "${s[0]}" "$SHA" -- fintrust_backend Dockerfile.fastapi data_shift.py deploy/cloudbuild-fastapi.yaml)" ]] || die "FastAPI source changed; cannot reuse candidate"
   [[ "$(service_url "$WEB")" == "$EXPECTED_WEB" && "$(service_url "$API")" == "${s[9]}" ]] || die "Service URLs changed"
-  [[ "$(serving "$WEB")" == "${s[1]}" && "$(serving "$API")" == "${s[2]}" ]] || die "Production traffic changed"
+  # Permit a web-only update after the recorded release has already been promoted.
+  # Never accept unrelated serving revisions or rebuild the API.
+  local active_web active_api
+  active_web="$(serving "$WEB")"; active_api="$(serving "$API")"
+  if [[ "$active_web" == "$WEB-ui-final-${s[8]}" && "$active_api" == "${s[3]}" ]]; then
+    s[1]="$active_web"; s[2]="$active_api"; s[4]="${s[9]}"
+  fi
+  [[ "$active_web" == "${s[1]}" && "$active_api" == "${s[2]}" ]] || die "Production traffic changed"
   health "${s[4]}"
   [[ -n "${FIREBASE_WEB_API_KEY:-}" && -n "${FIREBASE_WEB_APP_ID:-}" ]] || die "Set public Firebase web API key and app ID in Cloud Shell"
   offline; build_context

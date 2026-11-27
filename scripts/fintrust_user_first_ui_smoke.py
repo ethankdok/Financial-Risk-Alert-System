@@ -79,6 +79,21 @@ def main() -> int:
             print(f"FAIL static {path}: {exc}")
             failures.append(path)
 
+    # Exercise real demo computations, not just static page availability.
+    try:
+        code, body = fetch(args.base, "/api/workbench/demo", body={"algorithm":"lr","scenario":"A","smote":True})
+        d = parse_json(body).get("data", {})
+        train, pred = d.get("training", {}), d.get("prediction", {})
+        ok = (code == 200 and d.get("data_mode") == "synthetic_workbench"
+              and sum(map(sum, train["confusion_matrix"])) == train["test_count"]
+              and abs(pred["base_value"] + sum(x["shap"] for x in pred["contributions"]) - pred["prediction"]) < 1e-8)
+        print(f"{'PASS' if ok else 'FAIL'} synthetic workbench computation: HTTP {code}")
+        if not ok:
+            failures.append("/api/workbench/demo")
+    except (URLError, KeyError, TypeError, ValueError) as exc:
+        print(f"FAIL synthetic workbench: {exc}")
+        failures.append("/api/workbench/demo")
+
     probes = [
         ("/api/financial/health", lambda d: d.get("success") is True and
          (d.get("data") or {}).get("status") == "ok"),
