@@ -245,7 +245,29 @@ function contributionPanel(rec,prev,m){
  det.appendChild(el("p",t("以已保存的六位小數特徵重算：","Recomputed from stored rounded features: ")+fmt(result.score,6)+" · "+t("原始模型輸出：","Archived output: ")+fmt(riskValue(rec,m),6),"ft-sheet-meta"));
  box.appendChild(det);return box;
 }
-function renderRiskDashboard(co,rec,prev){
+// Relative screening index: equal-weight midrank percentile within the same industry/year.
+function relativeRisk(rec,industry,yr){
+ if(!riskModels.every(m=>riskValue(rec,m)!=null))return null;
+ const peers=Object.values(database.industries[industry]||{}).map(c=>c.years[yr]).filter(r=>r&&riskModels.every(m=>riskValue(r,m)!=null));
+ if(peers.length<5)return null;
+ const ranks=riskModels.map(m=>{const v=riskValue(rec,m);const less=peers.filter(r=>riskValue(r,m)<v).length,equal=peers.filter(r=>riskValue(r,m)===v).length;return 100*(less+.5*equal)/peers.length;});
+ return {value:(ranks[0]+ranks[1])/2,ranks,count:peers.length};
+}
+function riskDial(rec,industry){
+ const index=relativeRisk(rec,industry,year),box=el("div",null,"ft-fin-dial");
+ const ns="http://www.w3.org/2000/svg",svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 300 178");svg.setAttribute("role","img");svg.setAttribute("aria-label",index?t("同業相對風險指數 ","Relative risk index ")+fmt(index.value,1):t("資料不足","Insufficient data"));
+ const pt=v=>[150-112*Math.cos(Math.PI*v/100),138-112*Math.sin(Math.PI*v/100)];
+ function add(tag,attrs,txt){const e=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,String(v)));if(txt!=null)e.textContent=txt;svg.append(e);return e;}
+ [[0,33.333,"#78a99f"],[33.333,66.667,"#d4b06b"],[66.667,100,"#b96c59"]].forEach(([a,b,c])=>{const p=pt(a),q=pt(b);add("path",{d:"M "+p.join(" ")+" A 112 112 0 0 1 "+q.join(" "),fill:"none",stroke:index?c:"#d9e1e5","stroke-width":18});});
+ if(index){const p=pt(index.value);add("line",{x1:150,y1:138,x2:150+(p[0]-150)*.82,y2:138+(p[1]-138)*.82,stroke:"#233f50","stroke-width":4,"stroke-linecap":"round"});add("circle",{cx:150,cy:138,r:6,fill:"#233f50"});}
+ add("text",{x:22,y:160,"font-size":11,fill:"#536b7b"},0);add("text",{x:278,y:160,"font-size":11,"text-anchor":"end",fill:"#536b7b"},100);
+ box.append(el("h3",t("同業相對財報風險指數","Industry-relative financial risk index")),svg,el("strong",index?fmt(index.value,1)+" / 100":"—","ft-fin-dial-value"));
+ if(index){const level=index.value>=66.667?t("相對偏高","Relatively high"):index.value>=33.333?t("相對居中","Mid-range"):t("相對偏低","Relatively low");box.append(el("p",level+" · "+index.count+" "+t("家同業完整樣本","complete industry peers"),"ft-fin-driver"));box.append(el("p","M "+fmt(index.ranks[0],1)+" / F "+fmt(index.ranks[1],1)+" "+t("百分位，等權平均","percentiles, equal-weight mean"),"ft-sheet-meta"));}
+ else box.append(el("p",t("雙模型完整且同業至少五家才計算。","Requires both scores and at least five complete peers."),"ft-sheet-meta"));
+ box.append(el("p",t("0–100 為同產業同年度的相對篩檢排序，不是舞弊機率。是否超標另依下方文獻門檻。","Relative screening rank within industry and year, not fraud probability. Original model cutoffs are shown separately."),"ft-sheet-meta"));return box;
+}
+
+function renderRiskDashboard(co,rec,prev,industry){
  const root=el("section",null,"ft-fin-risk-dashboard");root.id="ft-fin-risk-dashboard";
  root.appendChild(el("h2",t("財報舞弊風險篩檢儀表板","Financial misstatement risk dashboard")));
  const available=riskModels.filter(m=>riskValue(rec,m)!=null);
@@ -253,7 +275,7 @@ function renderRiskDashboard(co,rec,prev){
  const overall=el("div",null,"ft-fin-risk-overall");
  const label=available.length<2?t("資料不足｜無法完成雙模型判斷","Incomplete dual-model assessment"):flagged===2?t("雙模型警示｜優先查核","Dual-model alert | Priority review"):flagged===1?t("單模型警示｜加強查核","Single-model alert | Further review"):t("雙模型未超標","Neither model exceeds cutoff");
  overall.classList.add(flagged?"alert":"neutral");overall.append(el("div",label,"ft-fin-risk-level"),el("strong",flagged+" / "+available.length),el("span",t("已超標模型／可計算模型（共 2 組）","Flagged / computable models (2 total)"),"ft-sheet-meta"));
- root.appendChild(overall);
+ const overview=el("div",null,"ft-fin-risk-overview");overview.append(riskDial(rec,industry),overall);root.appendChild(overview);
  const stats=el("div",null,"ft-sheet-summary");
  riskModels.forEach(m=>{
   const value=riskValue(rec,m),flag=value!=null&&value>m.cut,box=el("div",null,"ft-sheet-stat ft-fin-risk-card");
@@ -303,7 +325,7 @@ function render(){
  const [industry,companies]=data,co=companies[company];let rec=co.years[year];if(!rec){year=Object.keys(co.years).sort().at(-1);rec=co.years[year];$("#ft-year").value=year;}
  const prev=co.years[String(Number(year)-1)];
  root.replaceChildren(header({group:industry}));
- root.appendChild(renderRiskDashboard(co,rec,prev));
+ root.appendChild(renderRiskDashboard(co,rec,prev,industry));
  const tabs=el("div",null,"ft-sheet-tabs");
  [["financial",t("財務報表","Statements")],["beneish","Beneish"],["dechow","Dechow"],["source",t("官方來源","Sources")],["verify",t("查證","Verify")]].forEach(([id,label])=>{
   const b=el("button",label);b.type="button";b.className=id===tab?"active":"";b.addEventListener("click",()=>{tab=id;render();});tabs.appendChild(b);

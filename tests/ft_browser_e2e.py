@@ -53,6 +53,8 @@ with sync_playwright() as pw:
     expect(page.locator(".ft-fin-risk-overall")).to_contain_text("單模型警示")
     expect(page.locator(".ft-fin-risk-overall strong")).to_have_text("1 / 2")
     expect(page.locator(".ft-fin-risk-trend")).to_have_count(2)
+    expect(page.locator(".ft-fin-dial-value")).to_have_text(re.compile(r"\d+\.\d / 100"))
+    expect(page.locator(".ft-fin-dial svg")).to_be_visible()
     expect(page.locator(".ft-fin-contribution")).to_have_count(15)
     page.locator(".ft-fin-contribution").first.click()
     expect(page.locator("#ft-formula-details")).to_be_visible()
