@@ -14,6 +14,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score, average_precision_score, roc_auc_score, accuracy_score, silhouette_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
+from sklearn.decomposition import NMF
 
 FEATURES = ["DSRI", "TATA", "RSST", "JSD"]
 SCENARIOS = {
@@ -76,6 +77,7 @@ def train(algorithm="lr",balance=True):
     report={"algorithm":algorithm,"feature_names":FEATURES,"seed":20261127,"train_count":len(a),"test_count":len(b),
         "training_before":before,"training_after":[int(sum(fity==0)),int(sum(fity==1))],
         "test_distribution":[int(sum(yb==0)),int(sum(yb==1))],
+        "training_preview":[{"sample":i+1,"features":[float(v) for v in row],"label":"Y" if label else "N"} for i,(row,label) in enumerate(zip(a[:12],ya[:12]))],
         "confusion_matrix":confusion_matrix(yb,pred,labels=[0,1]).tolist(),"metrics":metrics,"threshold":.5,"smote":balance}
     # 16 fixed training rows, not holdout observations, used for exact interventional Shapley values.
     return model,a[:16],report
@@ -117,7 +119,12 @@ def text_analysis(a,b,news):
     v=TfidfVectorizer(analyzer=tokens).fit_transform([a,b])
     cosine=float((v[0]@v[1].T).toarray()[0,0])
     docs=TEXTS+[a,b]
-    mat=TfidfVectorizer(analyzer=tokens).fit_transform(docs)
+    vectorizer=TfidfVectorizer(analyzer=tokens)
+    mat=vectorizer.fit_transform(docs)
+    topic_model=NMF(n_components=3,init="nndsvda",max_iter=500,random_state=22)
+    weights=topic_model.fit_transform(mat)
+    names=vectorizer.get_feature_names_out()
+    topics=[{"topic":i+1,"terms":[str(names[j]) for j in row.argsort()[-6:][::-1]],"prior_weight":float(weights[-2,i]),"current_weight":float(weights[-1,i])} for i,row in enumerate(topic_model.components_)]
     choices=[]
     for k in range(2,6):
         km=KMeans(n_clusters=k,n_init=5,random_state=22).fit(mat)
@@ -128,7 +135,7 @@ def text_analysis(a,b,news):
     count=sum(len(h["matches"]) for h in hits); maximum=sum(map(len,DICTIONARY.values()))
     return {"jsd":(kl(p)+kl(q))/2,"cosine":cosine,"token_counts":[sum(c1.values()),sum(c2.values())],
         "terms":[{"term":k,"prior":int(c1[k]),"current":int(c2[k]),"change":float(q[i]-p[i])} for i,k in sorted(enumerate(vocab),key=lambda v:abs(q[v[0]]-p[v[0]]),reverse=True)[:12]],
-        "clusters":groups,"cluster_count":best[1],"silhouette":best[0],"cluster_options":[{"k":k,"silhouette":s} for s,k,_ in choices],
+        "topics":topics,"clusters":groups,"cluster_count":best[1],"silhouette":best[0],"cluster_options":[{"k":k,"silhouette":s} for s,k,_ in choices],
         "word_counts":[{"term":k,"count":int(v)} for k,v in (c1+c2).most_common(24)],
         "news":{"text":news,"score":round(100*count/maximum,1),"hits":hits,"matched":count,"dictionary_size":maximum},
         "method":"Chinese character bigrams / word tokens; base-2 JSD; pairwise TF-IDF cosine; KMeans on demonstration corpus"}

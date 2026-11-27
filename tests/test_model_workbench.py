@@ -10,6 +10,8 @@ class WorkbenchTests(unittest.TestCase):
             self.assertEqual(*r["training_after"])
             self.assertAlmostEqual(p["base_value"]+sum(x["shap"] for x in p["contributions"]),p["prediction"],places=9)
             self.assertTrue(0<=d["text_analysis"]["jsd"]<=1)
+            self.assertEqual(len(d["text_analysis"]["topics"]),3)
+            self.assertEqual(len(r["training_preview"]),12)
     def test_no_smote_and_identical_text(self):
         d=run_workbench({"smote":False,"prior_text":"財務資訊內部控制","current_text":"財務資訊內部控制"})
         self.assertEqual(d["training"]["training_before"],d["training"]["training_after"])
