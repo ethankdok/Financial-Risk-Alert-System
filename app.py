@@ -331,6 +331,20 @@ def health():
     })
 
 
+@app.post("/api/workbench/demo")
+def demo_model_workbench():
+    from model_workbench import run_workbench
+    if request.content_length and request.content_length > 60000:
+        return jsonify({"error": "request too large"}), 413
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify({"error": "invalid request"}), 400
+    try:
+        return jsonify({"success": True, "data": run_workbench(payload)})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
 @app.get("/api/research/annual-model-results/<ticker>/<int:year>")
 def annual_model_result(ticker: str, year: int):
     """Read-only published MOPS calculation output; not live ML inference."""

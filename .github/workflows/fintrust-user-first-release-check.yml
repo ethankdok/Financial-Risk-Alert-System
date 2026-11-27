@@ -25,6 +25,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_claim_verification_proxy.py'
           python3 -m unittest discover -s tests -p 'test_public_company_directory.py'
           python3 -m unittest discover -s tests -p 'test_managed_member_auth.py'
+          python3 -m unittest discover -s tests -p 'test_model_workbench.py'
           (cd fintrust_backend && python3 -m unittest discover -s tests -p 'test_claim_verification.py')
           (cd fintrust_backend && python3 -m unittest discover -s tests -p 'test_integrity_firestore_timestamps.py')
       - name: Build frontend container and check packaged app

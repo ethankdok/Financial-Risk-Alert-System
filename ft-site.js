@@ -33,9 +33,8 @@
     ];
     var main=node("div",null,"ft-head-inner");
     var brand=node("a",null,"ft-brand");
-    brand.href="index.html";brand.setAttribute("aria-label","FinTrust");
-    brand.appendChild(node("span","F","ft-brand-symbol"));
-    brand.appendChild(node("span","FinTrust"));
+    brand.href="index.html";brand.setAttribute("aria-label","金融資訊風險查證系統");
+    var mark=node("img",null,"ft-brand-mark");mark.src="static/ft-brand-mark.svg";mark.alt="";mark.width=42;mark.height=42;brand.appendChild(mark);
     main.appendChild(brand);
     var nav=node("nav",null,"ft-top-nav");
     nav.id="ft-top-nav";nav.setAttribute("aria-label",L("主要導覽","Primary navigation"));

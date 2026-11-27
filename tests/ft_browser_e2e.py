@@ -192,6 +192,17 @@ with sync_playwright() as pw:
     expect(page).to_have_url(re.compile("member.html"))
     expect(page.locator("#profileForm [name=display_name]")).to_have_value("CI Updated")
     passed("development-only account registration, login/logout, persistent profile, preferences and watchlist")
+    page.goto(WEB+"/risk-workbench.html")
+    expect(page.locator("#wb-overview .ft-wb-kpi")).to_have_count(4,timeout=60000)
+    expect(page.locator("#wb-training")).to_contain_text("混淆矩陣")
+    expect(page.locator("#wb-shap")).to_contain_text("SHAP 特徵貢獻")
+    expect(page.locator("#wb-real")).to_contain_text("-3.1609")
+    page.locator("#wb-model").select_option("dt")
+    with page.expect_response(lambda r:r.url.endswith("/api/workbench/demo")) as response:
+        page.locator("#wb-run").click()
+    assert response.value.ok and response.value.json()["data"]["training"]["algorithm"]=="dt"
+    expect(page.locator("#wb-run")).to_be_enabled()
+    passed("synthetic model lab actual training/prediction/SHAP, text mining and separated MOPS evidence")
     assert not errors, errors
     browser.close()
     print("CORE BROWSER E2E PASSED",flush=True)

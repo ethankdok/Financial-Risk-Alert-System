@@ -50,6 +50,8 @@ def main() -> int:
     static = [
         ("/", "ft-home-query"),
         ("/analysis.html", "ft-form"),
+        ("/risk-workbench.html", "wb-dashboard"),
+        ("/ft-workbench.js", "wb-training"),
         ("/financial-audit.html", "ft-sheet-report"),
         ("/member-demo.html", "ft-member-panel"),
         ("/ft-site.css", ".ft-app"),
