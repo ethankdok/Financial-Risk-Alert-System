@@ -1,0 +1,15 @@
+{
+  "source_blob": "157e3f8196c13e561ba2735f99e163190d023dcd",
+  "rows": 250,
+  "Y": 1,
+  "N": 244,
+  "holdout": 5,
+  "complete": 195,
+  "complete_Y": 0,
+  "industries": [
+    "油電燃氣業",
+    "電子通路業"
+  ],
+  "M": 248,
+  "F": 200
+}
