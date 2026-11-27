@@ -154,6 +154,120 @@ function renderClaim(){
  root.appendChild(box);
  root.appendChild(el("p",t("預覽中 Beneish／Dechow 財務指標使用真實上傳資料；新聞驗證使用原有獨立後端，不會把指標超標直接判定為不實。","Beneish/Dechow use the uploaded dataset. News claims require the existing backend; model flags do not prove false claims."),"ft-sheet-meta"));
 }
+/* Explain the published linear score, not a new trained model or a fraud probability. */
+const riskModels=[
+ {id:"beneish",name:"Beneish M-Score",key:"M_score",cut:-1.78,base:-4.84,weights:{DSRI:.920,GMI:.528,AQI:.404,SGI:.892,DEPI:.115,SGAI:-.172,LVGI:-.327,TATA:4.679}},
+ {id:"dechow",name:"Dechow F-Score",key:"F_score",cut:1,base:-7.893,weights:{RSST:.790,dAR:2.518,dInventory:1.191,soft_assets:1.979,dCash_sales:.171,dROA:-.932,actual_issuance:1.029}}
+];
+const numeric=v=>typeof v==="number"&&Number.isFinite(v);
+function riskValue(rec,m){const v=rec?.[m.id]?.[m.key];return numeric(v)?v:null;}
+function signed(v,d=4){return numeric(v)?(v>0?"+":"")+fmt(v,d):"—";}
+function explainScore(rec,m){
+ const v=rec?.[m.id]||{};
+ if(riskValue(rec,m)==null||!Object.keys(m.weights).every(k=>numeric(v[k])))return null;
+ const terms=Object.entries(m.weights).map(([key,weight])=>({key,weight,value:v[key],contribution:weight*v[key]}));
+ const linear=terms.reduce((s,x)=>s+x.contribution,m.base);
+ const score=m.id==="beneish"?linear:1/(1+Math.exp(-linear))/.0037;
+ return {terms,linear,score};
+}
+function jumpModel(rec,m,key){
+ tab=m.id;render();
+ if(key){const def=(m.id==="beneish"?beneish:dechow).find(d=>d[0]===key);if(def){showInputs(rec,key+" · "+t(def[1],def[2]),def[3],def[4],rec[m.id][key]);return;}}
+ $("#ft-sheet-body")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function riskGauge(co,rec,m){
+ const box=el("div",null,"ft-fin-risk-gauge"),v=riskValue(rec,m);
+ if(v==null){box.appendChild(el("p",t("必要科目不足，無法計算","Required inputs missing"),"ft-sheet-meta"));return box;}
+ const values=Object.values(co.years).map(r=>riskValue(r,m)).filter(numeric);
+ let lo=Math.min(m.cut,v,...values),hi=Math.max(m.cut,v,...values);
+ const pad=Math.max((hi-lo)*.16,m.id==="beneish"?.2:.12);lo-=pad;hi+=pad;if(m.id==="dechow")lo=Math.max(0,lo);
+ const pos=x=>Math.max(0,Math.min(100,100*(x-lo)/(hi-lo)));
+ const scale=el("div",null,"ft-fin-risk-scale");
+ scale.style.setProperty("--cut",pos(m.cut)+"%");
+ const marker=el("span",null,"ft-fin-risk-marker");marker.style.left=pos(v)+"%";
+ const threshold=el("span",null,"ft-fin-risk-cut");threshold.style.left=pos(m.cut)+"%";
+ scale.append(marker,threshold);
+ const bounds=el("div",null,"ft-fin-risk-bounds");bounds.append(el("span",fmt(lo,2)),el("span",t("門檻 ","Cutoff ")+m.cut),el("span",fmt(hi,2)));
+ box.append(scale,bounds,el("p",t("與門檻差距：","Distance from cutoff: ")+signed(v-m.cut), "ft-sheet-meta"));
+ return box;
+}
+function trendChart(co,m){
+ const ns="http://www.w3.org/2000/svg",svg=document.createElementNS(ns,"svg");
+ svg.setAttribute("viewBox","0 0 520 170");svg.setAttribute("role","img");svg.setAttribute("aria-label",m.name+" "+t("歷年趨勢","annual trend"));
+ svg.classList.add("ft-fin-risk-trend");const years=Object.keys(co.years).sort();
+ const values=years.map(y=>riskValue(co.years[y],m)).filter(numeric);
+ let lo=Math.min(m.cut,...values),hi=Math.max(m.cut,...values);
+ const pad=Math.max((hi-lo)*.2,.1);lo-=pad;hi+=pad;
+ const x=i=>48+i*424/Math.max(1,years.length-1),y=v=>120-(v-lo)*83/(hi-lo);
+ function add(tag,attrs,txt){const n=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,String(v)));if(txt!=null)n.textContent=txt;svg.append(n);return n;}
+ add("text",{x:12,y:15,fill:"#304c5f","font-size":12},m.name);
+ add("line",{x1:32,x2:488,y1:y(m.cut),y2:y(m.cut),stroke:"#a07935","stroke-dasharray":"5 4"});
+ add("text",{x:12,y:y(m.cut)-5,fill:"#886426","font-size":10},t("門檻 ","Cutoff ")+m.cut);
+ let last=null;
+ years.forEach((yr,i)=>{
+  const v=riskValue(co.years[yr],m),px=x(i);
+  add("text",{x:px,y:154,"text-anchor":"middle",fill:"#536b7b","font-size":11,"font-weight":yr===year?700:400},yr);
+  if(v==null){add("text",{x:px,y:137,"text-anchor":"middle",fill:"#77848c","font-size":10},"—");last=null;return;}
+  const py=y(v);if(last)add("line",{x1:last[0],y1:last[1],x2:px,y2:py,stroke:"#477b87","stroke-width":2.3});
+  add("circle",{cx:px,cy:py,r:yr===year?6:4,fill:v>m.cut?"#a7563c":"#477b87",stroke:"#fff","stroke-width":1.5});
+  add("text",{x:px,y:py-10,"text-anchor":"middle",fill:"#263d4d","font-size":11},fmt(v,3));last=[px,py];
+ });
+ return svg;
+}
+function contributionPanel(rec,prev,m){
+ const box=el("section",null,"ft-fin-explain-card");
+ box.appendChild(el("h3",m.name+" · "+t("分數形成原因","Score decomposition")));
+ const result=explainScore(rec,m),previous=explainScore(prev,m);
+ if(!result){box.appendChild(el("p",t("此年度無完整模型特徵，無法分解。","Incomplete features; decomposition unavailable."),"ft-sheet-meta"));return box;}
+ const hasPrev=!!previous;
+ const rows=result.terms.map(x=>({...x,delta:hasPrev?x.contribution-previous.terms.find(z=>z.key===x.key).contribution:null}));
+ const defs=m.id==="beneish"?beneish:dechow;
+ const scale=Math.max(.000001,...rows.map(x=>Math.abs(hasPrev?x.delta:x.contribution)));
+ box.appendChild(el("p",hasPrev?t("各項指標對線性模型分數的年度變動貢獻（係數 × 指標變動）。","Year-over-year contribution to the linear score (coefficient × feature change)."):t("各項指標的加權項（係數 × 指標值）。","Weighted model terms (coefficient × feature value)."),"ft-sheet-meta"));
+ if(m.id==="dechow")box.appendChild(el("p",t("F-Score 的貢獻以轉換前的 logit（Pred）表示。","F-Score contributions are on the pre-transformation logit scale."),"ft-sheet-meta"));
+ const ordered=rows.slice().sort((a,b)=>Math.abs(hasPrev?b.delta:b.contribution)-Math.abs(hasPrev?a.delta:a.contribution));
+ const bars=el("div",null,"ft-fin-contributions");
+ ordered.forEach(x=>{
+  const def=defs.find(d=>d[0]===x.key),v=hasPrev?x.delta:x.contribution;
+  const b=el("button",null,"ft-fin-contribution");b.type="button";b.title=t("查看計算公式與原始財報科目","Inspect formula and source accounts");
+  b.addEventListener("click",()=>jumpModel(rec,m,x.key));
+  const label=el("span",null,"ft-fin-term");label.append(el("strong",x.key),el("small",t(def[1],def[2])));
+  const track=el("span",null,"ft-fin-contribution-track"),fill=el("span",null,"ft-fin-contribution-fill "+(v>=0?"up":"down"));
+  fill.style.width=(Math.abs(v)/scale*50)+"%";track.appendChild(fill);
+  b.append(label,track,el("span",signed(v),"ft-fin-contribution-value"));bars.appendChild(b);
+ });box.appendChild(bars);
+ const drivers=ordered.filter(x=>(hasPrev?x.delta:x.contribution)>0).slice(0,3);
+ if(drivers.length){box.appendChild(el("p",t(hasPrev?"主要推升線性分數的年度變動：":"主要正向加權項：",hasPrev?"Largest positive annual contributions: ":"Largest positive weighted terms: ")+drivers.map(x=>x.key+" "+signed(hasPrev?x.delta:x.contribution)).join("、"),"ft-fin-driver"));}
+ const det=el("details",null,"ft-fin-decomposition");det.appendChild(el("summary",t("展開模型係數、數值與完整分數計算","Expand coefficients, inputs and score calculation")));
+ det.appendChild(table([t("指標","Feature"),t("指標值","Value"),t("係數","Weight"),t("加權項","Weighted term"),t("較前年度貢獻","YoY contribution")],rows.map(x=>tr([x.key,fmt(x.value,6),fmt(x.weight,3),signed(x.contribution,6),signed(x.delta,6)]))));
+ det.appendChild(el("p",t("截距 ","Intercept ")+m.base+" + "+t("加權項合計 ","sum of weighted terms ")+fmt(result.linear-m.base,6)+" = "+fmt(result.linear,6),"ft-sheet-meta"));
+ if(m.id==="dechow")det.appendChild(el("p","F = logistic("+fmt(result.linear,6)+") / 0.0037 = "+fmt(result.score,6),"ft-sheet-meta"));
+ det.appendChild(el("p",t("以已保存的六位小數特徵重算：","Recomputed from stored rounded features: ")+fmt(result.score,6)+" · "+t("原始模型輸出：","Archived output: ")+fmt(riskValue(rec,m),6),"ft-sheet-meta"));
+ box.appendChild(det);return box;
+}
+function renderRiskDashboard(co,rec,prev){
+ const root=el("section",null,"ft-fin-risk-dashboard");root.id="ft-fin-risk-dashboard";
+ root.appendChild(el("h2",t("財報舞弊風險篩檢儀表板","Financial misstatement risk dashboard")));
+ const available=riskModels.filter(m=>riskValue(rec,m)!=null);
+ const flagged=available.filter(m=>riskValue(rec,m)>m.cut).length;
+ const overall=el("div",null,"ft-fin-risk-overall");
+ const label=available.length<2?t("資料不足｜無法完成雙模型判斷","Incomplete dual-model assessment"):flagged===2?t("雙模型警示｜優先查核","Dual-model alert | Priority review"):flagged===1?t("單模型警示｜加強查核","Single-model alert | Further review"):t("雙模型未超標","Neither model exceeds cutoff");
+ overall.classList.add(flagged?"alert":"neutral");overall.append(el("div",label,"ft-fin-risk-level"),el("strong",flagged+" / "+available.length),el("span",t("已超標模型／可計算模型（共 2 組）","Flagged / computable models (2 total)"),"ft-sheet-meta"));
+ root.appendChild(overall);
+ const stats=el("div",null,"ft-sheet-summary");
+ riskModels.forEach(m=>{
+  const value=riskValue(rec,m),flag=value!=null&&value>m.cut,box=el("div",null,"ft-sheet-stat ft-fin-risk-card");
+  box.append(el("span",m.name,"ft-sheet-meta"),el("strong",fmt(value,4)),quality(value==null?t("無資料","No data"):flag?t("超過篩檢門檻","Above cutoff"):t("未超過篩檢門檻","Below cutoff"),flag));
+  box.appendChild(riskGauge(co,rec,m));
+  if(m.id==="dechow"&&value!=null)box.appendChild(el("p",t("相對基準發生率的倍數：","Multiple of baseline incidence: ")+fmt(value,4)+"×","ft-sheet-meta"));
+  const btn=el("button",t("查看模型指標與公式","Inspect model indicators"),"ft-btn");btn.type="button";btn.addEventListener("click",()=>jumpModel(rec,m));box.appendChild(btn);stats.appendChild(box);
+ });root.appendChild(stats);
+ const trends=el("div",null,"ft-fin-risk-grid");riskModels.forEach(m=>trends.appendChild(trendChart(co,m)));root.appendChild(trends);
+ const exp=el("div",null,"ft-fin-risk-grid");riskModels.forEach(m=>exp.appendChild(contributionPanel(rec,prev,m)));root.appendChild(exp);
+ root.appendChild(el("p",t("整體判斷依兩組模型原始門檻，不另行估計舞弊機率。","Overall assessment uses the original model cutoffs, not an estimated fraud probability."),"ft-sheet-meta"));
+ return root;
+}
+
 function render(){
  const root=$("#ft-sheet-report");if(!database||!root)return;
  const data=Object.entries(database.industries).find(([,v])=>v[company]);
@@ -189,10 +303,7 @@ function render(){
  const [industry,companies]=data,co=companies[company];let rec=co.years[year];if(!rec){year=Object.keys(co.years).sort().at(-1);rec=co.years[year];$("#ft-year").value=year;}
  const prev=co.years[String(Number(year)-1)];
  root.replaceChildren(header({group:industry}));
- const stats=el("div",null,"ft-sheet-summary");
- [[ "M-score",rec.beneish?.M_score,rec.beneish?.flag,-1.78],["F-score",rec.dechow?.F_score,rec.dechow?.flag,1.0]].forEach(([name,value,flag,threshold])=>{
-   const box=el("div",null,"ft-sheet-stat");box.appendChild(el("span",name,"ft-sheet-meta"));box.appendChild(el("strong",fmt(value,4)));box.appendChild(quality(value==null?t("無資料","No data"):flag?t("異常訊號","Flagged"):t("未超標","Not flagged"),flag));stats.appendChild(box);
- });root.appendChild(stats);
+ root.appendChild(renderRiskDashboard(co,rec,prev));
  const tabs=el("div",null,"ft-sheet-tabs");
  [["financial",t("財務報表","Statements")],["beneish","Beneish"],["dechow","Dechow"],["source",t("官方來源","Sources")],["verify",t("查證","Verify")]].forEach(([id,label])=>{
   const b=el("button",label);b.type="button";b.className=id===tab?"active":"";b.addEventListener("click",()=>{tab=id;render();});tabs.appendChild(b);
